@@ -1,0 +1,22 @@
+---
+description: Submit actions beside text fields must also run on Enter (same as the submit control)
+globs: apps/extension/**/*.tsx
+alwaysApply: false
+---
+
+# Submit controls: Enter key
+
+When the user can **submit** from a **text field** using a **button** (add row, apply filter, send, search, etc.), **pressing Enter while the field is focused** must perform the **same submit** as clicking that button.
+
+## How to implement
+
+- **Preferred:** wrap the field + primary button in a **`<form>`** with **`onSubmit`** (call `preventDefault()`, then run your handler). Use **`type="submit"`** on the button so the browser fires submit on **Enter** from a single-line control inside the form.
+- **Alternative:** on the text control, handle **`onKeyDown`** / **`onKeyUp`** for **`key === "Enter"`** (guard with **`!event.shiftKey`** when the field is a **`<textarea>`** and Shift+Enter should insert a newline).
+
+## Do not
+
+- Leave Enter doing nothing (or only blurring the field) when a visible **“submit”** affordance exists for the same value.
+
+## Tests
+
+When the flow is **easy to regress** (settings, lists, critical inputs), add or extend a test that **Enter** triggers the same outcome as submit (component test or shared handler unit test—match what the package already uses).

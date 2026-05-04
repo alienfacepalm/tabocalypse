@@ -44,7 +44,13 @@ export function TodoWidget({
           </li>
         ))}
       </ul>
-      <div className="row mt-2">
+      <form
+        className="row mt-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+      >
         <div className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
             USER_LOG@TAB:&gt;
@@ -54,18 +60,13 @@ export function TodoWidget({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a task you'll push to tomorrow."
             className="w-full pl-36"
+            aria-label="New todo"
           />
         </div>
-        <button
-          type="button"
-          className="btn primary icon-only"
-          aria-label="Add todo"
-          title="Add"
-          onClick={add}
-        >
+        <button type="submit" className="btn primary icon-only" aria-label="Add todo" title="Add">
           <Plus size={20} strokeWidth={2} aria-hidden />
         </button>
-      </div>
+      </form>
     </section>
   );
 }

@@ -599,6 +599,33 @@ export default function App() {
     msgEl.value = "";
   };
 
+  const runByoAiTest = async () => {
+    setAiResult(null);
+    if (!s.openaiApiKey) {
+      setAiResult("Add an API key first.");
+      return;
+    }
+    if (s.openaiBaseUrl.includes("api.openai.com")) {
+      const granted = await browser.permissions.contains({
+        origins: ["https://api.openai.com/*"],
+      });
+      if (!granted) {
+        const ok = await browser.permissions.request({
+          origins: ["https://api.openai.com/*"],
+        });
+        if (!ok) {
+          setAiResult("Host permission denied for api.openai.com");
+          return;
+        }
+      }
+    }
+    const r = await testOpenAiCompatible({
+      apiKey: s.openaiApiKey,
+      baseUrl: s.openaiBaseUrl,
+    });
+    setAiResult(r.ok ? r.reply : r.error);
+  };
+
   const importPackFile = async (file: File) => {
     setImportErr(null);
     try {
@@ -1099,16 +1126,24 @@ export default function App() {
 
                 <section className="settings-block">
                   <h3>Alarm (notification)</h3>
-                  <input id="alarm-when" type="datetime-local" />
-                  <input id="alarm-msg" type="text" placeholder="Message" className="mt-2 w-full" />
-                  <button
-                    type="button"
-                    className="btn primary has-icon mt-2"
-                    onClick={() => void scheduleAlarm()}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void scheduleAlarm();
+                    }}
                   >
-                    <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                    <span>Schedule</span>
-                  </button>
+                    <input id="alarm-when" type="datetime-local" />
+                    <input
+                      id="alarm-msg"
+                      type="text"
+                      placeholder="Message"
+                      className="mt-2 w-full"
+                    />
+                    <button type="submit" className="btn primary has-icon mt-2">
+                      <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                      <span>Schedule</span>
+                    </button>
+                  </form>
                 </section>
 
                 <section className="settings-block">
@@ -1116,57 +1151,35 @@ export default function App() {
                   <p className="muted sm">
                     You pay your provider. Nothing is sent without your key.
                   </p>
-                  <input
-                    placeholder="API key"
-                    type="password"
-                    autoComplete="off"
-                    value={s.openaiApiKey}
-                    onChange={(e) =>
-                      void persist((cur) => ({ ...cur, openaiApiKey: e.target.value }))
-                    }
-                    className="w-full"
-                  />
-                  <input
-                    placeholder="Base URL"
-                    value={s.openaiBaseUrl}
-                    onChange={(e) =>
-                      void persist((cur) => ({ ...cur, openaiBaseUrl: e.target.value }))
-                    }
-                    className="mt-2 w-full"
-                  />
-                  <button
-                    type="button"
-                    className="btn has-icon mt-2"
-                    onClick={async () => {
-                      setAiResult(null);
-                      if (!s.openaiApiKey) {
-                        setAiResult("Add an API key first.");
-                        return;
-                      }
-                      if (s.openaiBaseUrl.includes("api.openai.com")) {
-                        const granted = await browser.permissions.contains({
-                          origins: ["https://api.openai.com/*"],
-                        });
-                        if (!granted) {
-                          const ok = await browser.permissions.request({
-                            origins: ["https://api.openai.com/*"],
-                          });
-                          if (!ok) {
-                            setAiResult("Host permission denied for api.openai.com");
-                            return;
-                          }
-                        }
-                      }
-                      const r = await testOpenAiCompatible({
-                        apiKey: s.openaiApiKey,
-                        baseUrl: s.openaiBaseUrl,
-                      });
-                      setAiResult(r.ok ? r.reply : r.error);
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void runByoAiTest();
                     }}
                   >
-                    <Sparkles size={18} strokeWidth={2} aria-hidden />
-                    <span>Test chat completion</span>
-                  </button>
+                    <input
+                      placeholder="API key"
+                      type="password"
+                      autoComplete="off"
+                      value={s.openaiApiKey}
+                      onChange={(e) =>
+                        void persist((cur) => ({ ...cur, openaiApiKey: e.target.value }))
+                      }
+                      className="w-full"
+                    />
+                    <input
+                      placeholder="Base URL"
+                      value={s.openaiBaseUrl}
+                      onChange={(e) =>
+                        void persist((cur) => ({ ...cur, openaiBaseUrl: e.target.value }))
+                      }
+                      className="mt-2 w-full"
+                    />
+                    <button type="submit" className="btn has-icon mt-2">
+                      <Sparkles size={18} strokeWidth={2} aria-hidden />
+                      <span>Test chat completion</span>
+                    </button>
+                  </form>
                   {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
                 </section>
 
