@@ -1,34 +1,31 @@
-export const BING_HP_ARCHIVE =
-  "https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=en-US";
+/** Peapix exposes a public JSON feed that mirrors Bing’s daily images (same approach as Fluent New Tab). */
+export const PEAPIX_BING_FEED_US = "https://peapix.com/bing/feed?country=us";
 
-/** Parses Bing HPImageArchive JSON and returns absolute image URLs. */
-export function wallpaperUrlsFromBingArchiveJson(data: unknown): string[] {
-  if (typeof data !== "object" || data === null) return [];
-  const images = (data as { images?: unknown }).images;
-  if (!Array.isArray(images)) return [];
+/** Parses Peapix `/bing/feed` JSON (array of entries) into HTTPS image URLs. */
+export function wallpaperUrlsFromPeapixFeedJson(data: unknown): string[] {
+  if (!Array.isArray(data)) return [];
   const out: string[] = [];
-  for (const im of images) {
-    if (typeof im !== "object" || im === null) continue;
-    const url = (im as { url?: unknown }).url;
-    if (typeof url !== "string" || !url.trim()) continue;
-    const trimmed = url.trim();
-    out.push(trimmed.startsWith("http") ? trimmed : `https://www.bing.com${trimmed}`);
+  for (const item of data) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as { fullUrl?: unknown; imageUrl?: unknown; thumbUrl?: unknown; url?: unknown };
+    const candidates = [o.fullUrl, o.imageUrl, o.url, o.thumbUrl];
+    const raw = candidates.find((x) => typeof x === "string" && x.trim());
+    if (typeof raw !== "string") continue;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("https://")) out.push(trimmed);
   }
   return out;
 }
 
 /**
- * Fetches the current Bing spotlight batch (typically 8 images).
- *
- * Call this from the new-tab extension page. Bing does not send CORS headers; some Chrome builds
- * still surface a CORS failure for the same `fetch()` from the MV3 service worker even when
- * `host_permissions` include `https://www.bing.com/*`, while the extension page request is allowed.
+ * Fetches a batch of Bing-style spotlight images (served via Peapix; avoids Bing’s
+ * HPImageArchive endpoint, which does not send CORS headers).
  */
 export async function fetchBingWallpaperImageUrls(signal?: AbortSignal): Promise<string[]> {
-  const res = await fetch(BING_HP_ARCHIVE, { signal });
-  if (!res.ok) throw new Error(`Bing wallpaper HTTP ${res.status}`);
+  const res = await fetch(PEAPIX_BING_FEED_US, { signal, credentials: "omit" });
+  if (!res.ok) throw new Error(`Bing wallpaper feed HTTP ${res.status}`);
   const data: unknown = await res.json();
-  return wallpaperUrlsFromBingArchiveJson(data);
+  return wallpaperUrlsFromPeapixFeedJson(data);
 }
 
 /**
