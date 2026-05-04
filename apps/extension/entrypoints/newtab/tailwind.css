@@ -233,6 +233,40 @@
     backdrop-filter: blur(12px);
   }
 
+  .settings-modal .modal-head {
+    @apply border-b-2 border-accent shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
+  }
+
+  .settings-accordion {
+    @apply flex flex-col gap-3;
+  }
+
+  .acc-item {
+    @apply relative border border-border bg-black/40;
+    backdrop-filter: blur(12px);
+  }
+
+  .acc-item::before {
+    content: "";
+    @apply absolute left-0 top-0 h-0.5 w-full bg-accent;
+  }
+
+  .acc-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 border-b border-border bg-black/30 px-4 py-3 font-display text-[0.9rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] transition-[transform,box-shadow,background-color,color] duration-100 select-none hover:bg-accent hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(255,0,255,1)] open:bg-accent open:text-black open:shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
+  }
+
+  .acc-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .acc-title {
+    @apply text-inherit;
+  }
+
+  .acc-body {
+    @apply px-4 py-3;
+  }
+
   .modal.small {
     @apply w-[min(420px,100%)];
   }

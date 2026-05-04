@@ -120,6 +120,8 @@ describe("loadSettings", () => {
       [LOCAL_KEY]: {
         version: 1,
         userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: false,
         openWeatherApiKey: "k",
         openaiApiKey: "sk",
         openaiBaseUrl: "https://example.com/v1",

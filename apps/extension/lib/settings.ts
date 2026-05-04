@@ -46,8 +46,11 @@ export interface ISettings {
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
+  /** If true and the chosen background kind supports it, the background rotates over time. */
+  backgroundRotate: boolean;
   backgroundSolid: string;
   userBackgroundDataUrl: string | null;
+  userBackgroundDataUrls: string[];
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
@@ -83,6 +86,8 @@ export interface ISyncSlice {
 export interface ILocalSlice {
   version: 1;
   userBackgroundDataUrl: string | null;
+  userBackgroundDataUrls: string[];
+  backgroundRotate: boolean;
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
@@ -135,8 +140,10 @@ export function defaultSettings(): ISettings {
     weatherAutoGeo: false,
     useOpenWeather: false,
     backgroundKind: "gradient",
+    backgroundRotate: false,
     backgroundSolid: "#0f0f12",
     userBackgroundDataUrl: null,
+    userBackgroundDataUrls: [],
     openWeatherApiKey: "",
     openaiApiKey: "",
     openaiBaseUrl: "https://api.openai.com/v1",
@@ -173,6 +180,8 @@ function toLocal(s: ISettings): ILocalSlice {
   return {
     version: 1,
     userBackgroundDataUrl: s.userBackgroundDataUrl,
+    userBackgroundDataUrls: s.userBackgroundDataUrls,
+    backgroundRotate: s.backgroundRotate,
     openWeatherApiKey: s.openWeatherApiKey,
     openaiApiKey: s.openaiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
@@ -189,6 +198,13 @@ function mergeSettings(
   local: Partial<ILocalSlice> | undefined,
 ): ISettings {
   const d = defaultSettings();
+  const legacySingle = local?.userBackgroundDataUrl ?? d.userBackgroundDataUrl;
+  const legacyToList =
+    (local?.userBackgroundDataUrls ?? d.userBackgroundDataUrls).length > 0
+      ? (local?.userBackgroundDataUrls ?? d.userBackgroundDataUrls)
+      : legacySingle
+        ? [legacySingle]
+        : [];
   return {
     version: 1,
     preset: sync?.preset ?? d.preset,
@@ -203,9 +219,11 @@ function mergeSettings(
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
+    backgroundRotate: local?.backgroundRotate ?? d.backgroundRotate,
     backgroundSolid: sync?.backgroundSolid ?? d.backgroundSolid,
     debugPluginSource: sync?.debugPluginSource ?? d.debugPluginSource,
-    userBackgroundDataUrl: local?.userBackgroundDataUrl ?? d.userBackgroundDataUrl,
+    userBackgroundDataUrl: legacySingle,
+    userBackgroundDataUrls: legacyToList,
     openWeatherApiKey: local?.openWeatherApiKey ?? d.openWeatherApiKey,
     openaiApiKey: local?.openaiApiKey ?? d.openaiApiKey,
     openaiBaseUrl: local?.openaiBaseUrl ?? d.openaiBaseUrl,

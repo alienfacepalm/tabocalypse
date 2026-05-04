@@ -59,9 +59,12 @@ import {
 } from "../../lib/fetch-bing-wallpaper";
 
 const BG_MAX = 1_500_000;
+const BG_TOTAL_MAX = 6_000_000;
+const USER_ROTATE_MS = 15 * 60 * 1000;
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
+  userImageUrl?: string | null;
 };
 
 function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
@@ -81,9 +84,15 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
   if (s.backgroundKind === "solid") {
     return { background: s.backgroundSolid };
   }
-  if (s.backgroundKind === "image" && s.userBackgroundDataUrl) {
+  if (s.backgroundKind === "image") {
+    const u = extras?.userImageUrl ?? s.userBackgroundDataUrl;
+    if (!u) {
+      return {
+        background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+      };
+    }
     return {
-      backgroundImage: `url(${s.userBackgroundDataUrl})`,
+      backgroundImage: `url(${u})`,
       backgroundSize: "cover",
       backgroundPosition: "center",
     };
@@ -91,6 +100,13 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
   return {
     background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
   };
+}
+
+function pickRotatingUrl(urls: string[], rotate: boolean, nowMs = Date.now()): string | null {
+  if (urls.length === 0) return null;
+  if (!rotate) return urls[0] ?? null;
+  const slot = Math.floor(nowMs / USER_ROTATE_MS);
+  return urls[slot % urls.length] ?? urls[0] ?? null;
 }
 
 export default function App() {
@@ -104,6 +120,7 @@ export default function App() {
   const [prodScore] = useState(() => Math.floor(20 + Math.random() * 80));
   const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
   const [bingFetchErr, setBingFetchErr] = useState<string | null>(null);
+  const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -135,6 +152,29 @@ export default function App() {
     return () => ac.abort();
   }, [settings?.backgroundKind]);
 
+  useEffect(() => {
+    const kind = settings?.backgroundKind;
+    if (kind !== "image") {
+      setUserChosenUrl(null);
+      return;
+    }
+    if (!settings) return;
+    const picked = pickRotatingUrl(settings.userBackgroundDataUrls, settings.backgroundRotate);
+    setUserChosenUrl(picked ?? settings.userBackgroundDataUrl ?? null);
+    if (!settings.backgroundRotate) return;
+    const id = window.setInterval(() => {
+      const next = pickRotatingUrl(settings.userBackgroundDataUrls, true);
+      setUserChosenUrl(next ?? settings.userBackgroundDataUrl ?? null);
+    }, USER_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [
+    settings,
+    settings?.backgroundKind,
+    settings?.backgroundRotate,
+    settings?.userBackgroundDataUrl,
+    settings?.userBackgroundDataUrls,
+  ]);
+
   const persist = useCallback(async (next: ISettings) => {
     setSettings(next);
     await saveSettings(next);
@@ -154,8 +194,8 @@ export default function App() {
 
   const shellStyle = useMemo(() => {
     if (!settings) return undefined;
-    return backgroundStyle(settings, { bingImageUrl: bingChosenUrl });
-  }, [settings, bingChosenUrl]);
+    return backgroundStyle(settings, { bingImageUrl: bingChosenUrl, userImageUrl: userChosenUrl });
+  }, [settings, bingChosenUrl, userChosenUrl]);
 
   const dailyLine = useMemo(() => (humorCtx ? pickDailyLine(humorCtx) : null), [humorCtx]);
 
@@ -196,24 +236,44 @@ export default function App() {
     void persist({ ...s, humorBuiltinPackIds: [...set] });
   };
 
-  const onPickBackground = async (f: File | null) => {
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setImportErr("Background must be an image file.");
+  const onPickBackgrounds = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const picked = [...files];
+    for (const f of picked) {
+      if (!f.type.startsWith("image/")) {
+        setImportErr("Backgrounds must be image files.");
+        return;
+      }
+    }
+    const bufs = await Promise.all(picked.map((f) => f.arrayBuffer()));
+    for (const b of bufs) {
+      if (b.byteLength > BG_MAX) {
+        setImportErr("One of the images is too large.");
+        return;
+      }
+    }
+    const total = bufs.reduce((n, b) => n + b.byteLength, 0);
+    if (total > BG_TOTAL_MAX) {
+      setImportErr("Selected images exceed local quota. Pick fewer or smaller files.");
       return;
     }
-    const buf = await f.arrayBuffer();
-    if (buf.byteLength > BG_MAX) {
-      setImportErr("Image too large.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      void persist({ ...s, backgroundKind: "image", userBackgroundDataUrl: dataUrl });
-      setImportErr(null);
-    };
-    reader.readAsDataURL(f);
+
+    const toDataUrl = (f: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Failed to read file."));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(f);
+      });
+    const dataUrls = await Promise.all(picked.map((f) => toDataUrl(f)));
+    const first = dataUrls[0] ?? null;
+    void persist({
+      ...s,
+      backgroundKind: "image",
+      userBackgroundDataUrl: first,
+      userBackgroundDataUrls: dataUrls,
+    });
+    setImportErr(null);
   };
 
   const scheduleAlarm = async () => {
@@ -287,7 +347,7 @@ export default function App() {
       {openSettings ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setOpenSettings(false)}>
           <div
-            className="modal"
+            className="modal settings-modal"
             role="dialog"
             aria-label="Settings"
             onClick={(e) => e.stopPropagation()}
@@ -304,521 +364,563 @@ export default function App() {
               </button>
             </header>
             <div className="modal-body">
-              <section className="settings-block">
-                <h3>Presets</h3>
-                <div className="row wrap">
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist(applyPreset("focus", s))}
-                  >
-                    <Target size={18} strokeWidth={2} aria-hidden />
-                    <span>Focus</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist(applyPreset("balanced", s))}
-                  >
-                    <Scale size={18} strokeWidth={2} aria-hidden />
-                    <span>Balanced</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist(applyPreset("chaos", s))}
-                  >
-                    <Flame size={18} strokeWidth={2} aria-hidden />
-                    <span>Chaos</span>
-                  </button>
-                </div>
-              </section>
+              <div className="settings-accordion">
+                <details className="acc-item" open>
+                  <summary className="acc-summary">
+                    <span className="acc-title">Presets</span>
+                  </summary>
+                  <div className="acc-body">
+                    <div className="row wrap">
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist(applyPreset("focus", s))}
+                      >
+                        <Target size={18} strokeWidth={2} aria-hidden />
+                        <span>Focus</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist(applyPreset("balanced", s))}
+                      >
+                        <Scale size={18} strokeWidth={2} aria-hidden />
+                        <span>Balanced</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist(applyPreset("chaos", s))}
+                      >
+                        <Flame size={18} strokeWidth={2} aria-hidden />
+                        <span>Chaos</span>
+                      </button>
+                    </div>
+                  </div>
+                </details>
 
-              <section className="settings-block">
-                <h3>Widgets</h3>
-                {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
-                  <label key={k} className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={s.widgets[k]}
-                      onChange={(e) => toggleWidget(k, e.target.checked)}
-                    />
-                    <span>{WIDGET_LABELS[k]}</span>
-                  </label>
-                ))}
-              </section>
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Widgets</span>
+                  </summary>
+                  <div className="acc-body">
+                    {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
+                      <label key={k} className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.widgets[k]}
+                          onChange={(e) => toggleWidget(k, e.target.checked)}
+                        />
+                        <span>{WIDGET_LABELS[k]}</span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
 
-              <section className="settings-block">
-                <h3>Chaos</h3>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={s.humorEnabled}
-                    onChange={(e) => void persist({ ...s, humorEnabled: e.target.checked })}
-                  />
-                  <span>Humor on</span>
-                </label>
-                <label className="block">
-                  Intensity
-                  <select
-                    value={s.humorIntensity}
-                    onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
-                  >
-                    <option value="off">off</option>
-                    <option value="mild">mild</option>
-                    <option value="spicy">spicy</option>
-                    <option value="unhinged">unhinged</option>
-                  </select>
-                </label>
-                <p className="muted sm">Builtin packs (filtered for built-in lines only):</p>
-                {BUILTIN_PACKS.map((p) => (
-                  <label key={p.id} className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={s.humorBuiltinPackIds.includes(p.id)}
-                      onChange={(e) => togglePack(p.id, e.target.checked)}
-                    />
-                    <span>
-                      {p.name} <span className="muted sm">({p.maxIntensity})</span>
-                    </span>
-                  </label>
-                ))}
-              </section>
-
-              <section className="settings-block">
-                <h3>Search engine</h3>
-                <select
-                  value={s.searchEngine}
-                  onChange={(e) =>
-                    void persist({
-                      ...s,
-                      searchEngine: e.target.value as ISettings["searchEngine"],
-                    })
-                  }
-                >
-                  <option value="ddg">DuckDuckGo</option>
-                  <option value="google">Google</option>
-                  <option value="bing">Bing</option>
-                </select>
-              </section>
-
-              <section className="settings-block">
-                <h3>Background</h3>
-                <div className="row wrap">
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist({ ...s, backgroundKind: "solid" })}
-                  >
-                    <Square size={18} strokeWidth={2} aria-hidden />
-                    <span>Solid</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist({ ...s, backgroundKind: "gradient" })}
-                  >
-                    <Paintbrush size={18} strokeWidth={2} aria-hidden />
-                    <span>Gradient</span>
-                  </button>
-                  <label className="btn has-icon">
-                    <ImagePlus size={18} strokeWidth={2} aria-hidden />
-                    <span>Image</span>
-                    <input
-                      hidden
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => void onPickBackground(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={() => void persist({ ...s, backgroundKind: "bing" })}
-                  >
-                    <Images size={18} strokeWidth={2} aria-hidden />
-                    <span>Bing spotlight</span>
-                  </button>
-                </div>
-                {s.backgroundKind === "bing" && bingFetchErr ? (
-                  <p className="muted sm" role="status">
-                    Bing wallpaper: {bingFetchErr}
-                  </p>
-                ) : null}
-                <label className="block">
-                  Solid color
-                  <input
-                    type="color"
-                    value={s.backgroundSolid}
-                    onChange={(e) => void persist({ ...s, backgroundSolid: e.target.value })}
-                  />
-                </label>
-              </section>
-
-              <section className="settings-block">
-                <h3>Weather location</h3>
-                <button
-                  type="button"
-                  className="btn has-icon"
-                  onClick={() => {
-                    if (!navigator.geolocation) return;
-                    navigator.geolocation.getCurrentPosition(
-                      (pos) => {
-                        void persist({
-                          ...s,
-                          weatherLat: pos.coords.latitude,
-                          weatherLon: pos.coords.longitude,
-                        });
-                      },
-                      () => undefined,
-                    );
-                  }}
-                >
-                  <MapPin size={18} strokeWidth={2} aria-hidden />
-                  <span>Use my location (once)</span>
-                </button>
-                <div className="row">
-                  <label className="block">
-                    Lat
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={s.weatherLat}
-                      onChange={(e) => void persist({ ...s, weatherLat: Number(e.target.value) })}
-                    />
-                  </label>
-                  <label className="block">
-                    Lon
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={s.weatherLon}
-                      onChange={(e) => void persist({ ...s, weatherLon: Number(e.target.value) })}
-                    />
-                  </label>
-                </div>
-              </section>
-
-              <section className="settings-block">
-                <h3>Optional permissions</h3>
-                <div className="row wrap">
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={async () => {
-                      const ok = await browser.permissions.request({ permissions: ["topSites"] });
-                      if (ok) void persist({ ...s, widgets: { ...s.widgets, topSites: true } });
-                    }}
-                  >
-                    <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                    <span>Enable Top sites</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={async () => {
-                      const ok = await browser.permissions.request({ permissions: ["bookmarks"] });
-                      if (ok)
-                        void persist({ ...s, widgets: { ...s.widgets, bookmarksStrip: true } });
-                    }}
-                  >
-                    <Bookmark size={18} strokeWidth={2} aria-hidden />
-                    <span>Enable Bookmarks</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    onClick={async () => {
-                      const ok = await browser.permissions.request({ permissions: ["tabs"] });
-                      if (ok) void persist({ ...s, widgets: { ...s.widgets, tabGuilt: true } });
-                    }}
-                  >
-                    <Layers size={18} strokeWidth={2} aria-hidden />
-                    <span>Enable Tab guilt (tabs)</span>
-                  </button>
-                </div>
-              </section>
-
-              <section className="settings-block">
-                <h3>Alarm (notification)</h3>
-                <input id="alarm-when" type="datetime-local" />
-                <input id="alarm-msg" type="text" placeholder="Message" className="mt-2 w-full" />
-                <button
-                  type="button"
-                  className="btn primary has-icon mt-2"
-                  onClick={() => void scheduleAlarm()}
-                >
-                  <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                  <span>Schedule</span>
-                </button>
-              </section>
-
-              <section className="settings-block">
-                <h3>BYO AI (OpenAI-compatible)</h3>
-                <p className="muted sm">You pay your provider. Nothing is sent without your key.</p>
-                <input
-                  placeholder="API key"
-                  type="password"
-                  autoComplete="off"
-                  value={s.openaiApiKey}
-                  onChange={(e) => void persist({ ...s, openaiApiKey: e.target.value })}
-                  className="w-full"
-                />
-                <input
-                  placeholder="Base URL"
-                  value={s.openaiBaseUrl}
-                  onChange={(e) => void persist({ ...s, openaiBaseUrl: e.target.value })}
-                  className="mt-2 w-full"
-                />
-                <button
-                  type="button"
-                  className="btn has-icon mt-2"
-                  onClick={async () => {
-                    setAiResult(null);
-                    if (!s.openaiApiKey) {
-                      setAiResult("Add an API key first.");
-                      return;
-                    }
-                    if (s.openaiBaseUrl.includes("api.openai.com")) {
-                      const granted = await browser.permissions.contains({
-                        origins: ["https://api.openai.com/*"],
-                      });
-                      if (!granted) {
-                        const ok = await browser.permissions.request({
-                          origins: ["https://api.openai.com/*"],
-                        });
-                        if (!ok) {
-                          setAiResult("Host permission denied for api.openai.com");
-                          return;
-                        }
-                      }
-                    }
-                    const r = await testOpenAiCompatible({
-                      apiKey: s.openaiApiKey,
-                      baseUrl: s.openaiBaseUrl,
-                    });
-                    setAiResult(r.ok ? r.reply : r.error);
-                  }}
-                >
-                  <Sparkles size={18} strokeWidth={2} aria-hidden />
-                  <span>Test chat completion</span>
-                </button>
-                {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
-              </section>
-
-              <section className="settings-block">
-                <h3>My lines (local)</h3>
-                <textarea
-                  rows={4}
-                  className="w-full"
-                  placeholder="One joke per line — saved when you leave this field"
-                  defaultValue={s.myLines.join("\n")}
-                  key={s.importedPacks.length + s.myLines.length}
-                  onBlur={(e) =>
-                    void persist({
-                      ...s,
-                      myLines: e.target.value
-                        .split("\n")
-                        .map((x) => x.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </section>
-
-              <section className="settings-block">
-                <h3>Import pack (.zip with pack.json or .json)</h3>
-                <label className="btn has-icon">
-                  <FolderUp size={18} strokeWidth={2} aria-hidden />
-                  <span>Choose file</span>
-                  <input
-                    hidden
-                    type="file"
-                    accept=".zip,.json,application/json"
-                    onChange={(e) => void importPackFile(e.target.files![0]!)}
-                  />
-                </label>
-                <p className="muted sm">You are responsible for imported content.</p>
-              </section>
-
-              <section className="settings-block">
-                <h3>Import declarative plugin (tabocalypse-plugin.json)</h3>
-                <label className="btn has-icon">
-                  <Braces size={18} strokeWidth={2} aria-hidden />
-                  <span>Choose JSON</span>
-                  <input
-                    hidden
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(e) => void importPluginFile(e.target.files![0]!)}
-                  />
-                </label>
-                <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
-              </section>
-
-              <section className="settings-block">
-                <h3>Manage imports</h3>
-                <p className="muted sm">Packs</p>
-                {s.importedPacks.map((p) => (
-                  <div key={p.id} className="row manage-row">
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Chaos</span>
+                  </summary>
+                  <div className="acc-body">
                     <label className="check-row">
                       <input
                         type="checkbox"
-                        checked={p.enabled}
-                        onChange={(e) =>
-                          void persist({
-                            ...s,
-                            importedPacks: s.importedPacks.map((x) =>
-                              x.id === p.id ? { ...x, enabled: e.target.checked } : x,
-                            ),
-                          })
-                        }
+                        checked={s.humorEnabled}
+                        onChange={(e) => void persist({ ...s, humorEnabled: e.target.checked })}
                       />
-                      <span>{p.name}</span>
+                      <span>Humor on</span>
                     </label>
-                    <button
-                      type="button"
-                      className="btn ghost sm has-icon"
-                      onClick={() =>
+                    <label className="block">
+                      Intensity
+                      <select
+                        value={s.humorIntensity}
+                        onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
+                      >
+                        <option value="off">off</option>
+                        <option value="mild">mild</option>
+                        <option value="spicy">spicy</option>
+                        <option value="unhinged">unhinged</option>
+                      </select>
+                    </label>
+                    <p className="muted sm">Builtin packs (filtered for built-in lines only):</p>
+                    {BUILTIN_PACKS.map((p) => (
+                      <label key={p.id} className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.humorBuiltinPackIds.includes(p.id)}
+                          onChange={(e) => togglePack(p.id, e.target.checked)}
+                        />
+                        <span>
+                          {p.name} <span className="muted sm">({p.maxIntensity})</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Search engine</span>
+                  </summary>
+                  <div className="acc-body">
+                    <select
+                      value={s.searchEngine}
+                      onChange={(e) =>
                         void persist({
                           ...s,
-                          importedPacks: s.importedPacks.filter((x) => x.id !== p.id),
+                          searchEngine: e.target.value as ISettings["searchEngine"],
                         })
                       }
                     >
-                      <Trash2 size={18} strokeWidth={2} aria-hidden />
-                      <span>Remove</span>
-                    </button>
+                      <option value="ddg">DuckDuckGo</option>
+                      <option value="google">Google</option>
+                      <option value="bing">Bing</option>
+                    </select>
                   </div>
-                ))}
-                <p className="muted sm">Plugins</p>
-                {s.importedPlugins.map((p) => (
-                  <div key={p.id} className="row manage-row">
-                    <label className="check-row">
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Background</span>
+                  </summary>
+                  <div className="acc-body">
+                    <div className="row wrap">
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist({ ...s, backgroundKind: "solid" })}
+                      >
+                        <Square size={18} strokeWidth={2} aria-hidden />
+                        <span>Solid</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist({ ...s, backgroundKind: "gradient" })}
+                      >
+                        <Paintbrush size={18} strokeWidth={2} aria-hidden />
+                        <span>Gradient</span>
+                      </button>
+                      <label className="btn has-icon">
+                        <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                        <span>Upload image(s)</span>
+                        <input
+                          hidden
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => void onPickBackgrounds(e.target.files)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => void persist({ ...s, backgroundKind: "bing" })}
+                      >
+                        <Images size={18} strokeWidth={2} aria-hidden />
+                        <span>Bing spotlight</span>
+                      </button>
+                    </div>
+
+                    <label className="check-row mt-3">
                       <input
                         type="checkbox"
-                        checked={p.enabled}
-                        onChange={(e) =>
+                        checked={s.backgroundRotate}
+                        onChange={(e) => void persist({ ...s, backgroundRotate: e.target.checked })}
+                      />
+                      <span>Rotate background</span>
+                    </label>
+                    <p className="muted sm">
+                      Upload rotation changes every ~15 minutes while this tab is open.
+                    </p>
+
+                    {s.backgroundKind === "bing" && bingFetchErr ? (
+                      <p className="muted sm" role="status">
+                        Bing wallpaper: {bingFetchErr}
+                      </p>
+                    ) : null}
+
+                    <label className="block">
+                      Solid color
+                      <input
+                        type="color"
+                        value={s.backgroundSolid}
+                        onChange={(e) => void persist({ ...s, backgroundSolid: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                </details>
+
+                <section className="settings-block">
+                  <h3>Weather location</h3>
+                  <button
+                    type="button"
+                    className="btn has-icon"
+                    onClick={() => {
+                      if (!navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
                           void persist({
                             ...s,
-                            importedPlugins: s.importedPlugins.map((x) =>
-                              x.id === p.id ? { ...x, enabled: e.target.checked } : x,
-                            ),
-                          })
-                        }
-                      />
-                      <span>{p.name}</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="btn ghost sm has-icon"
-                      onClick={() =>
-                        void persist({
-                          ...s,
-                          importedPlugins: s.importedPlugins.filter((x) => x.id !== p.id),
-                        })
-                      }
-                    >
-                      <Trash2 size={18} strokeWidth={2} aria-hidden />
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                ))}
-              </section>
-
-              <section className="settings-block">
-                <h3>Debug</h3>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={s.debugPluginSource}
-                    onChange={(e) => void persist({ ...s, debugPluginSource: e.target.checked })}
-                  />
-                  <span>Show plugin widget types</span>
-                </label>
-              </section>
-
-              <section className="settings-block">
-                <h3>Data</h3>
-                <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
-                  <Download size={18} strokeWidth={2} aria-hidden />
-                  <span>Export settings JSON</span>
-                </button>
-                <label className="btn has-icon ml-2">
-                  <Upload size={18} strokeWidth={2} aria-hidden />
-                  <span>Import settings JSON</span>
-                  <input
-                    hidden
-                    type="file"
-                    accept="application/json"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        try {
-                          const parsed = JSON.parse(String(reader.result)) as Partial<ISettings>;
-                          const d = defaultSettings();
-                          const merged: ISettings = {
-                            ...d,
-                            ...parsed,
-                            version: 1,
-                            widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
-                          };
-                          void persist(merged);
-                        } catch {
-                          setImportErr("Invalid settings JSON");
-                        }
-                      };
-                      reader.readAsText(f);
+                            weatherLat: pos.coords.latitude,
+                            weatherLon: pos.coords.longitude,
+                          });
+                        },
+                        () => undefined,
+                      );
                     }}
-                  />
-                </label>
-              </section>
+                  >
+                    <MapPin size={18} strokeWidth={2} aria-hidden />
+                    <span>Use my location (once)</span>
+                  </button>
+                  <div className="row">
+                    <label className="block">
+                      Lat
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={s.weatherLat}
+                        onChange={(e) => void persist({ ...s, weatherLat: Number(e.target.value) })}
+                      />
+                    </label>
+                    <label className="block">
+                      Lon
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={s.weatherLon}
+                        onChange={(e) => void persist({ ...s, weatherLon: Number(e.target.value) })}
+                      />
+                    </label>
+                  </div>
+                </section>
 
-              <section className="settings-block support-block">
-                <h3>Fuel the chaos / Ideas</h3>
-                <p className="muted sm">
-                  Optional support — opens third-party sites. Tabocalypse does not process payments.
-                </p>
-                <div className="row wrap">
-                  {SUPPORT.featureUrl ? (
-                    <button
-                      type="button"
-                      className="btn primary has-icon"
-                      onClick={() => openExternal(SUPPORT.featureUrl)}
-                    >
-                      <Lightbulb size={18} strokeWidth={2} aria-hidden />
-                      <span>Suggest a feature</span>
-                    </button>
-                  ) : null}
-                  {SUPPORT.donateUrl ? (
+                <section className="settings-block">
+                  <h3>Optional permissions</h3>
+                  <div className="row wrap">
                     <button
                       type="button"
                       className="btn has-icon"
-                      onClick={() => openExternal(SUPPORT.donateUrl)}
+                      onClick={async () => {
+                        const ok = await browser.permissions.request({ permissions: ["topSites"] });
+                        if (ok) void persist({ ...s, widgets: { ...s.widgets, topSites: true } });
+                      }}
                     >
-                      <Heart size={18} strokeWidth={2} aria-hidden />
-                      <span>Donate</span>
+                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                      <span>Enable Top sites</span>
                     </button>
-                  ) : null}
-                  {SUPPORT.githubUrl ? (
                     <button
                       type="button"
-                      className="btn ghost has-icon"
-                      onClick={() => openExternal(SUPPORT.githubUrl)}
+                      className="btn has-icon"
+                      onClick={async () => {
+                        const ok = await browser.permissions.request({
+                          permissions: ["bookmarks"],
+                        });
+                        if (ok)
+                          void persist({ ...s, widgets: { ...s.widgets, bookmarksStrip: true } });
+                      }}
                     >
-                      <ExternalLink size={18} strokeWidth={2} aria-hidden />
-                      <span>GitHub</span>
+                      <Bookmark size={18} strokeWidth={2} aria-hidden />
+                      <span>Enable Bookmarks</span>
                     </button>
-                  ) : null}
-                </div>
-                <p className="muted sm">
-                  Set <code>WXT_TABOCALYPSE_FEATURE_URL</code>,{" "}
-                  <code>WXT_TABOCALYPSE_DONATE_URL</code>, <code>WXT_TABOCALYPSE_GITHUB_URL</code>{" "}
-                  in <code>.env</code>.
-                </p>
-              </section>
+                    <button
+                      type="button"
+                      className="btn has-icon"
+                      onClick={async () => {
+                        const ok = await browser.permissions.request({ permissions: ["tabs"] });
+                        if (ok) void persist({ ...s, widgets: { ...s.widgets, tabGuilt: true } });
+                      }}
+                    >
+                      <Layers size={18} strokeWidth={2} aria-hidden />
+                      <span>Enable Tab guilt (tabs)</span>
+                    </button>
+                  </div>
+                </section>
+
+                <section className="settings-block">
+                  <h3>Alarm (notification)</h3>
+                  <input id="alarm-when" type="datetime-local" />
+                  <input id="alarm-msg" type="text" placeholder="Message" className="mt-2 w-full" />
+                  <button
+                    type="button"
+                    className="btn primary has-icon mt-2"
+                    onClick={() => void scheduleAlarm()}
+                  >
+                    <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                    <span>Schedule</span>
+                  </button>
+                </section>
+
+                <section className="settings-block">
+                  <h3>BYO AI (OpenAI-compatible)</h3>
+                  <p className="muted sm">
+                    You pay your provider. Nothing is sent without your key.
+                  </p>
+                  <input
+                    placeholder="API key"
+                    type="password"
+                    autoComplete="off"
+                    value={s.openaiApiKey}
+                    onChange={(e) => void persist({ ...s, openaiApiKey: e.target.value })}
+                    className="w-full"
+                  />
+                  <input
+                    placeholder="Base URL"
+                    value={s.openaiBaseUrl}
+                    onChange={(e) => void persist({ ...s, openaiBaseUrl: e.target.value })}
+                    className="mt-2 w-full"
+                  />
+                  <button
+                    type="button"
+                    className="btn has-icon mt-2"
+                    onClick={async () => {
+                      setAiResult(null);
+                      if (!s.openaiApiKey) {
+                        setAiResult("Add an API key first.");
+                        return;
+                      }
+                      if (s.openaiBaseUrl.includes("api.openai.com")) {
+                        const granted = await browser.permissions.contains({
+                          origins: ["https://api.openai.com/*"],
+                        });
+                        if (!granted) {
+                          const ok = await browser.permissions.request({
+                            origins: ["https://api.openai.com/*"],
+                          });
+                          if (!ok) {
+                            setAiResult("Host permission denied for api.openai.com");
+                            return;
+                          }
+                        }
+                      }
+                      const r = await testOpenAiCompatible({
+                        apiKey: s.openaiApiKey,
+                        baseUrl: s.openaiBaseUrl,
+                      });
+                      setAiResult(r.ok ? r.reply : r.error);
+                    }}
+                  >
+                    <Sparkles size={18} strokeWidth={2} aria-hidden />
+                    <span>Test chat completion</span>
+                  </button>
+                  {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
+                </section>
+
+                <section className="settings-block">
+                  <h3>My lines (local)</h3>
+                  <textarea
+                    rows={4}
+                    className="w-full"
+                    placeholder="One joke per line — saved when you leave this field"
+                    defaultValue={s.myLines.join("\n")}
+                    key={s.importedPacks.length + s.myLines.length}
+                    onBlur={(e) =>
+                      void persist({
+                        ...s,
+                        myLines: e.target.value
+                          .split("\n")
+                          .map((x) => x.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </section>
+
+                <section className="settings-block">
+                  <h3>Import pack (.zip with pack.json or .json)</h3>
+                  <label className="btn has-icon">
+                    <FolderUp size={18} strokeWidth={2} aria-hidden />
+                    <span>Choose file</span>
+                    <input
+                      hidden
+                      type="file"
+                      accept=".zip,.json,application/json"
+                      onChange={(e) => void importPackFile(e.target.files![0]!)}
+                    />
+                  </label>
+                  <p className="muted sm">You are responsible for imported content.</p>
+                </section>
+
+                <section className="settings-block">
+                  <h3>Import declarative plugin (tabocalypse-plugin.json)</h3>
+                  <label className="btn has-icon">
+                    <Braces size={18} strokeWidth={2} aria-hidden />
+                    <span>Choose JSON</span>
+                    <input
+                      hidden
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(e) => void importPluginFile(e.target.files![0]!)}
+                    />
+                  </label>
+                  <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
+                </section>
+
+                <section className="settings-block">
+                  <h3>Manage imports</h3>
+                  <p className="muted sm">Packs</p>
+                  {s.importedPacks.map((p) => (
+                    <div key={p.id} className="row manage-row">
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={p.enabled}
+                          onChange={(e) =>
+                            void persist({
+                              ...s,
+                              importedPacks: s.importedPacks.map((x) =>
+                                x.id === p.id ? { ...x, enabled: e.target.checked } : x,
+                              ),
+                            })
+                          }
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="btn ghost sm has-icon"
+                        onClick={() =>
+                          void persist({
+                            ...s,
+                            importedPacks: s.importedPacks.filter((x) => x.id !== p.id),
+                          })
+                        }
+                      >
+                        <Trash2 size={18} strokeWidth={2} aria-hidden />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  ))}
+                  <p className="muted sm">Plugins</p>
+                  {s.importedPlugins.map((p) => (
+                    <div key={p.id} className="row manage-row">
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={p.enabled}
+                          onChange={(e) =>
+                            void persist({
+                              ...s,
+                              importedPlugins: s.importedPlugins.map((x) =>
+                                x.id === p.id ? { ...x, enabled: e.target.checked } : x,
+                              ),
+                            })
+                          }
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="btn ghost sm has-icon"
+                        onClick={() =>
+                          void persist({
+                            ...s,
+                            importedPlugins: s.importedPlugins.filter((x) => x.id !== p.id),
+                          })
+                        }
+                      >
+                        <Trash2 size={18} strokeWidth={2} aria-hidden />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  ))}
+                </section>
+
+                <section className="settings-block">
+                  <h3>Debug</h3>
+                  <label className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={s.debugPluginSource}
+                      onChange={(e) => void persist({ ...s, debugPluginSource: e.target.checked })}
+                    />
+                    <span>Show plugin widget types</span>
+                  </label>
+                </section>
+
+                <section className="settings-block">
+                  <h3>Data</h3>
+                  <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
+                    <Download size={18} strokeWidth={2} aria-hidden />
+                    <span>Export settings JSON</span>
+                  </button>
+                  <label className="btn has-icon ml-2">
+                    <Upload size={18} strokeWidth={2} aria-hidden />
+                    <span>Import settings JSON</span>
+                    <input
+                      hidden
+                      type="file"
+                      accept="application/json"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          try {
+                            const parsed = JSON.parse(String(reader.result)) as Partial<ISettings>;
+                            const d = defaultSettings();
+                            const merged: ISettings = {
+                              ...d,
+                              ...parsed,
+                              version: 1,
+                              widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
+                            };
+                            void persist(merged);
+                          } catch {
+                            setImportErr("Invalid settings JSON");
+                          }
+                        };
+                        reader.readAsText(f);
+                      }}
+                    />
+                  </label>
+                </section>
+
+                <section className="settings-block support-block">
+                  <h3>Fuel the chaos / Ideas</h3>
+                  <p className="muted sm">
+                    Optional support — opens third-party sites. Tabocalypse does not process
+                    payments.
+                  </p>
+                  <div className="row wrap">
+                    {SUPPORT.featureUrl ? (
+                      <button
+                        type="button"
+                        className="btn primary has-icon"
+                        onClick={() => openExternal(SUPPORT.featureUrl)}
+                      >
+                        <Lightbulb size={18} strokeWidth={2} aria-hidden />
+                        <span>Suggest a feature</span>
+                      </button>
+                    ) : null}
+                    {SUPPORT.donateUrl ? (
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        onClick={() => openExternal(SUPPORT.donateUrl)}
+                      >
+                        <Heart size={18} strokeWidth={2} aria-hidden />
+                        <span>Donate</span>
+                      </button>
+                    ) : null}
+                    {SUPPORT.githubUrl ? (
+                      <button
+                        type="button"
+                        className="btn ghost has-icon"
+                        onClick={() => openExternal(SUPPORT.githubUrl)}
+                      >
+                        <ExternalLink size={18} strokeWidth={2} aria-hidden />
+                        <span>GitHub</span>
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="muted sm">
+                    Set <code>WXT_TABOCALYPSE_FEATURE_URL</code>,{" "}
+                    <code>WXT_TABOCALYPSE_DONATE_URL</code>, <code>WXT_TABOCALYPSE_GITHUB_URL</code>{" "}
+                    in <code>.env</code>.
+                  </p>
+                </section>
+              </div>
             </div>
           </div>
         </div>
