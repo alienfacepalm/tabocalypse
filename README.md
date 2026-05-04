@@ -71,11 +71,26 @@ GitHub Actions runs **`pnpm run check`** then **`pnpm run build`** on pushes and
 
 ## Configure support URLs
 
-Copy [`apps/extension/.env.example`](apps/extension/.env.example) to `apps/extension/.env` (or project root per WXT docs) and set:
+Copy [`apps/extension/.env.example`](apps/extension/.env.example) to `apps/extension/.env` (or project root per WXT docs).
+
+**Option A — JSON list (any number of rows):** set `WXT_TABOCALYPSE_SUPPORT_LINKS` to a single-line JSON array. Each object needs `label` and `url` (`https://` or `http://`). Optional `kind` picks the default icon: `feedback`, `donate`, `source`, or `link`.
+
+Example:
+
+```json
+[
+  { "label": "Send feedback", "url": "https://example.com/form", "kind": "feedback" },
+  { "label": "Donate", "url": "https://example.com/donate", "kind": "donate" }
+]
+```
+
+**Option B — fixed trio:** if `WXT_TABOCALYPSE_SUPPORT_LINKS` is unset or empty, these are used when set:
 
 - `WXT_TABOCALYPSE_DONATE_URL`
 - `WXT_TABOCALYPSE_FEATURE_URL` (e.g. GitHub Issues or Google Form)
 - `WXT_TABOCALYPSE_GITHUB_URL`
+
+If `WXT_TABOCALYPSE_SUPPORT_LINKS` is set but is not valid JSON array syntax, the build falls back to option B.
 
 ## User packs
 

@@ -54,7 +54,7 @@ After code changes, use the browser’s **reload extension** control; for `dev`,
 
 ## Configuration
 
-- **Support / donate / GitHub links:** copy [`apps/extension/.env.example`](../apps/extension/.env.example) to `apps/extension/.env` and set `WXT_TABOCALYPSE_*` variables (see [README](../README.md)).
+- **Feedback / donate / outbound links:** copy [`apps/extension/.env.example`](../apps/extension/.env.example) to `apps/extension/.env` and set `WXT_TABOCALYPSE_SUPPORT_LINKS` (JSON list) and/or the legacy `WXT_TABOCALYPSE_*_URL` variables (see [README](../README.md)).
 - **Manifest and browser IDs:** [`apps/extension/wxt.config.ts`](../apps/extension/wxt.config.ts) — especially Firefox `browser_specific_settings.gecko.id` before AMO release.
 
 ## Conventions for contributors
