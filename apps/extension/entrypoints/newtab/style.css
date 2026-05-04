@@ -148,6 +148,16 @@ select:focus {
   font-size: 0.9rem;
 }
 
+.btn.has-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn.has-icon svg {
+  flex-shrink: 0;
+}
+
 .btn.primary {
   background: linear-gradient(135deg, var(--accent), #8b2f0a);
   border-color: transparent;

@@ -45,7 +45,7 @@ export interface ISettings {
   weatherLon: number;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
-  backgroundKind: "solid" | "gradient" | "image";
+  backgroundKind: "solid" | "gradient" | "image" | "bing";
   backgroundSolid: string;
   userBackgroundDataUrl: string | null;
   openWeatherApiKey: string;

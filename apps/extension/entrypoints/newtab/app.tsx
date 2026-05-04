@@ -1,5 +1,31 @@
 import browser from "webextension-polyfill";
-import { Settings as SettingsIcon } from "lucide-react";
+import {
+  Bookmark,
+  Braces,
+  CalendarClock,
+  CheckCircle2,
+  CircleX,
+  Download,
+  ExternalLink,
+  Flame,
+  FolderUp,
+  Heart,
+  ImagePlus,
+  Images,
+  LayoutGrid,
+  Layers,
+  Lightbulb,
+  MapPin,
+  Paintbrush,
+  Scale,
+  Settings as SettingsIcon,
+  Sparkles,
+  Square,
+  Target,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { ClockWidget } from "../../components/clock-widget";
@@ -27,10 +53,31 @@ import {
   parsePackJsonText,
   parseTabocalypseZip,
 } from "../../lib/user-packs";
+import {
+  fetchBingWallpaperImageUrls,
+  pickRotatingBingWallpaperUrl,
+} from "../../lib/fetch-bing-wallpaper";
 
 const BG_MAX = 1_500_000;
 
-function backgroundStyle(s: ISettings): React.CSSProperties {
+type TBackgroundStyleExtras = {
+  bingImageUrl?: string | null;
+};
+
+function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
+  if (s.backgroundKind === "bing") {
+    const u = extras?.bingImageUrl;
+    if (u) {
+      return {
+        backgroundImage: `url(${u})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    return {
+      background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+    };
+  }
   if (s.backgroundKind === "solid") {
     return { background: s.backgroundSolid };
   }
@@ -55,10 +102,38 @@ export default function App() {
   const [pluginValidateLog, setPluginValidateLog] = useState<string>("");
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [prodScore] = useState(() => Math.floor(20 + Math.random() * 80));
+  const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
+  const [bingFetchErr, setBingFetchErr] = useState<string | null>(null);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
   }, []);
+
+  useEffect(() => {
+    const kind = settings?.backgroundKind;
+    if (kind !== "bing") {
+      setBingChosenUrl(null);
+      setBingFetchErr(null);
+      return;
+    }
+    const ac = new AbortController();
+    setBingChosenUrl(null);
+    setBingFetchErr(null);
+    void fetchBingWallpaperImageUrls(ac.signal)
+      .then((urls) => {
+        if (ac.signal.aborted) return;
+        if (urls.length === 0) {
+          setBingFetchErr("No images returned.");
+          return;
+        }
+        setBingChosenUrl(pickRotatingBingWallpaperUrl(urls));
+      })
+      .catch((e: unknown) => {
+        if (ac.signal.aborted) return;
+        setBingFetchErr(e instanceof Error ? e.message : String(e));
+      });
+    return () => ac.abort();
+  }, [settings?.backgroundKind]);
 
   const persist = useCallback(async (next: ISettings) => {
     setSettings(next);
@@ -76,6 +151,11 @@ export default function App() {
       locale: navigator.language,
     };
   }, [settings]);
+
+  const shellStyle = useMemo(() => {
+    if (!settings) return undefined;
+    return backgroundStyle(settings, { bingImageUrl: bingChosenUrl });
+  }, [settings, bingChosenUrl]);
 
   const dailyLine = useMemo(() => (humorCtx ? pickDailyLine(humorCtx) : null), [humorCtx]);
 
@@ -202,7 +282,7 @@ export default function App() {
   };
 
   return (
-    <div className="shell" style={backgroundStyle(s)}>
+    <div className="shell" style={shellStyle}>
       {openSettings ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setOpenSettings(false)}>
           <div
@@ -213,8 +293,13 @@ export default function App() {
           >
             <header className="modal-head">
               <h2>Settings</h2>
-              <button type="button" className="btn ghost" onClick={() => setOpenSettings(false)}>
-                Close
+              <button
+                type="button"
+                className="btn ghost has-icon"
+                onClick={() => setOpenSettings(false)}
+              >
+                <X size={18} strokeWidth={2} aria-hidden />
+                <span>Close</span>
               </button>
             </header>
             <div className="modal-body">
@@ -223,24 +308,27 @@ export default function App() {
                 <div className="row wrap">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={() => void persist(applyPreset("focus", s))}
                   >
-                    Focus
+                    <Target size={18} strokeWidth={2} aria-hidden />
+                    <span>Focus</span>
                   </button>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={() => void persist(applyPreset("balanced", s))}
                   >
-                    Balanced
+                    <Scale size={18} strokeWidth={2} aria-hidden />
+                    <span>Balanced</span>
                   </button>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={() => void persist(applyPreset("chaos", s))}
                   >
-                    Chaos
+                    <Flame size={18} strokeWidth={2} aria-hidden />
+                    <span>Chaos</span>
                   </button>
                 </div>
               </section>
@@ -318,20 +406,23 @@ export default function App() {
                 <div className="row wrap">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={() => void persist({ ...s, backgroundKind: "solid" })}
                   >
-                    Solid
+                    <Square size={18} strokeWidth={2} aria-hidden />
+                    <span>Solid</span>
                   </button>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={() => void persist({ ...s, backgroundKind: "gradient" })}
                   >
-                    Gradient
+                    <Paintbrush size={18} strokeWidth={2} aria-hidden />
+                    <span>Gradient</span>
                   </button>
-                  <label className="btn">
-                    Image
+                  <label className="btn has-icon">
+                    <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                    <span>Image</span>
                     <input
                       hidden
                       type="file"
@@ -339,7 +430,20 @@ export default function App() {
                       onChange={(e) => void onPickBackground(e.target.files?.[0] ?? null)}
                     />
                   </label>
+                  <button
+                    type="button"
+                    className="btn has-icon"
+                    onClick={() => void persist({ ...s, backgroundKind: "bing" })}
+                  >
+                    <Images size={18} strokeWidth={2} aria-hidden />
+                    <span>Bing spotlight</span>
+                  </button>
                 </div>
+                {s.backgroundKind === "bing" && bingFetchErr ? (
+                  <p className="muted sm" role="status">
+                    Bing wallpaper: {bingFetchErr}
+                  </p>
+                ) : null}
                 <label className="block">
                   Solid color
                   <input
@@ -354,7 +458,7 @@ export default function App() {
                 <h3>Weather location</h3>
                 <button
                   type="button"
-                  className="btn"
+                  className="btn has-icon"
                   onClick={() => {
                     if (!navigator.geolocation) return;
                     navigator.geolocation.getCurrentPosition(
@@ -369,7 +473,8 @@ export default function App() {
                     );
                   }}
                 >
-                  Use my location (once)
+                  <MapPin size={18} strokeWidth={2} aria-hidden />
+                  <span>Use my location (once)</span>
                 </button>
                 <div className="row">
                   <label className="block">
@@ -398,34 +503,37 @@ export default function App() {
                 <div className="row wrap">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={async () => {
                       const ok = await browser.permissions.request({ permissions: ["topSites"] });
                       if (ok) void persist({ ...s, widgets: { ...s.widgets, topSites: true } });
                     }}
                   >
-                    Enable Top sites
+                    <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                    <span>Enable Top sites</span>
                   </button>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={async () => {
                       const ok = await browser.permissions.request({ permissions: ["bookmarks"] });
                       if (ok)
                         void persist({ ...s, widgets: { ...s.widgets, bookmarksStrip: true } });
                     }}
                   >
-                    Enable Bookmarks
+                    <Bookmark size={18} strokeWidth={2} aria-hidden />
+                    <span>Enable Bookmarks</span>
                   </button>
                   <button
                     type="button"
-                    className="btn"
+                    className="btn has-icon"
                     onClick={async () => {
                       const ok = await browser.permissions.request({ permissions: ["tabs"] });
                       if (ok) void persist({ ...s, widgets: { ...s.widgets, tabGuilt: true } });
                     }}
                   >
-                    Enable Tab guilt (tabs)
+                    <Layers size={18} strokeWidth={2} aria-hidden />
+                    <span>Enable Tab guilt (tabs)</span>
                   </button>
                 </div>
               </section>
@@ -441,11 +549,12 @@ export default function App() {
                 />
                 <button
                   type="button"
-                  className="btn primary"
+                  className="btn primary has-icon"
                   style={{ marginTop: 8 }}
                   onClick={() => void scheduleAlarm()}
                 >
-                  Schedule
+                  <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                  <span>Schedule</span>
                 </button>
               </section>
 
@@ -468,7 +577,7 @@ export default function App() {
                 />
                 <button
                   type="button"
-                  className="btn"
+                  className="btn has-icon"
                   style={{ marginTop: 8 }}
                   onClick={async () => {
                     setAiResult(null);
@@ -497,7 +606,8 @@ export default function App() {
                     setAiResult(r.ok ? r.reply : r.error);
                   }}
                 >
-                  Test chat completion
+                  <Sparkles size={18} strokeWidth={2} aria-hidden />
+                  <span>Test chat completion</span>
                 </button>
                 {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
               </section>
@@ -524,8 +634,9 @@ export default function App() {
 
               <section className="settings-block">
                 <h3>Import pack (.zip with pack.json or .json)</h3>
-                <label className="btn">
-                  Choose file
+                <label className="btn has-icon">
+                  <FolderUp size={18} strokeWidth={2} aria-hidden />
+                  <span>Choose file</span>
                   <input
                     hidden
                     type="file"
@@ -538,8 +649,9 @@ export default function App() {
 
               <section className="settings-block">
                 <h3>Import declarative plugin (tabocalypse-plugin.json)</h3>
-                <label className="btn">
-                  Choose JSON
+                <label className="btn has-icon">
+                  <Braces size={18} strokeWidth={2} aria-hidden />
+                  <span>Choose JSON</span>
                   <input
                     hidden
                     type="file"
@@ -577,7 +689,7 @@ export default function App() {
                     </label>
                     <button
                       type="button"
-                      className="btn ghost sm"
+                      className="btn ghost sm has-icon"
                       onClick={() =>
                         void persist({
                           ...s,
@@ -585,7 +697,8 @@ export default function App() {
                         })
                       }
                     >
-                      Remove
+                      <Trash2 size={18} strokeWidth={2} aria-hidden />
+                      <span>Remove</span>
                     </button>
                   </div>
                 ))}
@@ -609,7 +722,7 @@ export default function App() {
                     </label>
                     <button
                       type="button"
-                      className="btn ghost sm"
+                      className="btn ghost sm has-icon"
                       onClick={() =>
                         void persist({
                           ...s,
@@ -617,7 +730,8 @@ export default function App() {
                         })
                       }
                     >
-                      Remove
+                      <Trash2 size={18} strokeWidth={2} aria-hidden />
+                      <span>Remove</span>
                     </button>
                   </div>
                 ))}
@@ -637,11 +751,13 @@ export default function App() {
 
               <section className="settings-block">
                 <h3>Data</h3>
-                <button type="button" className="btn" onClick={exportSettingsJson}>
-                  Export settings JSON
+                <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
+                  <Download size={18} strokeWidth={2} aria-hidden />
+                  <span>Export settings JSON</span>
                 </button>
-                <label className="btn" style={{ marginLeft: 8 }}>
-                  Import settings JSON
+                <label className="btn has-icon" style={{ marginLeft: 8 }}>
+                  <Upload size={18} strokeWidth={2} aria-hidden />
+                  <span>Import settings JSON</span>
                   <input
                     hidden
                     type="file"
@@ -680,28 +796,31 @@ export default function App() {
                   {SUPPORT.featureUrl ? (
                     <button
                       type="button"
-                      className="btn primary"
+                      className="btn primary has-icon"
                       onClick={() => openExternal(SUPPORT.featureUrl)}
                     >
-                      Suggest a feature
+                      <Lightbulb size={18} strokeWidth={2} aria-hidden />
+                      <span>Suggest a feature</span>
                     </button>
                   ) : null}
                   {SUPPORT.donateUrl ? (
                     <button
                       type="button"
-                      className="btn"
+                      className="btn has-icon"
                       onClick={() => openExternal(SUPPORT.donateUrl)}
                     >
-                      Donate
+                      <Heart size={18} strokeWidth={2} aria-hidden />
+                      <span>Donate</span>
                     </button>
                   ) : null}
                   {SUPPORT.githubUrl ? (
                     <button
                       type="button"
-                      className="btn ghost"
+                      className="btn ghost has-icon"
                       onClick={() => openExternal(SUPPORT.githubUrl)}
                     >
-                      GitHub
+                      <ExternalLink size={18} strokeWidth={2} aria-hidden />
+                      <span>GitHub</span>
                     </button>
                   ) : null}
                 </div>
@@ -725,11 +844,17 @@ export default function App() {
               are responsible for imported content.
             </p>
             <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
-              <button type="button" className="btn ghost" onClick={() => setWarnSpicy(false)}>
-                Cancel
+              <button
+                type="button"
+                className="btn ghost has-icon"
+                onClick={() => setWarnSpicy(false)}
+              >
+                <CircleX size={18} strokeWidth={2} aria-hidden />
+                <span>Cancel</span>
               </button>
-              <button type="button" className="btn primary" onClick={() => confirmSpicy()}>
-                I understand
+              <button type="button" className="btn primary has-icon" onClick={() => confirmSpicy()}>
+                <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                <span>I understand</span>
               </button>
             </div>
           </div>

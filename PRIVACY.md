@@ -10,6 +10,7 @@
 ## Network requests (only when you use a feature)
 
 - **Open-Meteo** (`api.open-meteo.com`) when the Weather widget is enabled — approximate location from coordinates you set (or from the browser geolocation prompt if you click “Use my location”).
+- **Bing** (`www.bing.com`) when you choose **Bing spotlight** as the new-tab background — the extension fetches Microsoft’s public daily wallpaper metadata and image URLs (no account; subject to Microsoft’s terms and privacy policy).
 - **Search** opens your chosen engine in a new tab (normal web navigation).
 - **BYO AI test** sends a minimal chat request to the **base URL you configure** (e.g. OpenAI) using **your** API key, only when you click “Test chat completion”. You are subject to that provider’s privacy policy and billing.
 - **Declarative plugins** may include `LinkGrid` or other types that open URLs **you** supplied in the plugin JSON.

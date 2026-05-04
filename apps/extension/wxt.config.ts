@@ -11,7 +11,7 @@ export default defineConfig({
       "New tab by AlienFacepalm — utility widgets, humor packs, optional user imports. No publisher backend.",
     permissions: ["storage", "alarms", "notifications"],
     optional_permissions: ["bookmarks", "topSites", "tabs"],
-    host_permissions: ["https://api.open-meteo.com/*"],
+    host_permissions: ["https://api.open-meteo.com/*", "https://www.bing.com/*"],
     optional_host_permissions: ["https://api.openai.com/*"],
     action: {},
     browser_specific_settings: {
