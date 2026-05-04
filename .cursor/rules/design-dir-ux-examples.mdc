@@ -1,0 +1,21 @@
+---
+description: Use `design/` HTML examples as UX/layout reference for the new tab
+globs: apps/extension/**/*.{tsx,css,mjs}
+alwaysApply: false
+---
+
+# `design/` is the UX example source
+
+When refactoring the extension UI (new tab, widgets, settings), treat the root `design/` folder as the canonical **UX/layout examples** (in addition to `DESIGN.md`).
+
+## Apply these patterns
+
+- **Shell**: fixed top bar, HUD-like grid, scanline overlay.
+- **Inputs**: terminal prompt prefix like `USER_LOG@TAB:>`.
+- **Layout**: stable zones (left/center/right) or 12-col grid; avoid “auto masonry card soup”.
+- **Style invariants**: 0px radius, hard offset shadows, Acid Green + Glitch Magenta accents.
+
+## Implementation constraints (Tabocalypse)
+
+- **Tailwind only**: use utilities + `@layer` in `apps/extension/entrypoints/newtab/tailwind.css` (no parallel CSS systems).
+- **Icons**: `lucide-react` only; icon-only actions must have plain-language `aria-label`.
