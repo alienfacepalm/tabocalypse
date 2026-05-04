@@ -622,14 +622,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         }
       }
     }
-    if (
-      userBgRepositionMode &&
-      userBgRepositionDraft &&
-      settings.backgroundKind === "image" &&
-      userBackgroundDisplayId
-    ) {
-      return `${userBgRepositionDraft.positionXPct}% ${userBgRepositionDraft.positionYPct}%`;
-    }
     if (settings.backgroundKind === "bing" && bingChosenUrl) {
       const f = settings.bingWallpaperFramings[bingChosenUrl];
       if (f) return `${f.positionXPct}% ${f.positionYPct}%`;
@@ -641,8 +633,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     return "50% 50%";
   }, [
     bgPanLive,
-    userBgRepositionMode,
-    userBgRepositionDraft,
     settings.backgroundKind,
     settings.bingWallpaperFramings,
     settings.userBackgroundImages,
@@ -2288,7 +2278,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         >
           {!userBgRepositionMode ? (
             <div className="w-full border-b border-border last:border-b-0 [&>div]:flex [&>div]:w-full">
-              <HudTip tip="Drag to frame the photo, then choose Set position when it looks right">
+              <HudTip tip="Hold the mouse button and drag to preview; release to see the saved framing until you choose Set position">
                 <button
                   type="button"
                   role="menuitem"
@@ -2350,8 +2340,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           aria-live="polite"
         >
           <p className="m-0 text-center font-display text-xs font-bold uppercase leading-snug tracking-widest text-accent sm:text-left">
-            Repositioning background — drag to frame. Double-click centers the preview. Press Escape
-            to cancel.
+            Repositioning background — hold the mouse button and drag to preview framing; release
+            returns to the saved view until you set it. Double-click centers the next preview. Press
+            Escape to cancel.
           </p>
           <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:justify-end">
             <HudTip tip="Save this framing to your background settings">
