@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "starter_plugin",
+  "name": "Starter plugin",
+  "version": "1.0.0",
+  "author": "You",
+  "description": "Dark quotes + links — rendered by Tabocalypse core only.",
+  "permissionsRequested": ["none"],
+  "widgets": [
+    {
+      "id": "welcome",
+      "type": "StaticText",
+      "props": {
+        "text": "This is a declarative plugin. No JS runs from this file."
+      }
+    },
+    {
+      "id": "rot",
+      "type": "RotatingQuotes",
+      "props": {
+        "quotes": [
+          "Tabs are just bookmarks with commitment issues.",
+          "Ship it. The universe is temporary anyway."
+        ]
+      }
+    },
+    {
+      "id": "links",
+      "type": "LinkGrid",
+      "props": {
+        "links": [
+          { "label": "Open-Meteo", "url": "https://open-meteo.com/" },
+          {
+            "label": "MDN WebExtensions",
+            "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions"
+          }
+        ]
+      }
+    }
+  ]
+}

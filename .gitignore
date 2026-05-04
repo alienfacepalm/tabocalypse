@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+npm-shrinkwrap.json
+.output
+**/.output
+.wxt
+**/.wxt
+dist
+*.local
+.DS_Store

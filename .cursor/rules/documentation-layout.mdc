@@ -1,0 +1,12 @@
+---
+description: Repository documentation lives in doc/ with uppercase filenames; index from root README
+alwaysApply: true
+---
+
+# Documentation layout
+
+- **Directory name:** use **`doc/`** only — do **not** add or use a top-level **`docs/`** folder for Tabocalypse-authored guides (avoids splitting the doc tree).
+- **Filenames:** every markdown file under **`doc/`** uses an **uppercase** basename (letters `A–Z`, digits, `_`, `-` only before the extension). Examples: `README.md`, `DEVELOPMENT.md`, `PLUGIN-SCHEMA.md`, `STORE-LISTING.md`. Multi-word names: **`LIKE-THIS.md`** or **`LIKE_THIS.md`**, not lowercase `like-this.md`.
+- **Discovery:** when you add or rename a **`doc/*.md`** file, **link it from the repository root [README.md](../../README.md)** (Documentation section) and from **[doc/README.md](../../doc/README.md)** so readers and agents can find it from one place.
+
+**Exception:** `README.md` under `doc/` stays the conventional spelling for GitHub rendering; treat it as satisfying the “uppercase” rule (all letters in the name are uppercase).

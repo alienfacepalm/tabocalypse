@@ -1,0 +1,7 @@
+{
+  "id": "my_local_pack",
+  "name": "My local pack",
+  "version": "1.0.0",
+  "maxIntensityHint": "spicy",
+  "messages": ["Imported line one.", "Imported line two."]
+}

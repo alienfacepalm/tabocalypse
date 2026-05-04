@@ -1,0 +1,49 @@
+{
+  "name": "tabocalypse",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vitejs/plugin-react": "4.3.4"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm --filter extension dev",
+    "dev:firefox": "pnpm --filter extension dev:firefox",
+    "build": "pnpm --filter extension build",
+    "build:firefox": "pnpm --filter extension build:firefox",
+    "zip": "pnpm --filter extension zip",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:sdk": "tsc --noEmit -p packages/plugin-sdk/tsconfig.json",
+    "check:extension": "pnpm --filter extension exec tsc --noEmit -p tsconfig.json",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run test && pnpm run check:sdk && pnpm run check:extension",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs,cjs}": [
+      "eslint --max-warnings=0 --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": "prettier --write"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-unicorn": "^56.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.22.0",
+    "vitest": "^3.0.5"
+  }
+}

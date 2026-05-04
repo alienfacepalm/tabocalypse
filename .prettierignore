@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+node_modules
+.output
+**/.output
+.wxt
+**/.wxt
+dist
+coverage
+*.min.js
+*.min.css

@@ -1,0 +1,10 @@
+{
+  "name": "@tabocalypse/example-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Example declarative Tabocalypse plugin (JSON manifest only).",
+  "files": [
+    "tabocalypse-plugin.json",
+    "README.md"
+  ]
+}

@@ -1,0 +1,92 @@
+---
+description: Tabocalypse product rules, TypeScript, testing, Prettier/ESLint, styling, pnpm, skills, MCP
+alwaysApply: true
+---
+
+# Project conventions (Tabocalypse)
+
+Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicity, surgical edits, goal-driven work). This file adds **toolchain** and **product** rules for this repository.
+
+## Tabocalypse product invariants (non-negotiable)
+
+- **No AlienFacepalm / publisher backend** — no telemetry, sync server, or “phone home” for core features. Networking is user-directed (weather, user URLs in plugins, BYO AI base URL) only.
+- **Zero recurring publisher operating cost** — no publisher API keys; no hosted infrastructure you pay to run for users.
+- **AI** — only **user-supplied** API keys (OpenAI-compatible test UI). Never ship or inject publisher LLM keys.
+- **User content** — imported packs/plugins are user-owned; **declarative plugins only** (JSON + allowlisted widget types). No `eval`, no user-supplied JS execution, no loading `.js` from imports.
+- **Support / donations** — static **link-out** URLs (`WXT_TABOCALYPSE_*` in `.env`); no in-extension payments.
+- **Do not edit** the product spec in `~/.cursor/plans/tabocalypse_browser_extension_*.plan.md` unless the user explicitly asks to change the plan.
+
+## TypeScript
+
+- Prefer TypeScript for new and changed code; avoid plain JavaScript unless the file must stay JS.
+- Do not use the `any` type. Use concrete types, generics, `unknown` with narrowing, or `satisfies` where appropriate.
+
+## Typings and naming
+
+- **`lib/` and existing code** use interfaces **without** an `I` prefix (`Settings`, `ImportedUserPack`, …). **Stay consistent** with the directory you touch; do not bulk-rename to `I*` unless the user requests a naming migration.
+- For **new** shared shapes, either match neighboring types in that folder or use an `I` prefix if you are introducing a clearly shared contract — pick one style per file and do not mix both styles in the same file.
+
+## File names (kebab-case)
+
+- **All repo-authored source files** use **kebab-case** names with lowercase letters and hyphens between words (for example `user-packs.ts`, `clock-widget.tsx`, `fetch-weather.ts`, `app.tsx`). **Do not** use `camelCase` or `PascalCase` file names for TypeScript, TSX, CSS, or scripts.
+- **Exceptions** (tooling or ecosystem defaults): `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `README.md`, `AGENTS.md`, `wxt.config.ts`, `.env.example`, dotfiles, and generated output under `.output/` / `.wxt/`.
+- **Documentation** under **`doc/`** follows [`.cursor/rules/documentation-layout.mdc`](documentation-layout.mdc): **`doc/`** (not `docs/`), **uppercase** markdown basenames (except the conventional `README.md`), and **every `doc/*.md` linked from the root `README.md`** plus the doc index.
+
+## Styling (Tailwind)
+
+- **Always use [Tailwind CSS](https://tailwindcss.com/)** for layout, spacing, typography, colors, and responsive behavior in extension and package UI. Prefer utility classes and, where repetition demands it, `@apply` in Tailwind-managed layers or small component-scoped patterns — not ad hoc global CSS.
+- **Do not** introduce or expand parallel styling stacks for UI: no new global utility sheets, no CSS-in-JS for layout/visuals, and no “second” design system alongside Tailwind. Legacy **[apps/extension/entrypoints/newtab/style.css](../../apps/extension/entrypoints/newtab/style.css)** may remain until migrated; **new and changed UI** should be Tailwind-first and should not add substantial new rules to that file unless the user explicitly asks for an exception.
+
+## Package manager
+
+- **pnpm** only: **`pnpm install`**, **`pnpm add`**, **`pnpm run …`**, **`pnpm dlx …`**. Do not use `npm` / `npx` for project workflows unless there is no pnpm equivalent and the user explicitly agrees. This repo uses **`pnpm-lock.yaml`** (not `package-lock.json`).
+- **Enforcement:** root [`.npmrc`](../../.npmrc) sets **`package-manager-strict=true`** (pnpm refuses installs from other package managers). **`package-lock.json`** / **`npm-shrinkwrap.json`** are gitignored. Root **`package.json`** declares **`engines.node`** — use Node 20+.
+
+## Stack reference
+
+- **Monorepo** (`pnpm-workspace.yaml`): **`apps/extension`** = WXT + React + webextension-polyfill; **`packages/plugin-sdk`** = declarative plugin types + `validatePluginJsonText`; **`packages/example-plugin`** = sample manifest. MV3 Chrome/Edge; Firefox path per [README.md](../../README.md).
+
+## Testing
+
+- **Critical components and functions** must have **automated test suites** (not only manual checks). Treat as critical when a bug would risk **user data loss**, **security / plugin-safety violations**, **broken core flows** (new tab, packs, import/export, settings persistence), or **invalid extension packaging**.
+- When you add or materially change critical behavior, **add or extend tests in the same change** (or the next commit in the same PR) so regressions are caught by `pnpm test` (or the package’s test script once wired).
+- **Colocate** tests with the package or feature (`*.test.ts` / `*.spec.ts` or a `__tests__/` folder — match whatever harness exists; if none exists yet for that package, add a **minimal** runner with **pnpm** (for example Vitest for TypeScript) and a root or workspace `test` script rather than leaving critical logic permanently untested.
+
+## Formatting and static analysis
+
+- **Prettier** — config: [`prettier.config.mjs`](../../prettier.config.mjs) (explicit Prettier defaults: double quotes, semicolons, `trailingComma: "all"`, `printWidth: 100`). Use **`pnpm run format`** when you edit matching files; CI or pre-merge should run **`pnpm run format:check`**.
+- **ESLint** — [`eslint.config.mjs`](../../eslint.config.mjs): **`@typescript-eslint/no-explicit-any`**, **`@typescript-eslint/consistent-type-imports`**, **`no-eval` / `no-implied-eval` / `no-new-func`** (aligns with declarative-only / no user JS execution); **`unicorn/filename-case`** (**kebab-case** for `apps/**` and `packages/**`, with ignores for `wxt.config.ts`, `*.test.ts`, `*.spec.ts`); unused vars must be used or prefixed with `_`. **`pnpm run lint`** uses **`--max-warnings=0`**.
+- **Git hooks** — [`.husky/pre-commit`](../../.husky/pre-commit) runs **`lint-staged`** (ESLint `--fix` + Prettier on staged files). Requires a normal **git** clone; after `pnpm install`, hooks are installed via the **`prepare`** script.
+- **Typecheck** — **`pnpm run check:sdk`** and **`pnpm run check:extension`**, or **`pnpm run check`** for format check + lint + tests + both typechecks, before calling a change done.
+
+## Cursor skills (use when relevant)
+
+Read the skill file before following it; do not improvise when a skill applies.
+
+| Topic | Skill |
+|-------|--------|
+| Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc) |
+| Authoring new agent skills | `create-skill` |
+| Cursor hooks / automation around agent events | `create-hook` |
+| Firebase CLI, env, deploy, or services | `firebase-basics` first; then domain skills under `~/.cursor/plugins/cache/cursor-public/firebase/.../skills/` |
+| Programmatic Cursor agents (`@cursor/sdk`, CI bots) | `cursor-sdk` |
+| PR triage, comments, CI fix loops | `babysit` |
+| Splitting work into small PRs | `split-to-prs` |
+| Rich side-by-side UI for data-heavy or analytical output | `canvas` |
+| Changing editor/VS Code settings | `update-cursor-settings` |
+
+## MCP servers in this workspace (prefer tools over guessing)
+
+Before any MCP call, read that tool’s schema from Cursor’s MCP tool list or the local MCP descriptor files for the enabled server (do not guess parameters).
+
+### `plugin-firebase-firebase` (Firebase)
+
+- Not used by Tabocalypse core; if you add Firebase, call **`firebase_get_environment`** first, follow **firebase-basics**, and read tool schemas before calls.
+
+### `user-eamodio.gitlens-extension-GitKraken` (GitLens / GitKraken)
+
+- Use for **git status/log/diff**, branches, PRs when connected; pass the repo **`directory`** argument tools require.
+
+## Optional MCP servers to consider adding
+
+Context7 / doc-index MCP for library docs; Linear / Jira; Sentry; Playwright or browser MCP; GitHub MCP for issues/PRs.
