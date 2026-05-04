@@ -1,0 +1,26 @@
+---
+description: Extension buttons must define hover and active feedback (shared .btn layer or explicit utilities)
+globs: apps/extension/**/*.tsx
+alwaysApply: false
+---
+
+# Extension UI: button hover and active states
+
+Aligned with **[DESIGN.md](../../DESIGN.md)** (hard offset shadows, HUD tactility). **Every `<button>`** (and **`label.btn`** file pickers) in **`apps/extension`** must give clear **`:hover`** and **`:active`** feedback—not a static control that only changes on `:focus-visible`.
+
+## Default: use `.btn`
+
+- Prefer **`tailwind.css`** **`@layer components`** classes **`btn`**, **`btn primary`**, **`btn ghost`**, plus **`icon-only`** / **`sm`** as needed. Those selectors **must** keep matching **`:hover`** and **`:active`** rules in the same file (see **`tailwind-btn-states.test.ts`**).
+- **`aria-pressed`** / open-modal toggles: inactive = **`btn ghost`**, active = **`btn primary`** unless a one-off design needs different pairing—still use **`btn`** variants so states stay centralized.
+
+## Exceptions (custom classes)
+
+If a control **cannot** use **`btn`** (e.g. full-width **`role="menuitem"`** rows, **`linkish`** text buttons):
+
+- Add Tailwind **`hover:*`** and **`active:*`** utilities (background, opacity, shadow, or color)—**both**—or define **`@layer components`** hooks in **`tailwind.css`** (as with **`.linkish`**).
+- **`transition-*`** on a short **`duration-100`** keeps presses from flashing.
+
+## Do not
+
+- Ship a plain **`<button className="…">`** with only layout/typography and no hover/active (keyboard **`:focus-visible`** alone is not enough for pointer users).
+- Rely on browser default button chrome; extension UI is fully styled.

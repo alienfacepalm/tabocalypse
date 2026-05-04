@@ -203,7 +203,7 @@
   }
 
   .btn {
-    @apply border border-accent bg-btn-bg px-[0.85rem] py-[0.5rem] font-display text-[0.85rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color] duration-100;
+    @apply border border-accent bg-btn-bg px-[0.85rem] py-[0.5rem] font-display text-[0.85rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color,filter] duration-100;
   }
 
   .btn:hover {
@@ -222,12 +222,24 @@
     @apply brightness-110;
   }
 
+  .btn.primary:active {
+    @apply translate-x-px translate-y-px brightness-[0.97] shadow-[3px_3px_0px_0px_var(--color-accent)];
+  }
+
   .btn.ghost {
     @apply border-accent2 bg-transparent text-accent2 shadow-[4px_4px_0px_0px_var(--color-accent2)];
   }
 
   .btn.ghost:hover {
     @apply border-accent2 bg-surface-weak text-accent2 brightness-110 shadow-[5px_5px_0px_0px_var(--color-accent2)];
+  }
+
+  .btn:active {
+    @apply translate-x-px translate-y-px brightness-[0.97] shadow-[3px_3px_0px_0px_var(--color-accent)];
+  }
+
+  .btn.ghost:active {
+    @apply shadow-[3px_3px_0px_0px_var(--color-accent2)];
   }
 
   .btn.sm {
@@ -454,7 +466,15 @@
   }
 
   .linkish {
-    @apply cursor-pointer border-none bg-transparent p-0 text-[inherit] text-accent underline;
+    @apply cursor-pointer border-none bg-transparent p-0 text-[inherit] text-accent underline transition-[color,opacity,filter] duration-100;
+  }
+
+  .linkish:hover {
+    @apply text-accent3 brightness-110;
+  }
+
+  .linkish:active {
+    @apply opacity-90;
   }
 
   .toast {

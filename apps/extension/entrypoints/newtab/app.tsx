@@ -2283,7 +2283,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-text hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                  className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-text transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
                   onClick={() => {
                     setUserBgRepositionMode(true);
                     setUserBgRepositionDraft(null);
@@ -2302,7 +2302,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <button
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-accent hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-accent transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
                     onClick={() => {
                       commitUserBackgroundReposition();
                       setUserBgContextMenu(null);
@@ -2318,7 +2318,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <button
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-muted hover:bg-surface-strong hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-muted transition-colors duration-100 hover:bg-surface-strong hover:text-text active:bg-surface2 active:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
                     onClick={() => {
                       cancelUserBackgroundReposition();
                       setUserBgContextMenu(null);

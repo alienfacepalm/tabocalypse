@@ -40,6 +40,7 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 ## Styling (Tailwind only)
 
 - **Extension UI:** use **[Tailwind CSS](https://tailwindcss.com/) exclusively** — utilities on elements and, when shared patterns need a name, **`@layer components`** / **`@layer base`** with **`@apply`** in the single entry stylesheet **[apps/extension/entrypoints/newtab/tailwind.css](../../apps/extension/entrypoints/newtab/tailwind.css)** (imported from the new-tab entry). **Do not** add other authored global CSS files, ad hoc `<style>` blocks for layout/visuals, CSS-in-JS styling stacks, or a parallel design system.
+- **Extension buttons:** every control built with **`<button>`** (or **`label.btn`**) needs **`:hover`** and **`:active`** feedback; prefer **`.btn`** / **`.linkish`** from **`tailwind.css`** or follow [extension-button-interaction-states.mdc](extension-button-interaction-states.mdc). **`apps/extension/lib/tailwind-btn-states.test.ts`** guards the shared **`.btn`** / **`.linkish`** selectors.
 - **Packages:** if a package ships UI later, use Tailwind the same way (one Tailwind pipeline per surface); do not mix unsanctioned styling stacks.
 
 ## Package manager
