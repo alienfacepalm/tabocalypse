@@ -284,7 +284,15 @@ export function DraggableHudPanel({
       }}
     >
       <HudPanelDragContext.Provider value={dragContext}>
-        <div className="hud-panel-size-host flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={[
+            "hud-panel-size-host flex min-h-0 flex-1 flex-col overflow-hidden",
+            // Keep body content clear of the corner resize affordance (absolute sibling).
+            !locked ? "pb-9 pr-9" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {children}
         </div>
       </HudPanelDragContext.Provider>
