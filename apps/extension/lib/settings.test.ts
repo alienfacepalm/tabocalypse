@@ -24,8 +24,15 @@ vi.mock("webextension-polyfill", () => ({
 const SYNC_KEY = "tabocalypseSync";
 const LOCAL_KEY = "tabocalypseLocal";
 
-const { loadSettings, saveSettings, defaultSettings, applyPreset, DEFAULT_WIDGETS, WIDGET_LABELS } =
-  await import("./settings");
+const {
+  loadSettings,
+  saveSettings,
+  defaultSettings,
+  applyPreset,
+  DEFAULT_WIDGETS,
+  WIDGET_LABELS,
+  TABOCALYPSE_SETTINGS_LOCAL_KEYS,
+} = await import("./settings");
 
 describe("WIDGET_LABELS", () => {
   it("defines a non-empty user-facing label for every widget key", () => {
@@ -83,7 +90,7 @@ describe("loadSettings", () => {
     const s = await loadSettings();
     expect(s).toEqual(defaultSettings());
     expect(syncGet).toHaveBeenCalledWith(SYNC_KEY);
-    expect(localGet).toHaveBeenCalledWith(LOCAL_KEY);
+    expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   });
 
   it("loads from local only when storage.sync is unavailable", async () => {
@@ -92,7 +99,7 @@ describe("loadSettings", () => {
       const s = await loadSettings();
       expect(s).toEqual(defaultSettings());
       expect(syncGet).not.toHaveBeenCalled();
-      expect(localGet).toHaveBeenCalledWith(LOCAL_KEY);
+      expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
     } finally {
       mockBrowser.storage.sync = { get: syncGet, set: syncSet };
     }
@@ -148,6 +155,67 @@ describe("loadSettings", () => {
     expect(s.themeMode).toBe("light");
     expect(s.themePalette).toBe("ocean");
   });
+
+  it("prefers local sync mirror over cloud sync for overlapping fields", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "glitch",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: ["tab_shame"],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        useOpenWeather: false,
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        debugPluginSource: false,
+      },
+    });
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: false,
+        openWeatherApiKey: "",
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+      [TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "ocean",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: ["tab_shame"],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        useOpenWeather: false,
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        debugPluginSource: false,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.themePalette).toBe("ocean");
+  });
 });
 
 describe("saveSettings", () => {
@@ -189,6 +257,7 @@ describe("saveSettings", () => {
       importedPacks: s.importedPacks,
     });
     expect(localArg[LOCAL_KEY]).not.toHaveProperty("preset");
+    expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]).toEqual(syncArg[SYNC_KEY]);
   });
 
   it("writes local only when storage.sync is unavailable", async () => {

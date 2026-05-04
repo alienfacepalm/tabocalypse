@@ -43,7 +43,13 @@ import {
   type TWidgetKey,
   WIDGET_LABELS,
 } from "../../lib/settings";
-import { applyPreset, defaultSettings, loadSettings, saveSettings } from "../../lib/settings";
+import {
+  applyPreset,
+  defaultSettings,
+  isTabocalypseSettingsStorageChange,
+  loadSettings,
+  saveSettings,
+} from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
@@ -213,6 +219,22 @@ export default function App() {
 
   useEffect(() => {
     void loadSettings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    const onStorageChanged: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
+      changes,
+      areaName,
+    ) => {
+      if (areaName !== "local" && areaName !== "sync") return;
+      if (!isTabocalypseSettingsStorageChange(changes, areaName)) return;
+      void loadSettings().then((next) => {
+        latestSettingsRef.current = next;
+        setSettings(next);
+      });
+    };
+    browser.storage.onChanged.addListener(onStorageChanged);
+    return () => browser.storage.onChanged.removeListener(onStorageChanged);
   }, []);
 
   useEffect(() => {

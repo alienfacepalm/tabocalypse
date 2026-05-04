@@ -68,6 +68,35 @@ export interface ISettings {
 
 const SYNC_KEY = "tabocalypseSync";
 const LOCAL_KEY = "tabocalypseLocal";
+/** Same payload as `SYNC_KEY`, stored in `storage.local` so preferences survive sync quota/errors and new tabs read the latest save immediately. */
+const SYNC_LOCAL_MIRROR_KEY = "tabocalypseSyncMirror";
+
+/** Keys read together from `browser.storage.local` for settings (also used to filter `storage.onChanged`). */
+export const TABOCALYPSE_SETTINGS_LOCAL_KEYS = [LOCAL_KEY, SYNC_LOCAL_MIRROR_KEY] as const;
+
+/** Minimal shape of `browser.storage.StorageChange` for `onChanged` filtering. */
+type TStorageChange = { oldValue?: unknown; newValue?: unknown };
+
+export function isTabocalypseSettingsStorageChange(
+  changes: Record<string, TStorageChange | undefined>,
+  areaName: string,
+): boolean {
+  if (areaName === "local") {
+    return TABOCALYPSE_SETTINGS_LOCAL_KEYS.some((k) => changes[k] !== undefined);
+  }
+  if (areaName === "sync") {
+    return changes[SYNC_KEY] !== undefined;
+  }
+  return false;
+}
+
+function mergeSyncFromSources(
+  cloud: Partial<ISyncSlice> | undefined,
+  mirror: Partial<ISyncSlice> | undefined,
+): Partial<ISyncSlice> | undefined {
+  if (!cloud && !mirror) return undefined;
+  return { ...cloud, ...mirror };
+}
 
 export interface ISyncSlice {
   version: 1;
@@ -248,19 +277,27 @@ function mergeSettings(
 }
 
 export async function loadSettings(): Promise<ISettings> {
-  const localRaw = await browser.storage.local.get(LOCAL_KEY);
+  const localRaw = await browser.storage.local.get([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   const syncRaw = browser.storage.sync
     ? await browser.storage.sync.get(SYNC_KEY)
     : ({} as Record<string, unknown>);
-  const sync = syncRaw[SYNC_KEY] as ISyncSlice | undefined;
+  const cloudSync = syncRaw[SYNC_KEY] as ISyncSlice | undefined;
+  const mirrorSync = localRaw[SYNC_LOCAL_MIRROR_KEY] as ISyncSlice | undefined;
+  const sync = mergeSyncFromSources(cloudSync, mirrorSync);
   const local = localRaw[LOCAL_KEY] as ILocalSlice | undefined;
   return mergeSettings(sync, local);
 }
 
 export async function saveSettings(s: ISettings): Promise<void> {
-  const writes: Promise<unknown>[] = [browser.storage.local.set({ [LOCAL_KEY]: toLocal(s) })];
+  const syncPayload = toSync(s);
+  const writes: Promise<unknown>[] = [
+    browser.storage.local.set({
+      [LOCAL_KEY]: toLocal(s),
+      [SYNC_LOCAL_MIRROR_KEY]: syncPayload,
+    }),
+  ];
   if (browser.storage.sync) {
-    writes.unshift(browser.storage.sync.set({ [SYNC_KEY]: toSync(s) }));
+    writes.push(browser.storage.sync.set({ [SYNC_KEY]: syncPayload }));
   }
   await Promise.all(writes);
 }
