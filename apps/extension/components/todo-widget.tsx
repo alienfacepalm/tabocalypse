@@ -44,12 +44,12 @@ export function TodoWidget({
           </li>
         ))}
       </ul>
-      <div className="row" style={{ marginTop: 8 }}>
+      <div className="row mt-2">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="New item"
-          style={{ flex: 1 }}
+          className="min-w-0 flex-1"
         />
         <button
           type="button"

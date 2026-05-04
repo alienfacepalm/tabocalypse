@@ -541,16 +541,10 @@ export default function App() {
               <section className="settings-block">
                 <h3>Alarm (notification)</h3>
                 <input id="alarm-when" type="datetime-local" />
-                <input
-                  id="alarm-msg"
-                  type="text"
-                  placeholder="Message"
-                  style={{ marginTop: 8, width: "100%" }}
-                />
+                <input id="alarm-msg" type="text" placeholder="Message" className="mt-2 w-full" />
                 <button
                   type="button"
-                  className="btn primary has-icon"
-                  style={{ marginTop: 8 }}
+                  className="btn primary has-icon mt-2"
                   onClick={() => void scheduleAlarm()}
                 >
                   <CalendarClock size={20} strokeWidth={2} aria-hidden />
@@ -567,18 +561,17 @@ export default function App() {
                   autoComplete="off"
                   value={s.openaiApiKey}
                   onChange={(e) => void persist({ ...s, openaiApiKey: e.target.value })}
-                  style={{ width: "100%" }}
+                  className="w-full"
                 />
                 <input
                   placeholder="Base URL"
                   value={s.openaiBaseUrl}
                   onChange={(e) => void persist({ ...s, openaiBaseUrl: e.target.value })}
-                  style={{ width: "100%", marginTop: 8 }}
+                  className="mt-2 w-full"
                 />
                 <button
                   type="button"
-                  className="btn has-icon"
-                  style={{ marginTop: 8 }}
+                  className="btn has-icon mt-2"
                   onClick={async () => {
                     setAiResult(null);
                     if (!s.openaiApiKey) {
@@ -616,7 +609,7 @@ export default function App() {
                 <h3>My lines (local)</h3>
                 <textarea
                   rows={4}
-                  style={{ width: "100%" }}
+                  className="w-full"
                   placeholder="One joke per line — saved when you leave this field"
                   defaultValue={s.myLines.join("\n")}
                   key={s.importedPacks.length + s.myLines.length}
@@ -659,12 +652,7 @@ export default function App() {
                     onChange={(e) => void importPluginFile(e.target.files![0]!)}
                   />
                 </label>
-                <textarea
-                  readOnly
-                  rows={3}
-                  style={{ width: "100%", marginTop: 8 }}
-                  value={pluginValidateLog}
-                />
+                <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
               </section>
 
               <section className="settings-block">
@@ -755,7 +743,7 @@ export default function App() {
                   <Download size={18} strokeWidth={2} aria-hidden />
                   <span>Export settings JSON</span>
                 </button>
-                <label className="btn has-icon" style={{ marginLeft: 8 }}>
+                <label className="btn has-icon ml-2">
                   <Upload size={18} strokeWidth={2} aria-hidden />
                   <span>Import settings JSON</span>
                   <input
@@ -837,13 +825,17 @@ export default function App() {
 
       {warnSpicy ? (
         <div className="modal-backdrop" role="presentation">
-          <div className="modal small" role="dialog" aria-label="Content notice">
+          <div
+            className="modal small flex flex-col gap-4 p-6"
+            role="dialog"
+            aria-label="Content notice"
+          >
             <h2>Turn it up?</h2>
             <p>
               Spicy and unhinged modes may include swearing or abrasive humor in curated packs. You
               are responsible for imported content.
             </p>
-            <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+            <div className="row justify-end gap-2">
               <button
                 type="button"
                 className="btn ghost has-icon"
@@ -891,7 +883,7 @@ export default function App() {
         </div>
       ) : null}
 
-      <main className="grid">
+      <main className="widget-grid">
         {s.widgets.search ? <SearchWidget engine={s.searchEngine} /> : null}
         {s.widgets.clock ? <ClockWidget humor={humorCtx} /> : null}
         {s.widgets.notes ? (
@@ -912,7 +904,7 @@ export default function App() {
 
       <footer className="footer muted sm">
         <span>{humorCtx.humorEnabled ? (dailyLine ?? "…") : "Focus mode engaged."}</span>
-        <div className="row" style={{ gap: 12 }}>
+        <div className="row gap-3">
           {SUPPORT.featureUrl ? (
             <button
               type="button"

@@ -23,7 +23,7 @@ export function WeatherWidget({ lat, lon }: { lat: number; lon: number }) {
   return (
     <section className="card">
       <h3>Weather</h3>
-      <p className="muted" style={{ fontSize: 12 }}>
+      <p className="muted text-xs">
         Open-Meteo (no key). Coords: {lat.toFixed(2)}, {lon.toFixed(2)}
       </p>
       {err ? <p className="err">{err}</p> : null}

@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply min-h-full;
+  }
+
+  body {
+    @apply m-0 min-h-full bg-bg font-sans text-text antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  a {
+    @apply text-accent;
+  }
+
+  button {
+    @apply cursor-pointer font-sans;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply rounded-lg border border-border bg-surface px-3 py-2 font-sans text-text;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline outline-2 outline-accent2 outline-offset-1;
+  }
+
+  code {
+    @apply rounded bg-codebg px-[0.35em] py-[0.1em] text-[0.85em];
+  }
+}
+
+@layer components {
+  .shell {
+    @apply flex min-h-screen flex-col bg-bg bg-blend-normal py-8 pb-8 pl-6 pr-6 pt-5;
+  }
+
+  .loading-screen {
+    @apply items-center justify-center;
+  }
+
+  .top-bar {
+    @apply mb-4 flex items-start justify-between gap-4;
+  }
+
+  .title {
+    @apply m-0 text-[1.75rem] tracking-tight;
+  }
+
+  .tagline {
+    @apply mt-1 text-[0.9rem];
+  }
+
+  .widget-grid {
+    @apply grid flex-1 grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4;
+  }
+
+  .card {
+    @apply rounded-card border border-border bg-surface/85 px-[1.1rem] py-4 backdrop-blur-md;
+  }
+
+  .card h3 {
+    @apply mb-3 mt-0 text-xs font-semibold uppercase tracking-widest text-muted;
+  }
+
+  .row {
+    @apply flex items-center gap-2;
+  }
+
+  .row.wrap {
+    @apply flex-wrap;
+  }
+
+  .muted {
+    @apply text-muted;
+  }
+
+  .sm {
+    @apply text-[0.8rem];
+  }
+
+  .block {
+    @apply mt-2 flex flex-col gap-[0.35rem];
+  }
+
+  .btn {
+    @apply rounded-lg border border-border bg-surface px-[0.85rem] py-[0.45rem] text-[0.9rem] text-text;
+  }
+
+  .btn.has-icon {
+    @apply inline-flex items-center gap-[0.4rem] [&_svg]:shrink-0;
+  }
+
+  .btn.primary {
+    @apply border-transparent bg-gradient-to-br from-accent to-[#8b2f0a] font-semibold;
+  }
+
+  .btn.ghost {
+    @apply border-border bg-transparent;
+  }
+
+  .btn.sm {
+    @apply px-[0.45rem] py-0.5 text-xs;
+  }
+
+  .btn.icon-only {
+    @apply inline-flex min-h-9 min-w-9 items-center justify-center p-[0.45rem] leading-none [&_svg]:block [&_svg]:shrink-0;
+  }
+
+  .btn.icon-only.sm {
+    @apply min-h-[1.85rem] min-w-[1.85rem] p-0.5;
+  }
+
+  .humor-banner {
+    @apply mb-4 rounded-card border border-border bg-accent2/10 px-4 py-3 text-[1.05rem];
+  }
+
+  .prod-gag {
+    @apply mb-4;
+  }
+
+  .clock-time {
+    @apply text-[2rem] font-bold tracking-wide;
+  }
+
+  .clock-date {
+    @apply mt-1;
+  }
+
+  .clock-tz {
+    @apply text-[0.8rem];
+  }
+
+  .clock-roast {
+    @apply mt-3 italic text-muted;
+  }
+
+  .todo-list {
+    @apply m-0 list-none p-0;
+  }
+
+  .todo-row {
+    @apply flex items-center justify-between gap-2 border-b border-border py-[0.35rem];
+  }
+
+  .done {
+    @apply opacity-60 line-through;
+  }
+
+  .weather-big {
+    @apply mt-2 text-[1.35rem];
+  }
+
+  .err {
+    @apply text-red-300;
+  }
+
+  .link-grid {
+    @apply m-0 flex list-none flex-col gap-[0.35rem] p-0;
+  }
+
+  .link-grid a {
+    @apply border-b border-transparent text-text no-underline;
+  }
+
+  .link-grid a:hover {
+    @apply border-accent;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-8;
+  }
+
+  .modal {
+    @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden rounded-card border border-border bg-modal;
+  }
+
+  .modal.small {
+    @apply w-[min(420px,100%)];
+  }
+
+  .modal-head {
+    @apply flex items-center justify-between border-b border-border px-5 py-4;
+  }
+
+  .modal-head h2 {
+    @apply m-0 text-xl;
+  }
+
+  .modal-body {
+    @apply overflow-y-auto px-5 pb-6 pt-4;
+  }
+
+  .settings-block {
+    @apply mb-6;
+  }
+
+  .settings-block h3 {
+    @apply mb-2 mt-0 text-[0.95rem] text-muted;
+  }
+
+  .check-row {
+    @apply my-1 flex items-center gap-2 text-[0.9rem];
+  }
+
+  .manage-row {
+    @apply my-[0.35rem] justify-between;
+  }
+
+  .footer {
+    @apply mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4;
+  }
+
+  .linkish {
+    @apply cursor-pointer border-none bg-transparent p-0 text-[inherit] text-accent underline;
+  }
+
+  .toast {
+    @apply fixed bottom-4 right-4 z-40 rounded-lg border border-border bg-surface px-4 py-3;
+  }
+
+  .toast.err {
+    @apply border-danger;
+  }
+
+  .ai-out {
+    @apply mt-2 whitespace-pre-wrap break-words rounded-lg bg-codebg p-2 text-[0.85rem];
+  }
+
+  .plugin-deck {
+    @apply col-span-full grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4;
+  }
+
+  .plugin-widget {
+    @apply mt-2;
+  }
+
+  .plugin-static,
+  .plugin-quotes {
+    @apply m-0;
+  }
+
+  .tab-count {
+    @apply my-1 text-2xl font-bold;
+  }
+}

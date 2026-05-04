@@ -9,7 +9,7 @@ export function NotesWidget({ value, onChange }: { value: string; onChange: (v: 
         onChange={(e) => onChange(e.target.value)}
         placeholder="Scratch pad — local only."
         rows={6}
-        style={{ width: "100%", resize: "vertical" }}
+        className="w-full resize-y"
       />
     </section>
   );

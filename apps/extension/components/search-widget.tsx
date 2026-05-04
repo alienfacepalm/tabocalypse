@@ -36,7 +36,7 @@ export function SearchWidget({ engine }: { engine: ISettings["searchEngine"] }) 
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={`Search (${engine})`}
-          style={{ flex: 1 }}
+          className="min-w-0 flex-1"
           aria-label="Search query"
         />
         <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">

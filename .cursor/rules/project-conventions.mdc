@@ -37,10 +37,10 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 - Extension UI must use **plain-language labels**, not raw identifiers (`WidgetKey` strings, etc.); see [user-facing-copy.mdc](user-facing-copy.mdc).
 - **Icon-only actions** in the extension use **Lucide** plus accessible names; see [extension-lucide-icons.mdc](extension-lucide-icons.mdc).
 
-## Styling (Tailwind)
+## Styling (Tailwind only)
 
-- **Always use [Tailwind CSS](https://tailwindcss.com/)** for layout, spacing, typography, colors, and responsive behavior in extension and package UI. Prefer utility classes and, where repetition demands it, `@apply` in Tailwind-managed layers or small component-scoped patterns — not ad hoc global CSS.
-- **Do not** introduce or expand parallel styling stacks for UI: no new global utility sheets, no CSS-in-JS for layout/visuals, and no “second” design system alongside Tailwind. Legacy **[apps/extension/entrypoints/newtab/style.css](../../apps/extension/entrypoints/newtab/style.css)** may remain until migrated; **new and changed UI** should be Tailwind-first and should not add substantial new rules to that file unless the user explicitly asks for an exception.
+- **Extension UI:** use **[Tailwind CSS](https://tailwindcss.com/) exclusively** — utilities on elements and, when shared patterns need a name, **`@layer components`** / **`@layer base`** with **`@apply`** in the single entry stylesheet **[apps/extension/entrypoints/newtab/tailwind.css](../../apps/extension/entrypoints/newtab/tailwind.css)** (imported from the new-tab entry). **Do not** add other authored global CSS files, ad hoc `<style>` blocks for layout/visuals, CSS-in-JS styling stacks, or a parallel design system.
+- **Packages:** if a package ships UI later, use Tailwind the same way (one Tailwind pipeline per surface); do not mix unsanctioned styling stacks.
 
 ## Package manager
 
