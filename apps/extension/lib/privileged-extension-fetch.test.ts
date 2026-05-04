@@ -65,6 +65,23 @@ describe("privilegedExtensionFetchJson", () => {
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/x.jpg" }]);
   });
 
+  it("prefers chrome.runtime.sendMessage when both chrome and browser expose sendMessage", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const chromeSendMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      data: [{ fullUrl: "https://img.peapix.com/preferred.jpg" }],
+    });
+    const browserSendMessage = vi.fn();
+    (globalThis as IGlobalWithOptionalChrome).chrome = {
+      runtime: { id: "ext", sendMessage: chromeSendMessage },
+    };
+    Object.assign(browser.runtime, { id: "ext", sendMessage: browserSendMessage });
+    const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
+    expect(chromeSendMessage).toHaveBeenCalledOnce();
+    expect(browserSendMessage).not.toHaveBeenCalled();
+    expect(data).toEqual([{ fullUrl: "https://img.peapix.com/preferred.jpg" }]);
+  });
+
   it("uses browser.runtime.sendMessage on extension-scheme pages when runtime.id is absent", async () => {
     vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
     const sendMessage = vi.fn().mockResolvedValue({

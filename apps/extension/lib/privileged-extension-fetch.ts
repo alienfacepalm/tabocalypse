@@ -52,11 +52,14 @@ function getExtensionRuntimeId(): string | undefined {
 
 function hasExtensionSendMessage(): boolean {
   try {
+    // Prefer Chromium `chrome.runtime` first: Edge/Chrome new-tab pages occasionally
+    // expose a `browser.runtime` object without a working `sendMessage` during boot,
+    // which would otherwise force in-page `fetch()` and hit CORS on extension origins.
+    if (typeof getChromeRuntime()?.sendMessage === "function") return true;
     if (typeof browser !== "undefined" && typeof browser.runtime?.sendMessage === "function") {
       return true;
     }
-    if (typeof getGlobalBrowserExtensionRuntime()?.sendMessage === "function") return true;
-    return typeof getChromeRuntime()?.sendMessage === "function";
+    return typeof getGlobalBrowserExtensionRuntime()?.sendMessage === "function";
   } catch {
     return false;
   }
@@ -68,14 +71,14 @@ async function extensionSendMessage<T>(message: unknown): Promise<T> {
     if (typeof sm !== "function") return undefined;
     return Promise.resolve(sm.call(run, message) as T);
   };
+  const viaChrome = await sendVia(getChromeRuntime());
+  if (viaChrome) return viaChrome;
   if (typeof browser !== "undefined") {
     const viaImport = await sendVia(browser.runtime as IChromeRuntimeShim);
     if (viaImport) return viaImport;
   }
   const viaGlobalBrowser = await sendVia(getGlobalBrowserExtensionRuntime());
   if (viaGlobalBrowser) return viaGlobalBrowser;
-  const viaChrome = await sendVia(getChromeRuntime());
-  if (viaChrome) return viaChrome;
   throw new Error("runtime.sendMessage is unavailable.");
 }
 
