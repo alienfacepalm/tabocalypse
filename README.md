@@ -41,7 +41,7 @@ pnpm run dev          # Chrome (default)
 pnpm run dev:firefox
 ```
 
-Load **Load unpacked** from [`apps/extension/output/chrome-mv3`](apps/extension/output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project). **Safari** does not load that folder directly: use the Chrome MV3 output with Apple’s **Safari Web Extension** converter on macOS, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
+Load **Load unpacked** from [`apps/extension/output/chrome-mv3`](apps/extension/output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project). After **`pnpm run build`**, you also get **`apps/extension/output/safari-mv3`** (Safari-targeted MV3 bundle from WXT). **Safari** still does not use Chromium’s **Load unpacked** flow: on macOS, point Apple’s **Safari Web Extension** converter at **`safari-mv3`** or **`chrome-mv3`**, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
 
 Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) if you use WXT env vars (or follow WXT’s env file discovery for that app).
 
@@ -50,6 +50,7 @@ Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts
 ```bash
 pnpm run build
 pnpm run build:firefox
+pnpm run build:safari
 pnpm run zip
 ```
 

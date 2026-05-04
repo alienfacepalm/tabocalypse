@@ -14,7 +14,7 @@ Whenever you add or edit **supported browser** lists, **store / publishing** tar
 ## Consistency
 
 - Use one consistent ordering per document (e.g. **Chrome, Edge, Firefox, Safari**) and mirror the same order in nearby lists.
-- If you document **build output folders** or **WXT targets**, keep Safari aligned with **actual repo tooling** (e.g. dedicated `pnpm` script or Apple’s converter workflow). If Safari is supported **for users** but not yet a first-class `wxt -b safari` output in this repo, say so briefly where load/test steps are described so the docs stay honest.
+- If you document **build output folders** or **WXT targets**, keep Safari aligned with **actual repo tooling**: default **`pnpm run build`** emits **`output/safari-mv3/`** (WXT `wxt build -b safari --mv3`); **`pnpm run build:safari`** rebuilds Safari only; Apple’s converter still runs on macOS for loading/signing.
 
 ## Implementation touchpoints (non-exhaustive)
 

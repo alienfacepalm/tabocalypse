@@ -16,12 +16,13 @@ This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, 
 From the repo root:
 
 ```bash
-pnpm run build           # Chrome MV3 → apps/extension/output/chrome-mv3/
+pnpm run build           # Chrome MV3 → apps/extension/output/chrome-mv3/ and Safari MV3 → apps/extension/output/safari-mv3/
 pnpm run build:firefox   # Firefox → apps/extension/output/firefox-mv2/
+pnpm run build:safari    # Safari MV3 only → apps/extension/output/safari-mv3/
 pnpm run zip             # Store-style zip (WXT); confirm output path in the CLI log
 ```
 
-For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging starts from that same **`chrome-mv3`** folder using Apple’s tools (see [Safari (Mac App Store)](#safari-mac-app-store)).
+For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging uses Apple’s tools on a Mac against the **`safari-mv3`** folder (or **`chrome-mv3`**; both are MV3 from the same build) — see [Safari (Mac App Store)](#safari-mac-app-store).
 
 ## Chrome Web Store
 
@@ -61,9 +62,9 @@ Official: [Distribute your extension](https://extensionworkshop.com/documentatio
 
 ## Safari (Mac App Store)
 
-This repo does **not** emit a separate WXT `output/safari-*` directory. Ship Safari from the **Chrome MV3** build:
+WXT emits **`apps/extension/output/safari-mv3/`** (Manifest V3 for Safari). The default **`pnpm run build`** refreshes **`chrome-mv3`** and **`safari-mv3`** together; you can also run **`pnpm run build:safari`** for Safari only.
 
-1. Run **`pnpm run build`** so `apps/extension/output/chrome-mv3/` is up to date.
+1. Run **`pnpm run build`** (or **`pnpm run build:safari`**) so `apps/extension/output/safari-mv3/` is up to date.
 2. On a **Mac**, use Apple’s **`safari-web-extension-converter`** (from Xcode / Command Line Tools) to turn that folder into a **Safari Web Extension** Xcode project — same idea as local testing in [Install and test locally](INSTALL-LOCAL-TESTING.md#safari).
 3. Complete **signing**, **notarization** (if you distribute outside the store), and **App Store Connect** listing steps per Apple’s current documentation.
 

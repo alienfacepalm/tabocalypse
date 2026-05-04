@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
+    "build": "wxt build && wxt build -b safari --mv3",
     "build:firefox": "wxt build -b firefox",
+    "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",
     "postinstall": "wxt prepare"
   },

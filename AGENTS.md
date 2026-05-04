@@ -79,7 +79,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | **Prettier / ESLint** | **`pnpm run format`** (or **`format:check`** in CI), **`pnpm run lint`**. Config: root `prettier.config.mjs`, `eslint.config.mjs`.                                                                                                                                                                                                                                                    |
 | **Verify**            | **`pnpm run check`** runs format check, lint (zero warnings), tests, SDK + extension `tsc`. **Git:** `.husky/pre-commit` runs **lint-staged** on staged files. For **meaningful** changes, also run extension **`pnpm run build`** when packaging is affected, then **commit** and **push** — see [`.cursor/rules/validate-commit-push.mdc`](.cursor/rules/validate-commit-push.mdc). |
 
-**Build (from repo root):** `pnpm run build` (Chrome MV3), `pnpm run build:firefox`, `pnpm run dev`. Extension output: `apps/extension/output/` (WXT `outDir`; visible in Finder). **Safari** uses the Chrome MV3 folder with Apple’s Safari Web Extension workflow on macOS (see [README.md](README.md) → doc links).
+**Build (from repo root):** `pnpm run build` (Chrome MV3 + Safari MV3), `pnpm run build:firefox`, `pnpm run build:safari`, `pnpm run dev`. Extension output: `apps/extension/output/` (WXT `outDir`; visible in Finder). **Safari** App Store / local converter flow uses `safari-mv3` (or `chrome-mv3`) with Apple’s tools on macOS (see [README.md](README.md) → doc links).
 
 For skills, MCP usage, and the full table of optional skills, see `.cursor/rules/project-conventions.mdc`.
 

@@ -16,6 +16,7 @@
     "dev:firefox": "pnpm --filter extension dev:firefox",
     "build": "pnpm --filter extension build",
     "build:firefox": "pnpm --filter extension build:firefox",
+    "build:safari": "pnpm --filter extension build:safari",
     "zip": "pnpm --filter extension zip",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",

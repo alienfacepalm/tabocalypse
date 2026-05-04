@@ -7,7 +7,7 @@ This page is for **testers** and **early users** who want to run the extension o
 - **Google Chrome**, **Microsoft Edge**, **Mozilla Firefox**, or **Apple Safari** (recent version). **Safari Web Extensions** are built and run on **macOS** (see [Safari](#safari) below).
 - Either:
   - **A zip file** built by a developer (`pnpm run zip` from the project — produces a store-style archive), **or**
-  - **An unpacked folder** such as `apps/extension/output/chrome-mv3` after someone runs `pnpm run build` for you.
+  - **An unpacked folder** such as `apps/extension/output/chrome-mv3` (or `safari-mv3` for Safari) after someone runs `pnpm run build` for you.
 
 Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.dmg`. You load it through the browser’s **developer / temporary add-on** flow.
 
@@ -32,13 +32,13 @@ Temporary add-ons **do not persist** across browser restarts; for longer testing
 
 ## Safari
 
-Safari does **not** use Chrome’s **Load unpacked** flow. You need a **Chrome MV3**-style extension folder (from this repo, `apps/extension/output/chrome-mv3` after `pnpm run build`) and a **Mac** with **Xcode**.
+Safari does **not** use Chrome’s **Load unpacked** flow. You need an **MV3** extension folder (from this repo, `apps/extension/output/safari-mv3` or `chrome-mv3` after `pnpm run build`) and a **Mac** with **Xcode**.
 
 1. Install **Xcode** (or Apple’s Command Line Tools that ship **`safari-web-extension-converter`**).
 2. Convert the extension bundle, for example:
 
    ```bash
-   xcrun safari-web-extension-converter /path/to/tabocalypse/apps/extension/output/chrome-mv3
+   xcrun safari-web-extension-converter /path/to/tabocalypse/apps/extension/output/safari-mv3
    ```
 
    This creates an Xcode project you open in Xcode to **Run** the embedded app and load the extension in Safari for testing.

@@ -49,7 +49,7 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 
 ## Stack reference
 
-- **Monorepo** (`pnpm-workspace.yaml`): **`apps/extension`** = WXT + React + webextension-polyfill; **`packages/plugin-sdk`** = declarative plugin types + `validatePluginJsonText`; **`packages/example-plugin`** = sample manifest. Targets: MV3 **Chrome/Edge**, **Firefox** (WXT `firefox-mv2`), and **Safari** via the Chrome MV3 build + Apple’s converter (see [README.md](../../README.md)).
+- **Monorepo** (`pnpm-workspace.yaml`): **`apps/extension`** = WXT + React + webextension-polyfill; **`packages/plugin-sdk`** = declarative plugin types + `validatePluginJsonText`; **`packages/example-plugin`** = sample manifest. Targets: MV3 **Chrome/Edge** and **`safari-mv3`**, **Firefox** (WXT `firefox-mv2`); **Safari** store/testing still uses Apple’s converter on macOS (see [README.md](../../README.md)).
 
 ## Testing
 
