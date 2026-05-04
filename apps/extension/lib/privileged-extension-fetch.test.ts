@@ -14,6 +14,7 @@ import {
 
 interface IGlobalWithOptionalChrome {
   chrome?: { runtime?: { id?: string; sendMessage?: (message: unknown) => unknown } };
+  browser?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
 }
 
 describe("isPrivilegedExtensionFetchUrlAllowed", () => {
@@ -41,6 +42,7 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
 describe("privilegedExtensionFetchJson", () => {
   afterEach(() => {
     delete (globalThis as IGlobalWithOptionalChrome).chrome;
+    delete (globalThis as IGlobalWithOptionalChrome).browser;
     vi.unstubAllGlobals();
     Reflect.deleteProperty(browser.runtime, "sendMessage");
     vi.restoreAllMocks();
@@ -77,6 +79,18 @@ describe("privilegedExtensionFetchJson", () => {
       url: "https://peapix.com/bing/feed?country=us",
     });
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/y.jpg" }]);
+  });
+
+  it("uses globalThis.browser.runtime.sendMessage when the module runtime has no sendMessage", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const sendMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      data: [{ fullUrl: "https://img.peapix.com/z.jpg" }],
+    });
+    (globalThis as IGlobalWithOptionalChrome).browser = { runtime: { sendMessage } };
+    const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(data).toEqual([{ fullUrl: "https://img.peapix.com/z.jpg" }]);
   });
 });
 

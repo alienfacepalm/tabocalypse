@@ -470,10 +470,12 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
   const shellStyle = useMemo(
     () =>
       backgroundStyle(settings, {
-        bingImageUrl: bingPaintUrl ?? bingChosenUrl,
+        // Only paint Bing from a same-origin blob URL. Raw Peapix HTTPS URLs in CSS
+        // can trigger cross-origin loads from the extension page (CORS / fetch noise).
+        bingImageUrl: bingPaintUrl,
         userImageUrl: userChosenUrl,
       }),
-    [settings, bingChosenUrl, bingPaintUrl, userChosenUrl],
+    [settings, bingPaintUrl, userChosenUrl],
   );
 
   useLayoutEffect(() => {

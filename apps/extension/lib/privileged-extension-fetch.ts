@@ -8,10 +8,16 @@ interface IChromeRuntimeShim {
 
 interface IGlobalWithOptionalChrome {
   chrome?: { runtime?: IChromeRuntimeShim };
+  /** `webextension-polyfill` also attaches here; the imported `browser` can lag `globalThis` in some hosts. */
+  browser?: { runtime?: IChromeRuntimeShim };
 }
 
 function getChromeRuntime(): IChromeRuntimeShim | undefined {
   return (globalThis as IGlobalWithOptionalChrome).chrome?.runtime;
+}
+
+function getGlobalBrowserExtensionRuntime(): IChromeRuntimeShim | undefined {
+  return (globalThis as IGlobalWithOptionalChrome).browser?.runtime;
 }
 
 /** New-tab and other extension HTML documents use these schemes (not `http:`). */
@@ -49,6 +55,7 @@ function hasExtensionSendMessage(): boolean {
     if (typeof browser !== "undefined" && typeof browser.runtime?.sendMessage === "function") {
       return true;
     }
+    if (typeof getGlobalBrowserExtensionRuntime()?.sendMessage === "function") return true;
     return typeof getChromeRuntime()?.sendMessage === "function";
   } catch {
     return false;
@@ -56,15 +63,20 @@ function hasExtensionSendMessage(): boolean {
 }
 
 async function extensionSendMessage<T>(message: unknown): Promise<T> {
-  if (typeof browser !== "undefined" && typeof browser.runtime?.sendMessage === "function") {
-    return browser.runtime.sendMessage(message) as Promise<T>;
+  const sendVia = (run: IChromeRuntimeShim | undefined): Promise<T> | undefined => {
+    const sm = run?.sendMessage;
+    if (typeof sm !== "function") return undefined;
+    return Promise.resolve(sm.call(run, message) as T);
+  };
+  if (typeof browser !== "undefined") {
+    const viaImport = await sendVia(browser.runtime as IChromeRuntimeShim);
+    if (viaImport) return viaImport;
   }
-  const run = getChromeRuntime();
-  const sm = run?.sendMessage;
-  if (typeof sm !== "function") {
-    throw new Error("runtime.sendMessage is unavailable.");
-  }
-  return Promise.resolve(sm.call(run, message) as T);
+  const viaGlobalBrowser = await sendVia(getGlobalBrowserExtensionRuntime());
+  if (viaGlobalBrowser) return viaGlobalBrowser;
+  const viaChrome = await sendVia(getChromeRuntime());
+  if (viaChrome) return viaChrome;
+  throw new Error("runtime.sendMessage is unavailable.");
 }
 
 /** Must stay aligned with `host_permissions` in `wxt.config.ts` (HTTPS prefixes only). */
