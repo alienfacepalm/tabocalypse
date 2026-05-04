@@ -1,0 +1,36 @@
+---
+description: TypeScript interface (I) and type-alias (T) naming prefixes; ESLint-enforced
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript type and interface prefixes
+
+These rules apply to **repo-authored** `interface` and `type` aliases in `apps/**` and `packages/**`. **ESLint** enforces them (`@typescript-eslint/naming-convention` in root [`eslint.config.mjs`](../../eslint.config.mjs)).
+
+## Interfaces → `I` + PascalCase
+
+Declare object shapes with **`I` + PascalCase** (Hungarian-style interface prefix).
+
+- Good: `ISettings`, `IPluginWidget`, `IGetSomething`
+- Bad: `Settings`, `getSomething`
+
+## Type aliases → `T` + PascalCase
+
+Declare type aliases (unions, intersections, aliases to primitives, mapped types, etc.) with **`T` + PascalCase**.
+
+- Good: `TWidgetKey`, `THumorIntensity`, `TUser`
+- Bad: `WidgetKey`, `HumorIntensity`
+
+## Generics and locals
+
+- **Generic type parameters** (`<TItem>`, `<K>`) are **not** covered by the `T` prefix rule above; use normal TS conventions (short uppercase or meaningful names) and keep them distinct from exported `T*` aliases.
+- **Variables, functions, React components** keep existing naming (camelCase / PascalCase); only `interface` / `type` declarations use the `I` / `T` prefixes.
+
+## Re-exports
+
+When re-exporting SDK types, use the prefixed names (`export type { IImportedPlugin } from "…"`).
+
+## Fixing violations
+
+Run `pnpm run lint`. Rename the declaration and every import/reference, or split a collision (e.g. rename a poorly named interface rather than fighting the prefix rule).

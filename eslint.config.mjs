@@ -34,6 +34,19 @@ export default tseslint.config(
         "error",
         { fixStyle: "inline-type-imports", prefer: "type-imports" },
       ],
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          selector: "interface",
+          format: ["PascalCase"],
+          prefix: ["I"],
+        },
+        {
+          selector: "typeAlias",
+          format: ["PascalCase"],
+          prefix: ["T"],
+        },
+      ],
     },
   },
   {

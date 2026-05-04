@@ -1,11 +1,11 @@
 import { unzipSync, strFromU8 } from "fflate";
-import type { ImportedUserPack } from "./settings";
+import type { IImportedUserPack } from "./settings";
 
 export const MAX_ZIP_BYTES = 12 * 1024 * 1024;
 export const MAX_MESSAGES = 800;
 export const MAX_LINE_LENGTH = 600;
 
-export interface PackJson {
+export interface IPackJson {
   id: string;
   name: string;
   version: string;
@@ -13,7 +13,7 @@ export interface PackJson {
   maxIntensityHint?: string;
 }
 
-function normalizeMessages(raw: PackJson["messages"]): string[] {
+function normalizeMessages(raw: IPackJson["messages"]): string[] {
   if (!raw || !Array.isArray(raw)) return [];
   const out: string[] = [];
   for (const m of raw) {
@@ -23,10 +23,10 @@ function normalizeMessages(raw: PackJson["messages"]): string[] {
   return out;
 }
 
-export function parsePackJsonText(text: string): ImportedUserPack {
-  let data: PackJson;
+export function parsePackJsonText(text: string): IImportedUserPack {
+  let data: IPackJson;
   try {
-    data = JSON.parse(text) as PackJson;
+    data = JSON.parse(text) as IPackJson;
   } catch {
     throw new Error("Invalid JSON");
   }
@@ -52,7 +52,7 @@ export function parsePackJsonText(text: string): ImportedUserPack {
   };
 }
 
-export function parseTabocalypseZip(buffer: ArrayBuffer): ImportedUserPack {
+export function parseTabocalypseZip(buffer: ArrayBuffer): IImportedUserPack {
   if (buffer.byteLength > MAX_ZIP_BYTES)
     throw new Error(`ZIP too large (max ${MAX_ZIP_BYTES} bytes)`);
   let files: Record<string, Uint8Array>;
@@ -73,7 +73,7 @@ export function parseTabocalypseZip(buffer: ArrayBuffer): ImportedUserPack {
   return parsePackJsonText(text);
 }
 
-export function estimateImportedBytes(packs: ImportedUserPack[]): number {
+export function estimateImportedBytes(packs: IImportedUserPack[]): number {
   return packs.reduce((acc, p) => acc + JSON.stringify(p).length, 0);
 }
 

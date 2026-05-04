@@ -23,8 +23,8 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 
 ## Typings and naming
 
-- **`lib/` and existing code** use interfaces **without** an `I` prefix (`Settings`, `ImportedUserPack`, …). **Stay consistent** with the directory you touch; do not bulk-rename to `I*` unless the user requests a naming migration.
-- For **new** shared shapes, either match neighboring types in that folder or use an `I` prefix if you are introducing a clearly shared contract — pick one style per file and do not mix both styles in the same file.
+- **Interfaces** use prefix **`I`** + PascalCase (`ISettings`, `IPluginWidget`). **Type aliases** use prefix **`T`** + PascalCase (`TWidgetKey`, `THumorIntensity`). See [typescript-type-prefixes.mdc](typescript-type-prefixes.mdc); **ESLint enforces** this in `apps/**` and `packages/**`.
+- **Do not mix** prefixed and unprefixed `interface` / `type` declarations in the same file.
 
 ## File names (kebab-case)
 
@@ -60,7 +60,7 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 ## Formatting and static analysis
 
 - **Prettier** — config: [`prettier.config.mjs`](../../prettier.config.mjs) (explicit Prettier defaults: double quotes, semicolons, `trailingComma: "all"`, `printWidth: 100`). Use **`pnpm run format`** when you edit matching files; CI or pre-merge should run **`pnpm run format:check`**.
-- **ESLint** — [`eslint.config.mjs`](../../eslint.config.mjs): **`@typescript-eslint/no-explicit-any`**, **`@typescript-eslint/consistent-type-imports`**, **`no-eval` / `no-implied-eval` / `no-new-func`** (aligns with declarative-only / no user JS execution); **`unicorn/filename-case`** (**kebab-case** for `apps/**` and `packages/**`, with ignores for `wxt.config.ts`, `*.test.ts`, `*.spec.ts`); unused vars must be used or prefixed with `_`. **`pnpm run lint`** uses **`--max-warnings=0`**.
+- **ESLint** — [`eslint.config.mjs`](../../eslint.config.mjs): **`@typescript-eslint/no-explicit-any`**, **`@typescript-eslint/consistent-type-imports`**, **`@typescript-eslint/naming-convention`** (interfaces **`I` + PascalCase**, type aliases **`T` + PascalCase**; see [typescript-type-prefixes.mdc](typescript-type-prefixes.mdc)), **`no-eval` / `no-implied-eval` / `no-new-func`** (aligns with declarative-only / no user JS execution); **`unicorn/filename-case`** (**kebab-case** for `apps/**` and `packages/**`, with ignores for `wxt.config.ts`, `*.test.ts`, `*.spec.ts`); unused vars must be used or prefixed with `_`. **`pnpm run lint`** uses **`--max-warnings=0`**.
 - **Git hooks** — [`.husky/pre-commit`](../../.husky/pre-commit) runs **`lint-staged`** (ESLint `--fix` + Prettier on staged files). Requires a normal **git** clone; after `pnpm install`, hooks are installed via the **`prepare`** script.
 - **Typecheck** — **`pnpm run check:sdk`** and **`pnpm run check:extension`**, or **`pnpm run check`** for format check + lint + tests + both typechecks, before calling a change done.
 - **Meaningful change closure** — run checks (and extension **`pnpm run build`** when relevant), then **commit** and **push**; see [validate-commit-push.mdc](validate-commit-push.mdc).

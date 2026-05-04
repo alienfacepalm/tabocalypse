@@ -1,13 +1,13 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import type { TodoItem } from "../lib/settings";
+import type { ITodoItem } from "../lib/settings";
 
 export function TodoWidget({
   items,
   onChange,
 }: {
-  items: TodoItem[];
-  onChange: (next: TodoItem[]) => void;
+  items: ITodoItem[];
+  onChange: (next: ITodoItem[]) => void;
 }) {
   const [draft, setDraft] = useState("");
   const add = () => {

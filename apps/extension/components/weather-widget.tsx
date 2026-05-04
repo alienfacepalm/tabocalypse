@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { fetchOpenMeteo, type WeatherSnapshot } from "../lib/weather/fetch-weather";
+import { fetchOpenMeteo, type IWeatherSnapshot } from "../lib/weather/fetch-weather";
 
 export function WeatherWidget({ lat, lon }: { lat: number; lon: number }) {
-  const [w, setW] = useState<WeatherSnapshot | null>(null);
+  const [w, setW] = useState<IWeatherSnapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {

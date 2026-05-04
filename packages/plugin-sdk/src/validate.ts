@@ -1,15 +1,15 @@
-import type { ImportedPlugin, PluginWidget } from "./types";
+import type { IImportedPlugin, IPluginWidget } from "./types";
 
-export interface ValidationResult {
+export interface IValidationResult {
   ok: boolean;
   errors: string[];
   warnings: string[];
-  plugin?: ImportedPlugin;
+  plugin?: IImportedPlugin;
 }
 
-const ALLOWED_TYPES = new Set<PluginWidget["type"]>(["StaticText", "RotatingQuotes", "LinkGrid"]);
+const ALLOWED_TYPES = new Set<IPluginWidget["type"]>(["StaticText", "RotatingQuotes", "LinkGrid"]);
 
-export interface RawPluginJson {
+export interface IRawPluginJson {
   schemaVersion?: number;
   id?: string;
   name?: string;
@@ -24,7 +24,7 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
-function validateWidget(w: unknown): PluginWidget | null {
+function validateWidget(w: unknown): IPluginWidget | null {
   if (!isRecord(w)) {
     return null;
   }
@@ -32,7 +32,7 @@ function validateWidget(w: unknown): PluginWidget | null {
   const type = w.type;
   const props = w.props;
   if (typeof id !== "string" || !id.trim()) return null;
-  if (typeof type !== "string" || !ALLOWED_TYPES.has(type as PluginWidget["type"])) return null;
+  if (typeof type !== "string" || !ALLOWED_TYPES.has(type as IPluginWidget["type"])) return null;
   if (!isRecord(props)) return null;
 
   if (type === "StaticText") {
@@ -63,12 +63,12 @@ function validateWidget(w: unknown): PluginWidget | null {
   return null;
 }
 
-export function validatePluginJsonText(text: string): ValidationResult {
+export function validatePluginJsonText(text: string): IValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  let raw: RawPluginJson;
+  let raw: IRawPluginJson;
   try {
-    raw = JSON.parse(text) as RawPluginJson;
+    raw = JSON.parse(text) as IRawPluginJson;
   } catch {
     return { ok: false, errors: ["Invalid JSON"], warnings };
   }
@@ -86,7 +86,7 @@ export function validatePluginJsonText(text: string): ValidationResult {
     }
   }
 
-  const widgets: PluginWidget[] = [];
+  const widgets: IPluginWidget[] = [];
   if (Array.isArray(raw.widgets)) {
     raw.widgets.forEach((w, i) => {
       const parsed = validateWidget(w);
@@ -97,7 +97,7 @@ export function validatePluginJsonText(text: string): ValidationResult {
 
   if (errors.length) return { ok: false, errors, warnings };
 
-  const plugin: ImportedPlugin = {
+  const plugin: IImportedPlugin = {
     id: String(raw.id)
       .replace(/[^a-zA-Z0-9_-]/g, "_")
       .slice(0, 64),

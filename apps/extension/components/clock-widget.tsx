@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { pickDailyLine, type HumorContext } from "../lib/humor/engine";
+import { pickDailyLine, type IHumorContext } from "../lib/humor/engine";
 
-export function ClockWidget({ humor }: { humor: HumorContext }) {
+export function ClockWidget({ humor }: { humor: IHumorContext }) {
   const [now, setNow] = useState(() => new Date());
   const [subtitle, setSubtitle] = useState<string | null>(null);
 

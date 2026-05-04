@@ -1,5 +1,5 @@
 import React from "react";
-import type { ImportedPlugin, PluginWidget } from "@tabocalypse/plugin-sdk";
+import type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 function StaticText({ props }: { props: { text: string } }) {
   return <p className="plugin-static">{props.text}</p>;
@@ -29,7 +29,7 @@ function LinkGrid({ props }: { props: { links: { label: string; url: string }[] 
   );
 }
 
-function OneWidget({ w, debug }: { w: PluginWidget; debug: boolean }) {
+function OneWidget({ w, debug }: { w: IPluginWidget; debug: boolean }) {
   return (
     <div className="plugin-widget">
       {debug ? <span className="muted sm">{w.type}</span> : null}
@@ -44,7 +44,7 @@ function OneWidget({ w, debug }: { w: PluginWidget; debug: boolean }) {
   );
 }
 
-export function PluginDeck({ plugins, debug }: { plugins: ImportedPlugin[]; debug: boolean }) {
+export function PluginDeck({ plugins, debug }: { plugins: IImportedPlugin[]; debug: boolean }) {
   const enabled = plugins.filter((p) => p.enabled);
   if (!enabled.length) return null;
   return (

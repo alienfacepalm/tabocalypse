@@ -1,9 +1,9 @@
-import type { HumorIntensity } from "../settings";
-import type { ImportedUserPack } from "../settings";
+import type { THumorIntensity } from "../settings";
+import type { IImportedUserPack } from "../settings";
 import { BUILTIN_PACKS } from "./builtin-packs";
 import { passesBuiltinHardFilter } from "./filter";
 
-const RANK: Record<HumorIntensity, number> = {
+const RANK: Record<THumorIntensity, number> = {
   off: 0,
   mild: 1,
   spicy: 2,
@@ -19,11 +19,11 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
-export interface HumorContext {
+export interface IHumorContext {
   humorEnabled: boolean;
-  humorIntensity: HumorIntensity;
+  humorIntensity: THumorIntensity;
   enabledBuiltinPackIds: string[];
-  importedPacks: ImportedUserPack[];
+  importedPacks: IImportedUserPack[];
   myLines: string[];
   locale: string;
 }
@@ -33,12 +33,12 @@ export function dailySeed(): string {
   return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
-function builtinPackAllowed(user: HumorIntensity, packMax: HumorIntensity): boolean {
+function builtinPackAllowed(user: THumorIntensity, packMax: THumorIntensity): boolean {
   if (user === "off") return false;
   return RANK[packMax] <= RANK[user];
 }
 
-export function pickDailyLine(ctx: HumorContext): string | null {
+export function pickDailyLine(ctx: IHumorContext): string | null {
   if (!ctx.humorEnabled || ctx.humorIntensity === "off") return null;
 
   const candidates: string[] = [];
@@ -68,7 +68,7 @@ export function pickDailyLine(ctx: HumorContext): string | null {
   return candidates[idx] ?? null;
 }
 
-export function randomRoast(ctx: HumorContext): string | null {
+export function randomRoast(ctx: IHumorContext): string | null {
   const line = pickDailyLine(ctx);
   if (line) return line;
   return "Humor packs disabled. Chaos respects consent.";

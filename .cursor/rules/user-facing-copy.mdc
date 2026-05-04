@@ -5,6 +5,6 @@ alwaysApply: true
 
 # User-facing copy (extension UI)
 
-- **Do not** show raw **TypeScript / storage identifiers** to users (camelCase `WidgetKey` values, internal enum names, JSON field names) when the UI is meant for non-developers.
+- **Do not** show raw **TypeScript / storage identifiers** to users (camelCase `TWidgetKey` string literal values, internal enum names, JSON field names) when the UI is meant for non-developers.
 - **Widget toggles** and similar lists: use **`WIDGET_LABELS`** from [`apps/extension/lib/settings.ts`](../../apps/extension/lib/settings.ts) (or the same pattern — a single **`Record<…, string>`** next to the key type) so labels stay in sync when keys are added.
-- When you add a new **`WidgetKey`**, add the matching **`WIDGET_LABELS`** entry and extend **`apps/extension/lib/settings.test.ts`** if the suite asserts coverage.
+- When you add a new **`TWidgetKey`** union member, add the matching **`WIDGET_LABELS`** entry and extend **`apps/extension/lib/settings.test.ts`** if the suite asserts coverage.

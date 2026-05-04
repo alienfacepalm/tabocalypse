@@ -4,11 +4,11 @@ import browser from "webextension-polyfill";
 const ALARM_PREFIX = "tabocalypse:";
 const META_KEY = "alarmMeta";
 
-type AlarmMeta = Record<string, string>;
+type TAlarmMeta = Record<string, string>;
 
-async function getMeta(): Promise<AlarmMeta> {
+async function getMeta(): Promise<TAlarmMeta> {
   const r = await browser.storage.local.get(META_KEY);
-  return ((r[META_KEY] as AlarmMeta) ?? {}) as AlarmMeta;
+  return ((r[META_KEY] as TAlarmMeta) ?? {}) as TAlarmMeta;
 }
 
 export default defineBackground(() => {

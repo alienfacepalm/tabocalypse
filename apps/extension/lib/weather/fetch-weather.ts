@@ -1,4 +1,4 @@
-export interface WeatherSnapshot {
+export interface IWeatherSnapshot {
   temperatureC: number;
   code: number;
   summary: string;
@@ -18,7 +18,7 @@ const CODE_SUMMARY: Record<number, string> = {
   95: "Thunderstorm",
 };
 
-export async function fetchOpenMeteo(lat: number, lon: number): Promise<WeatherSnapshot> {
+export async function fetchOpenMeteo(lat: number, lon: number): Promise<IWeatherSnapshot> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));

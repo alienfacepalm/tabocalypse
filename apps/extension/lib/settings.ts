@@ -1,11 +1,11 @@
-import type { ImportedPlugin } from "@tabocalypse/plugin-sdk";
+import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
 
-export type { ImportedPlugin, PluginWidget } from "@tabocalypse/plugin-sdk";
+export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
-export type HumorIntensity = "off" | "mild" | "spicy" | "unhinged";
+export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
 
-export type WidgetKey =
+export type TWidgetKey =
   | "search"
   | "clock"
   | "notes"
@@ -17,7 +17,7 @@ export type WidgetKey =
   | "humorBanner"
   | "productivityGag";
 
-export interface ImportedUserPack {
+export interface IImportedUserPack {
   id: string;
   name: string;
   version: string;
@@ -26,20 +26,20 @@ export interface ImportedUserPack {
   importedAt: number;
 }
 
-export interface TodoItem {
+export interface ITodoItem {
   id: string;
   text: string;
   done: boolean;
 }
 
-export interface Settings {
+export interface ISettings {
   version: 1;
   preset: "focus" | "balanced" | "chaos";
   humorEnabled: boolean;
-  humorIntensity: HumorIntensity;
+  humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
-  widgets: Record<WidgetKey, boolean>;
+  widgets: Record<TWidgetKey, boolean>;
   searchEngine: "ddg" | "google" | "bing";
   weatherLat: number;
   weatherLon: number;
@@ -52,48 +52,48 @@ export interface Settings {
   openaiApiKey: string;
   openaiBaseUrl: string;
   myLines: string[];
-  importedPacks: ImportedUserPack[];
-  importedPlugins: ImportedPlugin[];
+  importedPacks: IImportedUserPack[];
+  importedPlugins: IImportedPlugin[];
   debugPluginSource: boolean;
   notesText: string;
-  todos: TodoItem[];
+  todos: ITodoItem[];
 }
 
 const SYNC_KEY = "tabocalypseSync";
 const LOCAL_KEY = "tabocalypseLocal";
 
-export interface SyncSlice {
+export interface ISyncSlice {
   version: 1;
-  preset: Settings["preset"];
+  preset: ISettings["preset"];
   humorEnabled: boolean;
-  humorIntensity: HumorIntensity;
+  humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
-  widgets: Record<WidgetKey, boolean>;
-  searchEngine: Settings["searchEngine"];
+  widgets: Record<TWidgetKey, boolean>;
+  searchEngine: ISettings["searchEngine"];
   weatherLat: number;
   weatherLon: number;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
-  backgroundKind: Settings["backgroundKind"];
+  backgroundKind: ISettings["backgroundKind"];
   backgroundSolid: string;
   debugPluginSource: boolean;
 }
 
-export interface LocalSlice {
+export interface ILocalSlice {
   version: 1;
   userBackgroundDataUrl: string | null;
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
   myLines: string[];
-  importedPacks: ImportedUserPack[];
-  importedPlugins: ImportedPlugin[];
+  importedPacks: IImportedUserPack[];
+  importedPlugins: IImportedPlugin[];
   notesText: string;
-  todos: TodoItem[];
+  todos: ITodoItem[];
 }
 
-export const DEFAULT_WIDGETS: Record<WidgetKey, boolean> = {
+export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   search: true,
   clock: true,
   notes: false,
@@ -106,8 +106,8 @@ export const DEFAULT_WIDGETS: Record<WidgetKey, boolean> = {
   productivityGag: false,
 };
 
-/** User-visible names for the Widgets settings list (storage keys stay `WidgetKey`). */
-export const WIDGET_LABELS: Record<WidgetKey, string> = {
+/** User-visible names for the Widgets settings list (storage keys stay `TWidgetKey`). */
+export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   search: "Search",
   clock: "Clock",
   notes: "Notes",
@@ -120,7 +120,7 @@ export const WIDGET_LABELS: Record<WidgetKey, string> = {
   productivityGag: "Productivity gag",
 };
 
-export function defaultSettings(): Settings {
+export function defaultSettings(): ISettings {
   return {
     version: 1,
     preset: "balanced",
@@ -149,7 +149,7 @@ export function defaultSettings(): Settings {
   };
 }
 
-function toSync(s: Settings): SyncSlice {
+function toSync(s: ISettings): ISyncSlice {
   return {
     version: 1,
     preset: s.preset,
@@ -169,7 +169,7 @@ function toSync(s: Settings): SyncSlice {
   };
 }
 
-function toLocal(s: Settings): LocalSlice {
+function toLocal(s: ISettings): ILocalSlice {
   return {
     version: 1,
     userBackgroundDataUrl: s.userBackgroundDataUrl,
@@ -185,9 +185,9 @@ function toLocal(s: Settings): LocalSlice {
 }
 
 function mergeSettings(
-  sync: Partial<SyncSlice> | undefined,
-  local: Partial<LocalSlice> | undefined,
-): Settings {
+  sync: Partial<ISyncSlice> | undefined,
+  local: Partial<ILocalSlice> | undefined,
+): ISettings {
   const d = defaultSettings();
   return {
     version: 1,
@@ -217,17 +217,17 @@ function mergeSettings(
   };
 }
 
-export async function loadSettings(): Promise<Settings> {
+export async function loadSettings(): Promise<ISettings> {
   const localRaw = await browser.storage.local.get(LOCAL_KEY);
   const syncRaw = browser.storage.sync
     ? await browser.storage.sync.get(SYNC_KEY)
     : ({} as Record<string, unknown>);
-  const sync = syncRaw[SYNC_KEY] as SyncSlice | undefined;
-  const local = localRaw[LOCAL_KEY] as LocalSlice | undefined;
+  const sync = syncRaw[SYNC_KEY] as ISyncSlice | undefined;
+  const local = localRaw[LOCAL_KEY] as ILocalSlice | undefined;
   return mergeSettings(sync, local);
 }
 
-export async function saveSettings(s: Settings): Promise<void> {
+export async function saveSettings(s: ISettings): Promise<void> {
   const writes: Promise<unknown>[] = [browser.storage.local.set({ [LOCAL_KEY]: toLocal(s) })];
   if (browser.storage.sync) {
     writes.unshift(browser.storage.sync.set({ [SYNC_KEY]: toSync(s) }));
@@ -235,7 +235,7 @@ export async function saveSettings(s: Settings): Promise<void> {
   await Promise.all(writes);
 }
 
-export function applyPreset(preset: Settings["preset"], s: Settings): Settings {
+export function applyPreset(preset: ISettings["preset"], s: ISettings): ISettings {
   const next = { ...s, preset };
   if (preset === "focus") {
     next.humorEnabled = false;

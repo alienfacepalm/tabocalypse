@@ -1,13 +1,13 @@
-import type { HumorIntensity } from "../settings";
+import type { THumorIntensity } from "../settings";
 
-export interface BuiltinPack {
+export interface IBuiltinPack {
   id: string;
   name: string;
-  maxIntensity: HumorIntensity;
+  maxIntensity: THumorIntensity;
   lines: string[];
 }
 
-export const BUILTIN_PACKS: BuiltinPack[] = [
+export const BUILTIN_PACKS: IBuiltinPack[] = [
   {
     id: "office_absurd",
     name: "Office absurd",

@@ -1,15 +1,15 @@
 import browser from "webextension-polyfill";
 import { Search } from "lucide-react";
 import React, { useState } from "react";
-import type { Settings } from "../lib/settings";
+import type { ISettings } from "../lib/settings";
 
-const ENGINES: Record<Settings["searchEngine"], (q: string) => string> = {
+const ENGINES: Record<ISettings["searchEngine"], (q: string) => string> = {
   ddg: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
   google: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
   bing: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
 };
 
-export function SearchWidget({ engine }: { engine: Settings["searchEngine"] }) {
+export function SearchWidget({ engine }: { engine: ISettings["searchEngine"] }) {
   const [q, setQ] = useState("");
   const go = () => {
     const t = q.trim();

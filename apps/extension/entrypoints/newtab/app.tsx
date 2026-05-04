@@ -10,14 +10,14 @@ import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
 import { WeatherWidget } from "../../components/weather-widget";
 import {
-  type HumorIntensity,
-  type Settings,
-  type WidgetKey,
+  type THumorIntensity,
+  type ISettings,
+  type TWidgetKey,
   WIDGET_LABELS,
 } from "../../lib/settings";
 import { applyPreset, defaultSettings, loadSettings, saveSettings } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
-import type { HumorContext } from "../../lib/humor/engine";
+import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
 import { openExternal, SUPPORT } from "../../lib/support-links";
@@ -30,7 +30,7 @@ import {
 
 const BG_MAX = 1_500_000;
 
-function backgroundStyle(s: Settings): React.CSSProperties {
+function backgroundStyle(s: ISettings): React.CSSProperties {
   if (s.backgroundKind === "solid") {
     return { background: s.backgroundSolid };
   }
@@ -47,10 +47,10 @@ function backgroundStyle(s: Settings): React.CSSProperties {
 }
 
 export default function App() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settings, setSettings] = useState<ISettings | null>(null);
   const [openSettings, setOpenSettings] = useState(false);
   const [warnSpicy, setWarnSpicy] = useState(false);
-  const [pendingIntensity, setPendingIntensity] = useState<HumorIntensity | null>(null);
+  const [pendingIntensity, setPendingIntensity] = useState<THumorIntensity | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [pluginValidateLog, setPluginValidateLog] = useState<string>("");
   const [aiResult, setAiResult] = useState<string | null>(null);
@@ -60,12 +60,12 @@ export default function App() {
     void loadSettings().then(setSettings);
   }, []);
 
-  const persist = useCallback(async (next: Settings) => {
+  const persist = useCallback(async (next: ISettings) => {
     setSettings(next);
     await saveSettings(next);
   }, []);
 
-  const humorCtx: HumorContext | null = useMemo(() => {
+  const humorCtx: IHumorContext | null = useMemo(() => {
     if (!settings) return null;
     return {
       humorEnabled: settings.humorEnabled,
@@ -89,7 +89,7 @@ export default function App() {
 
   const s = settings;
 
-  const requestIntensity = (hi: HumorIntensity) => {
+  const requestIntensity = (hi: THumorIntensity) => {
     if ((hi === "spicy" || hi === "unhinged") && !s.spicyContentAcknowledged) {
       setPendingIntensity(hi);
       setWarnSpicy(true);
@@ -105,7 +105,7 @@ export default function App() {
     setPendingIntensity(null);
   };
 
-  const toggleWidget = (k: WidgetKey, on: boolean) => {
+  const toggleWidget = (k: TWidgetKey, on: boolean) => {
     void persist({ ...s, widgets: { ...s.widgets, [k]: on } });
   };
 
@@ -247,7 +247,7 @@ export default function App() {
 
               <section className="settings-block">
                 <h3>Widgets</h3>
-                {(Object.keys(s.widgets) as WidgetKey[]).map((k) => (
+                {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
                   <label key={k} className="check-row">
                     <input
                       type="checkbox"
@@ -273,7 +273,7 @@ export default function App() {
                   Intensity
                   <select
                     value={s.humorIntensity}
-                    onChange={(e) => requestIntensity(e.target.value as HumorIntensity)}
+                    onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
                   >
                     <option value="off">off</option>
                     <option value="mild">mild</option>
@@ -301,7 +301,10 @@ export default function App() {
                 <select
                   value={s.searchEngine}
                   onChange={(e) =>
-                    void persist({ ...s, searchEngine: e.target.value as Settings["searchEngine"] })
+                    void persist({
+                      ...s,
+                      searchEngine: e.target.value as ISettings["searchEngine"],
+                    })
                   }
                 >
                   <option value="ddg">DuckDuckGo</option>
@@ -649,9 +652,9 @@ export default function App() {
                       const reader = new FileReader();
                       reader.onload = () => {
                         try {
-                          const parsed = JSON.parse(String(reader.result)) as Partial<Settings>;
+                          const parsed = JSON.parse(String(reader.result)) as Partial<ISettings>;
                           const d = defaultSettings();
-                          const merged: Settings = {
+                          const merged: ISettings = {
                             ...d,
                             ...parsed,
                             version: 1,
