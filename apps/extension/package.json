@@ -12,6 +12,7 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@fontsource/audiowide": "^5.2.7",
     "@tabocalypse/plugin-sdk": "workspace:*",
     "fflate": "^0.8.2",
     "lucide-react": "^1.14.0",

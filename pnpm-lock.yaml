@@ -44,6 +44,9 @@ importers:
 
   apps/extension:
     dependencies:
+      '@fontsource/audiowide':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@tabocalypse/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
@@ -71,7 +74,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@wxt-dev/module-react':
         specifier: ^1.1.3
-        version: 1.2.2(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4))(wxt@0.19.29(@types/node@25.6.0)(rollup@4.60.2)(yaml@2.8.4))
+        version: 1.2.2(vite@6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4))(wxt@0.19.29(@types/node@25.6.0)(rollup@4.60.2)(yaml@2.8.4))
       autoprefixer:
         specifier: ^10.5.0
         version: 10.5.0(postcss@8.5.13)
@@ -404,6 +407,9 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fontsource/audiowide@5.2.7':
+    resolution: {integrity: sha512-ude+jAqXaEkV4vfKAYyfub694LSy/OKkYyUHumYrEP3ZgSSP6TomITFLUC8x6Fhc2salL7nuju3xT6aWOHECPg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -3095,6 +3101,8 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
+  '@fontsource/audiowide@5.2.7': {}
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -3391,14 +3399,14 @@ snapshots:
       '@typescript-eslint/types': 8.59.1
       eslint-visitor-keys: 5.0.1
 
-  '@vitejs/plugin-react@4.3.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4))':
+  '@vitejs/plugin-react@4.3.4(vite@6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
       '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.0)
       '@types/babel__core': 7.20.5
       react-refresh: 0.14.2
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4)
+      vite: 6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4)
     transitivePeerDependencies:
       - supports-color
 
@@ -3459,10 +3467,10 @@ snapshots:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
 
-  '@wxt-dev/module-react@1.2.2(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4))(wxt@0.19.29(@types/node@25.6.0)(rollup@4.60.2)(yaml@2.8.4))':
+  '@wxt-dev/module-react@1.2.2(vite@6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4))(wxt@0.19.29(@types/node@25.6.0)(rollup@4.60.2)(yaml@2.8.4))':
     dependencies:
-      '@vitejs/plugin-react': 4.3.4(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4))
-      vite: 6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4)
+      '@vitejs/plugin-react': 4.3.4(vite@6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4))
+      vite: 6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4)
       wxt: 0.19.29(@types/node@25.6.0)(rollup@4.60.2)(yaml@2.8.4)
     transitivePeerDependencies:
       - supports-color
@@ -5309,6 +5317,20 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  vite@6.4.2(@types/node@25.6.0)(jiti@1.21.7)(yaml@2.8.4):
+    dependencies:
+      esbuild: 0.25.12
+      fdir: 6.5.0(picomatch@4.0.4)
+      picomatch: 4.0.4
+      postcss: 8.5.13
+      rollup: 4.60.2
+      tinyglobby: 0.2.16
+    optionalDependencies:
+      '@types/node': 25.6.0
+      fsevents: 2.3.3
+      jiti: 1.21.7
+      yaml: 2.8.4
 
   vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(yaml@2.8.4):
     dependencies:

@@ -28,7 +28,7 @@ export default {
         card: "0px",
       },
       fontFamily: {
-        // `design/`: Space Mono (loud), JetBrains Mono (body); main chrome title uses Audiowide (Google Fonts)
+        // `design/`: Space Mono (loud), JetBrains Mono (body); main chrome title uses Audiowide (@fontsource)
         sans: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
         display: ['"Space Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
         title: [
