@@ -15,6 +15,21 @@ export function useHudPanelDrag(): IHudPanelDragContextValue | null {
   return useContext(HudPanelDragContext);
 }
 
+/** Scrollable body under a HUD panel title (flex child with min-height 0). */
+export function HudPanelBody({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={["min-h-0 flex-1 overflow-y-auto", className].filter(Boolean).join(" ")}>
+      {children}
+    </div>
+  );
+}
+
 /**
  * Panel title for draggable HUD cards (full-width `.card h3` row).
  * Outside {@link HudPanelDragContext}, renders a plain heading with the same card styles.

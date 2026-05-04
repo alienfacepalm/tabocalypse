@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { pickDailyLine, type IHumorContext } from "../lib/humor/engine";
-import { HudPanelTitle } from "./hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
 export function ClockWidget({ humor }: { humor: IHumorContext }) {
   const [now, setNow] = useState(() => new Date());
@@ -21,23 +21,25 @@ export function ClockWidget({ humor }: { humor: IHumorContext }) {
   return (
     <section className="card clock-card">
       <HudPanelTitle>Clock</HudPanelTitle>
-      <div className="clock-time">
-        {now.toLocaleTimeString(undefined, {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
-      </div>
-      <div className="clock-date muted">
-        {now.toLocaleDateString(undefined, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </div>
-      <div className="clock-tz muted">{tz}</div>
-      {subtitle ? <p className="clock-roast">{subtitle}</p> : null}
+      <HudPanelBody>
+        <div className="clock-time">
+          {now.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </div>
+        <div className="clock-date muted">
+          {now.toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </div>
+        <div className="clock-tz muted">{tz}</div>
+        {subtitle ? <p className="clock-roast">{subtitle}</p> : null}
+      </HudPanelBody>
     </section>
   );
 }

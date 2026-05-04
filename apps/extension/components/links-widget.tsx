@@ -1,6 +1,6 @@
 import React from "react";
 import browser from "webextension-polyfill";
-import { HudPanelTitle } from "./hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
 export function TopSitesWidget() {
   const [sites, setSites] = React.useState<{ url?: string; title?: string }[]>([]);
@@ -22,22 +22,26 @@ export function TopSitesWidget() {
     return (
       <section className="card">
         <HudPanelTitle>Top sites</HudPanelTitle>
-        <p className="err">{err}</p>
+        <HudPanelBody>
+          <p className="err">{err}</p>
+        </HudPanelBody>
       </section>
     );
 
   return (
     <section className="card">
       <HudPanelTitle>Top sites</HudPanelTitle>
-      <ul className="link-grid">
-        {sites.map((s, i) => (
-          <li key={i}>
-            <a href={s.url} target="_blank" rel="noreferrer">
-              {s.title || s.url}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <HudPanelBody>
+        <ul className="link-grid">
+          {sites.map((s, i) => (
+            <li key={i}>
+              <a href={s.url} target="_blank" rel="noreferrer">
+                {s.title || s.url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </HudPanelBody>
     </section>
   );
 }
@@ -62,22 +66,26 @@ export function BookmarksWidget() {
     return (
       <section className="card">
         <HudPanelTitle>Bookmarks</HudPanelTitle>
-        <p className="err">{err}</p>
+        <HudPanelBody>
+          <p className="err">{err}</p>
+        </HudPanelBody>
       </section>
     );
 
   return (
     <section className="card">
       <HudPanelTitle>Bookmarks</HudPanelTitle>
-      <ul className="link-grid">
-        {marks.map((b) => (
-          <li key={b.id}>
-            <a href={b.url} target="_blank" rel="noreferrer">
-              {b.title || b.url}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <HudPanelBody>
+        <ul className="link-grid">
+          {marks.map((b) => (
+            <li key={b.id}>
+              <a href={b.url} target="_blank" rel="noreferrer">
+                {b.title || b.url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </HudPanelBody>
     </section>
   );
 }

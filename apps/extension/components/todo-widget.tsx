@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import type { ITodoItem } from "../lib/settings";
-import { HudPanelTitle } from "./hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
 export function TodoWidget({
@@ -21,34 +21,36 @@ export function TodoWidget({
   return (
     <section className="card">
       <HudPanelTitle>Todos</HudPanelTitle>
-      <ul className="todo-list">
-        {items.map((it) => (
-          <li key={it.id} className="todo-row">
-            <label className="row">
-              <input
-                type="checkbox"
-                checked={it.done}
-                onChange={() =>
-                  onChange(items.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)))
-                }
-              />
-              <span className={it.done ? "done" : ""}>{it.text}</span>
-            </label>
-            <HudTip tip="Remove this task from the list">
-              <button
-                type="button"
-                className="btn ghost icon-only sm"
-                aria-label="Remove todo"
-                onClick={() => onChange(items.filter((x) => x.id !== it.id))}
-              >
-                <Trash2 size={18} strokeWidth={2} aria-hidden />
-              </button>
-            </HudTip>
-          </li>
-        ))}
-      </ul>
+      <HudPanelBody>
+        <ul className="todo-list">
+          {items.map((it) => (
+            <li key={it.id} className="todo-row">
+              <label className="row">
+                <input
+                  type="checkbox"
+                  checked={it.done}
+                  onChange={() =>
+                    onChange(items.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)))
+                  }
+                />
+                <span className={it.done ? "done" : ""}>{it.text}</span>
+              </label>
+              <HudTip tip="Remove this task from the list">
+                <button
+                  type="button"
+                  className="btn ghost icon-only sm"
+                  aria-label="Remove todo"
+                  onClick={() => onChange(items.filter((x) => x.id !== it.id))}
+                >
+                  <Trash2 size={18} strokeWidth={2} aria-hidden />
+                </button>
+              </HudTip>
+            </li>
+          ))}
+        </ul>
+      </HudPanelBody>
       <form
-        className="row mt-2"
+        className="row mt-2 shrink-0"
         onSubmit={(e) => {
           e.preventDefault();
           add();

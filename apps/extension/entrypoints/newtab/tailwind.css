@@ -133,6 +133,22 @@
     @apply max-w-full;
   }
 
+  .hud-panel-size-host > .card {
+    @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  }
+
+  .hud-panel-size-host > .card > h3 {
+    @apply shrink-0;
+  }
+
+  .hud-panel-size-host > .plugin-deck-host {
+    @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  }
+
+  .hud-panel-size-host .plugin-deck-scroll {
+    @apply min-h-0 flex-1 overflow-y-auto;
+  }
+
   .card {
     @apply relative border px-4 py-4;
     border-color: rgb(148 163 184 / 0.22);

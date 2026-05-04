@@ -34,7 +34,7 @@ import {
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
-import { HudPanelTitle } from "../../components/hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
@@ -200,7 +200,7 @@ function SupportLinkIcon({ kind }: { kind: TSupportLinkKind }) {
   }
 }
 
-export default function App({ initialSettings }: { initialSettings: ISettings }) {
+function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Element {
   const [settings, setSettings] = useState<ISettings>(initialSettings);
   const [openSettings, setOpenSettings] = useState(false);
   const [warnSpicy, setWarnSpicy] = useState(false);
@@ -1841,6 +1841,8 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
   );
 }
 
+export default App;
+
 function TabGuilt() {
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
@@ -1858,7 +1860,9 @@ function TabGuilt() {
     return (
       <section className="card">
         <HudPanelTitle>Tab guilt</HudPanelTitle>
-        <p className="muted">Grant tabs permission in settings.</p>
+        <HudPanelBody>
+          <p className="muted">Grant tabs permission in settings.</p>
+        </HudPanelBody>
       </section>
     );
   const msg =
@@ -1868,8 +1872,10 @@ function TabGuilt() {
   return (
     <section className="card">
       <HudPanelTitle>Tab guilt</HudPanelTitle>
-      <p className="tab-count">{n} tabs in this window.</p>
-      <p className="muted">{msg}</p>
+      <HudPanelBody>
+        <p className="tab-count">{n} tabs in this window.</p>
+        <p className="muted">{msg}</p>
+      </HudPanelBody>
     </section>
   );
 }
