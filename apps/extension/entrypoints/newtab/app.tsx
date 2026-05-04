@@ -174,8 +174,8 @@ function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void 
   }
 }
 
-export default function App() {
-  const [settings, setSettings] = useState<ISettings | null>(null);
+export default function App({ initialSettings }: { initialSettings: ISettings }) {
+  const [settings, setSettings] = useState<ISettings>(initialSettings);
   const [openSettings, setOpenSettings] = useState(false);
   const [warnSpicy, setWarnSpicy] = useState(false);
   const [pendingIntensity, setPendingIntensity] = useState<THumorIntensity | null>(null);
@@ -196,7 +196,7 @@ export default function App() {
     tabs: false,
   });
   const bingPaintUrlRef = useRef<string | null>(null);
-  const latestSettingsRef = useRef<ISettings | null>(null);
+  const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<void>>(Promise.resolve());
   const myLinesSaveTimerRef = useRef<number | null>(null);
 
@@ -238,13 +238,9 @@ export default function App() {
     return () => browser.storage.onChanged.removeListener(onStorageChanged);
   }, []);
 
-  useEffect(() => {
-    if (!settings) {
-      applyDocumentTheme("dark", "glitch");
-      return;
-    }
+  useLayoutEffect(() => {
     applyDocumentTheme(settings.themeMode, settings.themePalette);
-  }, [settings]);
+  }, [settings.themeMode, settings.themePalette]);
 
   useEffect(() => {
     const kind = settings?.backgroundKind;
@@ -387,7 +383,6 @@ export default function App() {
 
   const saveLatestToDisk = useCallback(async (): Promise<void> => {
     const cur = latestSettingsRef.current;
-    if (!cur) return;
     try {
       await saveSettings(cur);
       setImportErr(null);
@@ -401,7 +396,6 @@ export default function App() {
       const run = async () => {
         clearMyLinesDebouncedSaveTimer();
         const current = latestSettingsRef.current;
-        if (!current) return;
         const resolved = typeof next === "function" ? next(current) : next;
         latestSettingsRef.current = resolved;
         setSettings(resolved);
@@ -442,7 +436,6 @@ export default function App() {
   const scheduleMyLinesPersist = useCallback(
     (myLines: string[]) => {
       const current = latestSettingsRef.current;
-      if (!current) return;
       const next = { ...current, myLines };
       latestSettingsRef.current = next;
       setSettings(next);
@@ -462,28 +455,28 @@ export default function App() {
     [saveLatestToDisk],
   );
 
-  const humorCtx: IHumorContext | null = useMemo(() => {
-    if (!settings) return null;
-    return {
+  const humorCtx: IHumorContext = useMemo(
+    () => ({
       humorEnabled: settings.humorEnabled,
       humorIntensity: settings.humorIntensity,
       enabledBuiltinPackIds: settings.humorBuiltinPackIds,
       importedPacks: settings.importedPacks,
       myLines: settings.myLines,
       locale: navigator.language,
-    };
-  }, [settings]);
+    }),
+    [settings],
+  );
 
-  const shellStyle = useMemo(() => {
-    if (!settings) return undefined;
-    return backgroundStyle(settings, {
-      bingImageUrl: bingPaintUrl ?? bingChosenUrl,
-      userImageUrl: userChosenUrl,
-    });
-  }, [settings, bingChosenUrl, bingPaintUrl, userChosenUrl]);
+  const shellStyle = useMemo(
+    () =>
+      backgroundStyle(settings, {
+        bingImageUrl: bingPaintUrl ?? bingChosenUrl,
+        userImageUrl: userChosenUrl,
+      }),
+    [settings, bingChosenUrl, bingPaintUrl, userChosenUrl],
+  );
 
   useLayoutEffect(() => {
-    if (!shellStyle) return undefined;
     const html = document.documentElement;
     const bs = document.body;
     const { style: hs } = html;
@@ -500,15 +493,7 @@ export default function App() {
     };
   }, [shellStyle]);
 
-  const dailyLine = useMemo(() => (humorCtx ? pickDailyLine(humorCtx) : null), [humorCtx]);
-
-  if (!settings || !humorCtx) {
-    return (
-      <div className="shell loading-screen">
-        <p>Loading Tabocalypse…</p>
-      </div>
-    );
-  }
+  const dailyLine = useMemo(() => pickDailyLine(humorCtx), [humorCtx]);
 
   const s = settings;
 
