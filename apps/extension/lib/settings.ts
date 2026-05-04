@@ -51,6 +51,109 @@ export interface ITodoItem {
   done: boolean;
 }
 
+/** One user-uploaded background image with framing stored locally (not synced). */
+export interface IUserBackgroundImage {
+  id: string;
+  dataUrl: string;
+  /** Horizontal focal point for `background-position` (0–100, default 50). */
+  positionXPct: number;
+  /** Vertical focal point for `background-position` (0–100, default 50). */
+  positionYPct: number;
+}
+
+/** Saved focal point for a specific Bing spotlight image URL (local only). */
+export interface IBingWallpaperFraming {
+  positionXPct: number;
+  positionYPct: number;
+}
+
+export type TBingWallpaperFramings = Record<string, IBingWallpaperFraming>;
+
+export const BACKGROUND_ROTATE_MINUTES_MIN = 1;
+export const BACKGROUND_ROTATE_MINUTES_MAX = 24 * 60;
+export const DEFAULT_BACKGROUND_ROTATE_MINUTES = 15;
+
+export function coerceBackgroundRotateMinutes(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.min(
+    BACKGROUND_ROTATE_MINUTES_MAX,
+    Math.max(BACKGROUND_ROTATE_MINUTES_MIN, Math.round(n)),
+  );
+}
+
+function clampBackgroundPositionPct(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.min(100, Math.max(0, n));
+}
+
+/** Deterministic id so legacy URL-only storage migrates to the same ids across sessions. */
+export function stableUserBackgroundIdFromDataUrl(dataUrl: string, index: number): string {
+  let h = 2166136261;
+  for (let i = 0; i < dataUrl.length; i++) {
+    h ^= dataUrl.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `ubg-${index}-${(h >>> 0).toString(36)}-${dataUrl.length.toString(36)}`;
+}
+
+function coerceUserBackgroundImagesFromStorage(raw: unknown): IUserBackgroundImage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: IUserBackgroundImage[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as Record<string, unknown>;
+    const id = typeof o.id === "string" && o.id.trim().length > 0 ? o.id.trim() : "";
+    const dataUrl = typeof o.dataUrl === "string" && o.dataUrl.startsWith("data:") ? o.dataUrl : "";
+    if (!id || !dataUrl) continue;
+    out.push({
+      id,
+      dataUrl,
+      positionXPct: clampBackgroundPositionPct(o.positionXPct, 50),
+      positionYPct: clampBackgroundPositionPct(o.positionYPct, 50),
+    });
+  }
+  return out;
+}
+
+function coerceBingWallpaperFramings(raw: unknown): TBingWallpaperFramings {
+  if (typeof raw !== "object" || raw === null) return {};
+  const src = raw as Record<string, unknown>;
+  const out: TBingWallpaperFramings = {};
+  for (const [url, v] of Object.entries(src)) {
+    if (!url.startsWith("https://")) continue;
+    if (typeof v !== "object" || v === null) continue;
+    const o = v as Record<string, unknown>;
+    out[url] = {
+      positionXPct: clampBackgroundPositionPct(o.positionXPct, 50),
+      positionYPct: clampBackgroundPositionPct(o.positionYPct, 50),
+    };
+  }
+  return out;
+}
+
+/**
+ * Which upload is shown when rotation is off; when rotation is on, time slots pick the image.
+ * `null` means “first in list”.
+ */
+export function resolveUserBackgroundImage(
+  images: IUserBackgroundImage[],
+  activeId: string | null,
+  rotate: boolean,
+  rotateIntervalMs: number,
+  nowMs = Date.now(),
+): IUserBackgroundImage | null {
+  if (images.length === 0) return null;
+  if (rotate) {
+    const slot = Math.floor(nowMs / Math.max(60_000, rotateIntervalMs));
+    return images[slot % images.length] ?? images[0] ?? null;
+  }
+  if (activeId) {
+    const found = images.find((im) => im.id === activeId);
+    if (found) return found;
+  }
+  return images[0] ?? null;
+}
+
 export interface ISettings {
   version: 1;
   preset: "focus" | "balanced" | "chaos";
@@ -74,6 +177,10 @@ export interface ISettings {
   backgroundKind: "solid" | "gradient" | "image" | "bing";
   /** If true and the chosen background kind supports it, the background rotates over time. */
   backgroundRotate: boolean;
+  /** Minutes between Bing spotlight changes while rotation is on (local). */
+  backgroundRotateMinutesBing: number;
+  /** Minutes between uploaded-photo changes while rotation is on (local). */
+  backgroundRotateMinutesUser: number;
   backgroundSolid: string;
   /** Middle stop for the new-tab gradient (145deg, 45%). */
   backgroundGradientMid: string;
@@ -81,6 +188,12 @@ export interface ISettings {
   backgroundGradientEnd: string;
   userBackgroundDataUrl: string | null;
   userBackgroundDataUrls: string[];
+  /** Structured uploads with per-image framing; mirrors legacy URL fields on save/load. */
+  userBackgroundImages: IUserBackgroundImage[];
+  /** Active upload when rotation is off; ignored while rotating. */
+  userBackgroundActiveId: string | null;
+  /** Per–Bing-URL focal points (extension keys are HTTPS image URLs). */
+  bingWallpaperFramings: TBingWallpaperFramings;
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
@@ -159,7 +272,12 @@ export interface ILocalSlice {
   version: 1;
   userBackgroundDataUrl: string | null;
   userBackgroundDataUrls: string[];
+  userBackgroundImages?: IUserBackgroundImage[];
+  userBackgroundActiveId?: string | null;
+  bingWallpaperFramings?: TBingWallpaperFramings;
   backgroundRotate: boolean;
+  backgroundRotateMinutesBing?: number;
+  backgroundRotateMinutesUser?: number;
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
@@ -221,11 +339,16 @@ export function defaultSettings(): ISettings {
     useOpenWeather: false,
     backgroundKind: "gradient",
     backgroundRotate: false,
+    backgroundRotateMinutesBing: DEFAULT_BACKGROUND_ROTATE_MINUTES,
+    backgroundRotateMinutesUser: DEFAULT_BACKGROUND_ROTATE_MINUTES,
     backgroundSolid: "#0f0f12",
     backgroundGradientMid: themeGradientStops("dark").mid,
     backgroundGradientEnd: themeGradientStops("dark").end,
     userBackgroundDataUrl: null,
     userBackgroundDataUrls: [],
+    userBackgroundImages: [],
+    userBackgroundActiveId: null,
+    bingWallpaperFramings: {},
     openWeatherApiKey: "",
     openaiApiKey: "",
     openaiBaseUrl: "https://api.openai.com/v1",
@@ -273,7 +396,12 @@ function toLocal(s: ISettings): ILocalSlice {
     version: 1,
     userBackgroundDataUrl: s.userBackgroundDataUrl,
     userBackgroundDataUrls: s.userBackgroundDataUrls,
+    userBackgroundImages: s.userBackgroundImages,
+    userBackgroundActiveId: s.userBackgroundActiveId,
+    bingWallpaperFramings: s.bingWallpaperFramings,
     backgroundRotate: s.backgroundRotate,
+    backgroundRotateMinutesBing: s.backgroundRotateMinutesBing,
+    backgroundRotateMinutesUser: s.backgroundRotateMinutesUser,
     openWeatherApiKey: s.openWeatherApiKey,
     openaiApiKey: s.openaiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
@@ -288,20 +416,55 @@ function toLocal(s: ISettings): ILocalSlice {
   };
 }
 
+function buildUserBackgroundImagesFromLocal(
+  local: Partial<ILocalSlice> | undefined,
+): IUserBackgroundImage[] {
+  const fromStorage = coerceUserBackgroundImagesFromStorage(local?.userBackgroundImages);
+  if (fromStorage.length > 0) return fromStorage;
+  const legacySingle = local?.userBackgroundDataUrl ?? null;
+  const legacyList =
+    (local?.userBackgroundDataUrls ?? []).length > 0
+      ? local!.userBackgroundDataUrls!
+      : legacySingle
+        ? [legacySingle]
+        : [];
+  return legacyList.map((dataUrl, index) => ({
+    id: stableUserBackgroundIdFromDataUrl(dataUrl, index),
+    dataUrl,
+    positionXPct: 50,
+    positionYPct: 50,
+  }));
+}
+
 function mergeSettings(
   sync: Partial<ISyncSlice> | undefined,
   local: Partial<ILocalSlice> | undefined,
 ): ISettings {
   const d = defaultSettings();
-  const legacySingle = local?.userBackgroundDataUrl ?? d.userBackgroundDataUrl;
-  const legacyToList =
-    (local?.userBackgroundDataUrls ?? d.userBackgroundDataUrls).length > 0
-      ? (local?.userBackgroundDataUrls ?? d.userBackgroundDataUrls)
-      : legacySingle
-        ? [legacySingle]
-        : [];
+  const userBackgroundImages = buildUserBackgroundImagesFromLocal(local);
+  let userBackgroundActiveId =
+    typeof local?.userBackgroundActiveId === "string" ? local.userBackgroundActiveId.trim() : null;
+  const validIds = new Set(userBackgroundImages.map((im) => im.id));
+  if (userBackgroundActiveId && !validIds.has(userBackgroundActiveId)) {
+    userBackgroundActiveId = null;
+  }
+  const userBackgroundDataUrls = userBackgroundImages.map((im) => im.dataUrl);
+  const primary =
+    userBackgroundActiveId && validIds.has(userBackgroundActiveId)
+      ? userBackgroundImages.find((im) => im.id === userBackgroundActiveId)
+      : userBackgroundImages[0];
+  const userBackgroundDataUrl = primary?.dataUrl ?? null;
+
   const resolvedThemeMode = coerceThemeMode(sync?.themeMode, d.themeMode);
   const bgGradientFallback = themeGradientStops(resolvedThemeMode);
+  const backgroundRotateMinutesBing = coerceBackgroundRotateMinutes(
+    local?.backgroundRotateMinutesBing,
+    d.backgroundRotateMinutesBing,
+  );
+  const backgroundRotateMinutesUser = coerceBackgroundRotateMinutes(
+    local?.backgroundRotateMinutesUser,
+    d.backgroundRotateMinutesUser,
+  );
   return {
     version: 1,
     preset: sync?.preset ?? d.preset,
@@ -325,12 +488,17 @@ function mergeSettings(
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
     backgroundRotate: local?.backgroundRotate ?? d.backgroundRotate,
+    backgroundRotateMinutesBing,
+    backgroundRotateMinutesUser,
     backgroundSolid: sync?.backgroundSolid ?? d.backgroundSolid,
     backgroundGradientMid: coerceThemeHex(sync?.backgroundGradientMid, bgGradientFallback.mid),
     backgroundGradientEnd: coerceThemeHex(sync?.backgroundGradientEnd, bgGradientFallback.end),
     debugPluginSource: sync?.debugPluginSource ?? d.debugPluginSource,
-    userBackgroundDataUrl: legacySingle,
-    userBackgroundDataUrls: legacyToList,
+    userBackgroundDataUrl,
+    userBackgroundDataUrls,
+    userBackgroundImages,
+    userBackgroundActiveId,
+    bingWallpaperFramings: coerceBingWallpaperFramings(local?.bingWallpaperFramings),
     openWeatherApiKey: local?.openWeatherApiKey ?? d.openWeatherApiKey,
     openaiApiKey: local?.openaiApiKey ?? d.openaiApiKey,
     openaiBaseUrl: local?.openaiBaseUrl ?? d.openaiBaseUrl,

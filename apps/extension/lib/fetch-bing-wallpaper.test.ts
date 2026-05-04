@@ -97,6 +97,19 @@ describe("pickRotatingBingWallpaperUrl", () => {
     expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 2)).toBe("c");
     expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 3)).toBe("a");
   });
+
+  it("honors a custom rotation interval in milliseconds", () => {
+    const urls = ["a", "b"];
+    const thirtyMin = 30 * 60 * 1000;
+    expect(pickRotatingBingWallpaperUrl(urls, thirtyMin - 1, thirtyMin)).toBe("a");
+    expect(pickRotatingBingWallpaperUrl(urls, thirtyMin, thirtyMin)).toBe("b");
+  });
+
+  it("clamps the rotation step to at least one minute", () => {
+    const urls = ["a", "b"];
+    expect(pickRotatingBingWallpaperUrl(urls, 59_000, 30_000)).toBe("a");
+    expect(pickRotatingBingWallpaperUrl(urls, 60_000, 30_000)).toBe("b");
+  });
 });
 
 describe("pickDailyBingWallpaperUrl", () => {

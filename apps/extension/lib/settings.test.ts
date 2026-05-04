@@ -32,6 +32,8 @@ const {
   DEFAULT_WIDGETS,
   WIDGET_LABELS,
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
+  resolveUserBackgroundImage,
+  stableUserBackgroundIdFromDataUrl,
 } = await import("./settings");
 
 describe("WIDGET_LABELS", () => {
@@ -53,6 +55,40 @@ describe("defaultSettings", () => {
     expect(s.importedPacks).toEqual([]);
     expect(s.importedPlugins).toEqual([]);
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
+    expect(s.userBackgroundImages).toEqual([]);
+    expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("resolveUserBackgroundImage", () => {
+  const images = [
+    { id: "a", dataUrl: "data:image/png;base64,QQ==", positionXPct: 50, positionYPct: 50 },
+    { id: "b", dataUrl: "data:image/png;base64,Qg==", positionXPct: 50, positionYPct: 50 },
+  ];
+
+  it("returns the active row when rotation is off", () => {
+    expect(resolveUserBackgroundImage(images, "b", false, 60_000)?.id).toBe("b");
+  });
+
+  it("falls back to the first row when active id is unknown", () => {
+    expect(resolveUserBackgroundImage(images, "missing", false, 60_000)?.id).toBe("a");
+  });
+
+  it("rotates by time slot when rotation is on", () => {
+    const step = 60_000;
+    expect(resolveUserBackgroundImage(images, null, true, step, 0)?.id).toBe("a");
+    expect(resolveUserBackgroundImage(images, null, true, step, step)?.id).toBe("b");
+    expect(resolveUserBackgroundImage(images, null, true, step, step * 2)?.id).toBe("a");
+  });
+});
+
+describe("stableUserBackgroundIdFromDataUrl", () => {
+  it("is stable for the same inputs", () => {
+    const u = "data:image/png;base64,TEST";
+    expect(stableUserBackgroundIdFromDataUrl(u, 0)).toBe(stableUserBackgroundIdFromDataUrl(u, 0));
+    expect(stableUserBackgroundIdFromDataUrl(u, 0)).not.toBe(
+      stableUserBackgroundIdFromDataUrl(u, 1),
+    );
   });
 });
 
@@ -215,6 +251,30 @@ describe("loadSettings", () => {
     });
     const s = await loadSettings();
     expect(s.themePalette).toBe("ocean");
+  });
+
+  it("migrates legacy userBackgroundDataUrls into structured images", async () => {
+    syncGet.mockResolvedValue({});
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: ["data:image/png;base64,QQ==", "data:image/png;base64,Qg=="],
+        backgroundRotate: false,
+        openWeatherApiKey: "",
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+    });
+    const s = await loadSettings();
+    expect(s.userBackgroundImages).toHaveLength(2);
+    expect(s.userBackgroundImages[0]!.dataUrl).toBe("data:image/png;base64,QQ==");
+    expect(s.userBackgroundImages[0]!.id).toBeTruthy();
   });
 });
 

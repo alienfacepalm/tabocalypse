@@ -34,6 +34,7 @@ import {
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
+import { UserBackgroundGallery } from "../../components/user-background-gallery";
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/clock-widget";
@@ -48,9 +49,15 @@ import {
   type THumorIntensity,
   type IHudPanelPosition,
   type ISettings,
+  type IUserBackgroundImage,
   type THudPanelId,
   type TWidgetKey,
   WIDGET_LABELS,
+  BACKGROUND_ROTATE_MINUTES_MAX,
+  BACKGROUND_ROTATE_MINUTES_MIN,
+  DEFAULT_BACKGROUND_ROTATE_MINUTES,
+  coerceBackgroundRotateMinutes,
+  resolveUserBackgroundImage,
 } from "../../lib/settings";
 import {
   applyPreset,
@@ -101,14 +108,12 @@ const BG_MAX_EDGE_PX = 2560;
 /** Shown in Settings — must stay in sync with BG_MAX / BG_TOTAL_MAX. */
 const BG_MAX_LABEL = "1.5 MB";
 const BG_TOTAL_LABEL = "6 MB";
-const USER_ROTATE_MS = 15 * 60 * 1000;
-const BING_ROTATE_MS = 15 * 60 * 1000;
-
 type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
   userImageUrl?: string | null;
+  backgroundPosition?: string;
 };
 
 function revokeObjectUrlMaybe(url: string | null): void {
@@ -125,7 +130,7 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
         backgroundColor: "transparent",
         backgroundImage: `url(${u})`,
         backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundPosition: extras?.backgroundPosition ?? "50% 50%",
         backgroundRepeat: "no-repeat",
         backgroundAttachment: "fixed",
       };
@@ -156,7 +161,7 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
       backgroundColor: "transparent",
       backgroundImage: `url(${u})`,
       backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundPosition: extras?.backgroundPosition ?? "50% 50%",
       backgroundRepeat: "no-repeat",
       backgroundAttachment: "fixed",
     };
@@ -166,13 +171,6 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
     background: grad,
     backgroundAttachment: "fixed",
   };
-}
-
-function pickRotatingUrl(urls: string[], rotate: boolean, nowMs = Date.now()): string | null {
-  if (urls.length === 0) return null;
-  if (!rotate) return urls[0] ?? null;
-  const slot = Math.floor(nowMs / USER_ROTATE_MS);
-  return urls[slot % urls.length] ?? urls[0] ?? null;
 }
 
 function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void {
@@ -214,6 +212,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [bingImageLoadErr, setBingImageLoadErr] = useState<string | null>(null);
   const [bingRefreshing, setBingRefreshing] = useState(false);
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
+  /** Upload row used for framing / pan (stable while a given photo is visible). */
+  const [userBackgroundDisplayId, setUserBackgroundDisplayId] = useState<string | null>(null);
+  const [bgPanLive, setBgPanLive] = useState<
+    | { kind: "user"; id: string; positionXPct: number; positionYPct: number }
+    | { kind: "bing"; url: string; positionXPct: number; positionYPct: number }
+    | null
+  >(null);
   /** Mirrors `browser.permissions.contains` for optional API permissions (not widget toggles alone). */
   const [optionalApiPerms, setOptionalApiPerms] = useState({
     topSites: false,
@@ -225,6 +230,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<void>>(Promise.resolve());
   const myLinesSaveTimerRef = useRef<number | null>(null);
+  const bgPanDragRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    originXPct: number;
+    originYPct: number;
+    kind: "user" | "bing";
+    userId?: string;
+    bingUrl?: string;
+  } | null>(null);
+  const bgPanCommitRef = useRef<
+    | { kind: "user"; id: string; positionXPct: number; positionYPct: number }
+    | { kind: "bing"; url: string; positionXPct: number; positionYPct: number }
+    | null
+  >(null);
 
   useEffect(() => {
     bingPaintUrlRef.current = bingPaintUrl;
@@ -290,6 +310,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       return;
     }
     const rotate = settings?.backgroundRotate ?? false;
+    const bingRotateMs = Math.max(
+      60_000,
+      (settings?.backgroundRotateMinutesBing ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
+    );
     let cancelled = false;
     const listAbort = new AbortController();
     setBingChosenUrl(null);
@@ -308,7 +332,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           return;
         }
         setBingChosenUrl(
-          rotate ? pickRotatingBingWallpaperUrl(urls) : pickDailyBingWallpaperUrl(urls),
+          rotate
+            ? pickRotatingBingWallpaperUrl(urls, Date.now(), bingRotateMs)
+            : pickDailyBingWallpaperUrl(urls),
         );
       })
       .catch((e: unknown) => {
@@ -323,6 +349,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     const id = window.setInterval(() => {
       setBingRefreshing(true);
+      const step = Math.max(
+        60_000,
+        (latestSettingsRef.current.backgroundRotateMinutesBing ??
+          DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
+      );
       void fetchBingWallpaperImageUrls()
         .then((urls) => {
           if (cancelled) return;
@@ -331,7 +362,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             return;
           }
           setBingFetchErr(null);
-          setBingChosenUrl(pickRotatingBingWallpaperUrl(urls));
+          setBingChosenUrl(pickRotatingBingWallpaperUrl(urls, Date.now(), step));
         })
         .catch((e: unknown) => {
           if (cancelled) return;
@@ -340,13 +371,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         .finally(() => {
           if (!cancelled) setBingRefreshing(false);
         });
-    }, BING_ROTATE_MS);
+    }, bingRotateMs);
     return () => {
       cancelled = true;
       listAbort.abort();
       window.clearInterval(id);
     };
-  }, [settings?.backgroundKind, settings?.backgroundRotate]);
+  }, [settings?.backgroundKind, settings?.backgroundRotate, settings?.backgroundRotateMinutesBing]);
 
   useEffect(() => {
     if (settings?.backgroundKind !== "bing" || !bingChosenUrl) {
@@ -390,23 +421,39 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const kind = settings?.backgroundKind;
     if (kind !== "image") {
       setUserChosenUrl(null);
+      setUserBackgroundDisplayId(null);
       return;
     }
-    if (!settings) return;
-    const picked = pickRotatingUrl(settings.userBackgroundDataUrls, settings.backgroundRotate);
-    setUserChosenUrl(picked ?? settings.userBackgroundDataUrl ?? null);
+    const applyUserBackground = (): void => {
+      const c = latestSettingsRef.current;
+      const userMs = Math.max(
+        60_000,
+        (c.backgroundRotateMinutesUser ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
+      );
+      const resolved = resolveUserBackgroundImage(
+        c.userBackgroundImages,
+        c.userBackgroundActiveId,
+        c.backgroundRotate,
+        userMs,
+      );
+      setUserChosenUrl(resolved?.dataUrl ?? null);
+      setUserBackgroundDisplayId(resolved?.id ?? null);
+    };
+    applyUserBackground();
     if (!settings.backgroundRotate) return;
-    const id = window.setInterval(() => {
-      const next = pickRotatingUrl(settings.userBackgroundDataUrls, true);
-      setUserChosenUrl(next ?? settings.userBackgroundDataUrl ?? null);
-    }, USER_ROTATE_MS);
+    const userMs = Math.max(
+      60_000,
+      (settings.backgroundRotateMinutesUser ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
+    );
+    const id = window.setInterval(applyUserBackground, userMs);
     return () => window.clearInterval(id);
   }, [
     settings,
     settings?.backgroundKind,
     settings?.backgroundRotate,
-    settings?.userBackgroundDataUrl,
-    settings?.userBackgroundDataUrls,
+    settings?.backgroundRotateMinutesUser,
+    settings?.userBackgroundActiveId,
+    settings?.userBackgroundImages,
   ]);
 
   const clearMyLinesDebouncedSaveTimer = useCallback((): void => {
@@ -512,6 +559,41 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     [settings],
   );
 
+  const backgroundPositionStr = useMemo(() => {
+    if (bgPanLive) {
+      if (bgPanLive.kind === "bing" && settings.backgroundKind === "bing" && bingChosenUrl) {
+        if (bgPanLive.url === bingChosenUrl) {
+          return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
+        }
+      }
+      if (
+        bgPanLive.kind === "user" &&
+        settings.backgroundKind === "image" &&
+        userBackgroundDisplayId
+      ) {
+        if (bgPanLive.id === userBackgroundDisplayId) {
+          return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
+        }
+      }
+    }
+    if (settings.backgroundKind === "bing" && bingChosenUrl) {
+      const f = settings.bingWallpaperFramings[bingChosenUrl];
+      if (f) return `${f.positionXPct}% ${f.positionYPct}%`;
+    }
+    if (settings.backgroundKind === "image" && userBackgroundDisplayId) {
+      const im = settings.userBackgroundImages.find((row) => row.id === userBackgroundDisplayId);
+      if (im) return `${im.positionXPct}% ${im.positionYPct}%`;
+    }
+    return "50% 50%";
+  }, [
+    bgPanLive,
+    settings.backgroundKind,
+    settings.bingWallpaperFramings,
+    settings.userBackgroundImages,
+    bingChosenUrl,
+    userBackgroundDisplayId,
+  ]);
+
   const shellStyle = useMemo(
     () =>
       backgroundStyle(settings, {
@@ -519,8 +601,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         // can trigger cross-origin loads from the extension page (CORS / fetch noise).
         bingImageUrl: bingPaintUrl,
         userImageUrl: userChosenUrl,
+        backgroundPosition: backgroundPositionStr,
       }),
-    [settings, bingPaintUrl, userChosenUrl],
+    [settings, bingPaintUrl, userChosenUrl, backgroundPositionStr],
   );
 
   useLayoutEffect(() => {
@@ -592,21 +675,226 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         return;
       }
     }
-    const total = dataUrls.reduce((n, u) => n + estimateDataUrlBytes(u), 0);
-    if (total > BG_TOTAL_MAX) {
+    const existingBytes = latestSettingsRef.current.userBackgroundImages.reduce(
+      (n, im) => n + estimateDataUrlBytes(im.dataUrl),
+      0,
+    );
+    const newBytes = dataUrls.reduce((n, u) => n + estimateDataUrlBytes(u), 0);
+    if (existingBytes + newBytes > BG_TOTAL_MAX) {
       setImportErr(
         `After compressing on this device, images still exceed about ${BG_TOTAL_LABEL} total. Remove one file or pick smaller sources.`,
       );
       return;
     }
-    const first = dataUrls[0] ?? null;
-    void persist((cur) => ({
-      ...cur,
-      backgroundKind: "image",
-      userBackgroundDataUrl: first,
-      userBackgroundDataUrls: dataUrls,
-    }));
+    void persist((cur) => {
+      const additions: IUserBackgroundImage[] = dataUrls.map((dataUrl) => ({
+        id: crypto.randomUUID(),
+        dataUrl,
+        positionXPct: 50,
+        positionYPct: 50,
+      }));
+      const nextImages = [...cur.userBackgroundImages, ...additions];
+      const nextActive =
+        cur.userBackgroundImages.length === 0 ? additions[0]!.id : cur.userBackgroundActiveId;
+      const primary = nextImages.find((row) => row.id === nextActive) ?? nextImages[0];
+      return {
+        ...cur,
+        backgroundKind: "image",
+        userBackgroundImages: nextImages,
+        userBackgroundActiveId: nextActive,
+        userBackgroundDataUrl: primary?.dataUrl ?? null,
+        userBackgroundDataUrls: nextImages.map((row) => row.dataUrl),
+      };
+    });
   };
+
+  const deleteUserBackground = useCallback(
+    (id: string) => {
+      void persist((cur) => {
+        const next = cur.userBackgroundImages.filter((im) => im.id !== id);
+        let active = cur.userBackgroundActiveId;
+        if (active === id) active = next[0]?.id ?? null;
+        const primary = next.find((row) => row.id === active) ?? next[0];
+        const nextKind =
+          next.length === 0 && cur.backgroundKind === "image" ? "gradient" : cur.backgroundKind;
+        return {
+          ...cur,
+          backgroundKind: nextKind,
+          userBackgroundImages: next,
+          userBackgroundActiveId: active,
+          userBackgroundDataUrl: primary?.dataUrl ?? null,
+          userBackgroundDataUrls: next.map((row) => row.dataUrl),
+        };
+      });
+    },
+    [persist],
+  );
+
+  const moveUserBackground = useCallback(
+    (id: string, direction: "up" | "down") => {
+      void persist((cur) => {
+        const list = [...cur.userBackgroundImages];
+        const i = list.findIndex((im) => im.id === id);
+        if (i < 0) return cur;
+        const j = direction === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= list.length) return cur;
+        const a = list[i]!;
+        const b = list[j]!;
+        list[i] = b;
+        list[j] = a;
+        return {
+          ...cur,
+          userBackgroundImages: list,
+          userBackgroundDataUrls: list.map((row) => row.dataUrl),
+        };
+      });
+    },
+    [persist],
+  );
+
+  const onBackgroundPanPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (s.hudLayoutLocked) return;
+      if (e.button !== 0) return;
+      const canvas = hudCanvasRef.current;
+      if (!canvas) return;
+      if (s.backgroundKind === "image" && userChosenUrl) {
+        const id = userBackgroundDisplayId;
+        if (!id) return;
+        const im = s.userBackgroundImages.find((row) => row.id === id);
+        if (!im) return;
+        canvas.setPointerCapture(e.pointerId);
+        bgPanDragRef.current = {
+          pointerId: e.pointerId,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          originXPct: im.positionXPct,
+          originYPct: im.positionYPct,
+          kind: "user",
+          userId: id,
+        };
+        const live = {
+          kind: "user" as const,
+          id,
+          positionXPct: im.positionXPct,
+          positionYPct: im.positionYPct,
+        };
+        bgPanCommitRef.current = live;
+        setBgPanLive(live);
+        return;
+      }
+      if (s.backgroundKind === "bing" && bingChosenUrl && bingPaintUrl) {
+        const f = s.bingWallpaperFramings[bingChosenUrl] ?? {
+          positionXPct: 50,
+          positionYPct: 50,
+        };
+        canvas.setPointerCapture(e.pointerId);
+        bgPanDragRef.current = {
+          pointerId: e.pointerId,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          originXPct: f.positionXPct,
+          originYPct: f.positionYPct,
+          kind: "bing",
+          bingUrl: bingChosenUrl,
+        };
+        const live = {
+          kind: "bing" as const,
+          url: bingChosenUrl,
+          positionXPct: f.positionXPct,
+          positionYPct: f.positionYPct,
+        };
+        bgPanCommitRef.current = live;
+        setBgPanLive(live);
+      }
+    },
+    [s, userChosenUrl, userBackgroundDisplayId, bingChosenUrl, bingPaintUrl],
+  );
+
+  const onBackgroundPanPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = bgPanDragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const canvas = hudCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dx = ((e.clientX - drag.startClientX) / Math.max(1, rect.width)) * 100;
+    const dy = ((e.clientY - drag.startClientY) / Math.max(1, rect.height)) * 100;
+    const x = Math.min(100, Math.max(0, drag.originXPct + dx));
+    const y = Math.min(100, Math.max(0, drag.originYPct + dy));
+    if (drag.kind === "user" && drag.userId) {
+      const live = { kind: "user" as const, id: drag.userId, positionXPct: x, positionYPct: y };
+      bgPanCommitRef.current = live;
+      setBgPanLive(live);
+    } else if (drag.kind === "bing" && drag.bingUrl) {
+      const live = { kind: "bing" as const, url: drag.bingUrl, positionXPct: x, positionYPct: y };
+      bgPanCommitRef.current = live;
+      setBgPanLive(live);
+    }
+  }, []);
+
+  const finishBackgroundPan = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = bgPanDragRef.current;
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      try {
+        hudCanvasRef.current?.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+      bgPanDragRef.current = null;
+      setBgPanLive(null);
+      const live = bgPanCommitRef.current;
+      bgPanCommitRef.current = null;
+      if (!live) return;
+      void persist((cur) => {
+        if (live.kind === "user") {
+          return {
+            ...cur,
+            userBackgroundImages: cur.userBackgroundImages.map((row) =>
+              row.id === live.id
+                ? { ...row, positionXPct: live.positionXPct, positionYPct: live.positionYPct }
+                : row,
+            ),
+          };
+        }
+        return {
+          ...cur,
+          bingWallpaperFramings: {
+            ...cur.bingWallpaperFramings,
+            [live.url]: {
+              positionXPct: live.positionXPct,
+              positionYPct: live.positionYPct,
+            },
+          },
+        };
+      });
+    },
+    [persist],
+  );
+
+  const onBackgroundPanDoubleClick = useCallback(() => {
+    if (s.hudLayoutLocked) return;
+    if (s.backgroundKind === "image" && userBackgroundDisplayId) {
+      const id = userBackgroundDisplayId;
+      void persist((cur) => ({
+        ...cur,
+        userBackgroundImages: cur.userBackgroundImages.map((row) =>
+          row.id === id ? { ...row, positionXPct: 50, positionYPct: 50 } : row,
+        ),
+      }));
+      return;
+    }
+    if (s.backgroundKind === "bing" && bingChosenUrl) {
+      const url = bingChosenUrl;
+      void persist((cur) => ({
+        ...cur,
+        bingWallpaperFramings: {
+          ...cur.bingWallpaperFramings,
+          [url]: { positionXPct: 50, positionYPct: 50 },
+        },
+      }));
+    }
+  }, [s.hudLayoutLocked, s.backgroundKind, userBackgroundDisplayId, bingChosenUrl, persist]);
 
   const scheduleAlarm = async () => {
     const whenEl = document.getElementById("alarm-when") as HTMLInputElement | null;
@@ -1007,7 +1295,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <div className="row wrap">
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={
+                          s.backgroundKind === "solid" ? "btn primary has-icon" : "btn has-icon"
+                        }
+                        aria-pressed={s.backgroundKind === "solid"}
                         onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "solid" }))}
                       >
                         <Square size={18} strokeWidth={2} aria-hidden />
@@ -1015,7 +1306,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </button>
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={
+                          s.backgroundKind === "gradient" ? "btn primary has-icon" : "btn has-icon"
+                        }
+                        aria-pressed={s.backgroundKind === "gradient"}
                         onClick={() =>
                           void persist((cur) => ({ ...cur, backgroundKind: "gradient" }))
                         }
@@ -1023,7 +1317,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <Paintbrush size={18} strokeWidth={2} aria-hidden />
                         <span>Gradient</span>
                       </button>
-                      <label className="btn has-icon">
+                      <label
+                        className={
+                          s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
+                        }
+                      >
                         <ImagePlus size={18} strokeWidth={2} aria-hidden />
                         <span>Upload image(s)</span>
                         <input
@@ -1036,7 +1334,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </label>
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={
+                          s.backgroundKind === "bing" ? "btn primary has-icon" : "btn has-icon"
+                        }
+                        aria-pressed={s.backgroundKind === "bing"}
                         onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "bing" }))}
                       >
                         <Images size={18} strokeWidth={2} aria-hidden />
@@ -1054,19 +1355,81 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       />
                       <span>Rotate background</span>
                     </label>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="muted sm">Bing: minutes between images</span>
+                        <input
+                          type="number"
+                          min={BACKGROUND_ROTATE_MINUTES_MIN}
+                          max={BACKGROUND_ROTATE_MINUTES_MAX}
+                          className="mt-1 w-full max-w-[8rem]"
+                          value={s.backgroundRotateMinutesBing}
+                          onChange={(e) => {
+                            const n = coerceBackgroundRotateMinutes(
+                              Number(e.target.value),
+                              s.backgroundRotateMinutesBing,
+                            );
+                            void persist((cur) => ({ ...cur, backgroundRotateMinutesBing: n }));
+                          }}
+                          aria-label="Minutes between Bing spotlight images when rotation is on"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="muted sm">Uploads: minutes between photos</span>
+                        <input
+                          type="number"
+                          min={BACKGROUND_ROTATE_MINUTES_MIN}
+                          max={BACKGROUND_ROTATE_MINUTES_MAX}
+                          className="mt-1 w-full max-w-[8rem]"
+                          value={s.backgroundRotateMinutesUser}
+                          onChange={(e) => {
+                            const n = coerceBackgroundRotateMinutes(
+                              Number(e.target.value),
+                              s.backgroundRotateMinutesUser,
+                            );
+                            void persist((cur) => ({ ...cur, backgroundRotateMinutesUser: n }));
+                          }}
+                          aria-label="Minutes between uploaded photos when rotation is on"
+                        />
+                      </label>
+                    </div>
                     <p className="muted sm">
-                      Upload rotation changes every ~15 minutes while this tab is open.
+                      Timers run while this tab stays open. Minimum {BACKGROUND_ROTATE_MINUTES_MIN}{" "}
+                      minute; default {DEFAULT_BACKGROUND_ROTATE_MINUTES} minutes; maximum{" "}
+                      {Math.floor(BACKGROUND_ROTATE_MINUTES_MAX / 60)} hours.
                     </p>
                     <p className="muted sm">
                       Local uploads are resized and compressed in your browser before saving (about{" "}
                       {BG_MAX_LABEL} stored per image, about {BG_TOTAL_LABEL} total per
                       multi-select). Large originals are shrunk to fit extension storage.
                     </p>
-                    {s.backgroundKind === "bing" && s.backgroundRotate ? (
-                      <p className="muted sm">
-                        Bing rotation refreshes about every {BING_ROTATE_MS / 60_000} minutes while
-                        this tab stays open.
-                      </p>
+                    <p className="muted sm">
+                      Unlock panel layout, then drag empty space on the new tab to frame the
+                      wallpaper. Double-click empty space to re-center it. Each Bing image and each
+                      saved photo remembers its own framing.
+                    </p>
+
+                    {s.userBackgroundImages.length > 0 ? (
+                      <UserBackgroundGallery
+                        images={s.userBackgroundImages}
+                        activeId={s.userBackgroundActiveId}
+                        backgroundRotate={s.backgroundRotate}
+                        onPickFiles={(files) => void onPickBackgrounds(files)}
+                        onSetActiveId={(id) =>
+                          void persist((cur) => {
+                            const primary =
+                              cur.userBackgroundImages.find((row) => row.id === id) ??
+                              cur.userBackgroundImages[0];
+                            return {
+                              ...cur,
+                              userBackgroundActiveId: id,
+                              userBackgroundDataUrl: primary?.dataUrl ?? null,
+                            };
+                          })
+                        }
+                        onDeleteId={deleteUserBackground}
+                        onMove={moveUserBackground}
+                      />
                     ) : null}
 
                     {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
@@ -1801,6 +2164,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
       <main className="hud-main">
         <div ref={hudCanvasRef} className="hud-canvas">
+          <div
+            role="presentation"
+            className={[
+              "absolute inset-0 z-[1]",
+              !s.hudLayoutLocked &&
+              ((s.backgroundKind === "image" && userChosenUrl) ||
+                (s.backgroundKind === "bing" && bingPaintUrl))
+                ? "pointer-events-auto cursor-move touch-none"
+                : "pointer-events-none",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onPointerDown={onBackgroundPanPointerDown}
+            onPointerMove={onBackgroundPanPointerMove}
+            onPointerUp={finishBackgroundPan}
+            onPointerCancel={finishBackgroundPan}
+            onDoubleClick={onBackgroundPanDoubleClick}
+          />
           {s.widgets.todo ? (
             <DraggableHudPanel
               key="todo"

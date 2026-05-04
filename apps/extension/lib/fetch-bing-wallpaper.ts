@@ -30,13 +30,16 @@ export async function fetchBingWallpaperImageUrls(signal?: AbortSignal): Promise
 
 /**
  * Picks an image from the batch so the spotlight rotates over time without extra storage.
- * Slot changes every `ROTATE_MS` milliseconds.
+ * Slot changes every `rotateIntervalMs` milliseconds (minimum one minute).
  */
-const ROTATE_MS = 15 * 60 * 1000;
-
-export function pickRotatingBingWallpaperUrl(urls: string[], nowMs = Date.now()): string {
+export function pickRotatingBingWallpaperUrl(
+  urls: string[],
+  nowMs = Date.now(),
+  rotateIntervalMs = 15 * 60 * 1000,
+): string {
   if (urls.length === 0) throw new Error("No Bing wallpaper URLs");
-  const slot = Math.floor(nowMs / ROTATE_MS);
+  const step = Math.max(60_000, rotateIntervalMs);
+  const slot = Math.floor(nowMs / step);
   return urls[slot % urls.length] ?? urls[0]!;
 }
 
