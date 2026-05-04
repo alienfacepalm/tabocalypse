@@ -222,11 +222,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
   /** Upload row used for framing / pan (stable while a given photo is visible). */
   const [userBackgroundDisplayId, setUserBackgroundDisplayId] = useState<string | null>(null);
-  const [bgPanLive, setBgPanLive] = useState<
-    | { kind: "user"; id: string; positionXPct: number; positionYPct: number }
-    | { kind: "bing"; url: string; positionXPct: number; positionYPct: number }
-    | null
-  >(null);
+  const [bgPanLive, setBgPanLive] = useState<{
+    kind: "user";
+    id: string;
+    positionXPct: number;
+    positionYPct: number;
+  } | null>(null);
   /** Uploaded-image framing: drag only after enabling from the background context menu. */
   const [userBgRepositionMode, setUserBgRepositionMode] = useState(false);
   const [userBgRepositionDraft, setUserBgRepositionDraft] = useState<{
@@ -261,15 +262,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     startClientY: number;
     originXPct: number;
     originYPct: number;
-    kind: "user" | "bing";
-    userId?: string;
-    bingUrl?: string;
+    userId: string;
   } | null>(null);
-  const bgPanCommitRef = useRef<
-    | { kind: "user"; id: string; positionXPct: number; positionYPct: number }
-    | { kind: "bing"; url: string; positionXPct: number; positionYPct: number }
-    | null
-  >(null);
+  const bgPanCommitRef = useRef<{
+    kind: "user";
+    id: string;
+    positionXPct: number;
+    positionYPct: number;
+  } | null>(null);
 
   useEffect(() => {
     bingPaintUrlRef.current = bingPaintUrl;
@@ -637,21 +637,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   const backgroundPositionStr = useMemo(() => {
-    if (bgPanLive) {
-      if (bgPanLive.kind === "bing" && settings.backgroundKind === "bing" && bingChosenUrl) {
-        if (bgPanLive.url === bingChosenUrl) {
-          return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
-        }
-      }
-      if (
-        bgPanLive.kind === "user" &&
-        settings.backgroundKind === "image" &&
-        userBackgroundDisplayId
-      ) {
-        if (bgPanLive.id === userBackgroundDisplayId) {
-          return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
-        }
-      }
+    if (
+      bgPanLive &&
+      bgPanLive.kind === "user" &&
+      settings.backgroundKind === "image" &&
+      userBackgroundDisplayId &&
+      bgPanLive.id === userBackgroundDisplayId
+    ) {
+      return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
     }
     if (settings.backgroundKind === "bing" && bingChosenUrl) {
       const f = settings.bingWallpaperFramings[bingChosenUrl];
@@ -850,7 +843,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           startClientY: e.clientY,
           originXPct,
           originYPct,
-          kind: "user",
           userId: id,
         };
         const live = {
@@ -863,40 +855,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         setBgPanLive(live);
         return;
       }
-      if (s.backgroundKind === "bing" && bingChosenUrl && bingPaintUrl) {
-        const f = s.bingWallpaperFramings[bingChosenUrl] ?? {
-          positionXPct: 50,
-          positionYPct: 50,
-        };
-        canvas.setPointerCapture(e.pointerId);
-        bgPanDragRef.current = {
-          pointerId: e.pointerId,
-          startClientX: e.clientX,
-          startClientY: e.clientY,
-          originXPct: f.positionXPct,
-          originYPct: f.positionYPct,
-          kind: "bing",
-          bingUrl: bingChosenUrl,
-        };
-        const live = {
-          kind: "bing" as const,
-          url: bingChosenUrl,
-          positionXPct: f.positionXPct,
-          positionYPct: f.positionYPct,
-        };
-        bgPanCommitRef.current = live;
-        setBgPanLive(live);
-      }
     },
-    [
-      s,
-      userChosenUrl,
-      userBackgroundDisplayId,
-      userBgRepositionMode,
-      userBgRepositionDraft,
-      bingChosenUrl,
-      bingPaintUrl,
-    ],
+    [s, userChosenUrl, userBackgroundDisplayId, userBgRepositionMode, userBgRepositionDraft],
   );
 
   const onBackgroundPanPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -909,15 +869,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const dy = ((e.clientY - drag.startClientY) / Math.max(1, rect.height)) * 100;
     const x = Math.min(100, Math.max(0, drag.originXPct + dx));
     const y = Math.min(100, Math.max(0, drag.originYPct + dy));
-    if (drag.kind === "user" && drag.userId) {
-      const live = { kind: "user" as const, id: drag.userId, positionXPct: x, positionYPct: y };
-      bgPanCommitRef.current = live;
-      setBgPanLive(live);
-    } else if (drag.kind === "bing" && drag.bingUrl) {
-      const live = { kind: "bing" as const, url: drag.bingUrl, positionXPct: x, positionYPct: y };
-      bgPanCommitRef.current = live;
-      setBgPanLive(live);
-    }
+    const live = { kind: "user" as const, id: drag.userId, positionXPct: x, positionYPct: y };
+    bgPanCommitRef.current = live;
+    setBgPanLive(live);
   }, []);
 
   const finishBackgroundPan = useCallback(
@@ -933,7 +887,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const live = bgPanCommitRef.current;
       bgPanCommitRef.current = null;
 
-      if (drag.kind === "user" && userBgRepositionModeRef.current) {
+      if (userBgRepositionModeRef.current) {
         setBgPanLive(null);
         if (live?.kind === "user") {
           setUserBgRepositionDraft({
@@ -941,33 +895,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             positionYPct: live.positionYPct,
           });
         }
-        return;
+      } else {
+        setBgPanLive(null);
       }
-
-      setBgPanLive(null);
-      if (!live) return;
-      void persist((cur) => {
-        if (live.kind === "user") {
-          return {
-            ...cur,
-            userBackgroundImages: cur.userBackgroundImages.map((row) =>
-              row.id === live.id
-                ? { ...row, positionXPct: live.positionXPct, positionYPct: live.positionYPct }
-                : row,
-            ),
-          };
-        }
-        return {
-          ...cur,
-          bingWallpaperFramings: {
-            ...cur.bingWallpaperFramings,
-            [live.url]: {
-              positionXPct: live.positionXPct,
-              positionYPct: live.positionYPct,
-            },
-          },
-        };
-      });
     },
     [persist],
   );
@@ -1606,9 +1536,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       multi-select). Large originals are shrunk to fit extension storage.
                     </p>
                     <p className="muted sm">
-                      Unlock panel layout, then drag empty space on the new tab to frame the
-                      wallpaper. Double-click empty space to re-center it. Each Bing image and each
-                      saved photo remembers its own framing.
+                      Unlock panel layout, then use Reposition background on an uploaded photo
+                      (right click the wallpaper) to drag and preview framing; double-click empty
+                      space on the new tab to re-center the current Bing or uploaded wallpaper. Each
+                      Bing image and each saved photo remembers its own focal point.
                     </p>
 
                     {s.backgroundKind === "image" ? (
@@ -2724,8 +2655,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 ? "pointer-events-auto touch-none"
                 : "pointer-events-none",
               !s.hudLayoutLocked &&
-              ((s.backgroundKind === "image" && userChosenUrl && userBgRepositionMode) ||
-                (s.backgroundKind === "bing" && bingPaintUrl))
+              s.backgroundKind === "image" &&
+              userChosenUrl &&
+              userBgRepositionMode
                 ? "cursor-move"
                 : "",
             ]
