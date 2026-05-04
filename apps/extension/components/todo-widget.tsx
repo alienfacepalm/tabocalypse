@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import type { ITodoItem } from "../lib/settings";
+import { HudTip } from "./hud-tip";
 
 export function TodoWidget({
   items,
@@ -32,15 +33,16 @@ export function TodoWidget({
               />
               <span className={it.done ? "done" : ""}>{it.text}</span>
             </label>
-            <button
-              type="button"
-              className="btn ghost icon-only sm"
-              aria-label="Remove todo"
-              title="Remove"
-              onClick={() => onChange(items.filter((x) => x.id !== it.id))}
-            >
-              <Trash2 size={18} strokeWidth={2} aria-hidden />
-            </button>
+            <HudTip tip="Remove this task from the list">
+              <button
+                type="button"
+                className="btn ghost icon-only sm"
+                aria-label="Remove todo"
+                onClick={() => onChange(items.filter((x) => x.id !== it.id))}
+              >
+                <Trash2 size={18} strokeWidth={2} aria-hidden />
+              </button>
+            </HudTip>
           </li>
         ))}
       </ul>
@@ -63,9 +65,11 @@ export function TodoWidget({
             aria-label="New todo"
           />
         </div>
-        <button type="submit" className="btn primary icon-only" aria-label="Add todo" title="Add">
-          <Plus size={20} strokeWidth={2} aria-hidden />
-        </button>
+        <HudTip tip="Add the task in the field to your list">
+          <button type="submit" className="btn primary icon-only" aria-label="Add todo">
+            <Plus size={20} strokeWidth={2} aria-hidden />
+          </button>
+        </HudTip>
       </form>
     </section>
   );

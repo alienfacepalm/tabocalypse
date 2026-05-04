@@ -2,6 +2,7 @@ import browser from "webextension-polyfill";
 import { Search } from "lucide-react";
 import React, { useState } from "react";
 import type { ISettings } from "../lib/settings";
+import { HudTip } from "./hud-tip";
 
 const ENGINES: Record<ISettings["searchEngine"], (q: string) => string> = {
   ddg: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
@@ -49,9 +50,11 @@ export function SearchWidget({
           aria-label="Search query"
         />
       </div>
-      <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">
-        <Search size={20} strokeWidth={2} aria-hidden />
-      </button>
+      <HudTip tip="Run search in a new tab with your chosen engine">
+        <button type="submit" className="btn primary icon-only" aria-label="Search">
+          <Search size={20} strokeWidth={2} aria-hidden />
+        </button>
+      </HudTip>
     </form>
   );
 

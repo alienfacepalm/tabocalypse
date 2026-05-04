@@ -34,6 +34,7 @@ import {
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
+import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
 import { NotesWidget } from "../../components/notes-widget";
@@ -1073,16 +1074,24 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                   <p className="muted sm mb-2 mt-4">Temperature units</p>
                   <div className="row wrap" role="group" aria-label="Temperature units">
                     {WEATHER_TEMPERATURE_UNITS.map((u) => (
-                      <button
+                      <HudTip
                         key={u}
-                        type="button"
-                        className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
-                        onClick={() =>
-                          void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                        tip={
+                          u === "celsius"
+                            ? "Switch forecast and readings to Celsius"
+                            : "Switch forecast and readings to Fahrenheit"
                         }
                       >
-                        {WEATHER_UNIT_LABELS[u]}
-                      </button>
+                        <button
+                          type="button"
+                          className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
+                          onClick={() =>
+                            void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                          }
+                        >
+                          {WEATHER_UNIT_LABELS[u]}
+                        </button>
+                      </HudTip>
                     ))}
                   </div>
                 </section>
@@ -1453,16 +1462,17 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                         {supportActions.map((action) => (
                           <div key={action.url + action.label} className="support-action-row">
                             <span className="support-action-label">{action.label}</span>
-                            <button
-                              type="button"
-                              className="btn primary has-icon sm"
-                              onClick={() => openExternal(action.url)}
-                              aria-label={`Open ${action.label} in a new tab`}
-                              title="Open in new tab"
-                            >
-                              <SupportLinkIcon kind={action.kind} />
-                              <span>Open</span>
-                            </button>
+                            <HudTip tip="Open this link in a new browser tab">
+                              <button
+                                type="button"
+                                className="btn primary has-icon sm"
+                                onClick={() => openExternal(action.url)}
+                                aria-label={`Open ${action.label} in a new tab`}
+                              >
+                                <SupportLinkIcon kind={action.kind} />
+                                <span>Open</span>
+                              </button>
+                            </HudTip>
                           </div>
                         ))}
                       </fieldset>
@@ -1524,51 +1534,66 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
         </div>
         {s.widgets.search ? <SearchWidget engine={s.searchEngine} variant="header" /> : null}
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
-            aria-pressed={s.hudLayoutChaotic}
-            aria-label={
+          <HudTip
+            tip={
               s.hudLayoutChaotic
-                ? "Chaotic layout on; press to snap panels to a grid"
-                : "Snap to grid on; press for free-form layout"
-            }
-            title={s.hudLayoutChaotic ? "Chaotic layout" : "Snap to grid"}
-            onClick={() =>
-              void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
+                ? "Turn on grid snap so panels align to the layout grid"
+                : "Turn on free-form layout so panels ignore the snap grid"
             }
           >
-            {s.hudLayoutChaotic ? (
-              <Shuffle size={20} strokeWidth={2} aria-hidden />
-            ) : (
-              <LayoutGrid size={20} strokeWidth={2} aria-hidden />
-            )}
-          </button>
-          <button
-            type="button"
-            className={s.hudLayoutLocked ? "btn primary icon-only" : "btn ghost icon-only"}
-            aria-pressed={s.hudLayoutLocked}
-            aria-label={s.hudLayoutLocked ? "Unlock panel layout" : "Lock panel layout"}
-            title={s.hudLayoutLocked ? "Unlock layout" : "Lock layout"}
-            onClick={() =>
-              void persist((cur) => ({ ...cur, hudLayoutLocked: !cur.hudLayoutLocked }))
+            <button
+              type="button"
+              className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
+              aria-pressed={s.hudLayoutChaotic}
+              aria-label={
+                s.hudLayoutChaotic
+                  ? "Chaotic layout on; press to snap panels to a grid"
+                  : "Snap to grid on; press for free-form layout"
+              }
+              onClick={() =>
+                void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
+              }
+            >
+              {s.hudLayoutChaotic ? (
+                <Shuffle size={20} strokeWidth={2} aria-hidden />
+              ) : (
+                <LayoutGrid size={20} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          </HudTip>
+          <HudTip
+            tip={
+              s.hudLayoutLocked
+                ? "Unlock so you can drag HUD panels to new positions"
+                : "Lock panel positions so they stay put while you work"
             }
           >
-            {s.hudLayoutLocked ? (
-              <LucideLock size={20} strokeWidth={2} aria-hidden />
-            ) : (
-              <Unlock size={20} strokeWidth={2} aria-hidden />
-            )}
-          </button>
-          <button
-            type="button"
-            className="btn primary icon-only"
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => setOpenSettings(true)}
-          >
-            <SettingsIcon size={20} strokeWidth={2} aria-hidden />
-          </button>
+            <button
+              type="button"
+              className={s.hudLayoutLocked ? "btn primary icon-only" : "btn ghost icon-only"}
+              aria-pressed={s.hudLayoutLocked}
+              aria-label={s.hudLayoutLocked ? "Unlock panel layout" : "Lock panel layout"}
+              onClick={() =>
+                void persist((cur) => ({ ...cur, hudLayoutLocked: !cur.hudLayoutLocked }))
+              }
+            >
+              {s.hudLayoutLocked ? (
+                <LucideLock size={20} strokeWidth={2} aria-hidden />
+              ) : (
+                <Unlock size={20} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          </HudTip>
+          <HudTip tip="Open Tabocalypse settings">
+            <button
+              type="button"
+              className="btn primary icon-only"
+              aria-label="Settings"
+              onClick={() => setOpenSettings(true)}
+            >
+              <SettingsIcon size={20} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
         </div>
       </header>
 

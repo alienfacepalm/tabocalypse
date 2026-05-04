@@ -1,5 +1,6 @@
 import { GripVertical } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { HudTip } from "./hud-tip";
 import {
   HUD_PANEL_WIDTH_CLASSES,
   HUD_SNAP_GRID_PX,
@@ -145,19 +146,27 @@ export function DraggableHudPanel({
         zIndex: zLift ? 30 : 10,
       }}
     >
-      <button
-        type="button"
-        className={`btn ghost icon-only sm hud-drag-handle ${locked ? "opacity-40" : ""}`}
-        aria-label={locked ? "Panel layout locked" : "Drag to move panel"}
-        title={locked ? "Unlock layout in the header to rearrange" : "Drag to move"}
-        disabled={locked}
-        onPointerDown={onHandlePointerDown}
-        onPointerMove={onHandlePointerMove}
-        onPointerUp={onHandlePointerUp}
-        onPointerCancel={onHandlePointerUp}
+      <HudTip
+        tip={
+          locked
+            ? "Unlock layout in the header to move this panel"
+            : "Drag to move this panel on the canvas"
+        }
       >
-        <GripVertical size={18} strokeWidth={2} aria-hidden />
-      </button>
+        <button
+          type="button"
+          className={`btn ghost icon-only sm hud-drag-handle ${locked ? "opacity-40" : ""}`}
+          aria-label={locked ? "Panel layout locked" : "Drag to move panel"}
+          title={locked ? "Unlock layout in the header to rearrange" : undefined}
+          disabled={locked}
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={onHandlePointerUp}
+        >
+          <GripVertical size={18} strokeWidth={2} aria-hidden />
+        </button>
+      </HudTip>
       {children}
     </div>
   );
