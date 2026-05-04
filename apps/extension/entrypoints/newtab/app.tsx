@@ -18,6 +18,7 @@ import {
   MapPin,
   MessageSquare,
   Moon,
+  Move,
   Paintbrush,
   Scale,
   Sun,
@@ -219,6 +220,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     | { kind: "bing"; url: string; positionXPct: number; positionYPct: number }
     | null
   >(null);
+  /** Uploaded-image framing: drag only after enabling from the background context menu. */
+  const [userBgRepositionMode, setUserBgRepositionMode] = useState(false);
+  const [userBgRepositionDraft, setUserBgRepositionDraft] = useState<{
+    positionXPct: number;
+    positionYPct: number;
+  } | null>(null);
+  const [userBgContextMenu, setUserBgContextMenu] = useState<{
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const userBgRepositionModeRef = useRef(false);
+  const userBgContextMenuRef = useRef<HTMLDivElement | null>(null);
   /** Mirrors `browser.permissions.contains` for optional API permissions (not widget toggles alone). */
   const [optionalApiPerms, setOptionalApiPerms] = useState({
     topSites: false,
@@ -253,6 +266,39 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   useEffect(() => {
     latestSettingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    userBgRepositionModeRef.current = userBgRepositionMode;
+  }, [userBgRepositionMode]);
+
+  useEffect(() => {
+    setUserBgRepositionMode(false);
+    setUserBgRepositionDraft(null);
+    setUserBgContextMenu(null);
+  }, [userBackgroundDisplayId, settings.backgroundKind]);
+
+  useEffect(() => {
+    if (!userBgContextMenu) return;
+    const onPointerDown = (ev: PointerEvent) => {
+      if (userBgContextMenuRef.current?.contains(ev.target as Node)) return;
+      setUserBgContextMenu(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [userBgContextMenu]);
+
+  useEffect(() => {
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      setUserBgContextMenu(null);
+      if (userBgRepositionModeRef.current) {
+        setUserBgRepositionMode(false);
+        setUserBgRepositionDraft(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(
     () => () => {
@@ -576,6 +622,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         }
       }
     }
+    if (
+      userBgRepositionMode &&
+      userBgRepositionDraft &&
+      settings.backgroundKind === "image" &&
+      userBackgroundDisplayId
+    ) {
+      return `${userBgRepositionDraft.positionXPct}% ${userBgRepositionDraft.positionYPct}%`;
+    }
     if (settings.backgroundKind === "bing" && bingChosenUrl) {
       const f = settings.bingWallpaperFramings[bingChosenUrl];
       if (f) return `${f.positionXPct}% ${f.positionYPct}%`;
@@ -587,6 +641,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     return "50% 50%";
   }, [
     bgPanLive,
+    userBgRepositionMode,
+    userBgRepositionDraft,
     settings.backgroundKind,
     settings.bingWallpaperFramings,
     settings.userBackgroundImages,
@@ -759,17 +815,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const canvas = hudCanvasRef.current;
       if (!canvas) return;
       if (s.backgroundKind === "image" && userChosenUrl) {
+        if (!userBgRepositionMode) return;
         const id = userBackgroundDisplayId;
         if (!id) return;
         const im = s.userBackgroundImages.find((row) => row.id === id);
         if (!im) return;
+        const originXPct = userBgRepositionDraft?.positionXPct ?? im.positionXPct;
+        const originYPct = userBgRepositionDraft?.positionYPct ?? im.positionYPct;
         canvas.setPointerCapture(e.pointerId);
         bgPanDragRef.current = {
           pointerId: e.pointerId,
           startClientX: e.clientX,
           startClientY: e.clientY,
-          originXPct: im.positionXPct,
-          originYPct: im.positionYPct,
+          originXPct,
+          originYPct,
           kind: "user",
           userId: id,
         };
@@ -808,7 +867,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         setBgPanLive(live);
       }
     },
-    [s, userChosenUrl, userBackgroundDisplayId, bingChosenUrl, bingPaintUrl],
+    [
+      s,
+      userChosenUrl,
+      userBackgroundDisplayId,
+      userBgRepositionMode,
+      userBgRepositionDraft,
+      bingChosenUrl,
+      bingPaintUrl,
+    ],
   );
 
   const onBackgroundPanPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -842,9 +909,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         // ignore
       }
       bgPanDragRef.current = null;
-      setBgPanLive(null);
       const live = bgPanCommitRef.current;
       bgPanCommitRef.current = null;
+
+      if (drag.kind === "user" && userBgRepositionModeRef.current) {
+        setBgPanLive(null);
+        if (live?.kind === "user") {
+          setUserBgRepositionDraft({
+            positionXPct: live.positionXPct,
+            positionYPct: live.positionYPct,
+          });
+        }
+        return;
+      }
+
+      setBgPanLive(null);
       if (!live) return;
       void persist((cur) => {
         if (live.kind === "user") {
@@ -875,6 +954,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const onBackgroundPanDoubleClick = useCallback(() => {
     if (s.hudLayoutLocked) return;
     if (s.backgroundKind === "image" && userBackgroundDisplayId) {
+      if (userBgRepositionMode) {
+        setUserBgRepositionDraft({ positionXPct: 50, positionYPct: 50 });
+        return;
+      }
       const id = userBackgroundDisplayId;
       void persist((cur) => ({
         ...cur,
@@ -894,7 +977,51 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         },
       }));
     }
-  }, [s.hudLayoutLocked, s.backgroundKind, userBackgroundDisplayId, bingChosenUrl, persist]);
+  }, [
+    s.hudLayoutLocked,
+    s.backgroundKind,
+    userBackgroundDisplayId,
+    userBgRepositionMode,
+    bingChosenUrl,
+    persist,
+  ]);
+
+  const commitUserBackgroundReposition = useCallback(() => {
+    const id = userBackgroundDisplayId;
+    if (!id || s.backgroundKind !== "image") return;
+    const im = latestSettingsRef.current.userBackgroundImages.find((row) => row.id === id);
+    if (!im) return;
+    const x = userBgRepositionDraft?.positionXPct ?? im.positionXPct;
+    const y = userBgRepositionDraft?.positionYPct ?? im.positionYPct;
+    void persist((cur) => ({
+      ...cur,
+      userBackgroundImages: cur.userBackgroundImages.map((row) =>
+        row.id === id ? { ...row, positionXPct: x, positionYPct: y } : row,
+      ),
+    }));
+    setUserBgRepositionMode(false);
+    setUserBgRepositionDraft(null);
+  }, [userBackgroundDisplayId, s.backgroundKind, userBgRepositionDraft, persist]);
+
+  const cancelUserBackgroundReposition = useCallback(() => {
+    setUserBgRepositionMode(false);
+    setUserBgRepositionDraft(null);
+  }, []);
+
+  const onUserBackgroundContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (s.hudLayoutLocked) return;
+      if (s.backgroundKind !== "image" || !userChosenUrl) return;
+      e.preventDefault();
+      const pad = 8;
+      const approxW = 220;
+      const approxH = 120;
+      const x = Math.min(e.clientX, window.innerWidth - approxW - pad);
+      const y = Math.min(e.clientY, window.innerHeight - approxH - pad);
+      setUserBgContextMenu({ clientX: Math.max(pad, x), clientY: Math.max(pad, y) });
+    },
+    [s.hudLayoutLocked, s.backgroundKind, userChosenUrl],
+  );
 
   const scheduleAlarm = async () => {
     const whenEl = document.getElementById("alarm-when") as HTMLInputElement | null;
@@ -2150,6 +2277,111 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
       {importErr ? <div className="toast err">{importErr}</div> : null}
 
+      {userBgContextMenu ? (
+        <div
+          ref={userBgContextMenuRef}
+          role="menu"
+          aria-label="Background photo"
+          className="fixed z-[100] flex min-w-[13rem] flex-col border-2 border-accent bg-modal py-1 shadow-[4px_4px_0_0_var(--color-shadow-hard)]"
+          style={{ left: userBgContextMenu.clientX, top: userBgContextMenu.clientY }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {!userBgRepositionMode ? (
+            <div className="w-full border-b border-border last:border-b-0 [&>div]:flex [&>div]:w-full">
+              <HudTip tip="Drag to frame the photo, then choose Set position when it looks right">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-text hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                  onClick={() => {
+                    setUserBgRepositionMode(true);
+                    setUserBgRepositionDraft(null);
+                    setUserBgContextMenu(null);
+                  }}
+                >
+                  <Move size={18} strokeWidth={2} aria-hidden />
+                  <span>Reposition background</span>
+                </button>
+              </HudTip>
+            </div>
+          ) : (
+            <>
+              <div className="w-full border-b border-border [&>div]:flex [&>div]:w-full">
+                <HudTip tip="Save this framing to your background settings">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-accent hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                    onClick={() => {
+                      commitUserBackgroundReposition();
+                      setUserBgContextMenu(null);
+                    }}
+                  >
+                    <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                    <span>Set position</span>
+                  </button>
+                </HudTip>
+              </div>
+              <div className="w-full [&>div]:flex [&>div]:w-full">
+                <HudTip tip="Exit without saving changes to the saved framing">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-muted hover:bg-surface-strong hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                    onClick={() => {
+                      cancelUserBackgroundReposition();
+                      setUserBgContextMenu(null);
+                    }}
+                  >
+                    <CircleX size={18} strokeWidth={2} aria-hidden />
+                    <span>Cancel repositioning</span>
+                  </button>
+                </HudTip>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {userBgRepositionMode && s.backgroundKind === "image" && userChosenUrl ? (
+        <div
+          className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-modal px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="m-0 text-center font-display text-xs font-bold uppercase leading-snug tracking-widest text-accent sm:text-left">
+            Repositioning background — drag to frame. Double-click centers the preview. Press Escape
+            to cancel.
+          </p>
+          <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:justify-end">
+            <HudTip tip="Save this framing to your background settings">
+              <button
+                type="button"
+                className="btn primary sm has-icon"
+                onClick={() => {
+                  commitUserBackgroundReposition();
+                }}
+              >
+                <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                <span>Set position</span>
+              </button>
+            </HudTip>
+            <HudTip tip="Exit without saving changes to the saved framing">
+              <button
+                type="button"
+                className="btn ghost sm has-icon"
+                onClick={() => {
+                  cancelUserBackgroundReposition();
+                }}
+              >
+                <CircleX size={18} strokeWidth={2} aria-hidden />
+                <span>Cancel</span>
+              </button>
+            </HudTip>
+          </div>
+        </div>
+      ) : null}
+
       {s.widgets.humorBanner && dailyLine ? (
         <div className="humor-banner">
           <span>{dailyLine}</span>
@@ -2171,8 +2403,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               !s.hudLayoutLocked &&
               ((s.backgroundKind === "image" && userChosenUrl) ||
                 (s.backgroundKind === "bing" && bingPaintUrl))
-                ? "pointer-events-auto cursor-move touch-none"
+                ? "pointer-events-auto touch-none"
                 : "pointer-events-none",
+              !s.hudLayoutLocked &&
+              ((s.backgroundKind === "image" && userChosenUrl && userBgRepositionMode) ||
+                (s.backgroundKind === "bing" && bingPaintUrl))
+                ? "cursor-move"
+                : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -2181,6 +2418,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             onPointerUp={finishBackgroundPan}
             onPointerCancel={finishBackgroundPan}
             onDoubleClick={onBackgroundPanDoubleClick}
+            onContextMenu={onUserBackgroundContextMenu}
           />
           {s.widgets.todo ? (
             <DraggableHudPanel
