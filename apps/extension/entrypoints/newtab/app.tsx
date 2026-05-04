@@ -2,6 +2,7 @@ import browser from "webextension-polyfill";
 import {
   Bookmark,
   Braces,
+  Calendar,
   CalendarClock,
   CheckCircle2,
   CircleX,
@@ -91,6 +92,7 @@ import {
   pickRotatingBingWallpaperUrl,
 } from "../../lib/fetch-bing-wallpaper";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
+import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
 import { DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
 import {
   applyDocumentTheme,
@@ -113,13 +115,9 @@ const BG_MAX_EDGE_PX = 2560;
 const BG_MAX_LABEL = "1.5 MB";
 const BG_TOTAL_LABEL = "6 MB";
 
-/** Value for `input type="datetime-local"` and its `min` attribute (local time, minute precision). */
-function formatDatetimeLocalFromDate(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
+
+type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
@@ -249,6 +247,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   });
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
+  const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
+  const alarmWhenInputRef = useRef<HTMLInputElement>(null);
   const alarmDatetimeMin = useMemo(() => formatDatetimeLocalFromDate(new Date()), [openSettings]);
   const supportActions = useMemo(() => getSupportActions(), []);
   const bingPaintUrlRef = useRef<string | null>(null);
@@ -582,6 +582,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!openSettings) return;
     void refreshOptionalApiPerms();
   }, [openSettings, refreshOptionalApiPerms]);
+
+  useEffect(() => {
+    if (!openSettings) return;
+    setAlarmScheduleBanner(null);
+    setAlarmWhen((prev) => (prev ? prev : defaultAlarmWhenLocal()));
+  }, [openSettings]);
+
+  const openAlarmWhenPicker = useCallback(() => {
+    const el = alarmWhenInputRef.current;
+    if (!el) return;
+    const pick = el.showPicker;
+    if (typeof pick === "function") {
+      void Promise.resolve(pick.call(el)).catch(() => {
+        el.focus();
+      });
+    } else {
+      el.focus();
+    }
+  }, []);
 
   const scheduleMyLinesPersist = useCallback(
     (myLines: string[]) => {
@@ -1026,25 +1045,58 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   const scheduleAlarm = async () => {
-    if (!alarmWhen) return;
-    const whenMs = new Date(alarmWhen).getTime();
-    if (Number.isNaN(whenMs) || whenMs < Date.now()) {
-      setImportErr("Pick a future time.");
+    setAlarmScheduleBanner(null);
+    const raw = alarmWhen.trim();
+    if (!raw) {
+      setAlarmScheduleBanner({
+        kind: "err",
+        message: "Choose a date and time first (or use the calendar button).",
+      });
+      return;
+    }
+    const whenMs = new Date(raw).getTime();
+    if (Number.isNaN(whenMs)) {
+      setAlarmScheduleBanner({
+        kind: "err",
+        message: "That date and time is not valid.",
+      });
+      return;
+    }
+    if (whenMs < Date.now()) {
+      setAlarmScheduleBanner({
+        kind: "err",
+        message: "Pick a time in the future.",
+      });
       return;
     }
     const id = crypto.randomUUID();
     const name = `tabocalypse:${id}`;
     const metaKey = "alarmMeta";
-    const cur = await browser.storage.local.get(metaKey);
-    const meta = {
-      ...(typeof cur[metaKey] === "object" && cur[metaKey] ? cur[metaKey] : {}),
-      [name]: alarmMessage.trim() || "Tabocalypse alarm",
-    };
-    await browser.storage.local.set({ [metaKey]: meta });
-    await browser.alarms.create(name, { when: whenMs });
-    setImportErr(null);
+    try {
+      const cur = await browser.storage.local.get(metaKey);
+      const meta = {
+        ...(typeof cur[metaKey] === "object" && cur[metaKey] ? cur[metaKey] : {}),
+        [name]: alarmMessage.trim() || "Tabocalypse alarm",
+      };
+      await browser.storage.local.set({ [metaKey]: meta });
+      await browser.alarms.create(name, { when: whenMs });
+    } catch (e) {
+      setAlarmScheduleBanner({
+        kind: "err",
+        message: e instanceof Error ? e.message : "Could not schedule the notification.",
+      });
+      return;
+    }
     setAlarmMessage("");
     setAlarmWhen("");
+    setAlarmScheduleBanner({
+      kind: "ok",
+      message:
+        "Scheduled. You will get a browser notification at that time (if notifications are allowed for this extension).",
+    });
+    window.setTimeout(() => {
+      setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
+    }, 6000);
   };
 
   const runByoAiTest = async () => {
@@ -1559,56 +1611,36 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       saved photo remembers its own framing.
                     </p>
 
-                    <UserBackgroundGallery
-                      images={s.userBackgroundImages}
-                      activeId={s.userBackgroundActiveId}
-                      backgroundRotate={s.backgroundRotate}
-                      onPickFiles={(files) => void onPickBackgrounds(files)}
-                      onSetActiveId={(id) =>
-                        void persist((cur) => {
-                          const primary =
-                            cur.userBackgroundImages.find((row) => row.id === id) ??
-                            cur.userBackgroundImages[0];
-                          return {
-                            ...cur,
-                            backgroundKind: "image",
-                            userBackgroundActiveId: id,
-                            userBackgroundDataUrl: primary?.dataUrl ?? null,
-                            userBackgroundDataUrls: cur.userBackgroundImages.map(
-                              (row) => row.dataUrl,
-                            ),
-                          };
-                        })
-                      }
-                      onDeleteId={deleteUserBackground}
-                      onMove={moveUserBackground}
-                    />
-
-                    {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
-                      <p className="muted sm" role="status">
-                        {bingChosenUrl
-                          ? bingPaintUrl
-                            ? bingRefreshing
-                              ? "Refreshing Bing spotlight…"
-                              : "Bing spotlight loaded."
-                            : "Preparing Bing image…"
-                          : "Loading Bing spotlight…"}
-                      </p>
-                    ) : null}
-                    {s.backgroundKind === "bing" && bingFetchErr ? (
-                      <p className="muted sm" role="status">
-                        Bing list: {bingFetchErr}
-                      </p>
-                    ) : null}
-                    {s.backgroundKind === "bing" && bingImageLoadErr ? (
-                      <p className="muted sm" role="status">
-                        Bing image: {bingImageLoadErr}
-                      </p>
+                    {s.backgroundKind === "image" ? (
+                      <UserBackgroundGallery
+                        images={s.userBackgroundImages}
+                        activeId={s.userBackgroundActiveId}
+                        backgroundRotate={s.backgroundRotate}
+                        onPickFiles={(files) => void onPickBackgrounds(files)}
+                        onSetActiveId={(id) =>
+                          void persist((cur) => {
+                            const primary =
+                              cur.userBackgroundImages.find((row) => row.id === id) ??
+                              cur.userBackgroundImages[0];
+                            return {
+                              ...cur,
+                              backgroundKind: "image",
+                              userBackgroundActiveId: id,
+                              userBackgroundDataUrl: primary?.dataUrl ?? null,
+                              userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                (row) => row.dataUrl,
+                              ),
+                            };
+                          })
+                        }
+                        onDeleteId={deleteUserBackground}
+                        onMove={moveUserBackground}
+                      />
                     ) : null}
 
                     {s.backgroundKind === "solid" || s.backgroundKind === "gradient" ? (
                       <div
-                        className="mt-3 flex flex-col gap-3"
+                        className="mt-4 flex flex-col gap-3 border border-outline/40 p-3"
                         role="group"
                         aria-label="Background colors"
                       >
@@ -1876,6 +1908,28 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         )}
                       </div>
                     ) : null}
+
+                    {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
+                      <p className="muted sm" role="status">
+                        {bingChosenUrl
+                          ? bingPaintUrl
+                            ? bingRefreshing
+                              ? "Refreshing Bing spotlight…"
+                              : "Bing spotlight loaded."
+                            : "Preparing Bing image…"
+                          : "Loading Bing spotlight…"}
+                      </p>
+                    ) : null}
+                    {s.backgroundKind === "bing" && bingFetchErr ? (
+                      <p className="muted sm" role="status">
+                        Bing list: {bingFetchErr}
+                      </p>
+                    ) : null}
+                    {s.backgroundKind === "bing" && bingImageLoadErr ? (
+                      <p className="muted sm" role="status">
+                        Bing image: {bingImageLoadErr}
+                      </p>
+                    ) : null}
                   </div>
                 </details>
 
@@ -2079,16 +2133,32 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   >
                     <label className="block">
                       <span className="muted sm">Date and time</span>
-                      <input
-                        id="tabocalypse-alarm-when"
-                        type="datetime-local"
-                        step={60}
-                        min={alarmDatetimeMin}
-                        className="mt-1 w-full max-w-md"
-                        value={alarmWhen}
-                        onChange={(e) => setAlarmWhen(e.target.value)}
-                        aria-label="Alarm date and time"
-                      />
+                      <div className="mt-1 flex max-w-md gap-2">
+                        <input
+                          ref={alarmWhenInputRef}
+                          id="tabocalypse-alarm-when"
+                          type="datetime-local"
+                          step={60}
+                          min={alarmDatetimeMin}
+                          className="min-w-0 flex-1"
+                          value={alarmWhen}
+                          onChange={(e) => {
+                            setAlarmWhen(e.target.value);
+                            setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
+                          }}
+                          aria-label="Alarm date and time"
+                        />
+                        <HudTip tip="Open the date and time picker">
+                          <button
+                            type="button"
+                            className="btn ghost sm icon-only shrink-0"
+                            aria-label="Open date and time picker"
+                            onClick={() => openAlarmWhenPicker()}
+                          >
+                            <Calendar size={18} strokeWidth={2} aria-hidden />
+                          </button>
+                        </HudTip>
+                      </div>
                     </label>
                     <label className="block">
                       <span className="muted sm">Message (optional)</span>
@@ -2098,14 +2168,31 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         placeholder="What the notification should say"
                         className="mt-1 w-full"
                         value={alarmMessage}
-                        onChange={(e) => setAlarmMessage(e.target.value)}
+                        onChange={(e) => {
+                          setAlarmMessage(e.target.value);
+                          setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
+                        }}
                         aria-label="Alarm notification message"
                       />
                     </label>
-                    <button type="submit" className="btn primary has-icon">
-                      <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                      <span>Schedule</span>
-                    </button>
+                    <HudTip tip="Save this one-time reminder using the time and message above">
+                      <button type="submit" className="btn primary has-icon">
+                        <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                        <span>Schedule</span>
+                      </button>
+                    </HudTip>
+                    {alarmScheduleBanner ? (
+                      <p
+                        role="status"
+                        className={
+                          alarmScheduleBanner.kind === "err"
+                            ? "err sm m-0"
+                            : "m-0 text-sm text-accent"
+                        }
+                      >
+                        {alarmScheduleBanner.message}
+                      </p>
+                    ) : null}
                   </form>
                 </section>
 

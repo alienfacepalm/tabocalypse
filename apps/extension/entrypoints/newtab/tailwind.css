@@ -252,21 +252,21 @@
   }
 
   .btn.primary:disabled {
-    @apply border-outline/50 bg-surface-weak text-on-accent/40;
+    @apply border-border bg-surface-weak text-muted;
   }
 
   .btn.primary:disabled:hover,
   .btn.primary:disabled:active {
-    @apply border-outline/50 bg-surface-weak text-on-accent/40;
+    @apply border-border bg-surface-weak text-muted;
   }
 
   .btn.ghost:disabled {
-    @apply border-outline/45 bg-transparent text-on-accent/35 shadow-none;
+    @apply border-border bg-transparent text-muted shadow-none;
   }
 
   .btn.ghost:disabled:hover,
   .btn.ghost:disabled:active {
-    @apply border-outline/45 bg-transparent text-on-accent/35 shadow-none;
+    @apply border-border bg-transparent text-muted shadow-none;
   }
 
   .btn.sm {
