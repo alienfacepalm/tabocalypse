@@ -286,33 +286,33 @@ export function DraggableHudPanel({
       <HudPanelDragContext.Provider value={dragContext}>
         <div
           className={[
-            "hud-panel-size-host flex min-h-0 flex-1 flex-col overflow-hidden",
-            // Keep body content clear of the corner resize affordance (absolute sibling).
-            !locked ? "pb-9 pr-9" : "",
+            "hud-panel-size-host relative flex min-h-0 flex-1 flex-col overflow-hidden",
+            // Keep body content clear of the corner handle (anchored inside this host, on the card).
+            !locked ? "pb-6 pr-6" : "",
           ]
             .filter(Boolean)
             .join(" ")}
         >
           {children}
+          {!locked ? (
+            <div className="pointer-events-none absolute bottom-0 right-0 z-20">
+              <HudTip tip="Drag the corner to resize this panel; body scrolls when space is tight.">
+                <button
+                  type="button"
+                  className="btn ghost icon-only sm pointer-events-auto cursor-nwse-resize border-0 touch-manipulation opacity-80 hover:opacity-100 !min-h-7 !min-w-7 !p-0.5"
+                  aria-label="Resize panel"
+                  onPointerDown={onResizePointerDown}
+                  onPointerMove={onResizePointerMove}
+                  onPointerUp={onResizePointerUp}
+                  onPointerCancel={onResizePointerUp}
+                >
+                  <MoveDiagonal2 size={12} strokeWidth={2} className="text-accent" aria-hidden />
+                </button>
+              </HudTip>
+            </div>
+          ) : null}
         </div>
       </HudPanelDragContext.Provider>
-      {!locked ? (
-        <div className="absolute bottom-0 right-0 z-20">
-          <HudTip tip="Drag the corner to resize this panel; body scrolls when space is tight.">
-            <button
-              type="button"
-              className="btn ghost icon-only sm cursor-nwse-resize border-0 touch-manipulation opacity-80 hover:opacity-100"
-              aria-label="Resize panel"
-              onPointerDown={onResizePointerDown}
-              onPointerMove={onResizePointerMove}
-              onPointerUp={onResizePointerUp}
-              onPointerCancel={onResizePointerUp}
-            >
-              <MoveDiagonal2 size={18} strokeWidth={2} className="text-accent" aria-hidden />
-            </button>
-          </HudTip>
-        </div>
-      ) : null}
     </div>
   );
 }
