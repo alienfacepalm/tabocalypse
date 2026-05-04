@@ -30,17 +30,17 @@ Use a normal **git** clone so the **Husky** `pre-commit` hook (lint-staged) can 
 
 All commands run from the **repo root** unless noted.
 
-| Command                  | Purpose                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------- |
-| `pnpm run dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes         |
-| `pnpm run dev:firefox`   | Same for Firefox                                                                               |
-| `pnpm run build`         | Production build → `apps/extension/output/chrome-mv3/` and `apps/extension/output/safari-mv3/` |
-| `pnpm run build:firefox` | Firefox build → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)          |
-| `pnpm run build:safari`  | Safari MV3 only → `apps/extension/output/safari-mv3/`                                          |
-| `pnpm run zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))                   |
-| `pnpm run check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                    |
-| `pnpm run format`        | Prettier write on tracked file types                                                           |
-| `pnpm run test`          | Vitest                                                                                         |
+| Command                  | Purpose                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `pnpm run dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes             |
+| `pnpm run dev:firefox`   | Same for Firefox                                                                                   |
+| `pnpm run build`         | Production build → `chrome-mv3/`, `safari-mv3/`, and `firefox-mv2/` under `apps/extension/output/` |
+| `pnpm run build:firefox` | Firefox only → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)               |
+| `pnpm run build:safari`  | Safari MV3 only → `apps/extension/output/safari-mv3/`                                              |
+| `pnpm run zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))                       |
+| `pnpm run check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                        |
+| `pnpm run format`        | Prettier write on tracked file types                                                               |
+| `pnpm run test`          | Vitest                                                                                             |
 
 **Safari** ships from **`safari-mv3`** (or **`chrome-mv3`**; both are MV3) with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
 

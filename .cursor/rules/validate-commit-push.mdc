@@ -16,10 +16,9 @@ Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant
 ## Validate
 
 1. From the **repo root**: **`pnpm run check`** (format check, ESLint, tests, SDK + extension `tsc`).
-2. After **meaningful / major updates**, also run **`pnpm run build`** to ensure the extension still packages cleanly. You may skip this only when the change is **clearly unrelated** to the extension (e.g. isolated `packages/plugin-sdk` internal refactors with no impact on `apps/extension`, or non-shipped internal notes).
-3. If Firefox behavior or gecko settings changed (or you touched Firefox-specific build paths), also run **`pnpm run build:firefox`**.
-4. If Safari-specific manifest or build paths changed, also run **`pnpm run build:safari`** (or rely on **`pnpm run build`**, which includes Safari MV3).
-5. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
+2. After **meaningful / major updates**, also run **`pnpm run build`** to ensure the extension still packages cleanly for **Chrome, Safari MV3, and Firefox**. You may skip this only when the change is **clearly unrelated** to the extension (e.g. isolated `packages/plugin-sdk` internal refactors with no impact on `apps/extension`, or non-shipped internal notes).
+3. Use **`pnpm run build:firefox`** or **`pnpm run build:safari`** when you only need one target (faster iteration) instead of the full **`pnpm run build`** matrix.
+4. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
 
 ## Commit
 

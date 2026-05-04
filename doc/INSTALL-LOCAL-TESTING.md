@@ -7,7 +7,7 @@ This page is for **testers** and **early users** who want to run the extension o
 - **Google Chrome**, **Microsoft Edge**, **Mozilla Firefox**, or **Apple Safari** (recent version). **Safari Web Extensions** are built and run on **macOS** (see [Safari](#safari) below).
 - Either:
   - **A zip file** built by a developer (`pnpm run zip` from the project — produces a store-style archive), **or**
-  - **An unpacked folder** such as `apps/extension/output/chrome-mv3` (or `safari-mv3` for Safari) after someone runs `pnpm run build` for you.
+  - **An unpacked folder** such as `apps/extension/output/chrome-mv3`, `safari-mv3`, or `firefox-mv2` after someone runs `pnpm run build` for you.
 
 Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.dmg`. You load it through the browser’s **developer / temporary add-on** flow.
 
@@ -26,7 +26,7 @@ Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.d
 ## Firefox
 
 1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on…** and choose **`manifest.json`** inside the Firefox build output folder (from this repo, a developer build is typically under `apps/extension/output/firefox-mv2` after `pnpm run build:firefox`).
+2. Click **Load Temporary Add-on…** and choose **`manifest.json`** inside the Firefox build output folder (from this repo, under `apps/extension/output/firefox-mv2` after `pnpm run build` or `pnpm run build:firefox`).
 
 Temporary add-ons **do not persist** across browser restarts; for longer testing, the maintainer should publish to **AMO** (Firefox Add-ons) or you can use **Firefox Developer Edition** / **Nightly** policies per Mozilla’s docs.
 
