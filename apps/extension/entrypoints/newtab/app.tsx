@@ -56,6 +56,10 @@ import {
   parseTabocalypseZip,
 } from "../../lib/user-packs";
 import {
+  compressImageFileToDataUrl,
+  estimateDataUrlBytes,
+} from "../../lib/compress-background-image";
+import {
   fetchBingWallpaperImageUrls,
   pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
@@ -73,6 +77,8 @@ import {
 
 const BG_MAX = 1_500_000;
 const BG_TOTAL_MAX = 6_000_000;
+/** Longer side cap before encoding (decoded pixels on the canvas). */
+const BG_MAX_EDGE_PX = 2560;
 /** Shown in Settings — must stay in sync with BG_MAX / BG_TOTAL_MAX. */
 const BG_MAX_LABEL = "1.5 MB";
 const BG_TOTAL_LABEL = "6 MB";
@@ -494,35 +500,27 @@ export default function App() {
   const onPickBackgrounds = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const picked = [...files];
+    setImportErr(null);
+    const dataUrls: string[] = [];
     for (const f of picked) {
-      if (!f.type.startsWith("image/")) {
-        setImportErr("Backgrounds must be image files.");
+      try {
+        const url = await compressImageFileToDataUrl(f, {
+          maxBytes: BG_MAX,
+          maxEdgePx: BG_MAX_EDGE_PX,
+        });
+        dataUrls.push(url);
+      } catch (e: unknown) {
+        setImportErr(e instanceof Error ? e.message : String(e));
         return;
       }
     }
-    const bufs = await Promise.all(picked.map((f) => f.arrayBuffer()));
-    for (const b of bufs) {
-      if (b.byteLength > BG_MAX) {
-        setImportErr(`Each image must be at most about ${BG_MAX_LABEL} (raw file size).`);
-        return;
-      }
-    }
-    const total = bufs.reduce((n, b) => n + b.byteLength, 0);
+    const total = dataUrls.reduce((n, u) => n + estimateDataUrlBytes(u), 0);
     if (total > BG_TOTAL_MAX) {
       setImportErr(
-        `Selected images must total at most about ${BG_TOTAL_LABEL} (raw file sizes in one upload).`,
+        `After compressing on this device, images still exceed about ${BG_TOTAL_LABEL} total. Remove one file or pick smaller sources.`,
       );
       return;
     }
-
-    const toDataUrl = (f: File) =>
-      new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Failed to read file."));
-        reader.onload = () => resolve(String(reader.result));
-        reader.readAsDataURL(f);
-      });
-    const dataUrls = await Promise.all(picked.map((f) => toDataUrl(f)));
     const first = dataUrls[0] ?? null;
     void persist((cur) => ({
       ...cur,
@@ -530,7 +528,6 @@ export default function App() {
       userBackgroundDataUrl: first,
       userBackgroundDataUrls: dataUrls,
     }));
-    setImportErr(null);
   };
 
   const scheduleAlarm = async () => {
@@ -842,9 +839,9 @@ export default function App() {
                       Upload rotation changes every ~15 minutes while this tab is open.
                     </p>
                     <p className="muted sm">
-                      Local uploads: up to about {BG_MAX_LABEL} per image and about {BG_TOTAL_LABEL}{" "}
-                      total per multi-select (raw file sizes). Images are stored in local extension
-                      storage as data, so large files cost performance and quota.
+                      Local uploads are resized and compressed in your browser before saving (about{" "}
+                      {BG_MAX_LABEL} stored per image, about {BG_TOTAL_LABEL} total per
+                      multi-select). Large originals are shrunk to fit extension storage.
                     </p>
                     {s.backgroundKind === "bing" && s.backgroundRotate ? (
                       <p className="muted sm">
