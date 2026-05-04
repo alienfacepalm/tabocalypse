@@ -1,3 +1,4 @@
+import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import type { TodoItem } from "../lib/settings";
 
@@ -33,10 +34,12 @@ export function TodoWidget({
             </label>
             <button
               type="button"
-              className="btn ghost sm"
+              className="btn ghost icon-only sm"
+              aria-label="Remove todo"
+              title="Remove"
               onClick={() => onChange(items.filter((x) => x.id !== it.id))}
             >
-              Remove
+              <Trash2 size={18} strokeWidth={2} aria-hidden />
             </button>
           </li>
         ))}
@@ -48,8 +51,14 @@ export function TodoWidget({
           placeholder="New item"
           style={{ flex: 1 }}
         />
-        <button type="button" className="btn primary" onClick={add}>
-          Add
+        <button
+          type="button"
+          className="btn primary icon-only"
+          aria-label="Add todo"
+          title="Add"
+          onClick={add}
+        >
+          <Plus size={20} strokeWidth={2} aria-hidden />
         </button>
       </div>
     </section>

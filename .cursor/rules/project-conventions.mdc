@@ -35,6 +35,7 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 ## User-facing copy
 
 - Extension UI must use **plain-language labels**, not raw identifiers (`WidgetKey` strings, etc.); see [user-facing-copy.mdc](user-facing-copy.mdc).
+- **Icon-only actions** in the extension use **Lucide** plus accessible names; see [extension-lucide-icons.mdc](extension-lucide-icons.mdc).
 
 ## Styling (Tailwind)
 

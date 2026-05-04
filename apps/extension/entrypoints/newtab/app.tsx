@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { Settings as SettingsIcon } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { ClockWidget } from "../../components/clock-widget";
@@ -737,8 +738,14 @@ export default function App() {
           <h1 className="title">Tabocalypse</h1>
           <p className="tagline muted">by AlienFacepalm — new tab utility + optional chaos</p>
         </div>
-        <button type="button" className="btn primary" onClick={() => setOpenSettings(true)}>
-          Settings
+        <button
+          type="button"
+          className="btn primary icon-only"
+          aria-label="Settings"
+          title="Settings"
+          onClick={() => setOpenSettings(true)}
+        >
+          <SettingsIcon size={20} strokeWidth={2} aria-hidden />
         </button>
       </header>
 

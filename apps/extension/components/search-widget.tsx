@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { Search } from "lucide-react";
 import React, { useState } from "react";
 import type { Settings } from "../lib/settings";
 
@@ -34,8 +35,8 @@ export function SearchWidget({ engine }: { engine: Settings["searchEngine"] }) {
           style={{ flex: 1 }}
           aria-label="Search query"
         />
-        <button type="submit" className="btn primary">
-          Go
+        <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">
+          <Search size={20} strokeWidth={2} aria-hidden />
         </button>
       </form>
     </section>
