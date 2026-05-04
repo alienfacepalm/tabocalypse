@@ -1,9 +1,10 @@
 import React from "react";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 
 export function NotesWidget({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <section className="card">
-      <h3>Notes</h3>
+      <HudPanelTitle>Notes</HudPanelTitle>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

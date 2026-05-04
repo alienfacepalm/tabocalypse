@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { pickDailyLine, type IHumorContext } from "../lib/humor/engine";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 
 export function ClockWidget({ humor }: { humor: IHumorContext }) {
   const [now, setNow] = useState(() => new Date());
@@ -19,7 +20,7 @@ export function ClockWidget({ humor }: { humor: IHumorContext }) {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return (
     <section className="card clock-card">
-      <h3>Clock</h3>
+      <HudPanelTitle>Clock</HudPanelTitle>
       <div className="clock-time">
         {now.toLocaleTimeString(undefined, {
           hour: "2-digit",

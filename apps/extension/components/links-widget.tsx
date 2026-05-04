@@ -1,5 +1,6 @@
 import React from "react";
 import browser from "webextension-polyfill";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 
 export function TopSitesWidget() {
   const [sites, setSites] = React.useState<{ url?: string; title?: string }[]>([]);
@@ -20,14 +21,14 @@ export function TopSitesWidget() {
   if (err)
     return (
       <section className="card">
-        <h3>Top sites</h3>
+        <HudPanelTitle>Top sites</HudPanelTitle>
         <p className="err">{err}</p>
       </section>
     );
 
   return (
     <section className="card">
-      <h3>Top sites</h3>
+      <HudPanelTitle>Top sites</HudPanelTitle>
       <ul className="link-grid">
         {sites.map((s, i) => (
           <li key={i}>
@@ -60,14 +61,14 @@ export function BookmarksWidget() {
   if (err)
     return (
       <section className="card">
-        <h3>Bookmarks</h3>
+        <HudPanelTitle>Bookmarks</HudPanelTitle>
         <p className="err">{err}</p>
       </section>
     );
 
   return (
     <section className="card">
-      <h3>Bookmarks</h3>
+      <HudPanelTitle>Bookmarks</HudPanelTitle>
       <ul className="link-grid">
         {marks.map((b) => (
           <li key={b.id}>

@@ -34,6 +34,7 @@ import {
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
+import { HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
@@ -1769,7 +1770,7 @@ function TabGuilt() {
   if (n === null)
     return (
       <section className="card">
-        <h3>Tab guilt</h3>
+        <HudPanelTitle>Tab guilt</HudPanelTitle>
         <p className="muted">Grant tabs permission in settings.</p>
       </section>
     );
@@ -1779,7 +1780,7 @@ function TabGuilt() {
       : "Tab count entering folklore territory.";
   return (
     <section className="card">
-      <h3>Tab guilt</h3>
+      <HudPanelTitle>Tab guilt</HudPanelTitle>
       <p className="tab-count">{n} tabs in this window.</p>
       <p className="muted">{msg}</p>
     </section>

@@ -1,6 +1,5 @@
-import { GripVertical } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { HudTip } from "./hud-tip";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HudPanelDragContext, type IHudPanelDragContextValue } from "./hud-panel-drag-context";
 import {
   HUD_PANEL_WIDTH_CLASSES,
   HUD_SNAP_GRID_PX,
@@ -101,40 +100,59 @@ export function DraggableHudPanel({
     setZLift(false);
   }, [locked]);
 
-  const onHandlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (locked || e.button !== 0) return;
-    const canvas = canvasRef.current;
-    const panel = rootRef.current;
-    if (!canvas || !panel) return;
-    const canvasRect = canvas.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
-    dragRef.current = {
-      pointerId: e.pointerId,
-      startClientX: e.clientX,
-      startClientY: e.clientY,
-      originLeftCanvasPx: panelRect.left - canvasRect.left,
-      originTopCanvasPx: panelRect.top - canvasRect.top,
-    };
-    setZLift(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  };
+  const onTitlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (locked || e.button !== 0) return;
+      const canvas = canvasRef.current;
+      const panel = rootRef.current;
+      if (!canvas || !panel) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      dragRef.current = {
+        pointerId: e.pointerId,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        originLeftCanvasPx: panelRect.left - canvasRect.left,
+        originTopCanvasPx: panelRect.top - canvasRect.top,
+      };
+      setZLift(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    },
+    [canvasRef, locked],
+  );
 
-  const onHandlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (dragRef.current === null || e.pointerId !== dragRef.current.pointerId) return;
-    const next = computeFromPointer(e.clientX, e.clientY, false);
-    if (next) setLivePct(next);
-  };
+  const onTitlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (dragRef.current === null || e.pointerId !== dragRef.current.pointerId) return;
+      const next = computeFromPointer(e.clientX, e.clientY, false);
+      if (next) setLivePct(next);
+    },
+    [computeFromPointer],
+  );
 
-  const onHandlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (dragRef.current === null || e.pointerId !== dragRef.current.pointerId) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-    endDrag(e.clientX, e.clientY);
-  };
+  const onTitlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (dragRef.current === null || e.pointerId !== dragRef.current.pointerId) return;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+      endDrag(e.clientX, e.clientY);
+    },
+    [endDrag],
+  );
+
+  const dragContext = useMemo<IHudPanelDragContextValue>(
+    () => ({
+      locked,
+      onTitlePointerDown,
+      onTitlePointerMove,
+      onTitlePointerUp,
+    }),
+    [locked, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp],
+  );
 
   return (
     <div
@@ -146,28 +164,7 @@ export function DraggableHudPanel({
         zIndex: zLift ? 30 : 10,
       }}
     >
-      <HudTip
-        tip={
-          locked
-            ? "Unlock layout in the header to move this panel"
-            : "Drag to move this panel on the canvas"
-        }
-      >
-        <button
-          type="button"
-          className={`btn ghost icon-only sm hud-drag-handle ${locked ? "opacity-40" : ""}`}
-          aria-label={locked ? "Panel layout locked" : "Drag to move panel"}
-          title={locked ? "Unlock layout in the header to rearrange" : undefined}
-          disabled={locked}
-          onPointerDown={onHandlePointerDown}
-          onPointerMove={onHandlePointerMove}
-          onPointerUp={onHandlePointerUp}
-          onPointerCancel={onHandlePointerUp}
-        >
-          <GripVertical size={18} strokeWidth={2} aria-hidden />
-        </button>
-      </HudTip>
-      {children}
+      <HudPanelDragContext.Provider value={dragContext}>{children}</HudPanelDragContext.Provider>
     </div>
   );
 }

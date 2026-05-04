@@ -2,6 +2,7 @@ import browser from "webextension-polyfill";
 import { Search } from "lucide-react";
 import React, { useState } from "react";
 import type { ISettings } from "../lib/settings";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
 const ENGINES: Record<ISettings["searchEngine"], (q: string) => string> = {
@@ -62,7 +63,7 @@ export function SearchWidget({
 
   return (
     <section className="card">
-      <h3>Search</h3>
+      <HudPanelTitle>Search</HudPanelTitle>
       {form}
     </section>
   );

@@ -3,6 +3,7 @@
  * Declarative plugin panels are rendered separately in `components/plugin-views.tsx`.
  */
 import React, { useEffect, useState } from "react";
+import { HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { fetchOpenMeteo, type IWeatherSnapshot } from "../../lib/weather/fetch-weather";
@@ -43,8 +44,8 @@ export function WeatherWidget({
 
   return (
     <section className="card">
-      <div className="flex flex-wrap items-start justify-between gap-3 pe-14">
-        <h3 className="m-0">Weather</h3>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <HudPanelTitleInline>Weather</HudPanelTitleInline>
         <div className="row wrap" role="group" aria-label="Temperature units">
           {WEATHER_TEMPERATURE_UNITS.map((u) => (
             <HudTip

@@ -1,5 +1,6 @@
 import React from "react";
 import type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 
 function StaticText({ props }: { props: { text: string } }) {
   return <p className="plugin-static">{props.text}</p>;
@@ -51,7 +52,7 @@ export function PluginDeck({ plugins, debug }: { plugins: IImportedPlugin[]; deb
     <div className="plugin-deck">
       {enabled.map((p) => (
         <section key={p.id} className="card">
-          <h3>{p.name}</h3>
+          <HudPanelTitle>{p.name}</HudPanelTitle>
           {debug ? <p className="muted sm">id: {p.id}</p> : null}
           {p.widgets.map((w) => (
             <OneWidget key={w.id} w={w} debug={debug} />

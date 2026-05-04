@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import type { ITodoItem } from "../lib/settings";
+import { HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
 export function TodoWidget({
@@ -19,7 +20,7 @@ export function TodoWidget({
   };
   return (
     <section className="card">
-      <h3>Todos</h3>
+      <HudPanelTitle>Todos</HudPanelTitle>
       <ul className="todo-list">
         {items.map((it) => (
           <li key={it.id} className="todo-row">

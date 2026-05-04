@@ -133,10 +133,6 @@
     @apply max-w-full;
   }
 
-  .hud-drag-handle {
-    @apply absolute right-2 top-2 z-10;
-  }
-
   .card {
     @apply relative border px-4 py-4;
     border-color: rgb(148 163 184 / 0.22);

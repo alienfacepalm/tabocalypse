@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
  */
 export function HudTip({ tip, children }: { tip: string; children: ReactElement }) {
   return (
-    <span className="group/tool relative inline-flex max-w-full align-middle">
+    <div className="group/tool relative inline-flex max-w-full align-middle">
       {children}
       <span
         aria-hidden
@@ -14,6 +14,6 @@ export function HudTip({ tip, children }: { tip: string; children: ReactElement 
       >
         {tip}
       </span>
-    </span>
+    </div>
   );
 }
