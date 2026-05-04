@@ -293,7 +293,7 @@ export function DraggableHudPanel({
           <HudTip tip="Drag the corner to resize this panel; body scrolls when space is tight.">
             <button
               type="button"
-              className="btn ghost icon-only sm cursor-nwse-resize touch-manipulation opacity-80 hover:opacity-100"
+              className="btn ghost icon-only sm cursor-nwse-resize border-0 touch-manipulation opacity-80 hover:opacity-100"
               aria-label="Resize panel"
               onPointerDown={onResizePointerDown}
               onPointerMove={onResizePointerMove}
