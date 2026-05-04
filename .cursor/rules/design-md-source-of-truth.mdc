@@ -1,0 +1,16 @@
+---
+description: Use DESIGN.md as source-of-truth for UI/brand decisions
+alwaysApply: true
+---
+
+# DESIGN.md is the design source of truth
+
+- **Treat `DESIGN.md` as authoritative** for Tabocalypse’s brand, visual style, layout philosophy, component aesthetics, and tone.
+- **Before making user-facing UI changes** (new screens, widgets, components, copy tone, colors, typography, spacing, elevation, shapes), **read `DESIGN.md` first** and align decisions with it.
+- **When a change could affect the look/feel**, prefer solutions that fit `DESIGN.md`’s constraints over generic “modern UI” defaults.
+  - **Shapes**: default to **sharp (0px) corners**; only use pills/circles when the design system calls for it (avatars/status stickers).
+  - **Depth**: use **hard shadows/offsets**; **avoid soft shadows** and **avoid all blur**.
+  - **Palette**: keep accents **Electric Lime / Acid Purple / Cyber Cyan**; avoid “random accent colors” unless `DESIGN.md` changes.
+  - **Layout**: prefer a **rigid grid** and bold typography; avoid overly centered/soft layouts.
+- **If other guidance conflicts with `DESIGN.md` on visual direction**, call out the conflict and **follow `DESIGN.md`** unless the user explicitly asks to override it.
+

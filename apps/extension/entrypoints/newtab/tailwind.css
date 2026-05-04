@@ -16,7 +16,7 @@
   }
 
   a {
-    @apply text-accent;
+    @apply text-accent3;
   }
 
   button {
@@ -26,17 +26,17 @@
   input,
   textarea,
   select {
-    @apply rounded-lg border border-border bg-surface px-3 py-2 font-sans text-text;
+    @apply border-2 border-transparent bg-white px-3 py-2 font-sans text-black;
   }
 
   input:focus,
   textarea:focus,
   select:focus {
-    @apply outline outline-2 outline-accent2 outline-offset-1;
+    @apply outline outline-2 outline-accent outline-offset-2;
   }
 
   code {
-    @apply rounded bg-codebg px-[0.35em] py-[0.1em] text-[0.85em];
+    @apply bg-codebg px-[0.35em] py-[0.1em] text-[0.85em];
   }
 }
 
@@ -54,7 +54,7 @@
   }
 
   .title {
-    @apply m-0 text-[1.75rem] tracking-tight;
+    @apply m-0 font-display text-[2.15rem] font-bold tracking-tight;
   }
 
   .tagline {
@@ -66,11 +66,11 @@
   }
 
   .card {
-    @apply rounded-card border border-border bg-surface/85 px-[1.1rem] py-4 backdrop-blur-md;
+    @apply rounded-card border-2 border-accent2 bg-surface px-[1.1rem] py-4 shadow-[6px_6px_0_0_#000];
   }
 
   .card h3 {
-    @apply mb-3 mt-0 text-xs font-semibold uppercase tracking-widest text-muted;
+    @apply mb-3 mt-0 bg-accent2 px-2 py-1 text-xs font-bold uppercase tracking-widest text-white;
   }
 
   .row {
@@ -94,7 +94,11 @@
   }
 
   .btn {
-    @apply rounded-lg border border-border bg-surface px-[0.85rem] py-[0.45rem] text-[0.9rem] text-text;
+    @apply border-2 border-black bg-surface px-[0.85rem] py-[0.5rem] text-[0.9rem] font-semibold text-text shadow-[4px_4px_0_0_#000] transition-[transform,box-shadow] duration-100;
+  }
+
+  .btn:hover {
+    @apply translate-x-1 translate-y-1 shadow-none;
   }
 
   .btn.has-icon {
@@ -102,11 +106,11 @@
   }
 
   .btn.primary {
-    @apply border-transparent bg-gradient-to-br from-accent to-[#8b2f0a] font-semibold;
+    @apply bg-accent text-black;
   }
 
   .btn.ghost {
-    @apply border-border bg-transparent;
+    @apply border-accent2 bg-transparent;
   }
 
   .btn.sm {
@@ -122,7 +126,7 @@
   }
 
   .humor-banner {
-    @apply mb-4 rounded-card border border-border bg-accent2/10 px-4 py-3 text-[1.05rem];
+    @apply mb-4 rounded-card border-2 border-accent bg-bg px-4 py-3 text-[1.05rem] shadow-[6px_6px_0_0_#000];
   }
 
   .prod-gag {
@@ -130,7 +134,7 @@
   }
 
   .clock-time {
-    @apply text-[2rem] font-bold tracking-wide;
+    @apply font-display text-[2.2rem] font-bold tracking-tight;
   }
 
   .clock-date {
@@ -182,7 +186,7 @@
   }
 
   .modal {
-    @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden rounded-card border border-border bg-modal;
+    @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden rounded-card border-2 border-accent2 bg-modal shadow-[10px_10px_0_0_#000];
   }
 
   .modal.small {
@@ -190,11 +194,11 @@
   }
 
   .modal-head {
-    @apply flex items-center justify-between border-b border-border px-5 py-4;
+    @apply flex items-center justify-between border-b-2 border-border px-5 py-4;
   }
 
   .modal-head h2 {
-    @apply m-0 text-xl;
+    @apply m-0 font-display text-xl font-bold;
   }
 
   .modal-body {
@@ -226,7 +230,7 @@
   }
 
   .toast {
-    @apply fixed bottom-4 right-4 z-40 rounded-lg border border-border bg-surface px-4 py-3;
+    @apply fixed bottom-4 right-4 z-40 border-2 border-border bg-surface px-4 py-3 shadow-[6px_6px_0_0_#000];
   }
 
   .toast.err {
@@ -234,7 +238,7 @@
   }
 
   .ai-out {
-    @apply mt-2 whitespace-pre-wrap break-words rounded-lg bg-codebg p-2 text-[0.85rem];
+    @apply mt-2 whitespace-pre-wrap break-words bg-codebg p-2 text-[0.85rem];
   }
 
   .plugin-deck {
