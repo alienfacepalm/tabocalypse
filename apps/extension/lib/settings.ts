@@ -106,6 +106,20 @@ export const DEFAULT_WIDGETS: Record<WidgetKey, boolean> = {
   productivityGag: false,
 };
 
+/** User-visible names for the Widgets settings list (storage keys stay `WidgetKey`). */
+export const WIDGET_LABELS: Record<WidgetKey, string> = {
+  search: "Search",
+  clock: "Clock",
+  notes: "Notes",
+  todo: "To-do",
+  weather: "Weather",
+  topSites: "Top sites",
+  bookmarksStrip: "Bookmarks strip",
+  tabGuilt: "Tab guilt",
+  humorBanner: "Humor banner",
+  productivityGag: "Productivity gag",
+};
+
 export function defaultSettings(): Settings {
   return {
     version: 1,

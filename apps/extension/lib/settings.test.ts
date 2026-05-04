@@ -17,7 +17,16 @@ vi.mock("webextension-polyfill", () => ({
 const SYNC_KEY = "tabocalypseSync";
 const LOCAL_KEY = "tabocalypseLocal";
 
-const { loadSettings, saveSettings, defaultSettings, applyPreset } = await import("./settings");
+const { loadSettings, saveSettings, defaultSettings, applyPreset, DEFAULT_WIDGETS, WIDGET_LABELS } =
+  await import("./settings");
+
+describe("WIDGET_LABELS", () => {
+  it("defines a non-empty user-facing label for every widget key", () => {
+    for (const key of Object.keys(DEFAULT_WIDGETS) as (keyof typeof DEFAULT_WIDGETS)[]) {
+      expect(WIDGET_LABELS[key]?.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe("defaultSettings", () => {
   it("returns version 1 and sane defaults", () => {

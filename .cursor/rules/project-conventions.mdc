@@ -32,6 +32,10 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 - **Exceptions** (tooling or ecosystem defaults): `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `README.md`, `AGENTS.md`, `wxt.config.ts`, `.env.example`, dotfiles, and generated output under **`apps/extension/output/`** (WXT `outDir`) and **`.wxt/`** (see [extension-build-output.mdc](extension-build-output.mdc)).
 - **Documentation** under **`doc/`** follows [`.cursor/rules/documentation-layout.mdc`](documentation-layout.mdc): **`doc/`** (not `docs/`), **uppercase** markdown basenames (except the conventional `README.md`), and **every `doc/*.md` linked from the root `README.md`** plus the doc index.
 
+## User-facing copy
+
+- Extension UI must use **plain-language labels**, not raw identifiers (`WidgetKey` strings, etc.); see [user-facing-copy.mdc](user-facing-copy.mdc).
+
 ## Styling (Tailwind)
 
 - **Always use [Tailwind CSS](https://tailwindcss.com/)** for layout, spacing, typography, colors, and responsive behavior in extension and package UI. Prefer utility classes and, where repetition demands it, `@apply` in Tailwind-managed layers or small component-scoped patterns — not ad hoc global CSS.
@@ -66,7 +70,7 @@ Read the skill file before following it; do not improvise when a skill applies.
 
 | Topic | Skill |
 |-------|--------|
-| Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc); WXT out dir: [extension-build-output.mdc](extension-build-output.mdc); validate / commit / push: [validate-commit-push.mdc](validate-commit-push.mdc) |
+| Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc); WXT out dir: [extension-build-output.mdc](extension-build-output.mdc); validate / commit / push: [validate-commit-push.mdc](validate-commit-push.mdc); UI labels: [user-facing-copy.mdc](user-facing-copy.mdc) |
 | Authoring new agent skills | `create-skill` |
 | Cursor hooks / automation around agent events | `create-hook` |
 | Firebase CLI, env, deploy, or services | `firebase-basics` first; then domain skills under `~/.cursor/plugins/cache/cursor-public/firebase/.../skills/` |

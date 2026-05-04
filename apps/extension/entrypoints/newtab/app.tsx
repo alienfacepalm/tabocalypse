@@ -8,7 +8,12 @@ import { PluginDeck } from "../../components/plugin-views";
 import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
 import { WeatherWidget } from "../../components/weather-widget";
-import type { HumorIntensity, Settings, WidgetKey } from "../../lib/settings";
+import {
+  type HumorIntensity,
+  type Settings,
+  type WidgetKey,
+  WIDGET_LABELS,
+} from "../../lib/settings";
 import { applyPreset, defaultSettings, loadSettings, saveSettings } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { HumorContext } from "../../lib/humor/engine";
@@ -248,7 +253,7 @@ export default function App() {
                       checked={s.widgets[k]}
                       onChange={(e) => toggleWidget(k, e.target.checked)}
                     />
-                    <span>{k}</span>
+                    <span>{WIDGET_LABELS[k]}</span>
                   </label>
                 ))}
               </section>
