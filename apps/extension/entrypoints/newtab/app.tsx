@@ -16,8 +16,10 @@ import {
   Layers,
   Lightbulb,
   MapPin,
+  Moon,
   Paintbrush,
   Scale,
+  Sun,
   Settings as SettingsIcon,
   Sparkles,
   Square,
@@ -58,6 +60,16 @@ import {
   pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
 } from "../../lib/fetch-bing-wallpaper";
+import {
+  applyDocumentTheme,
+  coerceThemeMode,
+  coerceThemePalette,
+  THEME_MODE_LABELS,
+  THEME_PALETTE_LABELS,
+  THEME_MODES,
+  THEME_PALETTES,
+  themeGradientStops,
+} from "../../lib/theme";
 
 const BG_MAX = 1_500_000;
 const BG_TOTAL_MAX = 6_000_000;
@@ -79,6 +91,9 @@ function revokeObjectUrlMaybe(url: string | null): void {
 }
 
 function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
+  const { mid, end } = themeGradientStops(s.themeMode);
+  const grad = `linear-gradient(145deg, ${s.backgroundSolid} 0%, ${mid} 45%, ${end} 100%)`;
+
   if (s.backgroundKind === "bing") {
     const u = extras?.bingImageUrl;
     if (u) {
@@ -93,7 +108,7 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
     }
     return {
       backgroundColor: "transparent",
-      background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+      background: grad,
       backgroundAttachment: "fixed",
     };
   }
@@ -109,7 +124,7 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
     if (!u) {
       return {
         backgroundColor: "transparent",
-        background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+        background: grad,
         backgroundAttachment: "fixed",
       };
     }
@@ -124,7 +139,7 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
   }
   return {
     backgroundColor: "transparent",
-    background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+    background: grad,
     backgroundAttachment: "fixed",
   };
 }
@@ -189,6 +204,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!settings) {
+      applyDocumentTheme("dark", "glitch");
+      return;
+    }
+    applyDocumentTheme(settings.themeMode, settings.themePalette);
+  }, [settings]);
+
+  useEffect(() => {
     const kind = settings?.backgroundKind;
     if (kind !== "bing") {
       setBingChosenUrl(null);
@@ -203,7 +226,6 @@ export default function App() {
     }
     const rotate = settings?.backgroundRotate ?? false;
     let cancelled = false;
-    const ac = new AbortController();
     setBingChosenUrl(null);
     setBingPaintUrl((prev) => {
       revokeObjectUrlMaybe(prev);
@@ -212,9 +234,9 @@ export default function App() {
     setBingFetchErr(null);
     setBingImageLoadErr(null);
     setBingRefreshing(false);
-    void fetchBingWallpaperImageUrls(ac.signal)
+    void fetchBingWallpaperImageUrls()
       .then((urls) => {
-        if (cancelled || ac.signal.aborted) return;
+        if (cancelled) return;
         if (urls.length === 0) {
           setBingFetchErr("No images returned.");
           return;
@@ -224,13 +246,12 @@ export default function App() {
         );
       })
       .catch((e: unknown) => {
-        if (cancelled || ac.signal.aborted) return;
+        if (cancelled) return;
         setBingFetchErr(e instanceof Error ? e.message : String(e));
       });
     if (!rotate) {
       return () => {
         cancelled = true;
-        ac.abort();
       };
     }
     const id = window.setInterval(() => {
@@ -256,7 +277,6 @@ export default function App() {
     return () => {
       cancelled = true;
       window.clearInterval(id);
-      ac.abort();
     };
   }, [settings?.backgroundKind, settings?.backgroundRotate]);
 
@@ -410,17 +430,18 @@ export default function App() {
   useLayoutEffect(() => {
     if (!shellStyle) return undefined;
     const html = document.documentElement;
+    const bs = document.body;
     const { style: hs } = html;
-    const { style: bs } = document.body;
+    const { style: bsStyle } = bs;
     const prevHtml = hs.cssText;
-    const prevBody = bs.cssText;
+    const prevBody = bsStyle.cssText;
     applyReactStyle(html, shellStyle);
-    applyReactStyle(document.body, shellStyle);
+    applyReactStyle(bs, shellStyle);
     hs.setProperty("min-height", "100%");
-    bs.setProperty("min-height", "100%");
+    bsStyle.setProperty("min-height", "100%");
     return () => {
       hs.cssText = prevHtml;
-      bs.cssText = prevBody;
+      bsStyle.cssText = prevBody;
     };
   }, [shellStyle]);
 
@@ -634,6 +655,45 @@ export default function App() {
                         <Flame size={18} strokeWidth={2} aria-hidden />
                         <span>Chaos</span>
                       </button>
+                    </div>
+                  </div>
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Appearance</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2">Base mode</p>
+                    <div className="row wrap">
+                      {THEME_MODES.map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          className={s.themeMode === mode ? "btn primary has-icon" : "btn has-icon"}
+                          onClick={() => void persist((cur) => ({ ...cur, themeMode: mode }))}
+                        >
+                          {mode === "dark" ? (
+                            <Moon size={18} strokeWidth={2} aria-hidden />
+                          ) : (
+                            <Sun size={18} strokeWidth={2} aria-hidden />
+                          )}
+                          <span>{THEME_MODE_LABELS[mode]}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="muted sm mb-2 mt-4">Accent palette</p>
+                    <div className="row wrap">
+                      {THEME_PALETTES.map((palette) => (
+                        <button
+                          key={palette}
+                          type="button"
+                          className={s.themePalette === palette ? "btn primary" : "btn"}
+                          onClick={() => void persist((cur) => ({ ...cur, themePalette: palette }))}
+                        >
+                          {THEME_PALETTE_LABELS[palette]}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </details>
@@ -1157,6 +1217,8 @@ export default function App() {
                               ...parsed,
                               version: 1,
                               widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
+                              themeMode: coerceThemeMode(parsed.themeMode, d.themeMode),
+                              themePalette: coerceThemePalette(parsed.themePalette, d.themePalette),
                             };
                             void persist(merged);
                           } catch {

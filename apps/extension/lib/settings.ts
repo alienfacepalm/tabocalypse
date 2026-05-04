@@ -1,6 +1,8 @@
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
+import { coerceThemeMode, coerceThemePalette, type TThemeMode, type TThemePalette } from "./theme";
 
+export type { TThemeMode, TThemePalette } from "./theme";
 export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
@@ -35,6 +37,8 @@ export interface ITodoItem {
 export interface ISettings {
   version: 1;
   preset: "focus" | "balanced" | "chaos";
+  themeMode: TThemeMode;
+  themePalette: TThemePalette;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
@@ -68,6 +72,8 @@ const LOCAL_KEY = "tabocalypseLocal";
 export interface ISyncSlice {
   version: 1;
   preset: ISettings["preset"];
+  themeMode: TThemeMode;
+  themePalette: TThemePalette;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
@@ -129,6 +135,8 @@ export function defaultSettings(): ISettings {
   return {
     version: 1,
     preset: "balanced",
+    themeMode: "dark",
+    themePalette: "glitch",
     humorEnabled: true,
     humorIntensity: "mild",
     humorBuiltinPackIds: ["tab_shame", "error_messages", "dev_snark"],
@@ -160,6 +168,8 @@ function toSync(s: ISettings): ISyncSlice {
   return {
     version: 1,
     preset: s.preset,
+    themeMode: s.themeMode,
+    themePalette: s.themePalette,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
     humorBuiltinPackIds: s.humorBuiltinPackIds,
@@ -208,6 +218,8 @@ function mergeSettings(
   return {
     version: 1,
     preset: sync?.preset ?? d.preset,
+    themeMode: coerceThemeMode(sync?.themeMode, d.themeMode),
+    themePalette: coerceThemePalette(sync?.themePalette, d.themePalette),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,

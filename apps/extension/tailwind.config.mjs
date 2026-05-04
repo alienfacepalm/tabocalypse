@@ -4,20 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Keep these semantic keys stable; values follow `design/` ("Glitch-Core Terminal").
-        bg: "#050505",
-        surface: "rgb(5 5 5 / 0.80)",
-        surface2: "rgb(0 0 0 / 0.60)",
-        border: "#27272a", // zinc-800-ish
-        text: "#dae6d0",
-        muted: "#71717a", // zinc-500-ish
-        // Acid Green / Glitch Magenta
-        accent: "#39ff14",
-        accent2: "#ff00ff",
-        accent3: "#efffe3",
-        danger: "#ffb4ab",
-        modal: "rgb(5 5 5 / 0.86)",
-        codebg: "#000000",
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        surface2: "var(--color-surface2)",
+        "surface-weak": "var(--color-surface-weak)",
+        "surface-strong": "var(--color-surface-strong)",
+        border: "var(--color-border)",
+        text: "var(--color-text)",
+        muted: "var(--color-muted)",
+        accent: "var(--color-accent)",
+        accent2: "var(--color-accent2)",
+        accent3: "var(--color-accent3)",
+        danger: "var(--color-danger)",
+        modal: "var(--color-modal)",
+        codebg: "var(--color-codebg)",
+        input: "var(--color-input-bg)",
+        "btn-bg": "var(--color-btn-bg)",
+        "on-accent": "var(--color-on-accent)",
+        backdrop: "var(--color-backdrop)",
+        "shadow-hard": "var(--color-shadow-hard)",
       },
       borderRadius: {
         card: "0px",

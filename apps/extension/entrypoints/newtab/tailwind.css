@@ -3,6 +3,29 @@
 @tailwind utilities;
 
 @layer base {
+  /* Default new-tab paint before JS applies settings (dark + glitch palette). */
+  :root {
+    --color-bg: #050505;
+    --color-text: #dae6d0;
+    --color-muted: #71717a;
+    --color-border: #27272a;
+    --color-surface: rgb(0 0 0 / 0.45);
+    --color-surface2: rgb(0 0 0 / 0.6);
+    --color-surface-weak: rgb(0 0 0 / 0.3);
+    --color-surface-strong: rgb(0 0 0 / 0.8);
+    --color-modal: rgb(5 5 5 / 0.86);
+    --color-input-bg: rgb(0 0 0 / 0.4);
+    --color-btn-bg: #000000;
+    --color-on-accent: #0a0a0a;
+    --color-backdrop: rgb(0 0 0 / 0.65);
+    --color-shadow-hard: #000000;
+    --color-codebg: #000000;
+    --color-danger: #fca5a5;
+    --color-accent: #39ff14;
+    --color-accent2: #ff00ff;
+    --color-accent3: #efffe3;
+  }
+
   html {
     @apply min-h-full;
   }
@@ -26,7 +49,7 @@
   input,
   textarea,
   select {
-    @apply border border-border bg-black/40 px-3 py-2 font-sans text-text;
+    @apply border border-border bg-input px-3 py-2 font-sans text-text;
   }
 
   input:focus,
@@ -47,6 +70,10 @@
 
   .glitch-overlay {
     @apply pointer-events-none fixed inset-0 z-50 opacity-20;
+
+    [data-theme="light"] & {
+      opacity: 0.1;
+    }
     background: repeating-linear-gradient(
       0deg,
       rgba(0, 0, 0, 0.15),
@@ -61,8 +88,20 @@
   }
 
   .top-bar {
-    @apply fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between gap-4 border-b-2 border-accent bg-black/45 px-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
-    backdrop-filter: blur(12px);
+    @apply fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between gap-4 border-b-2 border-accent px-4;
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.085) 0%,
+        rgb(255 255 255 / 0.02) 36%,
+        rgb(0 0 0 / 0.18) 100%
+      ),
+      rgb(5 5 5 / 0.38);
+    backdrop-filter: blur(18px) saturate(1.18);
+    -webkit-backdrop-filter: blur(18px) saturate(1.18);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      4px 4px 0 0 var(--color-accent);
   }
 
   .header-search {
@@ -70,7 +109,7 @@
   }
 
   .header-search input {
-    @apply border border-border bg-black/40 text-text;
+    @apply border border-border bg-input text-text;
   }
 
   .title {
@@ -102,8 +141,21 @@
   }
 
   .card {
-    @apply relative border border-border bg-black/45 px-4 py-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
-    backdrop-filter: blur(12px);
+    @apply relative border px-4 py-4;
+    border-color: rgb(148 163 184 / 0.22);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.085) 0%,
+        rgb(255 255 255 / 0.02) 36%,
+        rgb(0 0 0 / 0.22) 100%
+      ),
+      rgb(5 5 5 / 0.4);
+    backdrop-filter: blur(18px) saturate(1.18);
+    -webkit-backdrop-filter: blur(18px) saturate(1.18);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.11),
+      4px 4px 0 0 var(--color-accent);
   }
 
   .card h3 {
@@ -136,11 +188,11 @@
   }
 
   .btn {
-    @apply border border-accent bg-black px-[0.85rem] py-[0.5rem] font-display text-[0.85rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] transition-[transform,box-shadow,background-color,color] duration-100;
+    @apply border border-accent bg-btn-bg px-[0.85rem] py-[0.5rem] font-display text-[0.85rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color] duration-100;
   }
 
   .btn:hover {
-    @apply bg-accent text-black;
+    @apply bg-accent text-on-accent;
   }
 
   .btn.has-icon {
@@ -148,11 +200,11 @@
   }
 
   .btn.primary {
-    @apply bg-accent text-black;
+    @apply bg-accent text-on-accent;
   }
 
   .btn.ghost {
-    @apply border-accent2 bg-transparent text-accent2 shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
+    @apply border-accent2 bg-transparent text-accent2 shadow-[4px_4px_0px_0px_var(--color-accent2)];
   }
 
   .btn.sm {
@@ -168,8 +220,21 @@
   }
 
   .humor-banner {
-    @apply mb-6 border border-border bg-black/45 px-4 py-3 text-[1.05rem] shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
-    backdrop-filter: blur(12px);
+    @apply mb-6 border px-4 py-3 text-[1.05rem];
+    border-color: rgb(148 163 184 / 0.22);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.085) 0%,
+        rgb(255 255 255 / 0.02) 36%,
+        rgb(0 0 0 / 0.22) 100%
+      ),
+      rgb(5 5 5 / 0.4);
+    backdrop-filter: blur(18px) saturate(1.18);
+    -webkit-backdrop-filter: blur(18px) saturate(1.18);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.11),
+      4px 4px 0 0 var(--color-accent2);
   }
 
   .prod-gag {
@@ -225,16 +290,29 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-8;
+    @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-backdrop px-4 py-8;
   }
 
   .modal {
-    @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden border border-border bg-modal shadow-[6px_6px_0_0_#000];
-    backdrop-filter: blur(12px);
+    @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden border;
+    border-color: rgb(148 163 184 / 0.24);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.07) 0%,
+        rgb(255 255 255 / 0.02) 32%,
+        rgb(0 0 0 / 0.28) 100%
+      ),
+      rgb(5 5 5 / 0.55);
+    backdrop-filter: blur(20px) saturate(1.15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.1),
+      6px 6px 0 0 var(--color-shadow-hard);
   }
 
   .settings-modal .modal-head {
-    @apply border-b-2 border-accent shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
+    @apply border-b-2 border-accent shadow-[4px_4px_0px_0px_var(--color-accent)];
   }
 
   .settings-accordion {
@@ -242,8 +320,19 @@
   }
 
   .acc-item {
-    @apply relative border border-border bg-black/40;
-    backdrop-filter: blur(12px);
+    @apply relative border;
+    border-color: rgb(148 163 184 / 0.22);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.06) 0%,
+        rgb(255 255 255 / 0.02) 35%,
+        rgb(0 0 0 / 0.2) 100%
+      ),
+      rgb(5 5 5 / 0.38);
+    backdrop-filter: blur(18px) saturate(1.18);
+    -webkit-backdrop-filter: blur(18px) saturate(1.18);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.09);
   }
 
   .acc-item::before {
@@ -252,7 +341,7 @@
   }
 
   .acc-summary {
-    @apply flex cursor-pointer list-none items-center justify-between gap-3 border-b border-border bg-black/30 px-4 py-3 font-display text-[0.9rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] transition-[transform,box-shadow,background-color,color] duration-100 select-none hover:bg-accent hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(255,0,255,1)] open:bg-accent open:text-black open:shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 border-b border-border bg-surface-weak px-4 py-3 font-display text-[0.9rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color] duration-100 select-none hover:bg-accent hover:text-on-accent hover:shadow-[4px_4px_0px_0px_var(--color-accent2)] open:bg-accent open:text-on-accent open:shadow-[4px_4px_0px_0px_var(--color-accent2)];
   }
 
   .acc-summary::-webkit-details-marker {
@@ -308,7 +397,7 @@
   }
 
   .toast {
-    @apply fixed bottom-4 right-4 z-40 border border-border bg-black/80 px-4 py-3 shadow-[4px_4px_0_0_#000];
+    @apply fixed bottom-4 right-4 z-40 border border-border bg-surface-strong px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)];
   }
 
   .toast.err {
@@ -334,5 +423,77 @@
 
   .tab-count {
     @apply my-1 text-2xl font-bold;
+  }
+
+  [data-theme="light"] .top-bar {
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.55) 0%,
+        rgb(255 255 255 / 0.22) 40%,
+        rgb(0 0 0 / 0.04) 100%
+      ),
+      rgb(255 255 255 / 0.42);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      4px 4px 0 0 var(--color-accent);
+  }
+
+  [data-theme="light"] .card {
+    border-color: color-mix(in srgb, var(--color-border) 55%, transparent);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.55) 0%,
+        rgb(255 255 255 / 0.2) 38%,
+        rgb(0 0 0 / 0.03) 100%
+      ),
+      rgb(255 255 255 / 0.48);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      4px 4px 0 0 var(--color-accent);
+  }
+
+  [data-theme="light"] .humor-banner {
+    border-color: color-mix(in srgb, var(--color-border) 55%, transparent);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.55) 0%,
+        rgb(255 255 255 / 0.2) 38%,
+        rgb(0 0 0 / 0.03) 100%
+      ),
+      rgb(255 255 255 / 0.48);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      4px 4px 0 0 var(--color-accent2);
+  }
+
+  [data-theme="light"] .modal {
+    border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.52) 0%,
+        rgb(255 255 255 / 0.18) 34%,
+        rgb(0 0 0 / 0.04) 100%
+      ),
+      rgb(255 255 255 / 0.58);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      6px 6px 0 0 var(--color-shadow-hard);
+  }
+
+  [data-theme="light"] .acc-item {
+    border-color: color-mix(in srgb, var(--color-border) 55%, transparent);
+    background:
+      linear-gradient(
+        168deg,
+        rgb(255 255 255 / 0.45) 0%,
+        rgb(255 255 255 / 0.16) 36%,
+        rgb(0 0 0 / 0.03) 100%
+      ),
+      rgb(255 255 255 / 0.4);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55);
   }
 }

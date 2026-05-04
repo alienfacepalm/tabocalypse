@@ -40,6 +40,8 @@ describe("defaultSettings", () => {
     const s = defaultSettings();
     expect(s.version).toBe(1);
     expect(s.preset).toBe("balanced");
+    expect(s.themeMode).toBe("dark");
+    expect(s.themePalette).toBe("glitch");
     expect(s.widgets.search).toBe(true);
     expect(s.importedPacks).toEqual([]);
     expect(s.importedPlugins).toEqual([]);
@@ -114,6 +116,8 @@ describe("loadSettings", () => {
         backgroundKind: "solid",
         backgroundSolid: "#fff",
         debugPluginSource: true,
+        themeMode: "light",
+        themePalette: "ocean",
       },
     });
     localGet.mockResolvedValue({
@@ -141,6 +145,8 @@ describe("loadSettings", () => {
     expect(s.todos).toEqual([{ id: "1", text: "t", done: false }]);
     expect(s.widgets.humorBanner).toBe(false);
     expect(s.widgets.search).toBe(true);
+    expect(s.themeMode).toBe("light");
+    expect(s.themePalette).toBe("ocean");
   });
 });
 
@@ -174,6 +180,8 @@ describe("saveSettings", () => {
     expect(syncArg[SYNC_KEY]).toMatchObject({
       version: 1,
       preset: "chaos",
+      themeMode: "dark",
+      themePalette: "glitch",
     });
     expect(localArg[LOCAL_KEY]).toMatchObject({
       version: 1,
