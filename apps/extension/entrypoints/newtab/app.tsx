@@ -697,6 +697,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const s = settings;
 
+  /** Same gates as `onBackgroundPanPointerDown` for uploaded wallpaper pan (avoid a move cursor when drag is a no-op). */
+  const userBackgroundWallpaperPanDraggable = useMemo(() => {
+    if (s.hudLayoutLocked) return false;
+    if (s.backgroundKind !== "image" || !userChosenUrl || !userBgRepositionMode) return false;
+    const id = userBackgroundDisplayId;
+    if (!id) return false;
+    return s.userBackgroundImages.some((row) => row.id === id);
+  }, [
+    s.hudLayoutLocked,
+    s.backgroundKind,
+    s.userBackgroundImages,
+    userChosenUrl,
+    userBgRepositionMode,
+    userBackgroundDisplayId,
+  ]);
+
   const requestIntensity = (hi: THumorIntensity) => {
     void persist((cur) => {
       if ((hi === "spicy" || hi === "unhinged") && !cur.spicyContentAcknowledged) {
@@ -2654,12 +2670,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 (s.backgroundKind === "bing" && bingPaintUrl))
                 ? "pointer-events-auto touch-none"
                 : "pointer-events-none",
-              !s.hudLayoutLocked &&
-              s.backgroundKind === "image" &&
-              userChosenUrl &&
-              userBgRepositionMode
-                ? "cursor-move"
-                : "",
+              userBackgroundWallpaperPanDraggable ? "cursor-move" : "",
             ]
               .filter(Boolean)
               .join(" ")}
