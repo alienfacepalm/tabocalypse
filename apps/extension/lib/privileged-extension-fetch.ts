@@ -1,5 +1,61 @@
 import browser from "webextension-polyfill";
 
+/** Narrow `globalThis.chrome` without referencing an unbound `chrome` identifier (ESLint). */
+interface IChromeRuntimeShim {
+  id?: string;
+  sendMessage?: (message: unknown) => unknown;
+}
+
+interface IGlobalWithOptionalChrome {
+  chrome?: { runtime?: IChromeRuntimeShim };
+}
+
+function getChromeRuntime(): IChromeRuntimeShim | undefined {
+  return (globalThis as IGlobalWithOptionalChrome).chrome?.runtime;
+}
+
+/**
+ * Extension ID may appear on `chrome.runtime` even when `webextension-polyfill`’s
+ * `browser.runtime.id` is missing in some Chromium/Edge builds — falling back to
+ * in-page `fetch()` then hits CORS on `chrome-extension://` origins.
+ */
+function getExtensionRuntimeId(): string | undefined {
+  try {
+    const fromBrowser =
+      typeof browser !== "undefined" && typeof browser.runtime?.id === "string"
+        ? browser.runtime.id
+        : undefined;
+    if (fromBrowser) return fromBrowser;
+    const fromChrome = getChromeRuntime()?.id;
+    return typeof fromChrome === "string" && fromChrome.length > 0 ? fromChrome : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function hasExtensionSendMessage(): boolean {
+  try {
+    if (typeof browser !== "undefined" && typeof browser.runtime?.sendMessage === "function") {
+      return true;
+    }
+    return typeof getChromeRuntime()?.sendMessage === "function";
+  } catch {
+    return false;
+  }
+}
+
+async function extensionSendMessage<T>(message: unknown): Promise<T> {
+  if (typeof browser !== "undefined" && typeof browser.runtime?.sendMessage === "function") {
+    return browser.runtime.sendMessage(message) as Promise<T>;
+  }
+  const run = getChromeRuntime();
+  const sm = run?.sendMessage;
+  if (typeof sm !== "function") {
+    throw new Error("runtime.sendMessage is unavailable.");
+  }
+  return Promise.resolve(sm.call(run, message) as T);
+}
+
 /** Must stay aligned with `host_permissions` in `wxt.config.ts` (HTTPS prefixes only). */
 const ALLOWED_URL_PREFIXES = [
   "https://peapix.com/",
@@ -68,11 +124,7 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | undefined
 
 function useBackgroundPrivilegedFetch(): boolean {
   try {
-    return Boolean(
-      typeof browser !== "undefined" &&
-      typeof browser.runtime?.sendMessage === "function" &&
-      Boolean(browser.runtime.id),
-    );
+    return Boolean(getExtensionRuntimeId() && hasExtensionSendMessage());
   } catch {
     return false;
   }
@@ -90,10 +142,10 @@ export async function privilegedExtensionFetchJson(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
   }
-  const pending = browser.runtime.sendMessage({
+  const pending = extensionSendMessage<TPrivilegedFetchJsonResponse>({
     type: TABOCALYPSE_PRIV_FETCH_JSON,
     url,
-  } satisfies TPrivilegedFetchJsonRequest) as Promise<TPrivilegedFetchJsonResponse>;
+  } satisfies TPrivilegedFetchJsonRequest);
   const raced = await raceAbort(pending, signal);
   if (!raced.ok) throw new Error(raced.error);
   return raced.data;
@@ -113,10 +165,10 @@ export async function privilegedExtensionFetchBytes(
     const bytes = await res.arrayBuffer();
     return { mime, bytes };
   }
-  const pending = browser.runtime.sendMessage({
+  const pending = extensionSendMessage<TPrivilegedFetchBytesResponse>({
     type: TABOCALYPSE_PRIV_FETCH_BYTES,
     url,
-  } satisfies TPrivilegedFetchBytesRequest) as Promise<TPrivilegedFetchBytesResponse>;
+  } satisfies TPrivilegedFetchBytesRequest);
   const raced = await raceAbort(pending, signal);
   if (!raced.ok) throw new Error(raced.error);
   const bytes = base64ToArrayBuffer(raced.base64);

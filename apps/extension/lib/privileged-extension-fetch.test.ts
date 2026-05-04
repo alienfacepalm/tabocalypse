@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("webextension-polyfill", () => ({
   default: { runtime: {} },
@@ -7,7 +7,13 @@ vi.mock("webextension-polyfill", () => ({
 import {
   arrayBufferToBase64,
   isPrivilegedExtensionFetchUrlAllowed,
+  privilegedExtensionFetchJson,
+  TABOCALYPSE_PRIV_FETCH_JSON,
 } from "./privileged-extension-fetch";
+
+interface IGlobalWithOptionalChrome {
+  chrome?: { runtime?: { id?: string; sendMessage?: (message: unknown) => unknown } };
+}
 
 describe("isPrivilegedExtensionFetchUrlAllowed", () => {
   it("allows Peapix and Open-Meteo HTTPS URLs", () => {
@@ -28,6 +34,30 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     ).toBe(false);
     expect(isPrivilegedExtensionFetchUrlAllowed("http://peapix.com/x")).toBe(false);
     expect(isPrivilegedExtensionFetchUrlAllowed("not a url")).toBe(false);
+  });
+});
+
+describe("privilegedExtensionFetchJson", () => {
+  afterEach(() => {
+    delete (globalThis as IGlobalWithOptionalChrome).chrome;
+    vi.restoreAllMocks();
+  });
+
+  it("uses chrome.runtime.sendMessage when browser.runtime has no id (Chromium/Edge quirk)", async () => {
+    const sendMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      data: [{ fullUrl: "https://img.peapix.com/x.jpg" }],
+    });
+    (globalThis as IGlobalWithOptionalChrome).chrome = {
+      runtime: { id: "test-extension-id", sendMessage },
+    };
+    const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: TABOCALYPSE_PRIV_FETCH_JSON,
+      url: "https://peapix.com/bing/feed?country=us",
+    });
+    expect(data).toEqual([{ fullUrl: "https://img.peapix.com/x.jpg" }]);
   });
 });
 
