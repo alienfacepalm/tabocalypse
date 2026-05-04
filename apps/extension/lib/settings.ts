@@ -218,20 +218,21 @@ function mergeSettings(
 }
 
 export async function loadSettings(): Promise<Settings> {
-  const [syncRaw, localRaw] = await Promise.all([
-    browser.storage.sync.get(SYNC_KEY),
-    browser.storage.local.get(LOCAL_KEY),
-  ]);
+  const localRaw = await browser.storage.local.get(LOCAL_KEY);
+  const syncRaw = browser.storage.sync
+    ? await browser.storage.sync.get(SYNC_KEY)
+    : ({} as Record<string, unknown>);
   const sync = syncRaw[SYNC_KEY] as SyncSlice | undefined;
   const local = localRaw[LOCAL_KEY] as LocalSlice | undefined;
   return mergeSettings(sync, local);
 }
 
 export async function saveSettings(s: Settings): Promise<void> {
-  await Promise.all([
-    browser.storage.sync.set({ [SYNC_KEY]: toSync(s) }),
-    browser.storage.local.set({ [LOCAL_KEY]: toLocal(s) }),
-  ]);
+  const writes: Promise<unknown>[] = [browser.storage.local.set({ [LOCAL_KEY]: toLocal(s) })];
+  if (browser.storage.sync) {
+    writes.unshift(browser.storage.sync.set({ [SYNC_KEY]: toSync(s) }));
+  }
+  await Promise.all(writes);
 }
 
 export function applyPreset(preset: Settings["preset"], s: Settings): Settings {

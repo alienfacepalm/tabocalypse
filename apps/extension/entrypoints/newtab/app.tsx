@@ -812,7 +812,12 @@ export default function App() {
 function TabGuilt() {
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
-    browser.tabs
+    const tabs = browser.tabs;
+    if (!tabs?.query) {
+      setN(null);
+      return;
+    }
+    void tabs
       .query({ currentWindow: true })
       .then((t) => setN(t.length))
       .catch(() => setN(null));

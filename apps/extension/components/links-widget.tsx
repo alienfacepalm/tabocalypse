@@ -6,7 +6,12 @@ export function TopSitesWidget() {
   const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    browser.topSites
+    const api = browser.topSites;
+    if (!api?.get) {
+      setErr("Enable Top sites in settings (permission).");
+      return;
+    }
+    void api
       .get()
       .then((s) => setSites(s.slice(0, 12)))
       .catch(() => setErr("Enable Top sites in settings (permission)."));
@@ -41,7 +46,12 @@ export function BookmarksWidget() {
   const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    browser.bookmarks
+    const api = browser.bookmarks;
+    if (!api?.getRecent) {
+      setErr("Enable Bookmarks strip in settings (permission).");
+      return;
+    }
+    void api
       .getRecent(16)
       .then(setMarks)
       .catch(() => setErr("Enable Bookmarks strip in settings (permission)."));

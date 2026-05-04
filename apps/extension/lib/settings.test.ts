@@ -1,17 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const syncGet = vi.fn();
-const syncSet = vi.fn();
-const localGet = vi.fn();
-const localSet = vi.fn();
-
-vi.mock("webextension-polyfill", () => ({
-  default: {
+const { mockBrowser, syncGet, syncSet, localGet, localSet } = vi.hoisted(() => {
+  const syncGet = vi.fn();
+  const syncSet = vi.fn();
+  const localGet = vi.fn();
+  const localSet = vi.fn();
+  const mockBrowser = {
     storage: {
-      sync: { get: syncGet, set: syncSet },
+      sync: { get: syncGet, set: syncSet } as {
+        get: typeof syncGet;
+        set: typeof syncSet;
+      } | null,
       local: { get: localGet, set: localSet },
     },
-  },
+  };
+  return { mockBrowser, syncGet, syncSet, localGet, localSet };
+});
+
+vi.mock("webextension-polyfill", () => ({
+  default: mockBrowser,
 }));
 
 const SYNC_KEY = "tabocalypseSync";
@@ -75,6 +82,18 @@ describe("loadSettings", () => {
     expect(s).toEqual(defaultSettings());
     expect(syncGet).toHaveBeenCalledWith(SYNC_KEY);
     expect(localGet).toHaveBeenCalledWith(LOCAL_KEY);
+  });
+
+  it("loads from local only when storage.sync is unavailable", async () => {
+    mockBrowser.storage.sync = null;
+    try {
+      const s = await loadSettings();
+      expect(s).toEqual(defaultSettings());
+      expect(syncGet).not.toHaveBeenCalled();
+      expect(localGet).toHaveBeenCalledWith(LOCAL_KEY);
+    } finally {
+      mockBrowser.storage.sync = { get: syncGet, set: syncSet };
+    }
   });
 
   it("merges partial sync and local slices", async () => {
@@ -160,5 +179,17 @@ describe("saveSettings", () => {
       importedPacks: s.importedPacks,
     });
     expect(localArg[LOCAL_KEY]).not.toHaveProperty("preset");
+  });
+
+  it("writes local only when storage.sync is unavailable", async () => {
+    mockBrowser.storage.sync = null;
+    try {
+      const s = defaultSettings();
+      await saveSettings(s);
+      expect(syncSet).not.toHaveBeenCalled();
+      expect(localSet).toHaveBeenCalledTimes(1);
+    } finally {
+      mockBrowser.storage.sync = { get: syncGet, set: syncSet };
+    }
   });
 });

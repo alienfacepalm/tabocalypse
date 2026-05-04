@@ -15,7 +15,11 @@ export function SearchWidget({ engine }: { engine: Settings["searchEngine"] }) {
     const t = q.trim();
     if (!t) return;
     const url = ENGINES[engine](t);
-    void browser.tabs.create({ url });
+    if (browser.tabs?.create) {
+      void browser.tabs.create({ url });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
     setQ("");
   };
   return (
