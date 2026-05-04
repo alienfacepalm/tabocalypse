@@ -1,51 +1,51 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockBrowser, sendMessage } = vi.hoisted(() => {
-  const sendMessage = vi.fn();
-  const mockBrowser = {
-    runtime: { sendMessage },
-  };
-  return { mockBrowser, sendMessage };
-});
-
-vi.mock("webextension-polyfill", () => ({
-  default: mockBrowser,
-}));
-
 import {
+  BING_HP_ARCHIVE,
   fetchBingWallpaperImageUrls,
   pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
-  TABOCALYPSE_BING_WALLPAPER_URLS_MESSAGE,
   wallpaperUrlsFromBingArchiveJson,
 } from "./fetch-bing-wallpaper";
 
 describe("fetchBingWallpaperImageUrls", () => {
   beforeEach(() => {
-    sendMessage.mockReset();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ images: [{ url: "/th?id=OHR.X_1920x1080.jpg" }] }),
+      }),
+    );
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  it("proxies through runtime.sendMessage", async () => {
-    sendMessage.mockResolvedValue({ ok: true, urls: ["a"] });
+  it("fetches Bing HPImageArchive and returns absolute image URLs", async () => {
     const urls = await fetchBingWallpaperImageUrls();
-    expect(urls).toEqual(["a"]);
-    expect(sendMessage).toHaveBeenCalledWith({ type: TABOCALYPSE_BING_WALLPAPER_URLS_MESSAGE });
+    expect(urls).toEqual(["https://www.bing.com/th?id=OHR.X_1920x1080.jpg"]);
+    expect(fetch).toHaveBeenCalledWith(BING_HP_ARCHIVE, { signal: undefined });
   });
 
-  it("throws on error responses", async () => {
-    sendMessage.mockResolvedValue({ ok: false, error: "nope" });
-    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow("nope");
+  it("passes AbortSignal to fetch", async () => {
+    const ac = new AbortController();
+    await fetchBingWallpaperImageUrls(ac.signal);
+    expect(fetch).toHaveBeenCalledWith(BING_HP_ARCHIVE, { signal: ac.signal });
   });
 
-  it("throws when the background worker does not respond", async () => {
-    sendMessage.mockResolvedValue(undefined);
-    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow(
-      "No response from background worker for Bing wallpaper URLs.",
+  it("throws on non-OK HTTP", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      }),
     );
+    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow("Bing wallpaper HTTP 503");
   });
 });
 

@@ -226,6 +226,7 @@ export default function App() {
     }
     const rotate = settings?.backgroundRotate ?? false;
     let cancelled = false;
+    const listAbort = new AbortController();
     setBingChosenUrl(null);
     setBingPaintUrl((prev) => {
       revokeObjectUrlMaybe(prev);
@@ -234,7 +235,7 @@ export default function App() {
     setBingFetchErr(null);
     setBingImageLoadErr(null);
     setBingRefreshing(false);
-    void fetchBingWallpaperImageUrls()
+    void fetchBingWallpaperImageUrls(listAbort.signal)
       .then((urls) => {
         if (cancelled) return;
         if (urls.length === 0) {
@@ -252,6 +253,7 @@ export default function App() {
     if (!rotate) {
       return () => {
         cancelled = true;
+        listAbort.abort();
       };
     }
     const id = window.setInterval(() => {
@@ -276,6 +278,7 @@ export default function App() {
     }, BING_ROTATE_MS);
     return () => {
       cancelled = true;
+      listAbort.abort();
       window.clearInterval(id);
     };
   }, [settings?.backgroundKind, settings?.backgroundRotate]);
