@@ -1841,7 +1841,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 }
 
-export default App;
+export default App as React.FC<{ initialSettings: ISettings }>;
 
 function TabGuilt() {
   const [n, setN] = useState<number | null>(null);
