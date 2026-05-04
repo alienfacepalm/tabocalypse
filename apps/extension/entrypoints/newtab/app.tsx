@@ -11,7 +11,6 @@ import {
   FolderUp,
   Heart,
   Image,
-  ImagePlus,
   Images,
   LayoutGrid,
   Layers,
@@ -1483,22 +1482,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           <span>My photos</span>
                         </button>
                       </HudTip>
-                      <HudTip tip="Pick images from your device to add to your photo library">
-                        <label className="btn has-icon">
-                          <ImagePlus size={18} strokeWidth={2} aria-hidden />
-                          <span>Add photos</span>
-                          <input
-                            hidden
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => {
-                              void onPickBackgrounds(e.target.files);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                      </HudTip>
                       <button
                         type="button"
                         className={
@@ -1576,32 +1559,30 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       saved photo remembers its own framing.
                     </p>
 
-                    {s.userBackgroundImages.length > 0 ? (
-                      <UserBackgroundGallery
-                        images={s.userBackgroundImages}
-                        activeId={s.userBackgroundActiveId}
-                        backgroundRotate={s.backgroundRotate}
-                        onPickFiles={(files) => void onPickBackgrounds(files)}
-                        onSetActiveId={(id) =>
-                          void persist((cur) => {
-                            const primary =
-                              cur.userBackgroundImages.find((row) => row.id === id) ??
-                              cur.userBackgroundImages[0];
-                            return {
-                              ...cur,
-                              backgroundKind: "image",
-                              userBackgroundActiveId: id,
-                              userBackgroundDataUrl: primary?.dataUrl ?? null,
-                              userBackgroundDataUrls: cur.userBackgroundImages.map(
-                                (row) => row.dataUrl,
-                              ),
-                            };
-                          })
-                        }
-                        onDeleteId={deleteUserBackground}
-                        onMove={moveUserBackground}
-                      />
-                    ) : null}
+                    <UserBackgroundGallery
+                      images={s.userBackgroundImages}
+                      activeId={s.userBackgroundActiveId}
+                      backgroundRotate={s.backgroundRotate}
+                      onPickFiles={(files) => void onPickBackgrounds(files)}
+                      onSetActiveId={(id) =>
+                        void persist((cur) => {
+                          const primary =
+                            cur.userBackgroundImages.find((row) => row.id === id) ??
+                            cur.userBackgroundImages[0];
+                          return {
+                            ...cur,
+                            backgroundKind: "image",
+                            userBackgroundActiveId: id,
+                            userBackgroundDataUrl: primary?.dataUrl ?? null,
+                            userBackgroundDataUrls: cur.userBackgroundImages.map(
+                              (row) => row.dataUrl,
+                            ),
+                          };
+                        })
+                      }
+                      onDeleteId={deleteUserBackground}
+                      onMove={moveUserBackground}
+                    />
 
                     {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
                       <p className="muted sm" role="status">

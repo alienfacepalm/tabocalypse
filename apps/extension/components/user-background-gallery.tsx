@@ -26,24 +26,28 @@ export function UserBackgroundGallery({
     <div className="mt-4 flex flex-col gap-3 border border-outline/40 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm uppercase tracking-wide">Photo library</span>
-        <label className="btn has-icon sm">
-          <ImagePlus size={18} strokeWidth={2} aria-hidden />
-          <span>Add photos</span>
-          <input
-            hidden
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => {
-              onPickFiles(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <HudTip tip="Pick images from your device to add to your photo library">
+          <label className="btn has-icon sm">
+            <ImagePlus size={18} strokeWidth={2} aria-hidden />
+            <span>Add photos</span>
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                onPickFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </HudTip>
       </div>
 
       {images.length === 0 ? (
-        <p className="muted sm">No uploaded photos yet. Use Add photos or Upload image(s) above.</p>
+        <p className="muted sm">
+          No uploaded photos yet. Use Add photos to pick images from your device.
+        </p>
       ) : (
         <ul className="flex list-none flex-col gap-2 p-0">
           {images.map((im, index) => {
