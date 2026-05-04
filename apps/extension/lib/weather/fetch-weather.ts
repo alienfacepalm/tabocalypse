@@ -1,7 +1,9 @@
 import { privilegedExtensionFetchJson } from "../privileged-extension-fetch";
+import type { TWeatherTemperatureUnit } from "./weather-units";
 
 export interface IWeatherSnapshot {
-  temperatureC: number;
+  temperature: number;
+  temperatureUnit: TWeatherTemperatureUnit;
   code: number;
   summary: string;
 }
@@ -20,12 +22,16 @@ const CODE_SUMMARY: Record<number, string> = {
   95: "Thunderstorm",
 };
 
-export async function fetchOpenMeteo(lat: number, lon: number): Promise<IWeatherSnapshot> {
+export async function fetchOpenMeteo(
+  lat: number,
+  lon: number,
+  temperatureUnit: TWeatherTemperatureUnit,
+): Promise<IWeatherSnapshot> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
   url.searchParams.set("current", "temperature_2m,weather_code");
-  url.searchParams.set("temperature_unit", "celsius");
+  url.searchParams.set("temperature_unit", temperatureUnit);
 
   const data = (await privilegedExtensionFetchJson(url.toString())) as {
     current?: { temperature_2m?: number; weather_code?: number };
@@ -34,7 +40,8 @@ export async function fetchOpenMeteo(lat: number, lon: number): Promise<IWeather
   const code = data.current?.weather_code ?? 0;
   if (Number.isNaN(t)) throw new Error("Bad weather payload");
   return {
-    temperatureC: t,
+    temperature: t,
+    temperatureUnit,
     code,
     summary: CODE_SUMMARY[code] ?? "Weather",
   };

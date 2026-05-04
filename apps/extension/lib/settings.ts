@@ -1,8 +1,16 @@
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
+import { mergeHudPanelPositions, type IHudPanelPosition, type THudPanelId } from "./hud-layout";
 import { coerceThemeMode, coerceThemePalette, type TThemeMode, type TThemePalette } from "./theme";
+import {
+  coerceWeatherTemperatureUnit,
+  type TWeatherTemperatureUnit,
+} from "./weather/weather-units";
+
+export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
 
 export type { TThemeMode, TThemePalette } from "./theme";
+export type { TWeatherTemperatureUnit } from "./weather/weather-units";
 export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
@@ -47,6 +55,7 @@ export interface ISettings {
   searchEngine: "ddg" | "google" | "bing";
   weatherLat: number;
   weatherLon: number;
+  weatherTemperatureUnit: TWeatherTemperatureUnit;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
@@ -64,6 +73,12 @@ export interface ISettings {
   debugPluginSource: boolean;
   notesText: string;
   todos: ITodoItem[];
+  /** When true, panels are not snapped to the HUD grid on drop. */
+  hudLayoutChaotic: boolean;
+  /** When true, panel drag handles are disabled until unlocked. */
+  hudLayoutLocked: boolean;
+  /** Percentage positions of draggable HUD panels within the canvas. */
+  hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
 }
 
 const SYNC_KEY = "tabocalypseSync";
@@ -111,6 +126,7 @@ export interface ISyncSlice {
   searchEngine: ISettings["searchEngine"];
   weatherLat: number;
   weatherLon: number;
+  weatherTemperatureUnit: TWeatherTemperatureUnit;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
@@ -131,6 +147,9 @@ export interface ILocalSlice {
   importedPlugins: IImportedPlugin[];
   notesText: string;
   todos: ITodoItem[];
+  hudLayoutChaotic?: boolean;
+  hudLayoutLocked?: boolean;
+  hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
 }
 
 export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
@@ -174,6 +193,7 @@ export function defaultSettings(): ISettings {
     searchEngine: "ddg",
     weatherLat: 40.7128,
     weatherLon: -74.006,
+    weatherTemperatureUnit: "celsius",
     weatherAutoGeo: false,
     useOpenWeather: false,
     backgroundKind: "gradient",
@@ -190,6 +210,9 @@ export function defaultSettings(): ISettings {
     debugPluginSource: false,
     notesText: "",
     todos: [],
+    hudLayoutChaotic: false,
+    hudLayoutLocked: false,
+    hudPanelPositions: mergeHudPanelPositions(undefined),
   };
 }
 
@@ -207,6 +230,7 @@ function toSync(s: ISettings): ISyncSlice {
     searchEngine: s.searchEngine,
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
+    weatherTemperatureUnit: s.weatherTemperatureUnit,
     weatherAutoGeo: s.weatherAutoGeo,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
@@ -229,6 +253,9 @@ function toLocal(s: ISettings): ILocalSlice {
     importedPlugins: s.importedPlugins,
     notesText: s.notesText,
     todos: s.todos,
+    hudLayoutChaotic: s.hudLayoutChaotic,
+    hudLayoutLocked: s.hudLayoutLocked,
+    hudPanelPositions: s.hudPanelPositions,
   };
 }
 
@@ -257,6 +284,10 @@ function mergeSettings(
     searchEngine: sync?.searchEngine ?? d.searchEngine,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
+    weatherTemperatureUnit: coerceWeatherTemperatureUnit(
+      sync?.weatherTemperatureUnit,
+      d.weatherTemperatureUnit,
+    ),
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
@@ -273,6 +304,9 @@ function mergeSettings(
     importedPlugins: local?.importedPlugins ?? d.importedPlugins,
     notesText: local?.notesText ?? d.notesText,
     todos: local?.todos ?? d.todos,
+    hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
+    hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,
+    hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
   };
 }
 

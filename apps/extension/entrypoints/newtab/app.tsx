@@ -14,32 +14,39 @@ import {
   Images,
   LayoutGrid,
   Layers,
-  Lightbulb,
+  Lock as LucideLock,
   MapPin,
+  MessageSquare,
   Moon,
   Paintbrush,
   Scale,
   Sun,
   Settings as SettingsIcon,
+  Shuffle,
   Sparkles,
   Square,
   Target,
   Trash2,
+  Unlock,
   Upload,
   X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
+import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
 import { NotesWidget } from "../../components/notes-widget";
 import { PluginDeck } from "../../components/plugin-views";
 import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
-import { WeatherWidget } from "../../components/weather-widget";
+import { WeatherWidget } from "../../components/built-in/weather-widget";
+import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weather/weather-units";
 import {
   type THumorIntensity,
+  type IHudPanelPosition,
   type ISettings,
+  type THudPanelId,
   type TWidgetKey,
   WIDGET_LABELS,
 } from "../../lib/settings";
@@ -54,7 +61,7 @@ import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
-import { openExternal, SUPPORT } from "../../lib/support-links";
+import { getSupportActions, openExternal, type TSupportLinkKind } from "../../lib/support-links";
 import {
   estimateImportedBytes,
   MAX_TOTAL_IMPORTED_BYTES,
@@ -71,6 +78,7 @@ import {
   pickRotatingBingWallpaperUrl,
 } from "../../lib/fetch-bing-wallpaper";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
+import { DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
 import {
   applyDocumentTheme,
   coerceThemeMode,
@@ -174,6 +182,20 @@ function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void 
   }
 }
 
+function SupportLinkIcon({ kind }: { kind: TSupportLinkKind }) {
+  const iconProps = { size: 18, strokeWidth: 2, "aria-hidden": true as const };
+  switch (kind) {
+    case "feedback":
+      return <MessageSquare {...iconProps} />;
+    case "donate":
+      return <Heart {...iconProps} />;
+    case "source":
+      return <Braces {...iconProps} />;
+    default:
+      return <ExternalLink {...iconProps} />;
+  }
+}
+
 export default function App({ initialSettings }: { initialSettings: ISettings }) {
   const [settings, setSettings] = useState<ISettings>(initialSettings);
   const [openSettings, setOpenSettings] = useState(false);
@@ -195,6 +217,7 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
     bookmarks: false,
     tabs: false,
   });
+  const supportActions = useMemo(() => getSupportActions(), []);
   const bingPaintUrlRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -413,6 +436,17 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
       return persistChainRef.current;
     },
     [clearMyLinesDebouncedSaveTimer],
+  );
+
+  const hudCanvasRef = useRef<HTMLDivElement | null>(null);
+  const commitHudPanel = useCallback(
+    (id: THudPanelId, pos: IHudPanelPosition) => {
+      void persist((cur) => ({
+        ...cur,
+        hudPanelPositions: { ...cur.hudPanelPositions, [id]: pos },
+      }));
+    },
+    [persist],
   );
 
   const refreshOptionalApiPerms = useCallback(async (): Promise<void> => {
@@ -778,6 +812,51 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
 
                 <details className="acc-item">
                   <summary className="acc-summary">
+                    <span className="acc-title">Panel layout</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2">
+                      Drag panels by the grip in each header. Use the top bar for quick layout lock
+                      and chaotic mode.
+                    </p>
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={s.hudLayoutChaotic}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, hudLayoutChaotic: e.target.checked }))
+                        }
+                      />
+                      <span>Chaotic layout (no snap to grid)</span>
+                    </label>
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={s.hudLayoutLocked}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, hudLayoutLocked: e.target.checked }))
+                        }
+                      />
+                      <span>Lock panel positions</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn has-icon mt-3"
+                      onClick={() =>
+                        void persist((cur) => ({
+                          ...cur,
+                          hudPanelPositions: { ...DEFAULT_HUD_PANEL_POSITIONS },
+                        }))
+                      }
+                    >
+                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                      <span>Reset panel positions</span>
+                    </button>
+                  </div>
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
                     <span className="acc-title">Chaos</span>
                   </summary>
                   <div className="acc-body">
@@ -990,6 +1069,21 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                         }
                       />
                     </label>
+                  </div>
+                  <p className="muted sm mb-2 mt-4">Temperature units</p>
+                  <div className="row wrap" role="group" aria-label="Temperature units">
+                    {WEATHER_TEMPERATURE_UNITS.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
+                        onClick={() =>
+                          void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                        }
+                      >
+                        {WEATHER_UNIT_LABELS[u]}
+                      </button>
+                    ))}
                   </div>
                 </section>
 
@@ -1343,47 +1437,46 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                 </section>
 
                 <section className="settings-block support-block">
-                  <h3>Fuel the chaos / Ideas</h3>
+                  <h3>Feedback and support</h3>
                   <p className="muted sm">
-                    Optional support — opens third-party sites. Tabocalypse does not process
-                    payments.
+                    Opens the site you pick in a new tab. Donations and tips go through third-party
+                    pages — Tabocalypse does not process payments.
                   </p>
-                  <div className="row wrap">
-                    {SUPPORT.featureUrl ? (
-                      <button
-                        type="button"
-                        className="btn primary has-icon"
-                        onClick={() => openExternal(SUPPORT.featureUrl)}
-                      >
-                        <Lightbulb size={18} strokeWidth={2} aria-hidden />
-                        <span>Suggest a feature</span>
-                      </button>
-                    ) : null}
-                    {SUPPORT.donateUrl ? (
-                      <button
-                        type="button"
-                        className="btn has-icon"
-                        onClick={() => openExternal(SUPPORT.donateUrl)}
-                      >
-                        <Heart size={18} strokeWidth={2} aria-hidden />
-                        <span>Donate</span>
-                      </button>
-                    ) : null}
-                    {SUPPORT.githubUrl ? (
-                      <button
-                        type="button"
-                        className="btn ghost has-icon"
-                        onClick={() => openExternal(SUPPORT.githubUrl)}
-                      >
-                        <ExternalLink size={18} strokeWidth={2} aria-hidden />
-                        <span>GitHub</span>
-                      </button>
-                    ) : null}
-                  </div>
+                  {supportActions.length > 0 ? (
+                    <form
+                      className="support-actions-form"
+                      onSubmit={(event) => event.preventDefault()}
+                      noValidate
+                    >
+                      <fieldset className="m-0 border-0 p-0">
+                        <legend className="sr-only">Feedback and optional support links</legend>
+                        {supportActions.map((action) => (
+                          <div key={action.url + action.label} className="support-action-row">
+                            <span className="support-action-label">{action.label}</span>
+                            <button
+                              type="button"
+                              className="btn primary has-icon sm"
+                              onClick={() => openExternal(action.url)}
+                              aria-label={`Open ${action.label} in a new tab`}
+                              title="Open in new tab"
+                            >
+                              <SupportLinkIcon kind={action.kind} />
+                              <span>Open</span>
+                            </button>
+                          </div>
+                        ))}
+                      </fieldset>
+                    </form>
+                  ) : (
+                    <p className="muted sm">No links are configured yet.</p>
+                  )}
                   <p className="muted sm">
-                    Set <code>WXT_TABOCALYPSE_FEATURE_URL</code>,{" "}
-                    <code>WXT_TABOCALYPSE_DONATE_URL</code>, <code>WXT_TABOCALYPSE_GITHUB_URL</code>{" "}
-                    in <code>.env</code>.
+                    Set <code>WXT_TABOCALYPSE_SUPPORT_LINKS</code> to a JSON array of{" "}
+                    <code>label</code>, <code>url</code>, and optional <code>kind</code> (
+                    <code>feedback</code>, <code>donate</code>, <code>source</code>,{" "}
+                    <code>link</code>), or set <code>WXT_TABOCALYPSE_FEATURE_URL</code>,{" "}
+                    <code>WXT_TABOCALYPSE_DONATE_URL</code>, and{" "}
+                    <code>WXT_TABOCALYPSE_GITHUB_URL</code> in <code>.env</code>.
                   </p>
                 </section>
               </div>
@@ -1430,15 +1523,53 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
           </div>
         </div>
         {s.widgets.search ? <SearchWidget engine={s.searchEngine} variant="header" /> : null}
-        <button
-          type="button"
-          className="btn primary icon-only"
-          aria-label="Settings"
-          title="Settings"
-          onClick={() => setOpenSettings(true)}
-        >
-          <SettingsIcon size={20} strokeWidth={2} aria-hidden />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
+            aria-pressed={s.hudLayoutChaotic}
+            aria-label={
+              s.hudLayoutChaotic
+                ? "Chaotic layout on; press to snap panels to a grid"
+                : "Snap to grid on; press for free-form layout"
+            }
+            title={s.hudLayoutChaotic ? "Chaotic layout" : "Snap to grid"}
+            onClick={() =>
+              void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
+            }
+          >
+            {s.hudLayoutChaotic ? (
+              <Shuffle size={20} strokeWidth={2} aria-hidden />
+            ) : (
+              <LayoutGrid size={20} strokeWidth={2} aria-hidden />
+            )}
+          </button>
+          <button
+            type="button"
+            className={s.hudLayoutLocked ? "btn primary icon-only" : "btn ghost icon-only"}
+            aria-pressed={s.hudLayoutLocked}
+            aria-label={s.hudLayoutLocked ? "Unlock panel layout" : "Lock panel layout"}
+            title={s.hudLayoutLocked ? "Unlock layout" : "Lock layout"}
+            onClick={() =>
+              void persist((cur) => ({ ...cur, hudLayoutLocked: !cur.hudLayoutLocked }))
+            }
+          >
+            {s.hudLayoutLocked ? (
+              <LucideLock size={20} strokeWidth={2} aria-hidden />
+            ) : (
+              <Unlock size={20} strokeWidth={2} aria-hidden />
+            )}
+          </button>
+          <button
+            type="button"
+            className="btn primary icon-only"
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => setOpenSettings(true)}
+          >
+            <SettingsIcon size={20} strokeWidth={2} aria-hidden />
+          </button>
+        </div>
       </header>
 
       {importErr ? <div className="toast err">{importErr}</div> : null}
@@ -1456,57 +1587,141 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
       ) : null}
 
       <main className="hud-main">
-        <div className="hud-grid">
-          <div className="hud-left space-y-6">
-            {s.widgets.todo ? (
+        <div ref={hudCanvasRef} className="hud-canvas">
+          {s.widgets.todo ? (
+            <DraggableHudPanel
+              key="todo"
+              panelId="todo"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.todo}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("todo", pos)}
+            >
               <TodoWidget
                 items={s.todos}
                 onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
               />
-            ) : null}
-            {s.widgets.clock ? <ClockWidget humor={humorCtx} /> : null}
-            {s.widgets.tabGuilt ? <TabGuilt /> : null}
-          </div>
-
-          <div className="hud-center space-y-6">
-            {s.widgets.weather ? <WeatherWidget lat={s.weatherLat} lon={s.weatherLon} /> : null}
-            {s.widgets.topSites ? <TopSitesWidget /> : null}
-            {s.widgets.bookmarksStrip ? <BookmarksWidget /> : null}
-            <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
-          </div>
-
-          <div className="hud-right space-y-6">
-            {s.widgets.notes ? (
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.clock ? (
+            <DraggableHudPanel
+              key="clock"
+              panelId="clock"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.clock}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("clock", pos)}
+            >
+              <ClockWidget humor={humorCtx} />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.tabGuilt ? (
+            <DraggableHudPanel
+              key="tabGuilt"
+              panelId="tabGuilt"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.tabGuilt}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
+            >
+              <TabGuilt />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.weather ? (
+            <DraggableHudPanel
+              key="weather"
+              panelId="weather"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.weather}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("weather", pos)}
+            >
+              <WeatherWidget
+                lat={s.weatherLat}
+                lon={s.weatherLon}
+                temperatureUnit={s.weatherTemperatureUnit}
+                onTemperatureUnitChange={(weatherTemperatureUnit) =>
+                  void persist((cur) => ({ ...cur, weatherTemperatureUnit }))
+                }
+              />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.topSites ? (
+            <DraggableHudPanel
+              key="topSites"
+              panelId="topSites"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.topSites}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("topSites", pos)}
+            >
+              <TopSitesWidget />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.bookmarksStrip ? (
+            <DraggableHudPanel
+              key="bookmarksStrip"
+              panelId="bookmarksStrip"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.bookmarksStrip}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
+            >
+              <BookmarksWidget />
+            </DraggableHudPanel>
+          ) : null}
+          {s.importedPlugins.some((p) => p.enabled) ? (
+            <DraggableHudPanel
+              key="pluginDeck"
+              panelId="pluginDeck"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.pluginDeck}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
+            >
+              <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.notes ? (
+            <DraggableHudPanel
+              key="notes"
+              panelId="notes"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.notes}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("notes", pos)}
+            >
               <NotesWidget
                 value={s.notesText}
                 onChange={(notesText) => void persist((cur) => ({ ...cur, notesText }))}
               />
-            ) : null}
-          </div>
+            </DraggableHudPanel>
+          ) : null}
         </div>
       </main>
 
       <footer className="footer muted sm">
         <span>{humorCtx.humorEnabled ? (dailyLine ?? "…") : "Focus mode engaged."}</span>
-        <div className="row gap-3">
-          {SUPPORT.featureUrl ? (
+        <div className="row wrap gap-3">
+          {supportActions.map((action) => (
             <button
+              key={`${action.url}-${action.label}`}
               type="button"
               className="linkish"
-              onClick={() => openExternal(SUPPORT.featureUrl)}
+              onClick={() => openExternal(action.url)}
+              aria-label={`Open ${action.label} in a new tab`}
             >
-              Ideas
+              {action.label}
             </button>
-          ) : null}
-          {SUPPORT.donateUrl ? (
-            <button
-              type="button"
-              className="linkish"
-              onClick={() => openExternal(SUPPORT.donateUrl)}
-            >
-              Donate
-            </button>
-          ) : null}
+          ))}
         </div>
       </footer>
     </div>

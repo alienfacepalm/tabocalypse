@@ -30,7 +30,7 @@ const PALETTE_ACCENTS: Record<TThemePalette, { accent: string; accent2: string; 
 const DARK_NEUTRAL: Record<string, string> = {
   "--color-bg": "#050505",
   "--color-text": "#dae6d0",
-  "--color-muted": "#71717a",
+  "--color-muted": "#baccb0",
   "--color-border": "#27272a",
   "--color-surface": "rgb(0 0 0 / 0.45)",
   "--color-surface2": "rgb(0 0 0 / 0.60)",

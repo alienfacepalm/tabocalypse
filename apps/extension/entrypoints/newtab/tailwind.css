@@ -7,7 +7,8 @@
   :root {
     --color-bg: #050505;
     --color-text: #dae6d0;
-    --color-muted: #71717a;
+    /* Matches DESIGN.md on-surface-variant; zinc grays disappear on dark glass surfaces. */
+    --color-muted: #baccb0;
     --color-border: #27272a;
     --color-surface: rgb(0 0 0 / 0.45);
     --color-surface2: rgb(0 0 0 / 0.6);
@@ -124,20 +125,16 @@
     @apply flex-1 pt-4;
   }
 
-  .hud-grid {
-    @apply grid grid-cols-1 gap-6 lg:grid-cols-12;
+  .hud-canvas {
+    @apply relative isolate min-h-[min(80vh,52rem)] w-full touch-manipulation overflow-auto;
   }
 
-  .hud-left {
-    @apply lg:col-span-3;
+  .hud-draggable-panel {
+    @apply max-w-full;
   }
 
-  .hud-center {
-    @apply lg:col-span-6;
-  }
-
-  .hud-right {
-    @apply lg:col-span-3;
+  .hud-drag-handle {
+    @apply absolute right-2 top-2 z-10;
   }
 
   .card {
@@ -266,7 +263,7 @@
   }
 
   .done {
-    @apply opacity-60 line-through;
+    @apply text-muted line-through;
   }
 
   .weather-big {
@@ -380,6 +377,18 @@
     @apply mb-2 mt-0 text-[0.95rem] text-muted;
   }
 
+  .support-actions-form {
+    @apply mt-3 flex flex-col;
+  }
+
+  .support-action-row {
+    @apply flex items-center justify-between gap-3 border-b border-border py-2.5 first:pt-0 last:border-b-0 last:pb-0;
+  }
+
+  .support-action-label {
+    @apply min-w-0 flex-1 text-[0.9rem] text-text;
+  }
+
   .check-row {
     @apply my-1 flex items-center gap-2 text-[0.9rem];
   }
@@ -409,7 +418,7 @@
   }
 
   .plugin-deck {
-    @apply col-span-full grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4;
+    @apply grid w-full grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4;
   }
 
   .plugin-widget {
