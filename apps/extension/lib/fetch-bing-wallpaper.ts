@@ -1,3 +1,5 @@
+import { privilegedExtensionFetchJson } from "./privileged-extension-fetch";
+
 /** Peapix exposes a public JSON feed that mirrors Bing’s daily images (same approach as Fluent New Tab). */
 export const PEAPIX_BING_FEED_US = "https://peapix.com/bing/feed?country=us";
 
@@ -22,9 +24,7 @@ export function wallpaperUrlsFromPeapixFeedJson(data: unknown): string[] {
  * HPImageArchive endpoint, which does not send CORS headers).
  */
 export async function fetchBingWallpaperImageUrls(signal?: AbortSignal): Promise<string[]> {
-  const res = await fetch(PEAPIX_BING_FEED_US, { signal, credentials: "omit" });
-  if (!res.ok) throw new Error(`Bing wallpaper feed HTTP ${res.status}`);
-  const data: unknown = await res.json();
+  const data: unknown = await privilegedExtensionFetchJson(PEAPIX_BING_FEED_US, signal);
   return wallpaperUrlsFromPeapixFeedJson(data);
 }
 

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("webextension-polyfill", () => ({
+  default: { runtime: {} },
+}));
+
 import {
   PEAPIX_BING_FEED_US,
   fetchBingWallpaperImageUrls,
@@ -35,6 +39,7 @@ describe("fetchBingWallpaperImageUrls", () => {
     expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
       signal: undefined,
       credentials: "omit",
+      cache: "no-store",
     });
   });
 
@@ -44,6 +49,7 @@ describe("fetchBingWallpaperImageUrls", () => {
     expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
       signal: ac.signal,
       credentials: "omit",
+      cache: "no-store",
     });
   });
 
@@ -56,7 +62,7 @@ describe("fetchBingWallpaperImageUrls", () => {
         json: async () => [],
       }),
     );
-    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow("Bing wallpaper feed HTTP 503");
+    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow("HTTP 503");
   });
 });
 

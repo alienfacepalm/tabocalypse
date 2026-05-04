@@ -1,3 +1,5 @@
+import { privilegedExtensionFetchJson } from "../privileged-extension-fetch";
+
 export interface IWeatherSnapshot {
   temperatureC: number;
   code: number;
@@ -25,9 +27,7 @@ export async function fetchOpenMeteo(lat: number, lon: number): Promise<IWeather
   url.searchParams.set("current", "temperature_2m,weather_code");
   url.searchParams.set("temperature_unit", "celsius");
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Weather HTTP ${res.status}`);
-  const data = (await res.json()) as {
+  const data = (await privilegedExtensionFetchJson(url.toString())) as {
     current?: { temperature_2m?: number; weather_code?: number };
   };
   const t = data.current?.temperature_2m ?? NaN;

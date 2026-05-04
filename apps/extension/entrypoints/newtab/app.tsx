@@ -70,6 +70,7 @@ import {
   pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
 } from "../../lib/fetch-bing-wallpaper";
+import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import {
   applyDocumentTheme,
   coerceThemeMode,
@@ -334,11 +335,10 @@ export default function App() {
       return null;
     });
 
-    void fetch(bingChosenUrl, { signal: ac.signal, credentials: "omit", cache: "no-store" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Image HTTP ${res.status}`);
-        const blob = await res.blob();
+    void privilegedExtensionFetchBytes(bingChosenUrl, ac.signal)
+      .then(({ mime, bytes }) => {
         if (cancelled) return;
+        const blob = new Blob([bytes], { type: mime || "image/jpeg" });
         const objectUrl = URL.createObjectURL(blob);
         setBingPaintUrl((prev) => {
           revokeObjectUrlMaybe(prev);
