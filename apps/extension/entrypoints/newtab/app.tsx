@@ -67,6 +67,8 @@ const BG_TOTAL_LABEL = "6 MB";
 const USER_ROTATE_MS = 15 * 60 * 1000;
 const BING_ROTATE_MS = 15 * 60 * 1000;
 
+type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
+
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
   userImageUrl?: string | null;
@@ -160,14 +162,24 @@ export default function App() {
   const [bingRefreshing, setBingRefreshing] = useState(false);
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
   const bingPaintUrlRef = useRef<string | null>(null);
+  const latestSettingsRef = useRef<ISettings | null>(null);
+  const persistChainRef = useRef<Promise<void>>(Promise.resolve());
+  const myLinesSaveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     bingPaintUrlRef.current = bingPaintUrl;
   }, [bingPaintUrl]);
 
+  useEffect(() => {
+    latestSettingsRef.current = settings;
+  }, [settings]);
+
   useEffect(
     () => () => {
       revokeObjectUrlMaybe(bingPaintUrlRef.current);
+      if (myLinesSaveTimerRef.current !== null) {
+        window.clearTimeout(myLinesSaveTimerRef.current);
+      }
     },
     [],
   );
@@ -310,10 +322,70 @@ export default function App() {
     settings?.userBackgroundDataUrls,
   ]);
 
-  const persist = useCallback(async (next: ISettings) => {
-    setSettings(next);
-    await saveSettings(next);
+  const clearMyLinesDebouncedSaveTimer = useCallback((): void => {
+    if (myLinesSaveTimerRef.current === null) return;
+    window.clearTimeout(myLinesSaveTimerRef.current);
+    myLinesSaveTimerRef.current = null;
   }, []);
+
+  const saveLatestToDisk = useCallback(async (): Promise<void> => {
+    const cur = latestSettingsRef.current;
+    if (!cur) return;
+    try {
+      await saveSettings(cur);
+      setImportErr(null);
+    } catch (e: unknown) {
+      setImportErr(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
+  const persist = useCallback(
+    (next: TSettingsUpdater): Promise<void> => {
+      const run = async () => {
+        clearMyLinesDebouncedSaveTimer();
+        const current = latestSettingsRef.current;
+        if (!current) return;
+        const resolved = typeof next === "function" ? next(current) : next;
+        latestSettingsRef.current = resolved;
+        setSettings(resolved);
+        try {
+          await saveSettings(resolved);
+          setImportErr(null);
+        } catch (e: unknown) {
+          setImportErr(e instanceof Error ? e.message : String(e));
+        }
+      };
+
+      persistChainRef.current = persistChainRef.current.then(run).catch((e: unknown) => {
+        setImportErr(e instanceof Error ? e.message : String(e));
+      });
+      return persistChainRef.current;
+    },
+    [clearMyLinesDebouncedSaveTimer],
+  );
+
+  const scheduleMyLinesPersist = useCallback(
+    (myLines: string[]) => {
+      const current = latestSettingsRef.current;
+      if (!current) return;
+      const next = { ...current, myLines };
+      latestSettingsRef.current = next;
+      setSettings(next);
+
+      if (myLinesSaveTimerRef.current !== null) {
+        window.clearTimeout(myLinesSaveTimerRef.current);
+      }
+      myLinesSaveTimerRef.current = window.setTimeout(() => {
+        myLinesSaveTimerRef.current = null;
+        persistChainRef.current = persistChainRef.current
+          .then(() => saveLatestToDisk())
+          .catch((e: unknown) => {
+            setImportErr(e instanceof Error ? e.message : String(e));
+          });
+      }, 300);
+    },
+    [saveLatestToDisk],
+  );
 
   const humorCtx: IHumorContext | null = useMemo(() => {
     if (!settings) return null;
@@ -365,30 +437,34 @@ export default function App() {
   const s = settings;
 
   const requestIntensity = (hi: THumorIntensity) => {
-    if ((hi === "spicy" || hi === "unhinged") && !s.spicyContentAcknowledged) {
-      setPendingIntensity(hi);
-      setWarnSpicy(true);
-      return;
-    }
-    void persist({ ...s, humorIntensity: hi });
+    void persist((cur) => {
+      if ((hi === "spicy" || hi === "unhinged") && !cur.spicyContentAcknowledged) {
+        setPendingIntensity(hi);
+        setWarnSpicy(true);
+        return cur;
+      }
+      return { ...cur, humorIntensity: hi };
+    });
   };
 
   const confirmSpicy = () => {
     const hi = pendingIntensity ?? "spicy";
-    void persist({ ...s, spicyContentAcknowledged: true, humorIntensity: hi });
+    void persist((cur) => ({ ...cur, spicyContentAcknowledged: true, humorIntensity: hi }));
     setWarnSpicy(false);
     setPendingIntensity(null);
   };
 
   const toggleWidget = (k: TWidgetKey, on: boolean) => {
-    void persist({ ...s, widgets: { ...s.widgets, [k]: on } });
+    void persist((cur) => ({ ...cur, widgets: { ...cur.widgets, [k]: on } }));
   };
 
   const togglePack = (id: string, on: boolean) => {
-    const set = new Set(s.humorBuiltinPackIds);
-    if (on) set.add(id);
-    else set.delete(id);
-    void persist({ ...s, humorBuiltinPackIds: [...set] });
+    void persist((cur) => {
+      const set = new Set(cur.humorBuiltinPackIds);
+      if (on) set.add(id);
+      else set.delete(id);
+      return { ...cur, humorBuiltinPackIds: [...set] };
+    });
   };
 
   const onPickBackgrounds = async (files: FileList | null) => {
@@ -424,12 +500,12 @@ export default function App() {
       });
     const dataUrls = await Promise.all(picked.map((f) => toDataUrl(f)));
     const first = dataUrls[0] ?? null;
-    void persist({
-      ...s,
+    void persist((cur) => ({
+      ...cur,
       backgroundKind: "image",
       userBackgroundDataUrl: first,
       userBackgroundDataUrls: dataUrls,
-    });
+    }));
     setImportErr(null);
   };
 
@@ -465,11 +541,13 @@ export default function App() {
       } else {
         pack = parsePackJsonText(await file.text());
       }
-      const nextPacks = s.importedPacks.filter((p) => p.id !== pack.id).concat(pack);
-      if (estimateImportedBytes(nextPacks) > MAX_TOTAL_IMPORTED_BYTES) {
-        throw new Error("Imported packs exceed local quota. Remove a pack first.");
-      }
-      void persist({ ...s, importedPacks: nextPacks });
+      void persist((cur) => {
+        const nextPacks = cur.importedPacks.filter((p) => p.id !== pack.id).concat(pack);
+        if (estimateImportedBytes(nextPacks) > MAX_TOTAL_IMPORTED_BYTES) {
+          throw new Error("Imported packs exceed local quota. Remove a pack first.");
+        }
+        return { ...cur, importedPacks: nextPacks };
+      });
     } catch (e) {
       setImportErr(e instanceof Error ? e.message : String(e));
     }
@@ -484,13 +562,17 @@ export default function App() {
       setPluginValidateLog(r.errors.join("\n"));
       return;
     }
+    const plugin = r.plugin;
     setPluginValidateLog([...r.errors, ...r.warnings.map((w) => `warning: ${w}`)].join("\n"));
-    const next = s.importedPlugins.filter((p) => p.id !== r.plugin!.id).concat(r.plugin);
-    void persist({ ...s, importedPlugins: next });
+    void persist((cur) => {
+      const next = cur.importedPlugins.filter((p) => p.id !== plugin.id).concat(plugin);
+      return { ...cur, importedPlugins: next };
+    });
   };
 
   const exportSettingsJson = () => {
-    const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" });
+    const cur = latestSettingsRef.current ?? s;
+    const blob = new Blob([JSON.stringify(cur, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "tabocalypse-settings.json";
@@ -531,7 +613,7 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist(applyPreset("focus", s))}
+                        onClick={() => void persist((cur) => applyPreset("focus", cur))}
                       >
                         <Target size={18} strokeWidth={2} aria-hidden />
                         <span>Focus</span>
@@ -539,7 +621,7 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist(applyPreset("balanced", s))}
+                        onClick={() => void persist((cur) => applyPreset("balanced", cur))}
                       >
                         <Scale size={18} strokeWidth={2} aria-hidden />
                         <span>Balanced</span>
@@ -547,7 +629,7 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist(applyPreset("chaos", s))}
+                        onClick={() => void persist((cur) => applyPreset("chaos", cur))}
                       >
                         <Flame size={18} strokeWidth={2} aria-hidden />
                         <span>Chaos</span>
@@ -583,7 +665,9 @@ export default function App() {
                       <input
                         type="checkbox"
                         checked={s.humorEnabled}
-                        onChange={(e) => void persist({ ...s, humorEnabled: e.target.checked })}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, humorEnabled: e.target.checked }))
+                        }
                       />
                       <span>Humor on</span>
                     </label>
@@ -623,10 +707,10 @@ export default function App() {
                     <select
                       value={s.searchEngine}
                       onChange={(e) =>
-                        void persist({
-                          ...s,
+                        void persist((cur) => ({
+                          ...cur,
                           searchEngine: e.target.value as ISettings["searchEngine"],
-                        })
+                        }))
                       }
                     >
                       <option value="ddg">DuckDuckGo</option>
@@ -645,7 +729,7 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist({ ...s, backgroundKind: "solid" })}
+                        onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "solid" }))}
                       >
                         <Square size={18} strokeWidth={2} aria-hidden />
                         <span>Solid</span>
@@ -653,7 +737,9 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist({ ...s, backgroundKind: "gradient" })}
+                        onClick={() =>
+                          void persist((cur) => ({ ...cur, backgroundKind: "gradient" }))
+                        }
                       >
                         <Paintbrush size={18} strokeWidth={2} aria-hidden />
                         <span>Gradient</span>
@@ -672,7 +758,7 @@ export default function App() {
                       <button
                         type="button"
                         className="btn has-icon"
-                        onClick={() => void persist({ ...s, backgroundKind: "bing" })}
+                        onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "bing" }))}
                       >
                         <Images size={18} strokeWidth={2} aria-hidden />
                         <span>Bing spotlight</span>
@@ -683,7 +769,9 @@ export default function App() {
                       <input
                         type="checkbox"
                         checked={s.backgroundRotate}
-                        onChange={(e) => void persist({ ...s, backgroundRotate: e.target.checked })}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, backgroundRotate: e.target.checked }))
+                        }
                       />
                       <span>Rotate background</span>
                     </label>
@@ -729,7 +817,9 @@ export default function App() {
                       <input
                         type="color"
                         value={s.backgroundSolid}
-                        onChange={(e) => void persist({ ...s, backgroundSolid: e.target.value })}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, backgroundSolid: e.target.value }))
+                        }
                       />
                     </label>
                   </div>
@@ -744,11 +834,11 @@ export default function App() {
                       if (!navigator.geolocation) return;
                       navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                          void persist({
-                            ...s,
+                          void persist((cur) => ({
+                            ...cur,
                             weatherLat: pos.coords.latitude,
                             weatherLon: pos.coords.longitude,
-                          });
+                          }));
                         },
                         () => undefined,
                       );
@@ -764,7 +854,9 @@ export default function App() {
                         type="number"
                         step="0.01"
                         value={s.weatherLat}
-                        onChange={(e) => void persist({ ...s, weatherLat: Number(e.target.value) })}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, weatherLat: Number(e.target.value) }))
+                        }
                       />
                     </label>
                     <label className="block">
@@ -773,7 +865,9 @@ export default function App() {
                         type="number"
                         step="0.01"
                         value={s.weatherLon}
-                        onChange={(e) => void persist({ ...s, weatherLon: Number(e.target.value) })}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, weatherLon: Number(e.target.value) }))
+                        }
                       />
                     </label>
                   </div>
@@ -787,7 +881,11 @@ export default function App() {
                       className="btn has-icon"
                       onClick={async () => {
                         const ok = await browser.permissions.request({ permissions: ["topSites"] });
-                        if (ok) void persist({ ...s, widgets: { ...s.widgets, topSites: true } });
+                        if (ok)
+                          void persist((cur) => ({
+                            ...cur,
+                            widgets: { ...cur.widgets, topSites: true },
+                          }));
                       }}
                     >
                       <LayoutGrid size={18} strokeWidth={2} aria-hidden />
@@ -801,7 +899,10 @@ export default function App() {
                           permissions: ["bookmarks"],
                         });
                         if (ok)
-                          void persist({ ...s, widgets: { ...s.widgets, bookmarksStrip: true } });
+                          void persist((cur) => ({
+                            ...cur,
+                            widgets: { ...cur.widgets, bookmarksStrip: true },
+                          }));
                       }}
                     >
                       <Bookmark size={18} strokeWidth={2} aria-hidden />
@@ -812,7 +913,11 @@ export default function App() {
                       className="btn has-icon"
                       onClick={async () => {
                         const ok = await browser.permissions.request({ permissions: ["tabs"] });
-                        if (ok) void persist({ ...s, widgets: { ...s.widgets, tabGuilt: true } });
+                        if (ok)
+                          void persist((cur) => ({
+                            ...cur,
+                            widgets: { ...cur.widgets, tabGuilt: true },
+                          }));
                       }}
                     >
                       <Layers size={18} strokeWidth={2} aria-hidden />
@@ -845,13 +950,17 @@ export default function App() {
                     type="password"
                     autoComplete="off"
                     value={s.openaiApiKey}
-                    onChange={(e) => void persist({ ...s, openaiApiKey: e.target.value })}
+                    onChange={(e) =>
+                      void persist((cur) => ({ ...cur, openaiApiKey: e.target.value }))
+                    }
                     className="w-full"
                   />
                   <input
                     placeholder="Base URL"
                     value={s.openaiBaseUrl}
-                    onChange={(e) => void persist({ ...s, openaiBaseUrl: e.target.value })}
+                    onChange={(e) =>
+                      void persist((cur) => ({ ...cur, openaiBaseUrl: e.target.value }))
+                    }
                     className="mt-2 w-full"
                   />
                   <button
@@ -895,17 +1004,15 @@ export default function App() {
                   <textarea
                     rows={4}
                     className="w-full"
-                    placeholder="One joke per line — saved when you leave this field"
-                    defaultValue={s.myLines.join("\n")}
-                    key={s.importedPacks.length + s.myLines.length}
-                    onBlur={(e) =>
-                      void persist({
-                        ...s,
-                        myLines: e.target.value
+                    placeholder="One joke per line — saved as you type"
+                    value={s.myLines.join("\n")}
+                    onChange={(e) =>
+                      scheduleMyLinesPersist(
+                        e.target.value
                           .split("\n")
                           .map((x) => x.trim())
                           .filter(Boolean),
-                      })
+                      )
                     }
                   />
                 </section>
@@ -950,12 +1057,12 @@ export default function App() {
                           type="checkbox"
                           checked={p.enabled}
                           onChange={(e) =>
-                            void persist({
-                              ...s,
-                              importedPacks: s.importedPacks.map((x) =>
+                            void persist((cur) => ({
+                              ...cur,
+                              importedPacks: cur.importedPacks.map((x) =>
                                 x.id === p.id ? { ...x, enabled: e.target.checked } : x,
                               ),
-                            })
+                            }))
                           }
                         />
                         <span>{p.name}</span>
@@ -964,10 +1071,10 @@ export default function App() {
                         type="button"
                         className="btn ghost sm has-icon"
                         onClick={() =>
-                          void persist({
-                            ...s,
-                            importedPacks: s.importedPacks.filter((x) => x.id !== p.id),
-                          })
+                          void persist((cur) => ({
+                            ...cur,
+                            importedPacks: cur.importedPacks.filter((x) => x.id !== p.id),
+                          }))
                         }
                       >
                         <Trash2 size={18} strokeWidth={2} aria-hidden />
@@ -983,12 +1090,12 @@ export default function App() {
                           type="checkbox"
                           checked={p.enabled}
                           onChange={(e) =>
-                            void persist({
-                              ...s,
-                              importedPlugins: s.importedPlugins.map((x) =>
+                            void persist((cur) => ({
+                              ...cur,
+                              importedPlugins: cur.importedPlugins.map((x) =>
                                 x.id === p.id ? { ...x, enabled: e.target.checked } : x,
                               ),
-                            })
+                            }))
                           }
                         />
                         <span>{p.name}</span>
@@ -997,10 +1104,10 @@ export default function App() {
                         type="button"
                         className="btn ghost sm has-icon"
                         onClick={() =>
-                          void persist({
-                            ...s,
-                            importedPlugins: s.importedPlugins.filter((x) => x.id !== p.id),
-                          })
+                          void persist((cur) => ({
+                            ...cur,
+                            importedPlugins: cur.importedPlugins.filter((x) => x.id !== p.id),
+                          }))
                         }
                       >
                         <Trash2 size={18} strokeWidth={2} aria-hidden />
@@ -1016,7 +1123,9 @@ export default function App() {
                     <input
                       type="checkbox"
                       checked={s.debugPluginSource}
-                      onChange={(e) => void persist({ ...s, debugPluginSource: e.target.checked })}
+                      onChange={(e) =>
+                        void persist((cur) => ({ ...cur, debugPluginSource: e.target.checked }))
+                      }
                     />
                     <span>Show plugin widget types</span>
                   </label>
@@ -1177,7 +1286,10 @@ export default function App() {
         <div className="hud-grid">
           <div className="hud-left space-y-6">
             {s.widgets.todo ? (
-              <TodoWidget items={s.todos} onChange={(todos) => void persist({ ...s, todos })} />
+              <TodoWidget
+                items={s.todos}
+                onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
+              />
             ) : null}
             {s.widgets.clock ? <ClockWidget humor={humorCtx} /> : null}
             {s.widgets.tabGuilt ? <TabGuilt /> : null}
@@ -1194,7 +1306,7 @@ export default function App() {
             {s.widgets.notes ? (
               <NotesWidget
                 value={s.notesText}
-                onChange={(notesText) => void persist({ ...s, notesText })}
+                onChange={(notesText) => void persist((cur) => ({ ...cur, notesText }))}
               />
             ) : null}
           </div>
