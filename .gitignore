@@ -1,8 +1,11 @@
 node_modules
 package-lock.json
 npm-shrinkwrap.json
+apps/extension/output
+# Legacy WXT default (do not commit if present)
 .output
 **/.output
+apps/extension/.output
 .wxt
 **/.wxt
 dist

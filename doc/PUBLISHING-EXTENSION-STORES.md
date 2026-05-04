@@ -16,8 +16,8 @@ This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, 
 From the repo root:
 
 ```bash
-pnpm run build           # Chrome MV3 → apps/extension/.output/chrome-mv3/
-pnpm run build:firefox   # Firefox → apps/extension/.output/firefox-mv2/
+pnpm run build           # Chrome MV3 → apps/extension/output/chrome-mv3/
+pnpm run build:firefox   # Firefox → apps/extension/output/firefox-mv2/
 pnpm run zip             # Store-style zip (WXT); confirm output path in the CLI log
 ```
 

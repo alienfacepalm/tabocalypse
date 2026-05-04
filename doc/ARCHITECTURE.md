@@ -21,7 +21,7 @@ Typical layout under [`apps/extension/entrypoints/`](../apps/extension/entrypoin
 - **`newtab/`** — New tab page (main user interface).
 - **`background.ts`** — MV3 service worker: alarms, notifications, and other background tasks.
 
-Generated types and build output live under **`.wxt/`** and **`.output/`** (gitignored); do not edit generated files by hand.
+Generated types and dev cache live under **`.wxt/`** (gitignored); shipped browser folders (**`chrome-mv3`**, **`firefox-mv2`**) are built under **`apps/extension/output/`** (gitignored). Do not edit generated files by hand.
 
 ## Data flow (simplified)
 

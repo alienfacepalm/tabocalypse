@@ -41,7 +41,7 @@ pnpm run dev          # Chrome (default)
 pnpm run dev:firefox
 ```
 
-Load **Load unpacked** from [`apps/extension/.output/chrome-mv3`](apps/extension/.output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/.output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project).
+Load **Load unpacked** from [`apps/extension/output/chrome-mv3`](apps/extension/output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project).
 
 Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) if you use WXT env vars (or follow WXT’s env file discovery for that app).
 

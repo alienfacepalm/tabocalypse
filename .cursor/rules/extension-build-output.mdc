@@ -1,0 +1,10 @@
+---
+description: Tabocalypse WXT builds use visible apps/extension/output, not hidden .output
+alwaysApply: true
+---
+
+# Extension build output (WXT)
+
+- **`apps/extension/wxt.config.ts`** sets **`outDir: "output"`** so production and dev builds write to **`apps/extension/output/`** (e.g. `output/chrome-mv3/`, `output/firefox-mv2/`). This path is **not** hidden in Finder or other file managers.
+- **Do not** change the extension back to WXT’s default **`.output`** without updating **`.gitignore`**, **`.prettierignore`**, **root `eslint.config.mjs` ignores**, **README / AGENTS / `doc/*`**, and any scripts or CI that reference the build folder — keep them in sync.
+- **`.wxt/`** remains the WXT dev cache (gitignored); treat **`output/`** as the load-unpacked / zip artifact tree only.

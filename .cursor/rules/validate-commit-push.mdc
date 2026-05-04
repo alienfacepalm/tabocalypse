@@ -1,0 +1,35 @@
+---
+description: After meaningful changes, run full checks, build when needed, then commit and push
+alwaysApply: true
+---
+
+# Validate, commit, and push (meaningful changes)
+
+When you finish work that is **meaningful** — not a one-line typo in a comment with zero runtime impact — treat the task as incomplete until **validated**, **committed**, and **pushed** (when the user uses git and a remote).
+
+## What counts as meaningful
+
+Examples: behavior, UI, permissions or **`wxt.config.ts` / manifest**, plugin validation or import paths, **`packages/plugin-sdk`** public API, dependencies or **`pnpm-lock.yaml`**, CI, build tooling, security-sensitive code, settings/storage shape, cross-package contracts, or docs that describe **shipped** behavior.
+
+Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant **`pnpm run format`** / staged lint if you touched formatted file types; use judgment on whether a full **`pnpm run check`** is worth the round-trip.
+
+## Validate
+
+1. From the **repo root**: **`pnpm run check`** (format check, ESLint, tests, SDK + extension `tsc`).
+2. If you changed **`apps/extension`**, WXT config, manifest, or anything that affects packaging: also run **`pnpm run build`**; if Firefox behavior or gecko settings changed, add **`pnpm run build:firefox`**.
+3. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
+
+## Commit
+
+- **`git status`** — stage only intentional paths; do not commit **`apps/extension/output/`**, **`.wxt/`**, or **`node_modules/`** (they are gitignored).
+- **`git commit`** — use a **clear, complete-sentence** message describing what changed and why (not `wip` / `fix` alone).
+
+## Push
+
+- **`git push`** to the tracked upstream for the current branch (e.g. **`origin master`**).
+- **Skip push** if the user explicitly asked not to push, the workspace is not a git clone, or there is **no `origin`** / no network — say so instead of failing silently.
+- If push fails (auth, branch protection), report the error and what the user should do next.
+
+## Relation to hooks
+
+**`lint-staged`** on pre-commit only covers **staged** files. **`pnpm run check`** still matters so unstaged files and the **full** test/typecheck matrix pass before you call the work done.

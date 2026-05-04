@@ -34,8 +34,8 @@ All commands run from the **repo root** unless noted.
 | ------------------------ | -------------------------------------------------------------------------------------- |
 | `pnpm run dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes |
 | `pnpm run dev:firefox`   | Same for Firefox                                                                       |
-| `pnpm run build`         | Production build → `apps/extension/.output/chrome-mv3/`                                |
-| `pnpm run build:firefox` | Firefox build → `apps/extension/.output/firefox-mv2/` (WXT emits MV2 for Firefox here) |
+| `pnpm run build`         | Production build → `apps/extension/output/chrome-mv3/`                                 |
+| `pnpm run build:firefox` | Firefox build → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)  |
 | `pnpm run zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))           |
 | `pnpm run check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension            |
 | `pnpm run format`        | Prettier write on tracked file types                                                   |
@@ -44,8 +44,8 @@ All commands run from the **repo root** unless noted.
 ## Load the extension during development
 
 1. Run `pnpm run dev` (or `pnpm run build` for a static folder).
-2. **Chrome / Edge:** `chrome://extensions` → **Developer mode** → **Load unpacked** → choose `apps/extension/.output/chrome-mv3`.
-3. **Firefox:** `about:debugging` → **This Firefox** → **Load Temporary Add-on** → pick `manifest.json` inside the Firefox output folder under `apps/extension/.output/`.
+2. **Chrome / Edge:** `chrome://extensions` → **Developer mode** → **Load unpacked** → choose `apps/extension/output/chrome-mv3`.
+3. **Firefox:** `about:debugging` → **This Firefox** → **Load Temporary Add-on** → pick `manifest.json` inside the Firefox output folder under `apps/extension/output/`.
 
 After code changes, use the browser’s **reload extension** control; for `dev`, WXT may rebuild — reload again if the new tab page looks stale.
 
