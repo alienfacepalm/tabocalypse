@@ -113,7 +113,7 @@
   }
 
   .title {
-    @apply m-0 font-display text-2xl font-black uppercase tracking-widest text-accent italic;
+    @apply m-0 font-title text-2xl font-normal uppercase tracking-widest text-accent not-italic;
   }
 
   .tagline {
