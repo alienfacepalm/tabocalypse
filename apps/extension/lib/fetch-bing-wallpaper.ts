@@ -35,3 +35,12 @@ export function pickRotatingBingWallpaperUrl(urls: string[], nowMs = Date.now())
   const slot = Math.floor(nowMs / ROTATE_MS);
   return urls[slot % urls.length] ?? urls[0]!;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Picks one wallpaper per UTC day so Bing can stay static when rotation is off. */
+export function pickDailyBingWallpaperUrl(urls: string[], nowMs = Date.now()): string {
+  if (urls.length === 0) throw new Error("No Bing wallpaper URLs");
+  const day = Math.floor(nowMs / DAY_MS);
+  return urls[day % urls.length] ?? urls[0]!;
+}

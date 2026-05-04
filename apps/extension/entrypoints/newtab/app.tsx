@@ -26,7 +26,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
@@ -55,12 +55,14 @@ import {
 } from "../../lib/user-packs";
 import {
   fetchBingWallpaperImageUrls,
+  pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
 } from "../../lib/fetch-bing-wallpaper";
 
 const BG_MAX = 1_500_000;
 const BG_TOTAL_MAX = 6_000_000;
 const USER_ROTATE_MS = 15 * 60 * 1000;
+const BING_ROTATE_MS = 15 * 60 * 1000;
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
@@ -72,33 +74,49 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
     const u = extras?.bingImageUrl;
     if (u) {
       return {
+        backgroundColor: "transparent",
         backgroundImage: `url(${u})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       };
     }
     return {
+      backgroundColor: "transparent",
       background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+      backgroundAttachment: "fixed",
     };
   }
   if (s.backgroundKind === "solid") {
-    return { background: s.backgroundSolid };
+    return {
+      backgroundColor: "transparent",
+      background: s.backgroundSolid,
+      backgroundAttachment: "fixed",
+    };
   }
   if (s.backgroundKind === "image") {
     const u = extras?.userImageUrl ?? s.userBackgroundDataUrl;
     if (!u) {
       return {
+        backgroundColor: "transparent",
         background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+        backgroundAttachment: "fixed",
       };
     }
     return {
+      backgroundColor: "transparent",
       backgroundImage: `url(${u})`,
       backgroundSize: "cover",
       backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundAttachment: "fixed",
     };
   }
   return {
+    backgroundColor: "transparent",
     background: `linear-gradient(145deg, ${s.backgroundSolid} 0%, #1a1025 45%, #0f0f12 100%)`,
+    backgroundAttachment: "fixed",
   };
 }
 
@@ -107,6 +125,16 @@ function pickRotatingUrl(urls: string[], rotate: boolean, nowMs = Date.now()): s
   if (!rotate) return urls[0] ?? null;
   const slot = Math.floor(nowMs / USER_ROTATE_MS);
   return urls[slot % urls.length] ?? urls[0] ?? null;
+}
+
+function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void {
+  const t = target.style as unknown as Record<string, string>;
+  for (const k of Object.keys(style) as (keyof React.CSSProperties)[]) {
+    const v = style[k];
+    if (v === undefined) continue;
+    if (typeof v === "number") t[String(k)] = String(v);
+    else t[String(k)] = String(v);
+  }
 }
 
 export default function App() {
@@ -133,24 +161,47 @@ export default function App() {
       setBingFetchErr(null);
       return;
     }
+    const rotate = settings?.backgroundRotate ?? false;
+    let cancelled = false;
     const ac = new AbortController();
     setBingChosenUrl(null);
     setBingFetchErr(null);
     void fetchBingWallpaperImageUrls(ac.signal)
       .then((urls) => {
-        if (ac.signal.aborted) return;
+        if (cancelled || ac.signal.aborted) return;
         if (urls.length === 0) {
           setBingFetchErr("No images returned.");
           return;
         }
-        setBingChosenUrl(pickRotatingBingWallpaperUrl(urls));
+        setBingChosenUrl(
+          rotate ? pickRotatingBingWallpaperUrl(urls) : pickDailyBingWallpaperUrl(urls),
+        );
       })
       .catch((e: unknown) => {
-        if (ac.signal.aborted) return;
+        if (cancelled || ac.signal.aborted) return;
         setBingFetchErr(e instanceof Error ? e.message : String(e));
       });
-    return () => ac.abort();
-  }, [settings?.backgroundKind]);
+    if (!rotate) {
+      return () => {
+        cancelled = true;
+        ac.abort();
+      };
+    }
+    const id = window.setInterval(() => {
+      void fetchBingWallpaperImageUrls()
+        .then((urls) => {
+          if (cancelled) return;
+          if (urls.length === 0) return;
+          setBingChosenUrl(pickRotatingBingWallpaperUrl(urls));
+        })
+        .catch(() => undefined);
+    }, BING_ROTATE_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      ac.abort();
+    };
+  }, [settings?.backgroundKind, settings?.backgroundRotate]);
 
   useEffect(() => {
     const kind = settings?.backgroundKind;
@@ -196,6 +247,23 @@ export default function App() {
     if (!settings) return undefined;
     return backgroundStyle(settings, { bingImageUrl: bingChosenUrl, userImageUrl: userChosenUrl });
   }, [settings, bingChosenUrl, userChosenUrl]);
+
+  useLayoutEffect(() => {
+    if (!shellStyle) return undefined;
+    const html = document.documentElement;
+    const { style: hs } = html;
+    const { style: bs } = document.body;
+    const prevHtml = hs.cssText;
+    const prevBody = bs.cssText;
+    applyReactStyle(html, shellStyle);
+    applyReactStyle(document.body, shellStyle);
+    hs.setProperty("min-height", "100%");
+    bs.setProperty("min-height", "100%");
+    return () => {
+      hs.cssText = prevHtml;
+      bs.cssText = prevBody;
+    };
+  }, [shellStyle]);
 
   const dailyLine = useMemo(() => (humorCtx ? pickDailyLine(humorCtx) : null), [humorCtx]);
 
@@ -342,7 +410,7 @@ export default function App() {
   };
 
   return (
-    <div className="shell" style={shellStyle}>
+    <div className="shell">
       <div className="glitch-overlay" aria-hidden />
       {openSettings ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setOpenSettings(false)}>

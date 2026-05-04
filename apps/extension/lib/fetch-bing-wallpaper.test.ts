@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperUrl,
   wallpaperUrlsFromBingArchiveJson,
 } from "./fetch-bing-wallpaper";
@@ -33,5 +34,17 @@ describe("pickRotatingBingWallpaperUrl", () => {
     expect(pickRotatingBingWallpaperUrl(urls, fifteenMin)).toBe("b");
     expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 2)).toBe("c");
     expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 3)).toBe("a");
+  });
+});
+
+describe("pickDailyBingWallpaperUrl", () => {
+  it("is stable within a UTC day and advances daily", () => {
+    const urls = ["a", "b"];
+    const day = 24 * 60 * 60 * 1000;
+    expect(pickDailyBingWallpaperUrl(urls, 0)).toBe("a");
+    expect(pickDailyBingWallpaperUrl(urls, day - 1)).toBe("a");
+    expect(pickDailyBingWallpaperUrl(urls, day)).toBe("b");
+    expect(pickDailyBingWallpaperUrl(urls, day * 2 - 1)).toBe("b");
+    expect(pickDailyBingWallpaperUrl(urls, day * 2)).toBe("a");
   });
 });

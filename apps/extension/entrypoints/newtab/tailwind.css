@@ -42,7 +42,7 @@
 
 @layer components {
   .shell {
-    @apply relative flex min-h-screen flex-col bg-bg bg-blend-normal px-4 pb-8 pt-20;
+    @apply relative flex min-h-screen flex-col px-4 pb-8 pt-20;
   }
 
   .glitch-overlay {
@@ -61,7 +61,7 @@
   }
 
   .top-bar {
-    @apply fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between gap-4 border-b-2 border-accent bg-black/80 px-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
+    @apply fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between gap-4 border-b-2 border-accent bg-black/45 px-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
     backdrop-filter: blur(12px);
   }
 
@@ -102,7 +102,7 @@
   }
 
   .card {
-    @apply relative border border-border bg-black/60 px-4 py-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
+    @apply relative border border-border bg-black/45 px-4 py-4 shadow-[4px_4px_0px_0px_rgba(57,255,20,1)];
     backdrop-filter: blur(12px);
   }
 
@@ -168,7 +168,7 @@
   }
 
   .humor-banner {
-    @apply mb-6 border border-border bg-black/60 px-4 py-3 text-[1.05rem] shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
+    @apply mb-6 border border-border bg-black/45 px-4 py-3 text-[1.05rem] shadow-[4px_4px_0px_0px_rgba(255,0,255,1)];
     backdrop-filter: blur(12px);
   }
 
