@@ -182,6 +182,12 @@ export default function App() {
   const [bingImageLoadErr, setBingImageLoadErr] = useState<string | null>(null);
   const [bingRefreshing, setBingRefreshing] = useState(false);
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
+  /** Mirrors `browser.permissions.contains` for optional API permissions (not widget toggles alone). */
+  const [optionalApiPerms, setOptionalApiPerms] = useState({
+    topSites: false,
+    bookmarks: false,
+    tabs: false,
+  });
   const bingPaintUrlRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings | null>(null);
   const persistChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -392,6 +398,24 @@ export default function App() {
     },
     [clearMyLinesDebouncedSaveTimer],
   );
+
+  const refreshOptionalApiPerms = useCallback(async (): Promise<void> => {
+    try {
+      const [topSites, bookmarks, tabs] = await Promise.all([
+        browser.permissions.contains({ permissions: ["topSites"] }),
+        browser.permissions.contains({ permissions: ["bookmarks"] }),
+        browser.permissions.contains({ permissions: ["tabs"] }),
+      ]);
+      setOptionalApiPerms({ topSites, bookmarks, tabs });
+    } catch {
+      // Ignore: API unavailable in non-extension contexts.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!openSettings) return;
+    void refreshOptionalApiPerms();
+  }, [openSettings, refreshOptionalApiPerms]);
 
   const scheduleMyLinesPersist = useCallback(
     (myLines: string[]) => {
@@ -939,49 +963,114 @@ export default function App() {
                     <button
                       type="button"
                       className="btn has-icon"
+                      aria-label={
+                        optionalApiPerms.topSites
+                          ? "Disable Top sites permission"
+                          : "Enable Top sites permission"
+                      }
                       onClick={async () => {
-                        const ok = await browser.permissions.request({ permissions: ["topSites"] });
-                        if (ok)
-                          void persist((cur) => ({
-                            ...cur,
-                            widgets: { ...cur.widgets, topSites: true },
-                          }));
+                        if (optionalApiPerms.topSites) {
+                          const ok = await browser.permissions.remove({
+                            permissions: ["topSites"],
+                          });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, topSites: false },
+                            }));
+                          }
+                        } else {
+                          const ok = await browser.permissions.request({
+                            permissions: ["topSites"],
+                          });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, topSites: true },
+                            }));
+                          }
+                        }
+                        void refreshOptionalApiPerms();
                       }}
                     >
                       <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                      <span>Enable Top sites</span>
+                      <span>
+                        {optionalApiPerms.topSites ? "Disable Top sites" : "Enable Top sites"}
+                      </span>
                     </button>
                     <button
                       type="button"
                       className="btn has-icon"
+                      aria-label={
+                        optionalApiPerms.bookmarks
+                          ? "Disable Bookmarks permission"
+                          : "Enable Bookmarks permission"
+                      }
                       onClick={async () => {
-                        const ok = await browser.permissions.request({
-                          permissions: ["bookmarks"],
-                        });
-                        if (ok)
-                          void persist((cur) => ({
-                            ...cur,
-                            widgets: { ...cur.widgets, bookmarksStrip: true },
-                          }));
+                        if (optionalApiPerms.bookmarks) {
+                          const ok = await browser.permissions.remove({
+                            permissions: ["bookmarks"],
+                          });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, bookmarksStrip: false },
+                            }));
+                          }
+                        } else {
+                          const ok = await browser.permissions.request({
+                            permissions: ["bookmarks"],
+                          });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, bookmarksStrip: true },
+                            }));
+                          }
+                        }
+                        void refreshOptionalApiPerms();
                       }}
                     >
                       <Bookmark size={18} strokeWidth={2} aria-hidden />
-                      <span>Enable Bookmarks</span>
+                      <span>
+                        {optionalApiPerms.bookmarks ? "Disable Bookmarks" : "Enable Bookmarks"}
+                      </span>
                     </button>
                     <button
                       type="button"
                       className="btn has-icon"
+                      aria-label={
+                        optionalApiPerms.tabs
+                          ? "Disable Tab guilt (tabs) permission"
+                          : "Enable Tab guilt (tabs) permission"
+                      }
                       onClick={async () => {
-                        const ok = await browser.permissions.request({ permissions: ["tabs"] });
-                        if (ok)
-                          void persist((cur) => ({
-                            ...cur,
-                            widgets: { ...cur.widgets, tabGuilt: true },
-                          }));
+                        if (optionalApiPerms.tabs) {
+                          const ok = await browser.permissions.remove({ permissions: ["tabs"] });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, tabGuilt: false },
+                            }));
+                          }
+                        } else {
+                          const ok = await browser.permissions.request({ permissions: ["tabs"] });
+                          if (ok) {
+                            await persist((cur) => ({
+                              ...cur,
+                              widgets: { ...cur.widgets, tabGuilt: true },
+                            }));
+                          }
+                        }
+                        void refreshOptionalApiPerms();
                       }}
                     >
                       <Layers size={18} strokeWidth={2} aria-hidden />
-                      <span>Enable Tab guilt (tabs)</span>
+                      <span>
+                        {optionalApiPerms.tabs
+                          ? "Disable Tab guilt (tabs)"
+                          : "Enable Tab guilt (tabs)"}
+                      </span>
                     </button>
                   </div>
                 </section>
