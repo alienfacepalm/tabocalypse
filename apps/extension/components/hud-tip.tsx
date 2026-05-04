@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -53,6 +53,27 @@ export function HudTip({ tip, children }: { tip: string; children: ReactElement 
       window.removeEventListener("resize", onChange);
     };
   }, [open, measure]);
+
+  /**
+   * Disabled descendants (and some hit-testing edge cases) can skip `pointerleave` on this
+   * wrapper while the pointer moves elsewhere, leaving `hovered` stuck. Sync hover against the
+   * actual event target while a pointer-driven tooltip is open.
+   */
+  useEffect(() => {
+    if (!hovered) return;
+    const syncHover = (e: PointerEvent) => {
+      const root = wrapRef.current;
+      if (!root) return;
+      const t = e.target;
+      if (t instanceof Node && !root.contains(t)) {
+        setHovered(false);
+      }
+    };
+    window.addEventListener("pointermove", syncHover, true);
+    return () => {
+      window.removeEventListener("pointermove", syncHover, true);
+    };
+  }, [hovered]);
 
   const showFromPointer = useCallback(() => {
     measure();

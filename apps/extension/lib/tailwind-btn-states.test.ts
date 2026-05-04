@@ -18,6 +18,8 @@ describe("tailwind.css shared button states", () => {
       ".btn.primary:active",
       ".btn.ghost:hover",
       ".btn.ghost:active",
+      ".btn:disabled",
+      ".btn.ghost:disabled:hover",
     ]) {
       expect(css, `missing ${needle}`).toContain(needle);
     }

@@ -242,6 +242,33 @@
     @apply shadow-[3px_3px_0px_0px_var(--color-accent2)];
   }
 
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-45 shadow-none brightness-100 transform-none;
+  }
+
+  .btn:disabled:hover,
+  .btn:disabled:active {
+    @apply cursor-not-allowed opacity-45 shadow-none brightness-100 transform-none;
+  }
+
+  .btn.primary:disabled {
+    @apply border-outline/50 bg-surface-weak text-on-accent/40;
+  }
+
+  .btn.primary:disabled:hover,
+  .btn.primary:disabled:active {
+    @apply border-outline/50 bg-surface-weak text-on-accent/40;
+  }
+
+  .btn.ghost:disabled {
+    @apply border-outline/45 bg-transparent text-on-accent/35 shadow-none;
+  }
+
+  .btn.ghost:disabled:hover,
+  .btn.ghost:disabled:active {
+    @apply border-outline/45 bg-transparent text-on-accent/35 shadow-none;
+  }
+
   .btn.sm {
     @apply px-[0.45rem] py-0.5 text-xs;
   }
@@ -325,7 +352,8 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-backdrop px-4 py-8;
+    /* Above `.glitch-overlay` (z-50) so settings stay interactive. */
+    @apply fixed inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-backdrop px-4 py-8;
   }
 
   .modal {

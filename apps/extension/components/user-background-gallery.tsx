@@ -52,6 +52,8 @@ export function UserBackgroundGallery({
         <ul className="flex list-none flex-col gap-2 p-0">
           {images.map((im, index) => {
             const isActive = activeId === im.id || (activeId === null && index === 0);
+            const cannotMoveUp = index === 0;
+            const cannotMoveDown = index >= images.length - 1;
             return (
               <li
                 key={im.id}
@@ -83,23 +85,45 @@ export function UserBackgroundGallery({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <HudTip tip="Move earlier in the rotation order">
+                  <HudTip
+                    tip={
+                      cannotMoveUp
+                        ? "Already first in the rotation order"
+                        : "Move earlier in the rotation order"
+                    }
+                  >
                     <button
                       type="button"
-                      className="btn ghost icon-only sm"
-                      aria-label="Move photo earlier in rotation"
-                      disabled={index === 0}
+                      className="btn ghost icon-only sm disabled:pointer-events-none"
+                      aria-label={
+                        cannotMoveUp
+                          ? "Photo is already first in the rotation order"
+                          : "Move photo earlier in rotation"
+                      }
+                      title={cannotMoveUp ? "Already first in the rotation order" : undefined}
+                      disabled={cannotMoveUp}
                       onClick={() => onMove(im.id, "up")}
                     >
                       <ChevronUp size={18} strokeWidth={2} aria-hidden />
                     </button>
                   </HudTip>
-                  <HudTip tip="Move later in the rotation order">
+                  <HudTip
+                    tip={
+                      cannotMoveDown
+                        ? "Already last in the rotation order"
+                        : "Move later in the rotation order"
+                    }
+                  >
                     <button
                       type="button"
-                      className="btn ghost icon-only sm"
-                      aria-label="Move photo later in rotation"
-                      disabled={index >= images.length - 1}
+                      className="btn ghost icon-only sm disabled:pointer-events-none"
+                      aria-label={
+                        cannotMoveDown
+                          ? "Photo is already last in the rotation order"
+                          : "Move photo later in rotation"
+                      }
+                      title={cannotMoveDown ? "Already last in the rotation order" : undefined}
+                      disabled={cannotMoveDown}
                       onClick={() => onMove(im.id, "down")}
                     >
                       <ChevronDown size={18} strokeWidth={2} aria-hidden />
