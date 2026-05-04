@@ -32,13 +32,18 @@ export function SearchWidget({ engine }: { engine: ISettings["searchEngine"] }) 
           go();
         }}
       >
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={`Search (${engine})`}
-          className="min-w-0 flex-1"
-          aria-label="Search query"
-        />
+        <div className="relative min-w-0 flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
+            USER_LOG@TAB:&gt;
+          </span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`What useless trivia are we looking up now? (${engine})`}
+            className="w-full pl-36"
+            aria-label="Search query"
+          />
+        </div>
         <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">
           <Search size={20} strokeWidth={2} aria-hidden />
         </button>

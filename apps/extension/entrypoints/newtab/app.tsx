@@ -283,6 +283,7 @@ export default function App() {
 
   return (
     <div className="shell" style={shellStyle}>
+      <div className="glitch-overlay" aria-hidden />
       {openSettings ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setOpenSettings(false)}>
           <div
@@ -854,9 +855,11 @@ export default function App() {
       ) : null}
 
       <header className="top-bar">
-        <div>
-          <h1 className="title">Tabocalypse</h1>
-          <p className="tagline muted">by AlienFacepalm — new tab utility + optional chaos</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="title">Tabocalypse</h1>
+            <p className="tagline">SYSTEM_STABLE: FALSE</p>
+          </div>
         </div>
         <button
           type="button"

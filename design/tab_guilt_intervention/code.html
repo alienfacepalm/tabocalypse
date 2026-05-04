@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#3c4b35",
+                    "secondary-fixed-dim": "#ffabf3",
+                    "primary-container": "#39ff14",
+                    "on-tertiary": "#442927",
+                    "surface-container-lowest": "#071105",
+                    "surface-container-low": "#141e11",
+                    "on-error": "#690005",
+                    "surface-bright": "#323c2d",
+                    "on-secondary-fixed": "#380038",
+                    "surface-tint": "#2ae500",
+                    "secondary-fixed": "#ffd7f5",
+                    "surface-container-high": "#222d1e",
+                    "tertiary-fixed-dim": "#e7bdb8",
+                    "on-secondary-fixed-variant": "#810081",
+                    "tertiary": "#fff8f7",
+                    "surface-container-highest": "#2d3828",
+                    "primary": "#efffe3",
+                    "outline": "#85967c",
+                    "error": "#ffb4ab",
+                    "on-tertiary-container": "#7a5955",
+                    "primary-fixed-dim": "#2ae500",
+                    "on-primary-container": "#107100",
+                    "on-background": "#dae6d0",
+                    "primary-fixed": "#79ff5b",
+                    "surface-container": "#182214",
+                    "on-surface": "#dae6d0",
+                    "on-primary": "#053900",
+                    "on-secondary-container": "#500050",
+                    "surface-variant": "#2d3828",
+                    "surface": "#0c1609",
+                    "on-tertiary-fixed-variant": "#5d3f3c",
+                    "background": "#0c1609",
+                    "error-container": "#93000a",
+                    "tertiary-container": "#ffd3ce",
+                    "on-primary-fixed-variant": "#095300",
+                    "surface-dim": "#0c1609",
+                    "tertiary-fixed": "#ffdad6",
+                    "on-tertiary-fixed": "#2c1513",
+                    "inverse-primary": "#106e00",
+                    "inverse-on-surface": "#293324",
+                    "on-secondary": "#5b005b",
+                    "on-error-container": "#ffdad6",
+                    "inverse-surface": "#dae6d0",
+                    "secondary": "#ffabf3",
+                    "secondary-container": "#fe00fe",
+                    "on-surface-variant": "#baccb0",
+                    "on-primary-fixed": "#022100"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "margin": "24px",
+                    "xl": "64px",
+                    "sm": "8px",
+                    "xs": "4px",
+                    "lg": "32px",
+                    "md": "16px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "body-lg": ["JetBrains Mono"],
+                    "label": ["Space Mono"],
+                    "body-md": ["JetBrains Mono"],
+                    "h2": ["Space Mono"],
+                    "button": ["Space Mono"],
+                    "h3": ["Space Mono"],
+                    "h1": ["Space Mono"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label": ["12px", {"lineHeight": "1", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "h2": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "button": ["14px", {"lineHeight": "1", "fontWeight": "700"}],
+                    "h3": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        .glitch-overlay {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+        .magenta-vignette {
+            box-shadow: inset 0 0 200px rgba(255, 0, 255, 0.3);
+        }
+        .brutal-shadow-green {
+            box-shadow: 4px 4px 0px 0px #39FF14;
+        }
+        .brutal-shadow-magenta {
+            box-shadow: 4px 4px 0px 0px #FF00FF;
+        }
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 0, 255, 0.2);
+            position: absolute;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-on-background font-body-md overflow-hidden min-h-screen selection:bg-[#FF00FF] selection:text-white">
+<!-- Global Layout Container (Navigation suppressed for Interstitial/Task-focused Screen) -->
+<main class="relative w-full h-screen flex items-center justify-center p-gutter magenta-vignette">
+<!-- Background Texture & Visual Noise -->
+<div class="absolute inset-0 glitch-overlay z-0"></div>
+<div class="absolute inset-0 bg-gradient-to-tr from-[#050505] via-transparent to-[#500050]/20 z-0"></div>
+<!-- Center Content: Tab Apocalypse Intervention -->
+<div class="relative z-20 w-full max-w-4xl bg-[#050505]/80 backdrop-blur-xl border border-zinc-800 p-lg flex flex-col items-center text-center">
+<!-- Terminal Header -->
+<div class="w-full flex justify-between items-center mb-md border-b border-zinc-800 pb-xs">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[#FF00FF]" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label text-xs uppercase tracking-tighter text-[#FF00FF]">CRITICAL_SYSTEM_ERROR_LOG_V4.2</span>
+</div>
+<div class="font-label text-[10px] text-zinc-500">SESSION_ID: 9823-TABO</div>
+</div>
+<!-- Main Heading -->
+<h1 class="font-h1 text-[64px] leading-tight text-[#39FF14] uppercase tracking-tighter mb-lg break-words">
+                SYSTEM OVERLOAD.<br/>AND BY SYSTEM, I MEAN <span class="text-[#FF00FF] underline decoration-4">YOU.</span>
+</h1>
+<!-- Decorative Data Grid -->
+<div class="grid grid-cols-4 gap-xs w-full mb-lg">
+<div class="border border-zinc-800 p-sm text-left">
+<div class="text-[10px] text-zinc-500 uppercase font-label">Total_Hoard</div>
+<div class="font-h2 text-secondary-fixed leading-none">34</div>
+</div>
+<div class="border border-zinc-800 p-sm text-left">
+<div class="text-[10px] text-zinc-500 uppercase font-label">Idle_Rot</div>
+<div class="font-h2 text-[#FF00FF] leading-none">28</div>
+</div>
+<div class="border border-zinc-800 p-sm text-left">
+<div class="text-[10px] text-zinc-500 uppercase font-label">CPU_Burden</div>
+<div class="font-h2 text-secondary-fixed leading-none">88%</div>
+</div>
+<div class="border border-zinc-800 p-sm text-left bg-[#FF00FF]/5">
+<div class="text-[10px] text-[#FF00FF] uppercase font-label">Intervention_State</div>
+<div class="font-h2 text-[#FF00FF] leading-none">ACTIVE</div>
+</div>
+</div>
+<!-- Subtext Message -->
+<p class="font-body-lg text-primary max-w-2xl mb-xl">
+                You have <span class="text-[#39FF14] font-bold">34 tabs</span> open. <span class="text-[#FF00FF] font-bold">28 of them</span> have been idle for <span class="underline">3 days</span>. 
+                Your digital carbon footprint is embarrassing. 
+                Would you like to clean up your mess, or continue living in squalor?
+            </p>
+<!-- Action Buttons -->
+<div class="flex flex-col md:flex-row gap-lg w-full justify-center">
+<!-- Primary Button -->
+<button class="bg-[#39FF14] text-black font-button text-lg uppercase px-lg py-md brutal-shadow-green hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all active:scale-95 group">
+                    PURGE OLD TABS
+                    <span class="ml-sm material-symbols-outlined align-middle group-hover:rotate-90 transition-transform">delete_forever</span>
+</button>
+<!-- Secondary Button -->
+<button class="border border-[#FF00FF] text-[#FF00FF] font-button text-lg uppercase px-lg py-md brutal-shadow-magenta hover:bg-[#FF00FF] hover:text-black transition-all active:scale-95">
+                    I am a monster, let me browse
+                </button>
+</div>
+<!-- Bottom Terminal Bar -->
+<div class="w-full mt-xl flex justify-between items-center text-[10px] font-label text-zinc-600">
+<div class="flex gap-md">
+<span>USER_LOG@TAB:&gt; VERDICT_GUILTY</span>
+<span>MEM_SAVED: 4.2GB_PROJECTED</span>
+</div>
+<div class="animate-pulse">_WAITING_FOR_RESPONSE</div>
+</div>
+</div>
+<!-- Asymmetric Decorative Bento Fragments -->
+<div class="absolute top-margin left-margin w-32 h-32 border border-zinc-800/30 p-xs hidden lg:block">
+<div class="w-full h-full bg-[#FF00FF]/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#FF00FF]/20 text-4xl">skull</span>
+</div>
+</div>
+<div class="absolute bottom-margin right-margin w-64 h-24 border border-zinc-800/30 p-xs hidden lg:block overflow-hidden">
+<div class="font-label text-[8px] text-zinc-700 leading-tight">
+                ERROR: MEMORY_LEAK_DETECTED<br/>
+                ERROR: TAB_BLOAT_OVER_LIMIT<br/>
+                ERROR: HUMAN_INDECISION_DETECTED<br/>
+                REBOOTING_SHAME_MODULE...<br/>
+                STATUS: DISAPPOINTED
+            </div>
+</div>
+<!-- Side HUD Elements -->
+<div class="fixed left-0 top-1/2 -translate-y-1/2 flex flex-col gap-unit p-sm z-30">
+<div class="h-12 w-1 bg-[#39FF14]"></div>
+<div class="h-4 w-1 bg-zinc-800"></div>
+<div class="h-2 w-1 bg-zinc-800"></div>
+<div class="h-32 w-1 bg-[#FF00FF]"></div>
+</div>
+<!-- Visual Image Element: Tab Graveyard Illustration -->
+<div class="absolute -bottom-16 -left-16 w-96 h-96 opacity-10 blur-xl pointer-events-none">
+<img class="w-full h-full object-cover" data-alt="A dark, cinematic visualization of digital decay and cyberpunk circuitry. Glowing neon circuit board lines in acid green and magenta criss-cross through a dense, foggy atmosphere. Broken digital glass shards float in the void, reflecting flickering terminal code. The mood is oppressive, high-contrast, and technological, capturing the essence of a digital wasteland." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsLfxjxhDl_4R_NG1ORD_RO1urSfz9toFpLmDFhbVfW-8DmLk_M4uNy-pD_VobKTo8SWRgwKP7LiFqMfitq4oy6BYpa4tbmgTAe3vv1-grTpMDryl_1SH_JrNOTHsEwIx0l0UYSGUO-9AfNyvIx9uhh0T1pzbn68BCffgzDhqyc6Am5T1UmzeNNWBLbxdBtUUM40qOEA2xfW0SSq9lKTyDsC1x_HL748TiyXVylFWyBsoZeMIbvwuuH264ERB7O1y0OlRfgANHJA"/>
+</div>
+</main>
+<!-- Post-intervention Message (Hidden usually) -->
+<div class="fixed inset-0 z-[100] bg-[#39FF14] text-black flex items-center justify-center font-h1 uppercase text-center p-lg hidden">
+        RESOURCES RECLAIMED. SYSTEM STABLE.
+    </div>
+</body></html>

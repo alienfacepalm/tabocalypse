@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#3c4b35",
+                        "secondary-fixed-dim": "#ffabf3",
+                        "primary-container": "#39ff14",
+                        "on-tertiary": "#442927",
+                        "surface-container-lowest": "#071105",
+                        "surface-container-low": "#141e11",
+                        "on-error": "#690005",
+                        "surface-bright": "#323c2d",
+                        "on-secondary-fixed": "#380038",
+                        "surface-tint": "#2ae500",
+                        "secondary-fixed": "#ffd7f5",
+                        "surface-container-high": "#222d1e",
+                        "tertiary-fixed-dim": "#e7bdb8",
+                        "on-secondary-fixed-variant": "#810081",
+                        "tertiary": "#fff8f7",
+                        "surface-container-highest": "#2d3828",
+                        "primary": "#efffe3",
+                        "outline": "#85967c",
+                        "error": "#ffb4ab",
+                        "on-tertiary-container": "#7a5955",
+                        "primary-fixed-dim": "#2ae500",
+                        "on-primary-container": "#107100",
+                        "on-background": "#dae6d0",
+                        "primary-fixed": "#79ff5b",
+                        "surface-container": "#182214",
+                        "on-surface": "#dae6d0",
+                        "on-primary": "#053900",
+                        "on-secondary-container": "#500050",
+                        "surface-variant": "#2d3828",
+                        "surface": "#0c1609",
+                        "on-tertiary-fixed-variant": "#5d3f3c",
+                        "background": "#0c1609",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#ffd3ce",
+                        "on-primary-fixed-variant": "#095300",
+                        "surface-dim": "#0c1609",
+                        "tertiary-fixed": "#ffdad6",
+                        "on-tertiary-fixed": "#2c1513",
+                        "inverse-primary": "#106e00",
+                        "inverse-on-surface": "#293324",
+                        "on-secondary": "#5b005b",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#dae6d0",
+                        "secondary": "#ffabf3",
+                        "secondary-container": "#fe00fe",
+                        "on-surface-variant": "#baccb0",
+                        "on-primary-fixed": "#022100"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "margin": "24px",
+                        "xl": "64px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "lg": "32px",
+                        "md": "16px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["JetBrains Mono"],
+                        "label": ["Space Mono"],
+                        "body-md": ["JetBrains Mono"],
+                        "h2": ["Space Mono"],
+                        "button": ["Space Mono"],
+                        "h3": ["Space Mono"],
+                        "h1": ["Space Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label": ["12px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "h2": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "button": ["14px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "h3": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .blinking-cursor {
+            width: 10px;
+            height: 1.2em;
+            background-color: #39FF14;
+            display: inline-block;
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+        }
+        .scanline-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-black text-primary-container font-body-md selection:bg-primary-container selection:text-black min-h-screen flex flex-col overflow-hidden">
+<!-- Glitch Texture Overlay -->
+<div class="fixed inset-0 scanline-overlay z-50 opacity-20 pointer-events-none"></div>
+<!-- Top Navigation Shell -->
+<header class="bg-zinc-950/80 backdrop-blur-md text-[#39FF14] font-mono uppercase tracking-widest border-b-2 border-[#39FF14] shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] flex justify-between items-center w-full px-4 h-16 z-40">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-black text-[#39FF14] italic animate-pulse">TABOCALYPSE</span>
+<span class="text-xs border border-primary-container px-1">V.0.4.2-ALPHA</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex gap-4">
+<span class="text-black bg-[#39FF14] px-2 cursor-pointer hover:skew-x-2 transition-transform">DASH</span>
+<span class="text-zinc-500 hover:text-[#FF00FF] cursor-pointer hover:skew-x-2 transition-transform">VAULT</span>
+<span class="text-zinc-500 hover:text-[#FF00FF] cursor-pointer hover:skew-x-2 transition-transform">SCAN</span>
+</div>
+<div class="flex gap-2">
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">warning</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">terminal</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">skull</span>
+</div>
+</div>
+</header>
+<main class="flex-grow flex h-[calc(100vh-64px-56px)]">
+<!-- SideNavBar / Note List: 25% Split -->
+<aside class="w-1/4 bg-zinc-950/90 backdrop-blur-xl border-r-2 border-primary-container flex flex-col overflow-hidden">
+<div class="p-4 border-b border-zinc-800">
+<div class="text-[#39FF14] font-black font-mono">USER_LOG@TAB:&gt;</div>
+<div class="text-[10px] text-zinc-500 font-mono">SYSTEM_STABLE: FALSE</div>
+</div>
+<div class="flex-grow overflow-y-auto hide-scrollbar">
+<!-- Active Note -->
+<div class="p-4 bg-[#39FF14] text-black font-mono border-l-4 border-[#FF00FF] cursor-pointer brightness-125 saturate-150">
+<div class="font-black flex justify-between">
+<span>UNFINISHED_SYMPHONY.TXT</span>
+<span class="material-symbols-outlined text-xs">edit</span>
+</div>
+<div class="text-[10px] uppercase mt-1">LAST TOUCHED 4 DAYS AGO. GIVE IT UP.</div>
+</div>
+<!-- Inactive Notes -->
+<div class="p-4 border-b border-zinc-900 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 cursor-pointer transition-colors group">
+<div class="font-bold flex justify-between">
+<span>GROCERY_LIST_FINAL_V2.MD</span>
+<span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-xs">delete</span>
+</div>
+<div class="text-[10px] uppercase mt-1">EATING AGAIN? HOW BRAVE.</div>
+</div>
+<div class="p-4 border-b border-zinc-900 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 cursor-pointer transition-colors group">
+<div class="font-bold flex justify-between">
+<span>WORLD_DOMINATION_PLAN.LOG</span>
+<span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-xs">lock</span>
+</div>
+<div class="text-[10px] uppercase mt-1">DELUSIONS OF GRANDEUR DETECTED.</div>
+</div>
+<div class="p-4 border-b border-zinc-900 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 cursor-pointer transition-colors group">
+<div class="font-bold flex justify-between">
+<span>REVENGE_LIST.CSV</span>
+<span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-xs">warning</span>
+</div>
+<div class="text-[10px] uppercase mt-1">STILL HOLDING THAT GRUDGE FROM 2012?</div>
+</div>
+<div class="p-4 border-b border-zinc-900 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 cursor-pointer transition-colors group">
+<div class="font-bold flex justify-between">
+<span>EXISTENTIAL_DREAD.SH</span>
+<span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-xs">visibility</span>
+</div>
+<div class="text-[10px] uppercase mt-1">LAST READ: NEVER. TYPICAL.</div>
+</div>
+</div>
+<button class="m-4 border border-[#FF00FF] bg-black text-[#FF00FF] font-mono p-2 hover:bg-[#FF00FF] hover:text-black shadow-[4px_4px_0px_0px_rgba(255,0,255,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all uppercase text-xs font-bold">
+                INITIALIZE_PURGE
+            </button>
+</aside>
+<!-- Main Editor Shell: 75% Split -->
+<section class="w-3/4 bg-black flex flex-col relative">
+<!-- Terminal Header -->
+<div class="bg-zinc-900/50 p-2 border-b border-zinc-800 flex justify-between items-center">
+<div class="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-2">
+<span class="w-2 h-2 bg-primary-container rounded-full"></span>
+                    SESSION_ID: 0x882A_TERMINAL_01
+                </div>
+<div class="flex gap-4">
+<span class="text-[10px] text-primary-container border border-primary-container px-1">ENCRYPTION: AES-256-JUDGMENT</span>
+</div>
+</div>
+<!-- Naked Terminal Editor -->
+<div class="flex-grow flex flex-col p-8 font-mono text-primary-container relative">
+<div class="mb-4 text-sm opacity-50 select-none">
+                    // TYPE SOMETHING PROFOUND. OR JUST ANOTHER GROCERY LIST. I DON'T CARE.<br/>
+                    // AUTOSAVE IS ENABLED, BUT WILL IT MATTER IN THE END?
+                </div>
+<div class="flex-grow outline-none focus:ring-0 text-body-lg whitespace-pre-wrap caret-transparent leading-relaxed">
+                    I spent approximately four hours deciding between two different shades of dark gray for this interface. Is this a cry for help or just a supreme waste of human processing power? 
+                    <br/><br/>
+                    The void stares back, and it's asking why I haven't closed those 47 tabs about competitive bird watching yet. 
+                    <span class="blinking-cursor"></span>
+</div>
+<!-- Abstract Visual Decor -->
+<div class="absolute bottom-8 right-8 w-48 h-48 border border-zinc-800 opacity-20 pointer-events-none overflow-hidden">
+<div class="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-container/20 via-transparent to-transparent"></div>
+<div class="absolute inset-0 grid grid-cols-8 grid-rows-8">
+<div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div>
+<div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div><div class="border-[0.5px] border-zinc-700"></div>
+</div>
+</div>
+</div>
+<!-- Judgment Meter Overlay -->
+<div class="absolute top-20 right-8 flex flex-col items-end gap-1">
+<div class="text-[10px] uppercase text-zinc-500">Hoarding Level</div>
+<div class="flex gap-1">
+<div class="w-4 h-2 bg-primary-container"></div>
+<div class="w-4 h-2 bg-primary-container"></div>
+<div class="w-4 h-2 bg-primary-container"></div>
+<div class="w-4 h-2 bg-primary-container"></div>
+<div class="w-4 h-2 bg-primary-container"></div>
+<div class="w-4 h-2 bg-[#FF00FF] animate-pulse"></div>
+<div class="w-4 h-2 bg-zinc-800"></div>
+<div class="w-4 h-2 bg-zinc-800"></div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer Shell -->
+<footer class="bg-black text-primary-container font-mono text-[10px] font-black fixed bottom-0 left-0 w-full flex justify-between items-center h-14 border-t-2 border-[#39FF14] shadow-[0px_-4px_0px_0px_rgba(255,0,255,1)] px-6 z-40">
+<div class="flex gap-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">emergency</span>
+<span class="uppercase">CRITICAL ERRORS: 0</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">radar</span>
+<span class="uppercase">SCANNING FOR PRODUCTIVITY... NOT FOUND</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-primary-container text-black px-3 py-1 font-black flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(255,0,255,1)]">
+<span class="material-symbols-outlined text-xs">assessment</span>
+<span>420 WORDS OF PURE NONSENSE</span>
+</div>
+<div class="text-zinc-500 border-l border-zinc-800 pl-4">
+                UTC: 04:20:00
+            </div>
+</div>
+</footer>
+</body></html>

@@ -4,28 +4,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Keep these semantic keys stable; values follow DESIGN.md ("Neon Satire").
-        bg: "#131318",
-        surface: "#1f1f24",
-        surface2: "#2a292f",
-        border: "#444933",
-        text: "#e4e1e9",
-        muted: "#c4c9ac",
-        // Electric Lime / Acid Purple / Cyber Cyan
-        accent: "#c3f400",
-        accent2: "#9d05ff",
-        accent3: "#7df4ff",
+        // Keep these semantic keys stable; values follow `design/` ("Glitch-Core Terminal").
+        bg: "#050505",
+        surface: "rgb(5 5 5 / 0.80)",
+        surface2: "rgb(0 0 0 / 0.60)",
+        border: "#27272a", // zinc-800-ish
+        text: "#dae6d0",
+        muted: "#71717a", // zinc-500-ish
+        // Acid Green / Glitch Magenta
+        accent: "#39ff14",
+        accent2: "#ff00ff",
+        accent3: "#efffe3",
         danger: "#ffb4ab",
-        modal: "#1b1b20",
-        codebg: "#0e0e13",
+        modal: "rgb(5 5 5 / 0.86)",
+        codebg: "#000000",
       },
       borderRadius: {
         card: "0px",
       },
       fontFamily: {
-        // DESIGN.md: Space Grotesk (headlines), Be Vietnam Pro (body)
-        sans: ['"Be Vietnam Pro"', "system-ui", "sans-serif"],
-        display: ['"Space Grotesk"', "system-ui", "sans-serif"],
+        // `design/`: Space Mono (loud), JetBrains Mono (body)
+        sans: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: ['"Space Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
     },
   },

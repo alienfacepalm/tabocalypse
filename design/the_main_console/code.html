@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Mono:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .glitch-overlay {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+        .hard-shadow-primary { box-shadow: 4px 4px 0px 0px #39FF14; }
+        .hard-shadow-secondary { box-shadow: 4px 4px 0px 0px #FF00FF; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#3c4b35",
+                        "secondary-fixed-dim": "#ffabf3",
+                        "primary-container": "#39ff14",
+                        "on-tertiary": "#442927",
+                        "surface-container-lowest": "#071105",
+                        "surface-container-low": "#141e11",
+                        "on-error": "#690005",
+                        "surface-bright": "#323c2d",
+                        "on-secondary-fixed": "#380038",
+                        "surface-tint": "#2ae500",
+                        "secondary-fixed": "#ffd7f5",
+                        "surface-container-high": "#222d1e",
+                        "tertiary-fixed-dim": "#e7bdb8",
+                        "on-secondary-fixed-variant": "#810081",
+                        "tertiary": "#fff8f7",
+                        "surface-container-highest": "#2d3828",
+                        "primary": "#efffe3",
+                        "outline": "#85967c",
+                        "error": "#ffb4ab",
+                        "on-tertiary-container": "#7a5955",
+                        "primary-fixed-dim": "#2ae500",
+                        "on-primary-container": "#107100",
+                        "on-background": "#dae6d0",
+                        "primary-fixed": "#79ff5b",
+                        "surface-container": "#182214",
+                        "on-surface": "#dae6d0",
+                        "on-primary": "#053900",
+                        "on-secondary-container": "#500050",
+                        "surface-variant": "#2d3828",
+                        "surface": "#0c1609",
+                        "on-tertiary-fixed-variant": "#5d3f3c",
+                        "background": "#0c1609",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#ffd3ce",
+                        "on-primary-fixed-variant": "#095300",
+                        "surface-dim": "#0c1609",
+                        "tertiary-fixed": "#ffdad6",
+                        "on-tertiary-fixed": "#2c1513",
+                        "inverse-primary": "#106e00",
+                        "inverse-on-surface": "#293324",
+                        "on-secondary": "#5b005b",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#dae6d0",
+                        "secondary": "#ffabf3",
+                        "secondary-container": "#fe00fe",
+                        "on-surface-variant": "#baccb0",
+                        "on-primary-fixed": "#022100"
+                    },
+                    fontFamily: {
+                        "body-lg": ["JetBrains Mono"],
+                        "label": ["Space Mono"],
+                        "body-md": ["JetBrains Mono"],
+                        "h2": ["Space Mono"],
+                        "button": ["Space Mono"],
+                        "h3": ["Space Mono"],
+                        "h1": ["Space Mono"]
+                    },
+                    fontSize: {
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label": ["12px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "h2": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "button": ["14px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "h3": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen selection:bg-primary-container selection:text-black">
+<div class="fixed inset-0 glitch-overlay z-[9999] opacity-20"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b-2 border-[#39FF14] shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] flex justify-between items-center w-full px-4 h-16">
+<div class="flex items-center gap-4">
+<div class="text-2xl font-black text-[#39FF14] italic animate-pulse font-mono uppercase tracking-widest">
+                TABOCALYPSE
+            </div>
+<div class="hidden md:flex flex-col border-l border-zinc-800 pl-4">
+<span class="text-[#39FF14] font-mono text-xs font-bold uppercase">14:42:08</span>
+<span class="text-zinc-500 font-mono text-[10px]">YOU HAVE WASTED 4 HOURS TODAY.</span>
+</div>
+</div>
+<div class="flex-1 max-w-xl px-8 hidden lg:block">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#39FF14] font-mono">USER_LOG@TAB:&gt;</span>
+<input class="w-full bg-black/40 border border-zinc-800 focus:border-[#39FF14] focus:ring-0 text-primary font-mono text-sm pl-40 pr-4 py-2 hover:skew-x-2 transition-transform" placeholder="What useless trivia are we looking up now?" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="text-right hidden sm:block">
+<span class="text-[#FF00FF] font-mono text-xs block font-bold">42 TABS OPEN</span>
+<span class="text-zinc-500 font-mono text-[10px] uppercase">Researching a thesis or just afraid of commitment?</span>
+</div>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-[#39FF14] cursor-pointer hover:text-[#FF00FF]" data-icon="warning">warning</span>
+<span class="material-symbols-outlined text-[#39FF14] cursor-pointer hover:text-[#FF00FF]" data-icon="terminal">terminal</span>
+<span class="material-symbols-outlined text-[#39FF14] cursor-pointer hover:text-[#FF00FF]" data-icon="skull">skull</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-16 bottom-0 w-64 bg-zinc-950/90 backdrop-blur-xl border-r border-zinc-700 shadow-[4px_0px_0px_0px_rgba(255,0,255,1)] flex flex-col gap-2 p-4 hidden md:flex z-40">
+<div class="mb-6">
+<div class="text-[#39FF14] font-black font-mono text-sm">USER_LOG@TAB:&gt;</div>
+<div class="text-zinc-400 font-mono text-[10px] uppercase">SYSTEM_STABLE: FALSE</div>
+</div>
+<div class="space-y-1 flex-1">
+<a class="flex items-center gap-3 bg-[#39FF14] text-black font-black border-l-4 border-[#FF00FF] p-3 font-mono text-sm uppercase group transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>HOARD</span>
+</a>
+<a class="flex items-center gap-3 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 p-3 font-mono text-sm uppercase group transition-all hover:border-r-4 hover:border-[#39FF14]" href="#">
+<span class="material-symbols-outlined" data-icon="delete_forever">delete_forever</span>
+<span>PURGE</span>
+</a>
+<a class="flex items-center gap-3 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 p-3 font-mono text-sm uppercase group transition-all hover:border-r-4 hover:border-[#39FF14]" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span>WASTELAND</span>
+</a>
+<a class="flex items-center gap-3 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 p-3 font-mono text-sm uppercase group transition-all hover:border-r-4 hover:border-[#39FF14]" href="#">
+<span class="material-symbols-outlined" data-icon="Assessment">assessment</span>
+<span>GUILT_LOG</span>
+</a>
+<a class="flex items-center gap-3 text-zinc-400 hover:text-[#39FF14] hover:bg-zinc-900 p-3 font-mono text-sm uppercase group transition-all hover:border-r-4 hover:border-[#39FF14] mt-8" href="#">
+<span class="material-symbols-outlined" data-icon="power_settings_new">power_settings_new</span>
+<span>TERMINATE</span>
+</a>
+</div>
+<button class="mt-auto bg-black text-[#FF00FF] border border-[#FF00FF] p-3 font-mono text-sm font-bold uppercase shadow-[4px_4px_0px_0px_#FF00FF] active:translate-x-1 active:translate-y-1 active:shadow-none hover:bg-[#FF00FF] hover:text-black transition-all">
+            INITIALIZE_PURGE
+        </button>
+</nav>
+<!-- Main Content Area -->
+<main class="md:ml-64 pt-24 px-gutter pb-24 md:pb-8">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Left Widget: Pessimistic To-Dos -->
+<div class="lg:col-span-3 h-full">
+<div class="bg-black/60 backdrop-blur-xl border border-zinc-700 p-4 hard-shadow-primary relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-full h-1 bg-[#39FF14]"></div>
+<div class="flex justify-between items-start mb-6">
+<h3 class="font-h3 text-[#39FF14] uppercase tracking-tighter">PESSIMISTIC_TO_DOS</h3>
+<span class="material-symbols-outlined text-zinc-600" data-icon="list">list</span>
+</div>
+<ul class="space-y-4 font-mono text-sm">
+<li class="flex gap-3 group/item cursor-pointer">
+<span class="text-[#39FF14]">[ ]</span>
+<span class="text-zinc-400 group-hover/item:text-[#FF00FF]">Close the tab you opened 3 weeks ago.</span>
+</li>
+<li class="flex gap-3 group/item cursor-pointer">
+<span class="text-[#39FF14]">[ ]</span>
+<span class="text-zinc-400 group-hover/item:text-[#FF00FF]">Stare blankly at a spreadsheet.</span>
+</li>
+<li class="flex gap-3 group/item cursor-pointer">
+<span class="text-[#39FF14]">[ ]</span>
+<span class="text-zinc-400 group-hover/item:text-[#FF00FF]">Pretend you're being productive.</span>
+</li>
+<li class="flex gap-3 group/item cursor-pointer">
+<span class="text-[#FF00FF]">[X]</span>
+<span class="text-zinc-600 line-through">Dissociate for 45 minutes.</span>
+</li>
+<li class="flex gap-3 group/item cursor-pointer">
+<span class="text-[#39FF14]">[ ]</span>
+<span class="text-zinc-400 group-hover/item:text-[#FF00FF]">Add more items to this useless list.</span>
+</li>
+</ul>
+<div class="mt-8 pt-4 border-t border-zinc-800">
+<div class="flex justify-between items-center text-[10px] font-mono text-zinc-500">
+<span>TASKS_COMPLETED: 1</span>
+<span>SUCCESS_RATE: 0.02%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Center Widget: Hero / Weather -->
+<div class="lg:col-span-6 space-y-6">
+<div class="relative h-64 bg-zinc-900 border border-zinc-700 overflow-hidden hard-shadow-secondary">
+<img class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" data-alt="A glitchy, cyberpunk-inspired digital landscape with distorted scanlines and chromatic aberration. The scene shows a neon-lit city at night with intense magenta and acid green highlights reflecting off wet pavement. High-contrast hard shadows and a sense of digital decay dominate the mood, creating a confrontational and technologically advanced visual aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV4b5r0yKScU9udzhrCq4afALkdpW8ja2uUmqrspWU_w-TTV2FSauiiV4dm20qd3tebwxfud5vOyXYGkAxhLCI8Jar6JyNmSbML-IayXzWMBADfC2qFSd9I5avIavOVRVcgwGGj7mHm5x0dtWC_lKLwHcLsN1XQsnc5lKpM3rmhZUt7DZfEclncPEkFXbKwHwVlou10PAdvbAUYJenG4lwOBVQe4gbgnnSjFcr-YV38-dm759zbc_bjKrZmubjCH3tB0qFQWwOuA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+<div class="absolute bottom-6 left-6 right-6">
+<div class="flex justify-between items-end">
+<div>
+<div class="font-h1 text-[#39FF14] leading-none mb-2">72°F</div>
+<div class="font-mono text-sm text-white uppercase font-bold">MOODY_WEATHER: SUNNY</div>
+<div class="font-mono text-[10px] text-zinc-400">NOT THAT YOU'LL ACTUALLY GO OUTSIDE.</div>
+</div>
+<div class="text-right">
+<span class="material-symbols-outlined text-[#FF00FF] text-4xl" data-icon="wb_sunny">wb_sunny</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-black/40 backdrop-blur-md border border-zinc-800 p-4 hover:border-[#39FF14] transition-colors group">
+<div class="text-[#39FF14] font-mono text-xs mb-2">CPU_GUILT</div>
+<div class="h-4 bg-zinc-900 border border-zinc-800 flex items-center p-0.5">
+<div class="h-full bg-[#39FF14] w-[85%]"></div>
+</div>
+<div class="text-[10px] text-zinc-500 mt-2 font-mono uppercase">Your RAM is screaming. Help it.</div>
+</div>
+<div class="bg-black/40 backdrop-blur-md border border-zinc-800 p-4 hover:border-[#FF00FF] transition-colors group">
+<div class="text-[#FF00FF] font-mono text-xs mb-2">DOOMSCROLL_TIMER</div>
+<div class="h-4 bg-zinc-900 border border-zinc-800 flex items-center p-0.5">
+<div class="h-full bg-[#FF00FF] w-[62%]"></div>
+</div>
+<div class="text-[10px] text-zinc-500 mt-2 font-mono uppercase">Infinite loops detected.</div>
+</div>
+</div>
+</div>
+<!-- Right Widget: Recent Scraps -->
+<div class="lg:col-span-3 space-y-6">
+<div class="bg-zinc-950/60 backdrop-blur-xl border border-zinc-700 p-4 hard-shadow-primary relative group">
+<div class="absolute top-0 right-0 w-2 h-full bg-[#FF00FF]"></div>
+<h3 class="font-h3 text-white uppercase mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[#FF00FF]" data-icon="sticky_note_2">sticky_note_2</span>
+                        RECENT_SCRAPS
+                    </h3>
+<div class="space-y-4 font-mono">
+<div class="p-3 bg-zinc-900/50 border-l-2 border-[#39FF14]">
+<p class="text-xs text-zinc-300">"Fart your own pants"</p>
+<span class="text-[9px] text-zinc-600 block mt-1 uppercase">LOGGED: 12:04</span>
+</div>
+<div class="p-3 bg-zinc-900/50 border-l-2 border-[#FF00FF]">
+<p class="text-xs text-zinc-300">Buy more high-caffeine bean juice.</p>
+<span class="text-[9px] text-zinc-600 block mt-1 uppercase">LOGGED: 09:21</span>
+</div>
+<div class="p-3 bg-zinc-900/50 border-l-2 border-zinc-700">
+<p class="text-xs text-zinc-500 italic">"Remember to remember the thing."</p>
+<span class="text-[9px] text-zinc-600 block mt-1 uppercase">LOGGED: YESTERDAY</span>
+</div>
+</div>
+<button class="w-full mt-4 border border-dashed border-zinc-700 p-2 text-[10px] text-zinc-500 hover:border-[#39FF14] hover:text-[#39FF14] transition-all uppercase">
+                        + SCRAP_NEW_GARBAGE
+                    </button>
+</div>
+<div class="bg-[#39FF14] p-4 text-black font-black font-mono text-center">
+<div class="text-xs uppercase">Judgment Meter</div>
+<div class="text-2xl mt-1 uppercase tracking-tighter">UNSTABLE</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-stretch h-14 bg-black border-t-2 border-[#39FF14] shadow-[0px_-4px_0px_0px_rgba(255,0,255,1)] z-50">
+<a class="flex flex-col items-center justify-center bg-[#39FF14] text-black p-1 flex-1 transition-all active:invert duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-mono text-[10px] font-black uppercase">DASH</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-600 p-1 flex-1 transition-all hover:bg-[#FF00FF] hover:text-black" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="font-mono text-[10px] font-black uppercase">VAULT</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-600 p-1 flex-1 transition-all hover:bg-[#FF00FF] hover:text-black" href="#">
+<span class="material-symbols-outlined" data-icon="radar">radar</span>
+<span class="font-mono text-[10px] font-black uppercase">SCAN</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-600 p-1 flex-1 transition-all hover:bg-[#FF00FF] hover:text-black" href="#">
+<span class="material-symbols-outlined" data-icon="emergency">emergency</span>
+<span class="font-mono text-[10px] font-black uppercase">CRITICAL</span>
+</a>
+</nav>
+</body></html>

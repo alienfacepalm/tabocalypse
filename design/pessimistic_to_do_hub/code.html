@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=JetBrains+Mono:wght@400;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glitch-overlay {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.05),
+                rgba(0, 0, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+        .strike-magenta {
+            position: relative;
+        }
+        .strike-magenta::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 4px;
+            background-color: #FF00FF;
+            transform: translateY(-50%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline-variant": "#3c4b35",
+                      "secondary-fixed-dim": "#ffabf3",
+                      "primary-container": "#39ff14",
+                      "on-tertiary": "#442927",
+                      "surface-container-lowest": "#071105",
+                      "surface-container-low": "#141e11",
+                      "on-error": "#690005",
+                      "surface-bright": "#323c2d",
+                      "on-secondary-fixed": "#380038",
+                      "surface-tint": "#2ae500",
+                      "secondary-fixed": "#ffd7f5",
+                      "surface-container-high": "#222d1e",
+                      "tertiary-fixed-dim": "#e7bdb8",
+                      "on-secondary-fixed-variant": "#810081",
+                      "tertiary": "#fff8f7",
+                      "surface-container-highest": "#2d3828",
+                      "primary": "#efffe3",
+                      "outline": "#85967c",
+                      "error": "#ffb4ab",
+                      "on-tertiary-container": "#7a5955",
+                      "primary-fixed-dim": "#2ae500",
+                      "on-primary-container": "#107100",
+                      "on-background": "#dae6d0",
+                      "primary-fixed": "#79ff5b",
+                      "surface-container": "#182214",
+                      "on-surface": "#dae6d0",
+                      "on-primary": "#053900",
+                      "on-secondary-container": "#500050",
+                      "surface-variant": "#2d3828",
+                      "surface": "#0c1609",
+                      "on-tertiary-fixed-variant": "#5d3f3c",
+                      "background": "#0c1609",
+                      "error-container": "#93000a",
+                      "tertiary-container": "#ffd3ce",
+                      "on-primary-fixed-variant": "#095300",
+                      "surface-dim": "#0c1609",
+                      "tertiary-fixed": "#ffdad6",
+                      "on-tertiary-fixed": "#2c1513",
+                      "inverse-primary": "#106e00",
+                      "inverse-on-surface": "#293324",
+                      "on-secondary": "#5b005b",
+                      "on-error-container": "#ffdad6",
+                      "inverse-surface": "#dae6d0",
+                      "secondary": "#ffabf3",
+                      "secondary-container": "#fe00fe",
+                      "on-surface-variant": "#baccb0",
+                      "on-primary-fixed": "#022100"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0rem",
+                      "lg": "0rem",
+                      "xl": "0rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "body-lg": ["JetBrains Mono"],
+                      "label": ["Space Mono"],
+                      "body-md": ["JetBrains Mono"],
+                      "h2": ["Space Mono"],
+                      "button": ["Space Mono"],
+                      "h3": ["Space Mono"],
+                      "h1": ["Space Mono"]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-on-surface font-body-md selection:bg-[#FF00FF] selection:text-black min-h-screen overflow-x-hidden">
+<div class="glitch-overlay fixed inset-0 z-[100] opacity-20"></div>
+<!-- TopAppBar -->
+<header class="bg-zinc-950/80 backdrop-blur-md text-[#39FF14] font-mono uppercase tracking-widest border-b-2 border-[#39FF14] shadow-[4px_4px_0px_0px_rgba(57,255,20,1)] flex justify-between items-center w-full px-4 h-16 sticky top-0 z-50">
+<div class="text-2xl font-black text-[#39FF14] italic animate-pulse">TABOCALYPSE</div>
+<div class="hidden md:flex gap-6 items-center">
+<span class="text-black bg-[#39FF14] px-2">DASHBOARD</span>
+<span class="text-zinc-500 hover:text-[#FF00FF] hover:skew-x-2 transition-transform cursor-pointer">ARCHIVE</span>
+<span class="text-zinc-500 hover:text-[#FF00FF] hover:skew-x-2 transition-transform cursor-pointer">WASTE_BIN</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">warning</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">terminal</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-[#FF00FF]">skull</span>
+</div>
+</header>
+<main class="max-w-[800px] mx-auto px-4 py-12 pb-32">
+<!-- Sticky Productivity Score -->
+<section class="mb-12 flex flex-col items-center justify-center p-8 bg-zinc-900/50 backdrop-blur-md border-2 border-zinc-800 shadow-[8px_8px_0px_0px_#FF00FF]">
+<div class="relative w-32 h-32 flex items-center justify-center">
+<!-- SVG Radial Progress -->
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-zinc-800" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-[#FF00FF]" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="320.6" stroke-width="8"></circle>
+</svg>
+<span class="absolute text-2xl font-black font-label text-[#FF00FF]">12%</span>
+</div>
+<div class="mt-4 text-center">
+<h2 class="font-h2 text-h2 uppercase text-[#FF00FF]">Fake Productivity Score</h2>
+<p class="font-label text-xl tracking-[0.2em] text-[#FF00FF] animate-pulse">PATHETIC</p>
+</div>
+</section>
+<!-- Judgment Meter -->
+<div class="mb-8 p-4 border border-zinc-800 bg-black">
+<div class="flex justify-between items-end mb-2">
+<span class="font-label text-xs text-[#39FF14]">HOARDING_CAPACITY: CRITICAL</span>
+<span class="font-label text-xs text-[#FF00FF]">88% OVERFLOW</span>
+</div>
+<div class="h-4 w-full bg-zinc-900 border border-zinc-700 flex">
+<div class="h-full bg-[#39FF14] w-[30%]"></div>
+<div class="h-full bg-yellow-400 w-[20%]"></div>
+<div class="h-full bg-[#FF00FF] w-[38%] animate-pulse"></div>
+</div>
+</div>
+<!-- Task List -->
+<div class="space-y-0">
+<!-- Active Task -->
+<div class="group bg-zinc-900/40 p-6 flex items-center gap-6 border-b-4 border-zinc-800 hover:border-[#39FF14] transition-colors">
+<div class="font-label text-2xl text-[#39FF14] cursor-pointer hover:scale-110 transition-transform">
+                    [ ]
+                </div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg text-white group-hover:translate-x-2 transition-transform">Complete quarterly report or whatever.</p>
+<span class="font-label text-[10px] text-zinc-500 uppercase tracking-tighter">ADDED: 432 HOURS AGO · STATUS: ROTTING</span>
+</div>
+<button class="opacity-0 group-hover:opacity-100 font-label text-[#FF00FF] border border-[#FF00FF] px-2 py-1 hover:bg-[#FF00FF] hover:text-black transition-all">ABANDON</button>
+</div>
+<!-- Active Task 2 -->
+<div class="group bg-zinc-900/40 p-6 flex items-center gap-6 border-b-4 border-zinc-800 hover:border-[#39FF14] transition-colors">
+<div class="font-label text-2xl text-[#39FF14] cursor-pointer hover:scale-110 transition-transform">
+                    [ ]
+                </div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg text-white group-hover:translate-x-2 transition-transform">Answer "important" emails from people you hate.</p>
+<span class="font-label text-[10px] text-zinc-500 uppercase tracking-tighter">ADDED: 12 MINS AGO · STATUS: IGNORED</span>
+</div>
+<button class="opacity-0 group-hover:opacity-100 font-label text-[#FF00FF] border border-[#FF00FF] px-2 py-1 hover:bg-[#FF00FF] hover:text-black transition-all">ABANDON</button>
+</div>
+<!-- Completed Task (Magenta Strike-through) -->
+<div class="bg-black/60 p-6 flex items-center gap-6 border-b-4 border-zinc-800">
+<div class="font-label text-2xl text-[#FF00FF]">
+                    [X]
+                </div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg text-zinc-600 strike-magenta">Pretend to be busy during the meeting.</p>
+<span class="font-label text-[10px] text-[#FF00FF] uppercase tracking-tighter">COMPLETED BUT AT WHAT COST?</span>
+</div>
+<span class="material-symbols-outlined text-zinc-800">delete_forever</span>
+</div>
+<!-- Active Task 3 -->
+<div class="group bg-zinc-900/40 p-6 flex items-center gap-6 border-b-4 border-zinc-800 hover:border-[#39FF14] transition-colors">
+<div class="font-label text-2xl text-[#39FF14] cursor-pointer hover:scale-110 transition-transform">
+                    [ ]
+                </div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg text-white group-hover:translate-x-2 transition-transform">Think about exercising for 5 seconds.</p>
+<span class="font-label text-[10px] text-zinc-500 uppercase tracking-tighter">ADDED: YESTERDAY · STATUS: STAGNANT</span>
+</div>
+<button class="opacity-0 group-hover:opacity-100 font-label text-[#FF00FF] border border-[#FF00FF] px-2 py-1 hover:bg-[#FF00FF] hover:text-black transition-all">ABANDON</button>
+</div>
+</div>
+<!-- Propaganda Image -->
+<div class="mt-16 grayscale hover:grayscale-0 transition-all duration-700 border-2 border-zinc-800">
+<img alt="Cyberpunk Aesthetic" class="w-full h-48 object-cover" data-alt="A gritty close-up of a futuristic high-tech terminal server rack emitting harsh neon green and magenta lights through thick digital smoke. The atmosphere is oppressive and brutalist, with heavy metallic textures and industrial wiring. The scene captures the essence of a digital wasteland, featuring sharp angles and high-contrast shadows that evoke a sense of technological dread and cold efficiency." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABpz6F48M4dK6zxp3lg565poAnX5LErtoY0ifZziEujoNB46Eehx3smpFffWM25_iW0t31EpM5sDpUSEvRAH36Uib5arWKC6IftLHGbPVQqEnaaF2u9U423kH4lqRkMPPisBbJShXhpDZfEYFL4KPgbMxIt5Ic0QZjvXkEgZ995UauZ77p9lEIHASePeapkJKogmrGuWCPpRiHJPH6GfWepexvs_n5dONQo9Auq1AD2qU6egPXFLSRPvggVz8JqqQJ_VUKVcF6fw"/>
+</div>
+</main>
+<!-- SideNavBar (Suppressed due to focus task layout, but following JSON structure for visual side-elements) -->
+<aside class="hidden lg:flex fixed left-0 top-16 bottom-0 w-16 flex-col items-center py-8 gap-8 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl shadow-[4px_0px_0px_0px_rgba(255,0,255,1)]">
+<span class="material-symbols-outlined text-[#39FF14] hover:text-[#FF00FF] cursor-pointer">inventory_2</span>
+<span class="material-symbols-outlined text-zinc-600 hover:text-[#39FF14] cursor-pointer">delete_forever</span>
+<span class="material-symbols-outlined text-zinc-600 hover:text-[#39FF14] cursor-pointer">grid_view</span>
+<span class="material-symbols-outlined text-zinc-600 hover:text-[#39FF14] cursor-pointer">assessment</span>
+<div class="mt-auto mb-4">
+<span class="material-symbols-outlined text-red-600 animate-pulse">power_settings_new</span>
+</div>
+</aside>
+<!-- Fixed Bottom Bar Input -->
+<footer class="fixed bottom-0 left-0 w-full bg-black border-t-4 border-[#39FF14] h-20 flex items-stretch z-50 shadow-[0px_-8px_20px_rgba(0,0,0,0.8)]">
+<div class="flex items-center px-6 bg-zinc-900 border-r border-zinc-700 font-label text-[#39FF14] text-sm shrink-0">
+            USER_LOG@TAB:&gt;
+        </div>
+<input class="flex-1 bg-black text-[#39FF14] font-body-lg px-6 outline-none focus:ring-2 focus:ring-[#FF00FF] border-none placeholder:text-zinc-700 placeholder:italic" placeholder="Add a task you'll push to tomorrow." type="text"/>
+<button class="bg-[#39FF14] text-black font-button px-10 hover:bg-[#FF00FF] transition-colors active:translate-y-1">
+            INITIALIZE_PROCRASTINATION
+        </button>
+</footer>
+<!-- Floating Action Button (Contextual Suppression - Not rendered per rules for focus journey) -->
+<!-- Judgmental Tooltip -->
+<div class="fixed top-24 right-8 bg-[#FF00FF] text-black font-label text-[10px] px-2 py-1 shadow-[4px_4px_0px_0px_#39FF14] animate-bounce">
+        STILL OPEN? REALLY?
+    </div>
+</body></html>

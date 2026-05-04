@@ -45,12 +45,17 @@ export function TodoWidget({
         ))}
       </ul>
       <div className="row mt-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="New item"
-          className="min-w-0 flex-1"
-        />
+        <div className="relative min-w-0 flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
+            USER_LOG@TAB:&gt;
+          </span>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add a task you'll push to tomorrow."
+            className="w-full pl-36"
+          />
+        </div>
         <button
           type="button"
           className="btn primary icon-only"
