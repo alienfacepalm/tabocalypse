@@ -395,6 +395,32 @@
     @apply my-1 flex items-center gap-2 text-[0.9rem];
   }
 
+  .color-accent-row {
+    @apply my-2 flex flex-wrap items-center gap-3;
+  }
+
+  .color-accent-row label {
+    @apply min-w-[8.5rem] font-display text-[0.65rem] font-bold uppercase tracking-widest text-muted;
+  }
+
+  .color-input-hud {
+    @apply h-9 w-12 shrink-0 cursor-pointer border-2 border-border bg-input p-0 shadow-[3px_3px_0_0_var(--color-accent)];
+  }
+
+  .color-input-hud::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  .color-input-hud::-webkit-color-swatch {
+    border-style: none;
+    border-radius: 0;
+  }
+
+  .color-input-hud::-moz-color-swatch {
+    border-style: none;
+    border-radius: 0;
+  }
+
   .manage-row {
     @apply my-[0.35rem] justify-between;
   }

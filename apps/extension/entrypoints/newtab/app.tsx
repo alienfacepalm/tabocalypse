@@ -83,12 +83,14 @@ import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fe
 import { DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
 import {
   applyDocumentTheme,
+  coerceThemeHex,
   coerceThemeMode,
   coerceThemePalette,
+  getResolvedAccentPair,
   THEME_MODE_LABELS,
   THEME_PALETTE_LABELS,
   THEME_MODES,
-  THEME_PALETTES,
+  THEME_PRESET_PALETTES,
   themeGradientStops,
 } from "../../lib/theme";
 
@@ -264,8 +266,16 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
   }, []);
 
   useLayoutEffect(() => {
-    applyDocumentTheme(settings.themeMode, settings.themePalette);
-  }, [settings.themeMode, settings.themePalette]);
+    applyDocumentTheme(settings.themeMode, settings.themePalette, {
+      accent: settings.themeCustomAccent,
+      accent2: settings.themeCustomAccent2,
+    });
+  }, [
+    settings.themeMode,
+    settings.themePalette,
+    settings.themeCustomAccent,
+    settings.themeCustomAccent2,
+  ]);
 
   useEffect(() => {
     const kind = settings?.backgroundKind;
@@ -780,7 +790,7 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                     </div>
                     <p className="muted sm mb-2 mt-4">Accent palette</p>
                     <div className="row wrap">
-                      {THEME_PALETTES.map((palette) => (
+                      {THEME_PRESET_PALETTES.map((palette) => (
                         <button
                           key={palette}
                           type="button"
@@ -790,6 +800,75 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                           {THEME_PALETTE_LABELS[palette]}
                         </button>
                       ))}
+                    </div>
+                    <p className="muted sm mb-2 mt-4">Custom accents</p>
+                    <p className="muted sm mb-3">
+                      The swatches match the selected preset. Changing either switches to a custom
+                      palette (synced like other appearance settings).
+                    </p>
+                    <div className="color-accent-row">
+                      <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
+                      <HudTip tip="Main HUD highlight color (buttons, borders)">
+                        <input
+                          id="tabocalypse-accent-primary"
+                          type="color"
+                          className="color-input-hud"
+                          aria-label="Primary accent color"
+                          value={
+                            getResolvedAccentPair(s.themePalette, {
+                              accent: s.themeCustomAccent,
+                              accent2: s.themeCustomAccent2,
+                            }).accent
+                          }
+                          onChange={(e) => {
+                            const hex = coerceThemeHex(e.target.value, s.themeCustomAccent);
+                            void persist((cur) => {
+                              const pair = getResolvedAccentPair(cur.themePalette, {
+                                accent: cur.themeCustomAccent,
+                                accent2: cur.themeCustomAccent2,
+                              });
+                              return {
+                                ...cur,
+                                themePalette: "custom",
+                                themeCustomAccent: hex,
+                                themeCustomAccent2: pair.accent2,
+                              };
+                            });
+                          }}
+                        />
+                      </HudTip>
+                    </div>
+                    <div className="color-accent-row">
+                      <label htmlFor="tabocalypse-accent-secondary">Secondary accent</label>
+                      <HudTip tip="Second highlight for hovers and contrast accents">
+                        <input
+                          id="tabocalypse-accent-secondary"
+                          type="color"
+                          className="color-input-hud"
+                          aria-label="Secondary accent color"
+                          value={
+                            getResolvedAccentPair(s.themePalette, {
+                              accent: s.themeCustomAccent,
+                              accent2: s.themeCustomAccent2,
+                            }).accent2
+                          }
+                          onChange={(e) => {
+                            const hex = coerceThemeHex(e.target.value, s.themeCustomAccent2);
+                            void persist((cur) => {
+                              const pair = getResolvedAccentPair(cur.themePalette, {
+                                accent: cur.themeCustomAccent,
+                                accent2: cur.themeCustomAccent2,
+                              });
+                              return {
+                                ...cur,
+                                themePalette: "custom",
+                                themeCustomAccent: pair.accent,
+                                themeCustomAccent2: hex,
+                              };
+                            });
+                          }}
+                        />
+                      </HudTip>
                     </div>
                   </div>
                 </details>
@@ -1434,6 +1513,14 @@ export default function App({ initialSettings }: { initialSettings: ISettings })
                               widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
                               themeMode: coerceThemeMode(parsed.themeMode, d.themeMode),
                               themePalette: coerceThemePalette(parsed.themePalette, d.themePalette),
+                              themeCustomAccent: coerceThemeHex(
+                                parsed.themeCustomAccent,
+                                d.themeCustomAccent,
+                              ),
+                              themeCustomAccent2: coerceThemeHex(
+                                parsed.themeCustomAccent2,
+                                d.themeCustomAccent2,
+                              ),
                             };
                             void persist(merged);
                           } catch {

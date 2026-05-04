@@ -1,7 +1,15 @@
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
 import { mergeHudPanelPositions, type IHudPanelPosition, type THudPanelId } from "./hud-layout";
-import { coerceThemeMode, coerceThemePalette, type TThemeMode, type TThemePalette } from "./theme";
+import {
+  coerceThemeHex,
+  coerceThemeMode,
+  coerceThemePalette,
+  DEFAULT_THEME_CUSTOM_ACCENT,
+  DEFAULT_THEME_CUSTOM_ACCENT2,
+  type TThemeMode,
+  type TThemePalette,
+} from "./theme";
 import {
   coerceWeatherTemperatureUnit,
   type TWeatherTemperatureUnit,
@@ -47,6 +55,10 @@ export interface ISettings {
   preset: "focus" | "balanced" | "chaos";
   themeMode: TThemeMode;
   themePalette: TThemePalette;
+  /** Primary accent when `themePalette` is `custom`; preserved when using presets so Custom restores the last choice. */
+  themeCustomAccent: string;
+  /** Secondary accent when `themePalette` is `custom`; same persistence semantics as `themeCustomAccent`. */
+  themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
@@ -118,6 +130,8 @@ export interface ISyncSlice {
   preset: ISettings["preset"];
   themeMode: TThemeMode;
   themePalette: TThemePalette;
+  themeCustomAccent: string;
+  themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinPackIds: string[];
@@ -185,6 +199,8 @@ export function defaultSettings(): ISettings {
     preset: "balanced",
     themeMode: "dark",
     themePalette: "glitch",
+    themeCustomAccent: DEFAULT_THEME_CUSTOM_ACCENT,
+    themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     humorEnabled: true,
     humorIntensity: "mild",
     humorBuiltinPackIds: ["tab_shame", "error_messages", "dev_snark"],
@@ -222,6 +238,8 @@ function toSync(s: ISettings): ISyncSlice {
     preset: s.preset,
     themeMode: s.themeMode,
     themePalette: s.themePalette,
+    themeCustomAccent: s.themeCustomAccent,
+    themeCustomAccent2: s.themeCustomAccent2,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
     humorBuiltinPackIds: s.humorBuiltinPackIds,
@@ -276,6 +294,8 @@ function mergeSettings(
     preset: sync?.preset ?? d.preset,
     themeMode: coerceThemeMode(sync?.themeMode, d.themeMode),
     themePalette: coerceThemePalette(sync?.themePalette, d.themePalette),
+    themeCustomAccent: coerceThemeHex(sync?.themeCustomAccent, d.themeCustomAccent),
+    themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,

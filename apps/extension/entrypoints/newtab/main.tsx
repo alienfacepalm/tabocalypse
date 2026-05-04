@@ -14,7 +14,10 @@ void (async () => {
   } catch {
     initialSettings = defaultSettings();
   }
-  applyDocumentTheme(initialSettings.themeMode, initialSettings.themePalette);
+  applyDocumentTheme(initialSettings.themeMode, initialSettings.themePalette, {
+    accent: initialSettings.themeCustomAccent,
+    accent2: initialSettings.themeCustomAccent2,
+  });
 
   const rootEl = document.getElementById("root");
   if (!rootEl) return;
