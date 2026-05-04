@@ -26,7 +26,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
@@ -61,6 +61,9 @@ import {
 
 const BG_MAX = 1_500_000;
 const BG_TOTAL_MAX = 6_000_000;
+/** Shown in Settings — must stay in sync with BG_MAX / BG_TOTAL_MAX. */
+const BG_MAX_LABEL = "1.5 MB";
+const BG_TOTAL_LABEL = "6 MB";
 const USER_ROTATE_MS = 15 * 60 * 1000;
 const BING_ROTATE_MS = 15 * 60 * 1000;
 
@@ -68,6 +71,10 @@ type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
   userImageUrl?: string | null;
 };
+
+function revokeObjectUrlMaybe(url: string | null): void {
+  if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
 
 function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
   if (s.backgroundKind === "bing") {
@@ -147,8 +154,23 @@ export default function App() {
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [prodScore] = useState(() => Math.floor(20 + Math.random() * 80));
   const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
+  const [bingPaintUrl, setBingPaintUrl] = useState<string | null>(null);
   const [bingFetchErr, setBingFetchErr] = useState<string | null>(null);
+  const [bingImageLoadErr, setBingImageLoadErr] = useState<string | null>(null);
+  const [bingRefreshing, setBingRefreshing] = useState(false);
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
+  const bingPaintUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    bingPaintUrlRef.current = bingPaintUrl;
+  }, [bingPaintUrl]);
+
+  useEffect(
+    () => () => {
+      revokeObjectUrlMaybe(bingPaintUrlRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -158,14 +180,26 @@ export default function App() {
     const kind = settings?.backgroundKind;
     if (kind !== "bing") {
       setBingChosenUrl(null);
+      setBingPaintUrl((prev) => {
+        revokeObjectUrlMaybe(prev);
+        return null;
+      });
       setBingFetchErr(null);
+      setBingImageLoadErr(null);
+      setBingRefreshing(false);
       return;
     }
     const rotate = settings?.backgroundRotate ?? false;
     let cancelled = false;
     const ac = new AbortController();
     setBingChosenUrl(null);
+    setBingPaintUrl((prev) => {
+      revokeObjectUrlMaybe(prev);
+      return null;
+    });
     setBingFetchErr(null);
+    setBingImageLoadErr(null);
+    setBingRefreshing(false);
     void fetchBingWallpaperImageUrls(ac.signal)
       .then((urls) => {
         if (cancelled || ac.signal.aborted) return;
@@ -188,13 +222,24 @@ export default function App() {
       };
     }
     const id = window.setInterval(() => {
+      setBingRefreshing(true);
       void fetchBingWallpaperImageUrls()
         .then((urls) => {
           if (cancelled) return;
-          if (urls.length === 0) return;
+          if (urls.length === 0) {
+            setBingFetchErr("No images returned.");
+            return;
+          }
+          setBingFetchErr(null);
           setBingChosenUrl(pickRotatingBingWallpaperUrl(urls));
         })
-        .catch(() => undefined);
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setBingFetchErr(e instanceof Error ? e.message : String(e));
+        })
+        .finally(() => {
+          if (!cancelled) setBingRefreshing(false);
+        });
     }, BING_ROTATE_MS);
     return () => {
       cancelled = true;
@@ -202,6 +247,45 @@ export default function App() {
       ac.abort();
     };
   }, [settings?.backgroundKind, settings?.backgroundRotate]);
+
+  useEffect(() => {
+    if (settings?.backgroundKind !== "bing" || !bingChosenUrl) {
+      setBingImageLoadErr(null);
+      setBingPaintUrl((prev) => {
+        revokeObjectUrlMaybe(prev);
+        return null;
+      });
+      return;
+    }
+    const ac = new AbortController();
+    let cancelled = false;
+    setBingImageLoadErr(null);
+    setBingPaintUrl((prev) => {
+      revokeObjectUrlMaybe(prev);
+      return null;
+    });
+
+    void fetch(bingChosenUrl, { signal: ac.signal, credentials: "omit", cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Image HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        const objectUrl = URL.createObjectURL(blob);
+        setBingPaintUrl((prev) => {
+          revokeObjectUrlMaybe(prev);
+          return objectUrl;
+        });
+      })
+      .catch((e: unknown) => {
+        if (cancelled || ac.signal.aborted) return;
+        setBingImageLoadErr(e instanceof Error ? e.message : String(e));
+      });
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [settings?.backgroundKind, bingChosenUrl]);
 
   useEffect(() => {
     const kind = settings?.backgroundKind;
@@ -245,8 +329,11 @@ export default function App() {
 
   const shellStyle = useMemo(() => {
     if (!settings) return undefined;
-    return backgroundStyle(settings, { bingImageUrl: bingChosenUrl, userImageUrl: userChosenUrl });
-  }, [settings, bingChosenUrl, userChosenUrl]);
+    return backgroundStyle(settings, {
+      bingImageUrl: bingPaintUrl ?? bingChosenUrl,
+      userImageUrl: userChosenUrl,
+    });
+  }, [settings, bingChosenUrl, bingPaintUrl, userChosenUrl]);
 
   useLayoutEffect(() => {
     if (!shellStyle) return undefined;
@@ -316,13 +403,15 @@ export default function App() {
     const bufs = await Promise.all(picked.map((f) => f.arrayBuffer()));
     for (const b of bufs) {
       if (b.byteLength > BG_MAX) {
-        setImportErr("One of the images is too large.");
+        setImportErr(`Each image must be at most about ${BG_MAX_LABEL} (raw file size).`);
         return;
       }
     }
     const total = bufs.reduce((n, b) => n + b.byteLength, 0);
     if (total > BG_TOTAL_MAX) {
-      setImportErr("Selected images exceed local quota. Pick fewer or smaller files.");
+      setImportErr(
+        `Selected images must total at most about ${BG_TOTAL_LABEL} (raw file sizes in one upload).`,
+      );
       return;
     }
 
@@ -601,10 +690,37 @@ export default function App() {
                     <p className="muted sm">
                       Upload rotation changes every ~15 minutes while this tab is open.
                     </p>
+                    <p className="muted sm">
+                      Local uploads: up to about {BG_MAX_LABEL} per image and about {BG_TOTAL_LABEL}{" "}
+                      total per multi-select (raw file sizes). Images are stored in local extension
+                      storage as data, so large files cost performance and quota.
+                    </p>
+                    {s.backgroundKind === "bing" && s.backgroundRotate ? (
+                      <p className="muted sm">
+                        Bing rotation refreshes about every {BING_ROTATE_MS / 60_000} minutes while
+                        this tab stays open.
+                      </p>
+                    ) : null}
 
+                    {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
+                      <p className="muted sm" role="status">
+                        {bingChosenUrl
+                          ? bingPaintUrl
+                            ? bingRefreshing
+                              ? "Refreshing Bing spotlight…"
+                              : "Bing spotlight loaded."
+                            : "Preparing Bing image…"
+                          : "Loading Bing spotlight…"}
+                      </p>
+                    ) : null}
                     {s.backgroundKind === "bing" && bingFetchErr ? (
                       <p className="muted sm" role="status">
-                        Bing wallpaper: {bingFetchErr}
+                        Bing list: {bingFetchErr}
+                      </p>
+                    ) : null}
+                    {s.backgroundKind === "bing" && bingImageLoadErr ? (
+                      <p className="muted sm" role="status">
+                        Bing image: {bingImageLoadErr}
                       </p>
                     ) : null}
 
