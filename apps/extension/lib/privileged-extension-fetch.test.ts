@@ -4,6 +4,7 @@ vi.mock("webextension-polyfill", () => ({
   default: { runtime: {} },
 }));
 
+import browser from "webextension-polyfill";
 import {
   arrayBufferToBase64,
   isPrivilegedExtensionFetchUrlAllowed,
@@ -40,6 +41,8 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
 describe("privilegedExtensionFetchJson", () => {
   afterEach(() => {
     delete (globalThis as IGlobalWithOptionalChrome).chrome;
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(browser.runtime, "sendMessage");
     vi.restoreAllMocks();
   });
 
@@ -58,6 +61,22 @@ describe("privilegedExtensionFetchJson", () => {
       url: "https://peapix.com/bing/feed?country=us",
     });
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/x.jpg" }]);
+  });
+
+  it("uses browser.runtime.sendMessage on extension-scheme pages when runtime.id is absent", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const sendMessage = vi.fn().mockResolvedValue({
+      ok: true,
+      data: [{ fullUrl: "https://img.peapix.com/y.jpg" }],
+    });
+    Object.assign(browser.runtime, { sendMessage });
+    const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: TABOCALYPSE_PRIV_FETCH_JSON,
+      url: "https://peapix.com/bing/feed?country=us",
+    });
+    expect(data).toEqual([{ fullUrl: "https://img.peapix.com/y.jpg" }]);
   });
 });
 

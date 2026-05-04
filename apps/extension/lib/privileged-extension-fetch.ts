@@ -14,6 +14,17 @@ function getChromeRuntime(): IChromeRuntimeShim | undefined {
   return (globalThis as IGlobalWithOptionalChrome).chrome?.runtime;
 }
 
+/** New-tab and other extension HTML documents use these schemes (not `http:`). */
+function isPrivilegedFetchExtensionSurface(): boolean {
+  try {
+    if (typeof globalThis.location?.protocol !== "string") return false;
+    const p = globalThis.location.protocol;
+    return p === "chrome-extension:" || p === "moz-extension:" || p === "safari-web-extension:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Extension ID may appear on `chrome.runtime` even when `webextension-polyfill`’s
  * `browser.runtime.id` is missing in some Chromium/Edge builds — falling back to
@@ -124,7 +135,9 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | undefined
 
 function useBackgroundPrivilegedFetch(): boolean {
   try {
-    return Boolean(getExtensionRuntimeId() && hasExtensionSendMessage());
+    if (!hasExtensionSendMessage()) return false;
+    if (isPrivilegedFetchExtensionSurface()) return true;
+    return Boolean(getExtensionRuntimeId());
   } catch {
     return false;
   }
