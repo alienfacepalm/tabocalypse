@@ -2255,7 +2255,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           <HudTip tip="Open Tabocalypse settings">
             <button
               type="button"
-              className="btn primary icon-only"
+              className={openSettings ? "btn primary icon-only" : "btn ghost icon-only"}
+              aria-expanded={openSettings}
               aria-label="Settings"
               onClick={() => setOpenSettings(true)}
             >
