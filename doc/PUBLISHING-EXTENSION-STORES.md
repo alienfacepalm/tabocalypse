@@ -1,6 +1,6 @@
 # Publishing Tabocalypse to extension stores
 
-This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, **Microsoft Edge Add-ons**, and **Firefox Add-ons (AMO)**. It complements the short [store listing checklist](STORE-LISTING.md).
+This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, **Microsoft Edge Add-ons**, **Firefox Add-ons (AMO)**, and **Safari** (via **Mac App Store** / App Store Connect). It complements the short [store listing checklist](STORE-LISTING.md).
 
 ## Before you publish (all stores)
 
@@ -21,7 +21,7 @@ pnpm run build:firefox   # Firefox → apps/extension/output/firefox-mv2/
 pnpm run zip             # Store-style zip (WXT); confirm output path in the CLI log
 ```
 
-For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload.
+For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging starts from that same **`chrome-mv3`** folder using Apple’s tools (see [Safari (Mac App Store)](#safari-mac-app-store)).
 
 ## Chrome Web Store
 
@@ -58,6 +58,16 @@ Official: [Publish your extension to the Microsoft Edge Add-ons store](https://l
 3. **Source code** — If you minify or bundle, Mozilla may ask for build instructions and unobfuscated source; keep the repo reproducible (`pnpm install`, `pnpm run build`).
 
 Official: [Distribute your extension](https://extensionworkshop.com/documentation/publish/).
+
+## Safari (Mac App Store)
+
+This repo does **not** emit a separate WXT `output/safari-*` directory. Ship Safari from the **Chrome MV3** build:
+
+1. Run **`pnpm run build`** so `apps/extension/output/chrome-mv3/` is up to date.
+2. On a **Mac**, use Apple’s **`safari-web-extension-converter`** (from Xcode / Command Line Tools) to turn that folder into a **Safari Web Extension** Xcode project — same idea as local testing in [Install and test locally](INSTALL-LOCAL-TESTING.md#safari).
+3. Complete **signing**, **notarization** (if you distribute outside the store), and **App Store Connect** listing steps per Apple’s current documentation.
+
+Official: [Safari Web Extensions](https://developer.apple.com/safari/extensions/).
 
 ## Edge cases and policy tips
 

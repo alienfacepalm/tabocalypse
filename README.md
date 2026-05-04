@@ -1,6 +1,6 @@
 # Tabocalypse
 
-**by AlienFacepalm** — Cross-browser (Chrome / Edge / Firefox) Manifest V3 extension that replaces the new tab page with utility widgets, curated humor packs, optional user-imported packs, declarative plugins, alarms/notifications, and BYO OpenAI-compatible API testing.
+**by AlienFacepalm** — Cross-browser (Chrome / Edge / Firefox / Safari) Manifest V3 extension that replaces the new tab page with utility widgets, curated humor packs, optional user-imported packs, declarative plugins, alarms/notifications, and BYO OpenAI-compatible API testing.
 
 **Agents / AI:** follow [AGENTS.md](AGENTS.md) and [`.cursor/rules/project-conventions.mdc`](.cursor/rules/project-conventions.mdc) (always-on Cursor rules).
 
@@ -11,7 +11,7 @@ Guides live under **`doc/`**. Start at [doc/README.md](doc/README.md); every mar
 - [doc/README.md](doc/README.md) — index by audience
 - [doc/DEVELOPMENT.md](doc/DEVELOPMENT.md) — contributor setup and commands
 - [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) — load unpacked without a dev setup
-- [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md) — Chrome, Edge, Firefox (AMO)
+- [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md) — Chrome, Edge, Firefox (AMO), Safari (Mac App Store)
 - [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md) — packages and extension surfaces
 - [doc/CONTRIBUTING.md](doc/CONTRIBUTING.md) — PR workflow and checks
 - [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md) — common issues
@@ -41,7 +41,7 @@ pnpm run dev          # Chrome (default)
 pnpm run dev:firefox
 ```
 
-Load **Load unpacked** from [`apps/extension/output/chrome-mv3`](apps/extension/output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project).
+Load **Load unpacked** from [`apps/extension/output/chrome-mv3`](apps/extension/output/chrome-mv3) (Chrome/Edge MV3) or `apps/extension/output/firefox-mv2` (Firefox; WXT emits MV2 for Firefox in this project). **Safari** does not load that folder directly: use the Chrome MV3 output with Apple’s **Safari Web Extension** converter on macOS, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
 
 Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) if you use WXT env vars (or follow WXT’s env file discovery for that app).
 
@@ -87,7 +87,7 @@ See [doc/PLUGIN-SCHEMA.md](doc/PLUGIN-SCHEMA.md) and the sample in [`packages/ex
 
 ## Store listings
 
-See **[doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md)** for Chrome, Edge, and Firefox (AMO), plus versioning and privacy alignment. Short checklist: [doc/STORE-LISTING.md](doc/STORE-LISTING.md). Use [PRIVACY.md](PRIVACY.md) as the basis for store privacy fields.
+See **[doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md)** for Chrome, Edge, Firefox (AMO), and Safari (Mac App Store), plus versioning and privacy alignment. Short checklist: [doc/STORE-LISTING.md](doc/STORE-LISTING.md). Use [PRIVACY.md](PRIVACY.md) as the basis for store privacy fields.
 
 Before publishing to AMO, set a real add-on ID in [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) under `browser_specific_settings.gecko.id` (replace `tabocalypse@alienfacepalm.invalid`).
 

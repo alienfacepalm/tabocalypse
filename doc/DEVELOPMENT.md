@@ -41,11 +41,14 @@ All commands run from the **repo root** unless noted.
 | `pnpm run format`        | Prettier write on tracked file types                                                   |
 | `pnpm run test`          | Vitest                                                                                 |
 
+There is no `pnpm run build:safari` in this repo. **Safari** uses the **`chrome-mv3`** output with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
+
 ## Load the extension during development
 
 1. Run `pnpm run dev` (or `pnpm run build` for a static folder).
 2. **Chrome / Edge:** `chrome://extensions` → **Developer mode** → **Load unpacked** → choose `apps/extension/output/chrome-mv3`.
 3. **Firefox:** `about:debugging` → **This Firefox** → **Load Temporary Add-on** → pick `manifest.json` inside the Firefox output folder under `apps/extension/output/`.
+4. **Safari:** On macOS, convert `apps/extension/output/chrome-mv3` and run from Xcode — same links as above.
 
 After code changes, use the browser’s **reload extension** control; for `dev`, WXT may rebuild — reload again if the new tab page looks stale.
 

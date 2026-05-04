@@ -6,7 +6,7 @@ Start here for **development**, **local testing** (including non-developers), an
 | ---------------------------------------------------------------- | ----------------------------------------------------------------- |
 | [Development guide](DEVELOPMENT.md)                              | Contributors: setup, commands, repo layout, quality checks        |
 | [Install and test locally](INSTALL-LOCAL-TESTING.md)             | Anyone trying the extension on their machine without writing code |
-| [Publishing to extension stores](PUBLISHING-EXTENSION-STORES.md) | Maintainers shipping to Chrome, Edge, and Firefox                 |
+| [Publishing to extension stores](PUBLISHING-EXTENSION-STORES.md) | Maintainers shipping to Chrome, Edge, Firefox, and Safari         |
 | [Architecture overview](ARCHITECTURE.md)                         | High-level map of packages and extension surfaces                 |
 | [Contributing](CONTRIBUTING.md)                                  | PR expectations and checks                                        |
 | [Troubleshooting](TROUBLESHOOTING.md)                            | Common load / build / pnpm issues                                 |

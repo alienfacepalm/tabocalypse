@@ -7,7 +7,7 @@
 
 ## New tab still shows the default page
 
-- Confirm the extension is **enabled** on `chrome://extensions` or `edge://extensions`.
+- Confirm the extension is **enabled** on `chrome://extensions` or `edge://extensions` (Chromium). On **Safari**, enable the extension under **Settings → Safari → Extensions** after loading it from your Xcode / converter workflow.
 - Click **Reload** on the extension card after installing a new build.
 - Some browsers cache the new tab page — close all new-tab tabs and open a fresh one.
 
