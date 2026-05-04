@@ -16,8 +16,9 @@ Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant
 ## Validate
 
 1. From the **repo root**: **`pnpm run check`** (format check, ESLint, tests, SDK + extension `tsc`).
-2. If you changed **`apps/extension`**, WXT config, manifest, or anything that affects packaging: also run **`pnpm run build`**; if Firefox behavior or gecko settings changed, add **`pnpm run build:firefox`**.
-3. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
+2. After **meaningful / major updates**, also run **`pnpm run build`** to ensure the extension still packages cleanly. You may skip this only when the change is **clearly unrelated** to the extension (e.g. isolated `packages/plugin-sdk` internal refactors with no impact on `apps/extension`, or non-shipped internal notes).
+3. If Firefox behavior or gecko settings changed (or you touched Firefox-specific build paths), also run **`pnpm run build:firefox`**.
+4. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
 
 ## Commit
 
