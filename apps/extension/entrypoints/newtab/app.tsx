@@ -116,8 +116,7 @@ function revokeObjectUrlMaybe(url: string | null): void {
 }
 
 function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
-  const { mid, end } = themeGradientStops(s.themeMode);
-  const grad = `linear-gradient(145deg, ${s.backgroundSolid} 0%, ${mid} 45%, ${end} 100%)`;
+  const grad = `linear-gradient(145deg, ${s.backgroundSolid} 0%, ${s.backgroundGradientMid} 45%, ${s.backgroundGradientEnd} 100%)`;
 
   if (s.backgroundKind === "bing") {
     const u = extras?.bingImageUrl;
@@ -1092,16 +1091,103 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </p>
                     ) : null}
 
-                    <label className="block">
-                      Solid color
-                      <input
-                        type="color"
-                        value={s.backgroundSolid}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, backgroundSolid: e.target.value }))
-                        }
-                      />
-                    </label>
+                    {s.backgroundKind === "solid" || s.backgroundKind === "gradient" ? (
+                      <div
+                        className="mt-3 flex flex-col gap-3"
+                        role="group"
+                        aria-label="Background colors"
+                      >
+                        {s.backgroundKind === "solid" ? (
+                          <div className="color-accent-row">
+                            <label htmlFor="tabocalypse-bg-solid">Background color</label>
+                            <HudTip tip="Solid fill for the new tab behind the HUD">
+                              <input
+                                id="tabocalypse-bg-solid"
+                                type="color"
+                                className="color-input-hud"
+                                aria-label="Background color"
+                                value={s.backgroundSolid}
+                                onChange={(e) =>
+                                  void persist((cur) => ({
+                                    ...cur,
+                                    backgroundSolid: coerceThemeHex(
+                                      e.target.value,
+                                      cur.backgroundSolid,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </HudTip>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="color-accent-row">
+                              <label htmlFor="tabocalypse-bg-grad-start">Gradient start</label>
+                              <HudTip tip="Top-left color of the diagonal background blend">
+                                <input
+                                  id="tabocalypse-bg-grad-start"
+                                  type="color"
+                                  className="color-input-hud"
+                                  aria-label="Gradient start color"
+                                  value={s.backgroundSolid}
+                                  onChange={(e) =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      backgroundSolid: coerceThemeHex(
+                                        e.target.value,
+                                        cur.backgroundSolid,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </HudTip>
+                            </div>
+                            <div className="color-accent-row">
+                              <label htmlFor="tabocalypse-bg-grad-mid">Gradient middle</label>
+                              <HudTip tip="Mid blend along the diagonal (about halfway)">
+                                <input
+                                  id="tabocalypse-bg-grad-mid"
+                                  type="color"
+                                  className="color-input-hud"
+                                  aria-label="Gradient middle color"
+                                  value={s.backgroundGradientMid}
+                                  onChange={(e) =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      backgroundGradientMid: coerceThemeHex(
+                                        e.target.value,
+                                        cur.backgroundGradientMid,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </HudTip>
+                            </div>
+                            <div className="color-accent-row">
+                              <label htmlFor="tabocalypse-bg-grad-end">Gradient end</label>
+                              <HudTip tip="Bottom-right color of the diagonal background blend">
+                                <input
+                                  id="tabocalypse-bg-grad-end"
+                                  type="color"
+                                  className="color-input-hud"
+                                  aria-label="Gradient end color"
+                                  value={s.backgroundGradientEnd}
+                                  onChange={(e) =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      backgroundGradientEnd: coerceThemeHex(
+                                        e.target.value,
+                                        cur.backgroundGradientEnd,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </HudTip>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </details>
 
@@ -1506,12 +1592,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           try {
                             const parsed = JSON.parse(String(reader.result)) as Partial<ISettings>;
                             const d = defaultSettings();
+                            const importThemeMode = coerceThemeMode(parsed.themeMode, d.themeMode);
+                            const importGradFallback = themeGradientStops(importThemeMode);
                             const merged: ISettings = {
                               ...d,
                               ...parsed,
                               version: 1,
                               widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
-                              themeMode: coerceThemeMode(parsed.themeMode, d.themeMode),
+                              themeMode: importThemeMode,
                               themePalette: coerceThemePalette(parsed.themePalette, d.themePalette),
                               themeCustomAccent: coerceThemeHex(
                                 parsed.themeCustomAccent,
@@ -1520,6 +1608,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               themeCustomAccent2: coerceThemeHex(
                                 parsed.themeCustomAccent2,
                                 d.themeCustomAccent2,
+                              ),
+                              backgroundSolid: coerceThemeHex(
+                                parsed.backgroundSolid,
+                                d.backgroundSolid,
+                              ),
+                              backgroundGradientMid: coerceThemeHex(
+                                parsed.backgroundGradientMid,
+                                importGradFallback.mid,
+                              ),
+                              backgroundGradientEnd: coerceThemeHex(
+                                parsed.backgroundGradientEnd,
+                                importGradFallback.end,
                               ),
                             };
                             void persist(merged);

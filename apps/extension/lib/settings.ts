@@ -7,6 +7,7 @@ import {
   coerceThemePalette,
   DEFAULT_THEME_CUSTOM_ACCENT,
   DEFAULT_THEME_CUSTOM_ACCENT2,
+  themeGradientStops,
   type TThemeMode,
   type TThemePalette,
 } from "./theme";
@@ -74,6 +75,10 @@ export interface ISettings {
   /** If true and the chosen background kind supports it, the background rotates over time. */
   backgroundRotate: boolean;
   backgroundSolid: string;
+  /** Middle stop for the new-tab gradient (145deg, 45%). */
+  backgroundGradientMid: string;
+  /** End stop for the new-tab gradient (145deg, 100%). */
+  backgroundGradientEnd: string;
   userBackgroundDataUrl: string | null;
   userBackgroundDataUrls: string[];
   openWeatherApiKey: string;
@@ -145,6 +150,8 @@ export interface ISyncSlice {
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
   backgroundSolid: string;
+  backgroundGradientMid: string;
+  backgroundGradientEnd: string;
   debugPluginSource: boolean;
 }
 
@@ -215,6 +222,8 @@ export function defaultSettings(): ISettings {
     backgroundKind: "gradient",
     backgroundRotate: false,
     backgroundSolid: "#0f0f12",
+    backgroundGradientMid: themeGradientStops("dark").mid,
+    backgroundGradientEnd: themeGradientStops("dark").end,
     userBackgroundDataUrl: null,
     userBackgroundDataUrls: [],
     openWeatherApiKey: "",
@@ -253,6 +262,8 @@ function toSync(s: ISettings): ISyncSlice {
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
     backgroundSolid: s.backgroundSolid,
+    backgroundGradientMid: s.backgroundGradientMid,
+    backgroundGradientEnd: s.backgroundGradientEnd,
     debugPluginSource: s.debugPluginSource,
   };
 }
@@ -289,10 +300,12 @@ function mergeSettings(
       : legacySingle
         ? [legacySingle]
         : [];
+  const resolvedThemeMode = coerceThemeMode(sync?.themeMode, d.themeMode);
+  const bgGradientFallback = themeGradientStops(resolvedThemeMode);
   return {
     version: 1,
     preset: sync?.preset ?? d.preset,
-    themeMode: coerceThemeMode(sync?.themeMode, d.themeMode),
+    themeMode: resolvedThemeMode,
     themePalette: coerceThemePalette(sync?.themePalette, d.themePalette),
     themeCustomAccent: coerceThemeHex(sync?.themeCustomAccent, d.themeCustomAccent),
     themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
@@ -313,6 +326,8 @@ function mergeSettings(
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
     backgroundRotate: local?.backgroundRotate ?? d.backgroundRotate,
     backgroundSolid: sync?.backgroundSolid ?? d.backgroundSolid,
+    backgroundGradientMid: coerceThemeHex(sync?.backgroundGradientMid, bgGradientFallback.mid),
+    backgroundGradientEnd: coerceThemeHex(sync?.backgroundGradientEnd, bgGradientFallback.end),
     debugPluginSource: sync?.debugPluginSource ?? d.debugPluginSource,
     userBackgroundDataUrl: legacySingle,
     userBackgroundDataUrls: legacyToList,
