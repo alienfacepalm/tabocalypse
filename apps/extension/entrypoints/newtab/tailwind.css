@@ -65,6 +65,14 @@
     backdrop-filter: blur(12px);
   }
 
+  .header-search {
+    @apply hidden flex-1 px-8 lg:block;
+  }
+
+  .header-search input {
+    @apply border border-border bg-black/40 text-text;
+  }
+
   .title {
     @apply m-0 font-display text-2xl font-black uppercase tracking-widest text-accent italic;
   }
@@ -73,8 +81,24 @@
     @apply mt-1 text-[0.7rem] uppercase tracking-tight text-muted;
   }
 
-  .widget-grid {
-    @apply grid flex-1 grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6;
+  .hud-main {
+    @apply flex-1 pt-4;
+  }
+
+  .hud-grid {
+    @apply grid grid-cols-1 gap-6 lg:grid-cols-12;
+  }
+
+  .hud-left {
+    @apply lg:col-span-3;
+  }
+
+  .hud-center {
+    @apply lg:col-span-6;
+  }
+
+  .hud-right {
+    @apply lg:col-span-3;
   }
 
   .card {

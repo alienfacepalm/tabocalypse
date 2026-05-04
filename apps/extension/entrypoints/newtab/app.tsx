@@ -861,6 +861,7 @@ export default function App() {
             <p className="tagline">SYSTEM_STABLE: FALSE</p>
           </div>
         </div>
+        {s.widgets.search ? <SearchWidget engine={s.searchEngine} variant="header" /> : null}
         <button
           type="button"
           className="btn primary icon-only"
@@ -886,23 +887,32 @@ export default function App() {
         </div>
       ) : null}
 
-      <main className="widget-grid">
-        {s.widgets.search ? <SearchWidget engine={s.searchEngine} /> : null}
-        {s.widgets.clock ? <ClockWidget humor={humorCtx} /> : null}
-        {s.widgets.notes ? (
-          <NotesWidget
-            value={s.notesText}
-            onChange={(notesText) => void persist({ ...s, notesText })}
-          />
-        ) : null}
-        {s.widgets.todo ? (
-          <TodoWidget items={s.todos} onChange={(todos) => void persist({ ...s, todos })} />
-        ) : null}
-        {s.widgets.weather ? <WeatherWidget lat={s.weatherLat} lon={s.weatherLon} /> : null}
-        {s.widgets.topSites ? <TopSitesWidget /> : null}
-        {s.widgets.bookmarksStrip ? <BookmarksWidget /> : null}
-        {s.widgets.tabGuilt ? <TabGuilt /> : null}
-        <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
+      <main className="hud-main">
+        <div className="hud-grid">
+          <div className="hud-left space-y-6">
+            {s.widgets.todo ? (
+              <TodoWidget items={s.todos} onChange={(todos) => void persist({ ...s, todos })} />
+            ) : null}
+            {s.widgets.clock ? <ClockWidget humor={humorCtx} /> : null}
+            {s.widgets.tabGuilt ? <TabGuilt /> : null}
+          </div>
+
+          <div className="hud-center space-y-6">
+            {s.widgets.weather ? <WeatherWidget lat={s.weatherLat} lon={s.weatherLon} /> : null}
+            {s.widgets.topSites ? <TopSitesWidget /> : null}
+            {s.widgets.bookmarksStrip ? <BookmarksWidget /> : null}
+            <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
+          </div>
+
+          <div className="hud-right space-y-6">
+            {s.widgets.notes ? (
+              <NotesWidget
+                value={s.notesText}
+                onChange={(notesText) => void persist({ ...s, notesText })}
+              />
+            ) : null}
+          </div>
+        </div>
       </main>
 
       <footer className="footer muted sm">

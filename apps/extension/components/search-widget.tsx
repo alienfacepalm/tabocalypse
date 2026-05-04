@@ -9,7 +9,13 @@ const ENGINES: Record<ISettings["searchEngine"], (q: string) => string> = {
   bing: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
 };
 
-export function SearchWidget({ engine }: { engine: ISettings["searchEngine"] }) {
+export function SearchWidget({
+  engine,
+  variant = "card",
+}: {
+  engine: ISettings["searchEngine"];
+  variant?: "card" | "header";
+}) {
   const [q, setQ] = useState("");
   const go = () => {
     const t = q.trim();
@@ -22,32 +28,39 @@ export function SearchWidget({ engine }: { engine: ISettings["searchEngine"] }) 
     }
     setQ("");
   };
+
+  const form = (
+    <form
+      className="row"
+      onSubmit={(e) => {
+        e.preventDefault();
+        go();
+      }}
+    >
+      <div className="relative min-w-0 flex-1">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
+          USER_LOG@TAB:&gt;
+        </span>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={`What useless trivia are we looking up now? (${engine})`}
+          className="w-full pl-36"
+          aria-label="Search query"
+        />
+      </div>
+      <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">
+        <Search size={20} strokeWidth={2} aria-hidden />
+      </button>
+    </form>
+  );
+
+  if (variant === "header") return <div className="header-search">{form}</div>;
+
   return (
     <section className="card">
       <h3>Search</h3>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          go();
-        }}
-      >
-        <div className="relative min-w-0 flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
-            USER_LOG@TAB:&gt;
-          </span>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={`What useless trivia are we looking up now? (${engine})`}
-            className="w-full pl-36"
-            aria-label="Search query"
-          />
-        </div>
-        <button type="submit" className="btn primary icon-only" aria-label="Search" title="Search">
-          <Search size={20} strokeWidth={2} aria-hidden />
-        </button>
-      </form>
+      {form}
     </section>
   );
 }
