@@ -30,17 +30,62 @@ const {
   defaultSettings,
   applyPreset,
   DEFAULT_WIDGETS,
+  mergeWidgets,
   WIDGET_LABELS,
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
   resolveUserBackgroundImage,
   stableUserBackgroundIdFromDataUrl,
 } = await import("./settings");
 
+const { settingsBackgroundGradientCss } = await import("./background-gradient-css");
+
 describe("WIDGET_LABELS", () => {
   it("defines a non-empty user-facing label for every widget key", () => {
     for (const key of Object.keys(DEFAULT_WIDGETS) as (keyof typeof DEFAULT_WIDGETS)[]) {
       expect(WIDGET_LABELS[key]?.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("mergeWidgets", () => {
+  it("merges known keys and ignores removed or unknown widget keys", () => {
+    const m = mergeWidgets({
+      clock: false,
+      humorBanner: true,
+      productivityGag: true,
+    });
+    expect(m.clock).toBe(false);
+    expect(m.humorBanner).toBe(true);
+    expect(Object.keys(m).sort()).toEqual(Object.keys(DEFAULT_WIDGETS).sort());
+  });
+});
+
+describe("settingsBackgroundGradientCss", () => {
+  it("builds linear two-stop CSS with angle", () => {
+    const s = {
+      ...defaultSettings(),
+      backgroundGradientShape: "linear" as const,
+      backgroundGradientAngleDeg: 90,
+      backgroundSolid: "#000000",
+      backgroundGradientEnd: "#ffffff",
+    };
+    expect(settingsBackgroundGradientCss(s)).toBe(
+      "linear-gradient(90deg, #000000 0%, #ffffff 100%)",
+    );
+  });
+
+  it("builds radial CSS at configured center", () => {
+    const s = {
+      ...defaultSettings(),
+      backgroundGradientShape: "radial" as const,
+      backgroundGradientCenterXPct: 25,
+      backgroundGradientCenterYPct: 75,
+      backgroundSolid: "#111111",
+      backgroundGradientEnd: "#222222",
+    };
+    expect(settingsBackgroundGradientCss(s)).toBe(
+      "radial-gradient(circle at 25% 75%, #111111, #222222)",
+    );
   });
 });
 
@@ -102,11 +147,11 @@ describe("applyPreset", () => {
     expect(next.widgets.search).toBe(true);
   });
 
-  it("chaos preset enables spicy intensity and productivity gag", () => {
+  it("chaos preset enables spicy intensity and humor banner", () => {
     const s = applyPreset("chaos", defaultSettings());
     expect(s.preset).toBe("chaos");
     expect(s.humorIntensity).toBe("spicy");
-    expect(s.widgets.productivityGag).toBe(true);
+    expect(s.widgets.humorBanner).toBe(true);
   });
 });
 

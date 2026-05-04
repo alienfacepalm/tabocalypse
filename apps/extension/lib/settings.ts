@@ -33,8 +33,7 @@ export type TWidgetKey =
   | "topSites"
   | "bookmarksStrip"
   | "tabGuilt"
-  | "humorBanner"
-  | "productivityGag";
+  | "humorBanner";
 
 export interface IImportedUserPack {
   id: string;
@@ -79,6 +78,27 @@ export function coerceBackgroundRotateMinutes(n: unknown, fallback: number): num
     BACKGROUND_ROTATE_MINUTES_MAX,
     Math.max(BACKGROUND_ROTATE_MINUTES_MIN, Math.round(n)),
   );
+}
+
+export type TBackgroundGradientShape = "linear" | "radial";
+
+export function coerceBackgroundGradientShape(
+  raw: unknown,
+  fallback: TBackgroundGradientShape,
+): TBackgroundGradientShape {
+  return raw === "radial" ? "radial" : raw === "linear" ? "linear" : fallback;
+}
+
+export function coerceBackgroundGradientAngleDeg(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) {
+    return ((Math.round(fallback) % 360) + 360) % 360;
+  }
+  return ((Math.round(n) % 360) + 360) % 360;
+}
+
+export function coerceBackgroundGradientCenterPct(n: unknown, fallback: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return Math.min(100, Math.max(0, n));
 }
 
 function clampBackgroundPositionPct(n: unknown, fallback: number): number {
@@ -182,10 +202,18 @@ export interface ISettings {
   /** Minutes between uploaded-photo changes while rotation is on (local). */
   backgroundRotateMinutesUser: number;
   backgroundSolid: string;
-  /** Middle stop for the new-tab gradient (145deg, 45%). */
+  /** Legacy middle stop; kept for import/sync compatibility (two-stop CSS uses `backgroundSolid` + `backgroundGradientEnd` only). */
   backgroundGradientMid: string;
-  /** End stop for the new-tab gradient (145deg, 100%). */
+  /** Second color for solid-gradient and radial-gradient backgrounds. */
   backgroundGradientEnd: string;
+  /** Linear uses `backgroundGradientAngleDeg`; radial uses center percentages. */
+  backgroundGradientShape: TBackgroundGradientShape;
+  /** Clockwise CSS angle for `linear-gradient` when `backgroundGradientShape` is `linear` (0–359). */
+  backgroundGradientAngleDeg: number;
+  /** Horizontal center for `radial-gradient` when shape is `radial` (0–100). */
+  backgroundGradientCenterXPct: number;
+  /** Vertical center for `radial-gradient` when shape is `radial` (0–100). */
+  backgroundGradientCenterYPct: number;
   userBackgroundDataUrl: string | null;
   userBackgroundDataUrls: string[];
   /** Structured uploads with per-image framing; mirrors legacy URL fields on save/load. */
@@ -265,6 +293,10 @@ export interface ISyncSlice {
   backgroundSolid: string;
   backgroundGradientMid: string;
   backgroundGradientEnd: string;
+  backgroundGradientShape: TBackgroundGradientShape;
+  backgroundGradientAngleDeg: number;
+  backgroundGradientCenterXPct: number;
+  backgroundGradientCenterYPct: number;
   debugPluginSource: boolean;
 }
 
@@ -301,8 +333,20 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   bookmarksStrip: false,
   tabGuilt: false,
   humorBanner: true,
-  productivityGag: false,
 };
+
+/** Merge stored widget toggles into defaults; ignores unknown keys (e.g. removed widgets). */
+export function mergeWidgets(
+  partial: Partial<Record<string, unknown>> | undefined,
+): Record<TWidgetKey, boolean> {
+  const base = { ...DEFAULT_WIDGETS };
+  if (!partial || typeof partial !== "object") return base;
+  for (const key of Object.keys(base) as TWidgetKey[]) {
+    const v = partial[key];
+    if (typeof v === "boolean") base[key] = v;
+  }
+  return base;
+}
 
 /** User-visible names for the Widgets settings list (storage keys stay `TWidgetKey`). */
 export const WIDGET_LABELS: Record<TWidgetKey, string> = {
@@ -315,7 +359,6 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   bookmarksStrip: "Bookmarks strip",
   tabGuilt: "Tab guilt",
   humorBanner: "Humor banner",
-  productivityGag: "Productivity gag",
 };
 
 export function defaultSettings(): ISettings {
@@ -344,6 +387,10 @@ export function defaultSettings(): ISettings {
     backgroundSolid: "#0f0f12",
     backgroundGradientMid: themeGradientStops("dark").mid,
     backgroundGradientEnd: themeGradientStops("dark").end,
+    backgroundGradientShape: "linear",
+    backgroundGradientAngleDeg: 145,
+    backgroundGradientCenterXPct: 50,
+    backgroundGradientCenterYPct: 50,
     userBackgroundDataUrl: null,
     userBackgroundDataUrls: [],
     userBackgroundImages: [],
@@ -387,6 +434,10 @@ function toSync(s: ISettings): ISyncSlice {
     backgroundSolid: s.backgroundSolid,
     backgroundGradientMid: s.backgroundGradientMid,
     backgroundGradientEnd: s.backgroundGradientEnd,
+    backgroundGradientShape: s.backgroundGradientShape,
+    backgroundGradientAngleDeg: s.backgroundGradientAngleDeg,
+    backgroundGradientCenterXPct: s.backgroundGradientCenterXPct,
+    backgroundGradientCenterYPct: s.backgroundGradientCenterYPct,
     debugPluginSource: s.debugPluginSource,
   };
 }
@@ -476,7 +527,7 @@ function mergeSettings(
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
-    widgets: { ...d.widgets, ...(sync?.widgets ?? {}) },
+    widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
     searchEngine: sync?.searchEngine ?? d.searchEngine,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
@@ -493,6 +544,22 @@ function mergeSettings(
     backgroundSolid: sync?.backgroundSolid ?? d.backgroundSolid,
     backgroundGradientMid: coerceThemeHex(sync?.backgroundGradientMid, bgGradientFallback.mid),
     backgroundGradientEnd: coerceThemeHex(sync?.backgroundGradientEnd, bgGradientFallback.end),
+    backgroundGradientShape: coerceBackgroundGradientShape(
+      sync?.backgroundGradientShape,
+      d.backgroundGradientShape,
+    ),
+    backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
+      sync?.backgroundGradientAngleDeg,
+      d.backgroundGradientAngleDeg,
+    ),
+    backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
+      sync?.backgroundGradientCenterXPct,
+      d.backgroundGradientCenterXPct,
+    ),
+    backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
+      sync?.backgroundGradientCenterYPct,
+      d.backgroundGradientCenterYPct,
+    ),
     debugPluginSource: sync?.debugPluginSource ?? d.debugPluginSource,
     userBackgroundDataUrl,
     userBackgroundDataUrls,
@@ -547,7 +614,6 @@ export function applyPreset(preset: ISettings["preset"], s: ISettings): ISetting
     next.widgets = {
       ...s.widgets,
       humorBanner: false,
-      productivityGag: false,
       search: true,
       clock: true,
     };
@@ -558,7 +624,7 @@ export function applyPreset(preset: ISettings["preset"], s: ISettings): ISetting
   } else {
     next.humorEnabled = true;
     next.humorIntensity = "spicy";
-    next.widgets = { ...s.widgets, humorBanner: true, productivityGag: true };
+    next.widgets = { ...s.widgets, humorBanner: true };
   }
   return next;
 }

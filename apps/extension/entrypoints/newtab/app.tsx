@@ -10,6 +10,7 @@ import {
   Flame,
   FolderUp,
   Heart,
+  Image,
   ImagePlus,
   Images,
   LayoutGrid,
@@ -46,26 +47,29 @@ import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weather/weather-units";
+import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
-  type THumorIntensity,
+  applyPreset,
+  BACKGROUND_ROTATE_MINUTES_MAX,
+  BACKGROUND_ROTATE_MINUTES_MIN,
+  coerceBackgroundGradientAngleDeg,
+  coerceBackgroundGradientCenterPct,
+  coerceBackgroundGradientShape,
+  coerceBackgroundRotateMinutes,
+  DEFAULT_BACKGROUND_ROTATE_MINUTES,
+  defaultSettings,
   type IHudPanelPosition,
   type ISettings,
+  isTabocalypseSettingsStorageChange,
   type IUserBackgroundImage,
+  loadSettings,
+  mergeWidgets,
+  resolveUserBackgroundImage,
+  saveSettings,
+  type THumorIntensity,
   type THudPanelId,
   type TWidgetKey,
   WIDGET_LABELS,
-  BACKGROUND_ROTATE_MINUTES_MAX,
-  BACKGROUND_ROTATE_MINUTES_MIN,
-  DEFAULT_BACKGROUND_ROTATE_MINUTES,
-  coerceBackgroundRotateMinutes,
-  resolveUserBackgroundImage,
-} from "../../lib/settings";
-import {
-  applyPreset,
-  defaultSettings,
-  isTabocalypseSettingsStorageChange,
-  loadSettings,
-  saveSettings,
 } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { IHumorContext } from "../../lib/humor/engine";
@@ -109,6 +113,13 @@ const BG_MAX_EDGE_PX = 2560;
 /** Shown in Settings — must stay in sync with BG_MAX / BG_TOTAL_MAX. */
 const BG_MAX_LABEL = "1.5 MB";
 const BG_TOTAL_LABEL = "6 MB";
+
+/** Value for `input type="datetime-local"` and its `min` attribute (local time, minute precision). */
+function formatDatetimeLocalFromDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 
 type TBackgroundStyleExtras = {
@@ -122,7 +133,7 @@ function revokeObjectUrlMaybe(url: string | null): void {
 }
 
 function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.CSSProperties {
-  const grad = `linear-gradient(145deg, ${s.backgroundSolid} 0%, ${s.backgroundGradientMid} 45%, ${s.backgroundGradientEnd} 100%)`;
+  const grad = settingsBackgroundGradientCss(s);
 
   if (s.backgroundKind === "bing") {
     const u = extras?.bingImageUrl;
@@ -206,7 +217,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [importErr, setImportErr] = useState<string | null>(null);
   const [pluginValidateLog, setPluginValidateLog] = useState<string>("");
   const [aiResult, setAiResult] = useState<string | null>(null);
-  const [prodScore] = useState(() => Math.floor(20 + Math.random() * 80));
   const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
   const [bingPaintUrl, setBingPaintUrl] = useState<string | null>(null);
   const [bingFetchErr, setBingFetchErr] = useState<string | null>(null);
@@ -238,6 +248,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     bookmarks: false,
     tabs: false,
   });
+  const [alarmWhen, setAlarmWhen] = useState("");
+  const [alarmMessage, setAlarmMessage] = useState("");
+  const alarmDatetimeMin = useMemo(() => formatDatetimeLocalFromDate(new Date()), [openSettings]);
   const supportActions = useMemo(() => getSupportActions(), []);
   const bingPaintUrlRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
@@ -1014,10 +1027,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   const scheduleAlarm = async () => {
-    const whenEl = document.getElementById("alarm-when") as HTMLInputElement | null;
-    const msgEl = document.getElementById("alarm-msg") as HTMLInputElement | null;
-    if (!whenEl?.value || !msgEl) return;
-    const whenMs = new Date(whenEl.value).getTime();
+    if (!alarmWhen) return;
+    const whenMs = new Date(alarmWhen).getTime();
     if (Number.isNaN(whenMs) || whenMs < Date.now()) {
       setImportErr("Pick a future time.");
       return;
@@ -1028,12 +1039,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const cur = await browser.storage.local.get(metaKey);
     const meta = {
       ...(typeof cur[metaKey] === "object" && cur[metaKey] ? cur[metaKey] : {}),
-      [name]: msgEl.value || "Tabocalypse alarm",
+      [name]: alarmMessage.trim() || "Tabocalypse alarm",
     };
     await browser.storage.local.set({ [metaKey]: meta });
     await browser.alarms.create(name, { when: whenMs });
     setImportErr(null);
-    msgEl.value = "";
+    setAlarmMessage("");
+    setAlarmWhen("");
   };
 
   const runByoAiTest = async () => {
@@ -1434,21 +1446,59 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <Paintbrush size={18} strokeWidth={2} aria-hidden />
                         <span>Gradient</span>
                       </button>
-                      <label
-                        className={
-                          s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
+                      <HudTip
+                        tip={
+                          s.userBackgroundImages.length > 0
+                            ? "Use your saved photo library as the new tab background"
+                            : "Add at least one photo before you can pick this background"
                         }
                       >
-                        <ImagePlus size={18} strokeWidth={2} aria-hidden />
-                        <span>Upload image(s)</span>
-                        <input
-                          hidden
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => void onPickBackgrounds(e.target.files)}
-                        />
-                      </label>
+                        <button
+                          type="button"
+                          className={
+                            s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
+                          }
+                          aria-pressed={s.backgroundKind === "image"}
+                          disabled={s.userBackgroundImages.length === 0}
+                          onClick={() =>
+                            void persist((cur) => {
+                              if (cur.userBackgroundImages.length === 0) return cur;
+                              const primary =
+                                cur.userBackgroundImages.find(
+                                  (row) => row.id === cur.userBackgroundActiveId,
+                                ) ?? cur.userBackgroundImages[0];
+                              return {
+                                ...cur,
+                                backgroundKind: "image",
+                                userBackgroundActiveId: primary?.id ?? cur.userBackgroundActiveId,
+                                userBackgroundDataUrl: primary?.dataUrl ?? null,
+                                userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                  (row) => row.dataUrl,
+                                ),
+                              };
+                            })
+                          }
+                        >
+                          <Image size={18} strokeWidth={2} aria-hidden />
+                          <span>My photos</span>
+                        </button>
+                      </HudTip>
+                      <HudTip tip="Pick images from your device to add to your photo library">
+                        <label className="btn has-icon">
+                          <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                          <span>Add photos</span>
+                          <input
+                            hidden
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => {
+                              void onPickBackgrounds(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      </HudTip>
                       <button
                         type="button"
                         className={
@@ -1539,8 +1589,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               cur.userBackgroundImages[0];
                             return {
                               ...cur,
+                              backgroundKind: "image",
                               userBackgroundActiveId: id,
                               userBackgroundDataUrl: primary?.dataUrl ?? null,
+                              userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                (row) => row.dataUrl,
+                              ),
                             };
                           })
                         }
@@ -1603,7 +1657,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           <>
                             <div className="color-accent-row">
                               <label htmlFor="tabocalypse-bg-grad-start">Gradient start</label>
-                              <HudTip tip="Top-left color of the diagonal background blend">
+                              <HudTip tip="First color in the background blend">
                                 <input
                                   id="tabocalypse-bg-grad-start"
                                   type="color"
@@ -1623,29 +1677,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               </HudTip>
                             </div>
                             <div className="color-accent-row">
-                              <label htmlFor="tabocalypse-bg-grad-mid">Gradient middle</label>
-                              <HudTip tip="Mid blend along the diagonal (about halfway)">
-                                <input
-                                  id="tabocalypse-bg-grad-mid"
-                                  type="color"
-                                  className="color-input-hud"
-                                  aria-label="Gradient middle color"
-                                  value={s.backgroundGradientMid}
-                                  onChange={(e) =>
-                                    void persist((cur) => ({
-                                      ...cur,
-                                      backgroundGradientMid: coerceThemeHex(
-                                        e.target.value,
-                                        cur.backgroundGradientMid,
-                                      ),
-                                    }))
-                                  }
-                                />
-                              </HudTip>
-                            </div>
-                            <div className="color-accent-row">
                               <label htmlFor="tabocalypse-bg-grad-end">Gradient end</label>
-                              <HudTip tip="Bottom-right color of the diagonal background blend">
+                              <HudTip tip="Second color in the background blend">
                                 <input
                                   id="tabocalypse-bg-grad-end"
                                   type="color"
@@ -1664,6 +1697,200 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                 />
                               </HudTip>
                             </div>
+                            <p className="muted sm mb-0 mt-1">Gradient shape</p>
+                            <div className="row wrap" role="group" aria-label="Gradient shape">
+                              <HudTip tip="Blend colors along a line; set angle below">
+                                <button
+                                  type="button"
+                                  className={
+                                    s.backgroundGradientShape === "linear" ? "btn primary" : "btn"
+                                  }
+                                  aria-pressed={s.backgroundGradientShape === "linear"}
+                                  onClick={() =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      backgroundGradientShape: "linear",
+                                    }))
+                                  }
+                                >
+                                  Linear
+                                </button>
+                              </HudTip>
+                              <HudTip tip="Circular blend from a focal point; set center below">
+                                <button
+                                  type="button"
+                                  className={
+                                    s.backgroundGradientShape === "radial" ? "btn primary" : "btn"
+                                  }
+                                  aria-pressed={s.backgroundGradientShape === "radial"}
+                                  onClick={() =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      backgroundGradientShape: "radial",
+                                    }))
+                                  }
+                                >
+                                  Radial
+                                </button>
+                              </HudTip>
+                            </div>
+                            {s.backgroundGradientShape === "linear" ? (
+                              <div className="block">
+                                <span className="muted sm" id="tabocalypse-bg-grad-angle-label">
+                                  Direction (degrees)
+                                </span>
+                                <div className="mt-1 flex flex-wrap items-center gap-3">
+                                  <HudTip tip="Rotate the gradient direction (0° points up)">
+                                    <input
+                                      type="range"
+                                      className="min-w-[10rem] flex-1"
+                                      min={0}
+                                      max={359}
+                                      aria-labelledby="tabocalypse-bg-grad-angle-label"
+                                      value={s.backgroundGradientAngleDeg}
+                                      onChange={(e) => {
+                                        const n = coerceBackgroundGradientAngleDeg(
+                                          Number(e.target.value),
+                                          s.backgroundGradientAngleDeg,
+                                        );
+                                        void persist((cur) => ({
+                                          ...cur,
+                                          backgroundGradientAngleDeg: n,
+                                        }));
+                                      }}
+                                    />
+                                  </HudTip>
+                                  <label
+                                    className="sr-only"
+                                    htmlFor="tabocalypse-bg-grad-angle-num"
+                                  >
+                                    Direction in degrees
+                                  </label>
+                                  <HudTip tip="Exact angle in degrees (0–359)">
+                                    <input
+                                      id="tabocalypse-bg-grad-angle-num"
+                                      type="number"
+                                      className="w-20"
+                                      min={0}
+                                      max={359}
+                                      aria-labelledby="tabocalypse-bg-grad-angle-label"
+                                      value={s.backgroundGradientAngleDeg}
+                                      onChange={(e) => {
+                                        const n = coerceBackgroundGradientAngleDeg(
+                                          Number(e.target.value),
+                                          s.backgroundGradientAngleDeg,
+                                        );
+                                        void persist((cur) => ({
+                                          ...cur,
+                                          backgroundGradientAngleDeg: n,
+                                        }));
+                                      }}
+                                    />
+                                  </HudTip>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="block">
+                                  <span className="muted sm" id="tabocalypse-bg-grad-cx-label">
+                                    Center horizontal (%)
+                                  </span>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                                    <HudTip tip="Move the radial center left or right">
+                                      <input
+                                        type="range"
+                                        className="min-w-[8rem] flex-1"
+                                        min={0}
+                                        max={100}
+                                        aria-labelledby="tabocalypse-bg-grad-cx-label"
+                                        value={s.backgroundGradientCenterXPct}
+                                        onChange={(e) => {
+                                          const n = coerceBackgroundGradientCenterPct(
+                                            Number(e.target.value),
+                                            s.backgroundGradientCenterXPct,
+                                          );
+                                          void persist((cur) => ({
+                                            ...cur,
+                                            backgroundGradientCenterXPct: n,
+                                          }));
+                                        }}
+                                      />
+                                    </HudTip>
+                                    <label className="sr-only" htmlFor="tabocalypse-bg-grad-cx-num">
+                                      Center horizontal percent
+                                    </label>
+                                    <input
+                                      id="tabocalypse-bg-grad-cx-num"
+                                      type="number"
+                                      className="w-20"
+                                      min={0}
+                                      max={100}
+                                      aria-labelledby="tabocalypse-bg-grad-cx-label"
+                                      value={s.backgroundGradientCenterXPct}
+                                      onChange={(e) => {
+                                        const n = coerceBackgroundGradientCenterPct(
+                                          Number(e.target.value),
+                                          s.backgroundGradientCenterXPct,
+                                        );
+                                        void persist((cur) => ({
+                                          ...cur,
+                                          backgroundGradientCenterXPct: n,
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="block">
+                                  <span className="muted sm" id="tabocalypse-bg-grad-cy-label">
+                                    Center vertical (%)
+                                  </span>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                                    <HudTip tip="Move the radial center up or down">
+                                      <input
+                                        type="range"
+                                        className="min-w-[8rem] flex-1"
+                                        min={0}
+                                        max={100}
+                                        aria-labelledby="tabocalypse-bg-grad-cy-label"
+                                        value={s.backgroundGradientCenterYPct}
+                                        onChange={(e) => {
+                                          const n = coerceBackgroundGradientCenterPct(
+                                            Number(e.target.value),
+                                            s.backgroundGradientCenterYPct,
+                                          );
+                                          void persist((cur) => ({
+                                            ...cur,
+                                            backgroundGradientCenterYPct: n,
+                                          }));
+                                        }}
+                                      />
+                                    </HudTip>
+                                    <label className="sr-only" htmlFor="tabocalypse-bg-grad-cy-num">
+                                      Center vertical percent
+                                    </label>
+                                    <input
+                                      id="tabocalypse-bg-grad-cy-num"
+                                      type="number"
+                                      className="w-20"
+                                      min={0}
+                                      max={100}
+                                      aria-labelledby="tabocalypse-bg-grad-cy-label"
+                                      value={s.backgroundGradientCenterYPct}
+                                      onChange={(e) => {
+                                        const n = coerceBackgroundGradientCenterPct(
+                                          Number(e.target.value),
+                                          s.backgroundGradientCenterYPct,
+                                        );
+                                        void persist((cur) => ({
+                                          ...cur,
+                                          backgroundGradientCenterYPct: n,
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
@@ -1867,15 +2094,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       e.preventDefault();
                       void scheduleAlarm();
                     }}
+                    className="grid gap-3"
                   >
-                    <input id="alarm-when" type="datetime-local" />
-                    <input
-                      id="alarm-msg"
-                      type="text"
-                      placeholder="Message"
-                      className="mt-2 w-full"
-                    />
-                    <button type="submit" className="btn primary has-icon mt-2">
+                    <label className="block">
+                      <span className="muted sm">Date and time</span>
+                      <input
+                        id="tabocalypse-alarm-when"
+                        type="datetime-local"
+                        step={60}
+                        min={alarmDatetimeMin}
+                        className="mt-1 w-full max-w-md"
+                        value={alarmWhen}
+                        onChange={(e) => setAlarmWhen(e.target.value)}
+                        aria-label="Alarm date and time"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="muted sm">Message (optional)</span>
+                      <input
+                        id="tabocalypse-alarm-msg"
+                        type="text"
+                        placeholder="What the notification should say"
+                        className="mt-1 w-full"
+                        value={alarmMessage}
+                        onChange={(e) => setAlarmMessage(e.target.value)}
+                        aria-label="Alarm notification message"
+                      />
+                    </label>
+                    <button type="submit" className="btn primary has-icon">
                       <CalendarClock size={20} strokeWidth={2} aria-hidden />
                       <span>Schedule</span>
                     </button>
@@ -2078,7 +2324,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               ...d,
                               ...parsed,
                               version: 1,
-                              widgets: { ...d.widgets, ...(parsed.widgets ?? {}) },
+                              widgets: mergeWidgets(
+                                parsed.widgets as Partial<Record<string, unknown>> | undefined,
+                              ),
                               themeMode: importThemeMode,
                               themePalette: coerceThemePalette(parsed.themePalette, d.themePalette),
                               themeCustomAccent: coerceThemeHex(
@@ -2100,6 +2348,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               backgroundGradientEnd: coerceThemeHex(
                                 parsed.backgroundGradientEnd,
                                 importGradFallback.end,
+                              ),
+                              backgroundGradientShape: coerceBackgroundGradientShape(
+                                parsed.backgroundGradientShape,
+                                d.backgroundGradientShape,
+                              ),
+                              backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
+                                parsed.backgroundGradientAngleDeg,
+                                d.backgroundGradientAngleDeg,
+                              ),
+                              backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
+                                parsed.backgroundGradientCenterXPct,
+                                d.backgroundGradientCenterXPct,
+                              ),
+                              backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
+                                parsed.backgroundGradientCenterYPct,
+                                d.backgroundGradientCenterYPct,
                               ),
                             };
                             void persist(merged);
@@ -2377,12 +2641,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       {s.widgets.humorBanner && dailyLine ? (
         <div className="humor-banner">
           <span>{dailyLine}</span>
-        </div>
-      ) : null}
-
-      {s.widgets.productivityGag ? (
-        <div className="prod-gag muted">
-          Fake productivity score: <strong>{prodScore}</strong> — purely ceremonial.
         </div>
       ) : null}
 
