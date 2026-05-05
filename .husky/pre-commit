@@ -1,1 +1,5 @@
+#!/bin/sh
+set -e
 pnpm exec lint-staged
+node scripts/bump-extension-version.mjs
+git add apps/extension/package.json

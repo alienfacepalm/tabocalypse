@@ -254,6 +254,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const alarmWhenInputRef = useRef<HTMLInputElement>(null);
   const alarmDatetimeMin = useMemo(() => formatDatetimeLocalFromDate(new Date()), [openSettings]);
   const supportActions = useMemo(() => getSupportActions(), []);
+  const extensionVersion = useMemo(() => browser.runtime.getManifest().version, []);
   const bingPaintUrlRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -2865,6 +2866,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               {action.label}
             </button>
           ))}
+          <span aria-label={`Tabocalypse version ${extensionVersion}`}>v{extensionVersion}</span>
         </div>
       </footer>
     </div>
