@@ -1,0 +1,15 @@
+---
+description: Re-read and verify every change makes sense before finishing
+alwaysApply: true
+---
+
+# Verify changes make sense
+
+After making **any** edit, **re-read the changed lines in context** (surrounding 5–10 lines minimum) and ask:
+
+1. **Directional / relational words** — does the text say "above" when the target is below, "before" when it's after, "left" when it's right? Check the **actual rendered order** of the UI or document, not your assumption.
+2. **Visibility & state** — if a toggle/flag now controls something, trace both states (on **and** off). Does disabling a feature leave the user with a working alternative? Are inputs, buttons, or hints visible and enabled in every reachable state?
+3. **Copy coherence** — does the wording still make sense given the new location or context? Old phrasing may reference removed controls, wrong section names, or stale instructions.
+4. **Orphaned UI** — did moving or removing a control leave a section empty, a label pointing at nothing, or a state variable that no longer has a visible effect?
+
+If **any** check fails, fix it before considering the edit done. Do not rely on the user to catch directional or state-coverage mistakes.

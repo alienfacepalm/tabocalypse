@@ -2004,7 +2004,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   {s.weatherAutoGeo ? (
                     <p className="muted sm mb-2">
                       Auto-detect is on — coordinates refresh each new tab. Disable it in Optional
-                      permissions above to enter manually.
+                      permissions below to enter manually.
                     </p>
                   ) : null}
                   <div className="row">
