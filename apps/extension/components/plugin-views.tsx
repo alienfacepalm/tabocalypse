@@ -1,20 +1,29 @@
 import React from "react";
 import type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
+import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import { faviconUrl } from "../lib/favicon-url";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
 function StaticText({ props }: { props: { text: string } }) {
-  return <p className="plugin-static">{props.text}</p>;
+  return <p className="plugin-static">{coerceAlarmMetaMessage(props.text as unknown)}</p>;
 }
 
 function RotatingQuotes({ props }: { props: { quotes: string[] } }) {
+  const safeQuotes = React.useMemo(
+    () =>
+      props.quotes
+        .map((q) => coerceAlarmMetaMessage(q as unknown).trim())
+        .filter((s) => s.length > 0),
+    [props.quotes],
+  );
   const [i, setI] = React.useState(0);
   React.useEffect(() => {
-    const t = window.setInterval(() => setI((x) => (x + 1) % props.quotes.length), 8000);
+    if (safeQuotes.length === 0) return undefined;
+    const t = window.setInterval(() => setI((x) => (x + 1) % safeQuotes.length), 8000);
     return () => window.clearInterval(t);
-  }, [props.quotes.length]);
-  if (!props.quotes.length) return null;
-  return <p className="plugin-quotes">{props.quotes[i % props.quotes.length]}</p>;
+  }, [safeQuotes.length]);
+  if (!safeQuotes.length) return null;
+  return <p className="plugin-quotes">{safeQuotes[i % safeQuotes.length]}</p>;
 }
 
 function LinkGrid({ props }: { props: { links: { label: string; url: string }[] } }) {
@@ -24,7 +33,7 @@ function LinkGrid({ props }: { props: { links: { label: string; url: string }[] 
         <li key={idx}>
           <a href={l.url} target="_blank" rel="noreferrer">
             <img src={faviconUrl(l.url)} alt="" width={16} height={16} className="favicon" />
-            {l.label}
+            {coerceAlarmMetaMessage(l.label as unknown)}
           </a>
         </li>
       ))}

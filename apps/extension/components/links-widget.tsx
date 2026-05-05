@@ -1,5 +1,6 @@
 import React from "react";
 import browser from "webextension-polyfill";
+import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import { faviconUrl } from "../lib/favicon-url";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
@@ -44,7 +45,7 @@ export function TopSitesWidget() {
                   height={16}
                   className="favicon"
                 />
-                {s.title || s.url}
+                {coerceAlarmMetaMessage(s.title as unknown) || s.url}
               </a>
             </li>
           ))}
@@ -95,7 +96,7 @@ export function BookmarksWidget() {
                   height={16}
                   className="favicon"
                 />
-                {b.title || b.url}
+                {coerceAlarmMetaMessage(b.title as unknown) || b.url}
               </a>
             </li>
           ))}

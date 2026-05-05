@@ -127,6 +127,14 @@ type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
 
 type TPendingAlarm = { name: string; scheduledTime: number; message: string };
 
+/** Safe string for React children; alarmMeta may store legacy `{ message, title }` objects. */
+function formatAlarmReminderForList(raw: unknown): string | null {
+  const line = coerceAlarmMetaMessage(raw).trim();
+  if (!line) return null;
+  if (/^Tabocalypse alarm\.?$/.test(line)) return null;
+  return line;
+}
+
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
   userImageUrl?: string | null;
@@ -2407,41 +2415,42 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <>
                       <h4 className="mt-6 mb-2">Scheduled alarms</h4>
                       <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
-                        {pendingAlarms.map((alarm) => (
-                          <li
-                            key={alarm.name}
-                            className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <span className="font-mono text-xs opacity-70">
-                                {new Date(alarm.scheduledTime).toLocaleString()}
-                              </span>
-                              {alarm.message && alarm.message !== "Tabocalypse alarm" ? (
-                                <span className="ml-2">{alarm.message}</span>
-                              ) : null}
-                            </div>
-                            <HudTip tip="Edit this alarm">
-                              <button
-                                type="button"
-                                className="btn ghost sm icon-only"
-                                aria-label="Edit alarm"
-                                onClick={() => startEditAlarm(alarm)}
-                              >
-                                <Pencil size={16} strokeWidth={2} aria-hidden />
-                              </button>
-                            </HudTip>
-                            <HudTip tip="Delete this alarm">
-                              <button
-                                type="button"
-                                className="btn ghost sm icon-only"
-                                aria-label="Delete alarm"
-                                onClick={() => void deleteAlarm(alarm.name)}
-                              >
-                                <Trash2 size={16} strokeWidth={2} aria-hidden />
-                              </button>
-                            </HudTip>
-                          </li>
-                        ))}
+                        {pendingAlarms.map((alarm) => {
+                          const reminderLine = formatAlarmReminderForList(alarm.message);
+                          return (
+                            <li
+                              key={alarm.name}
+                              className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <span className="font-mono text-xs opacity-70">
+                                  {new Date(alarm.scheduledTime).toLocaleString()}
+                                </span>
+                                {reminderLine ? <span className="ml-2">{reminderLine}</span> : null}
+                              </div>
+                              <HudTip tip="Edit this alarm">
+                                <button
+                                  type="button"
+                                  className="btn ghost sm icon-only"
+                                  aria-label="Edit alarm"
+                                  onClick={() => startEditAlarm(alarm)}
+                                >
+                                  <Pencil size={16} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                              <HudTip tip="Delete this alarm">
+                                <button
+                                  type="button"
+                                  className="btn ghost sm icon-only"
+                                  aria-label="Delete alarm"
+                                  onClick={() => void deleteAlarm(alarm.name)}
+                                >
+                                  <Trash2 size={16} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </>
                   ) : null}
