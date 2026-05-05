@@ -117,7 +117,7 @@ export const BUILTIN_PACKS: IBuiltinPack[] = [
     maxIntensity: "mild",
     lines: [
       "Another tab? That’s giving main-character energy. No cap.",
-      "Your tab bar is doing the most, and it’s not the serve you think.",
+      "24-hour clock? Bestie, you can’t even manage 24 tabs.",
       "Bookmark who? Bestie, you’re not even bookmarking focus.",
       "The way you’re hoarding tabs is… a choice. Respectfully.",
       "Touch grass? You’re choosing Chrome tabs. Vibe check: failed.",
