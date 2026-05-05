@@ -93,7 +93,7 @@ describe("defaultSettings", () => {
   it("returns version 1 and sane defaults", () => {
     const s = defaultSettings();
     expect(s.version).toBe(1);
-    expect(s.preset).toBe("balanced");
+    expect(s.preset).toBe("chaos");
     expect(s.themeMode).toBe("dark");
     expect(s.themePalette).toBe("glitch");
     expect(s.widgets.search).toBe(true);
@@ -111,7 +111,8 @@ describe("defaultSettings", () => {
     expect(s.clockHourFormat).toBe("24h");
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
-    expect(s.humorBuiltinVoice).toBe("default");
+    expect(s.humorIntensity).toBe("spicy");
+    expect(s.humorBuiltinVoice).toBe("gen_z");
     expect(s.notes).toEqual([]);
     expect(s.notePanels).toEqual([]);
     expect(s.hasSeenSettingsIntro).toBe(false);

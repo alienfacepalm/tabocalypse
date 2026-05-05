@@ -485,14 +485,14 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
 export function defaultSettings(): ISettings {
   return {
     version: 1,
-    preset: "balanced",
+    preset: "chaos",
     themeMode: "dark",
     themePalette: "glitch",
     themeCustomAccent: DEFAULT_THEME_CUSTOM_ACCENT,
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     humorEnabled: true,
-    humorIntensity: "mild",
-    humorBuiltinVoice: "default",
+    humorIntensity: "spicy",
+    humorBuiltinVoice: "gen_z",
     humorBuiltinPackIds: [
       "office_absurd",
       "tab_shame",
@@ -670,10 +670,13 @@ function mergeSettings(
     themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
-    humorBuiltinVoice: coerceHumorBuiltinVoice({
-      humorBuiltinVoice: sync?.humorBuiltinVoice,
-      humorGenZMode: (sync as { humorGenZMode?: boolean } | undefined)?.humorGenZMode,
-    }),
+    humorBuiltinVoice:
+      sync === undefined
+        ? d.humorBuiltinVoice
+        : coerceHumorBuiltinVoice({
+            humorBuiltinVoice: sync.humorBuiltinVoice,
+            humorGenZMode: (sync as { humorGenZMode?: boolean }).humorGenZMode,
+          }),
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
     hasSeenSettingsIntro:
