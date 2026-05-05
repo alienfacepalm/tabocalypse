@@ -246,8 +246,10 @@ function NotesDetachedPanel({
   return (
     <section className="card">
       <HudPanelTitle>
-        <span className="row justify-between gap-2">
-          <span>Notes</span>
+        <span className="row min-w-0 justify-between gap-2">
+          <span className="min-w-0 flex-1 truncate" title={selected?.name}>
+            {selected?.name.trim() ? selected.name : "Untitled note"}
+          </span>
           {onClosePanel ? (
             <span className="row gap-1" onPointerDown={stopDragSurfacePropagation}>
               <HudTip tip={selected ? "Delete this note" : "Nothing to delete"}>
