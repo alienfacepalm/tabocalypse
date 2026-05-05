@@ -347,6 +347,11 @@ export interface ISettings {
   hudLayoutLocked: boolean;
   /** Percentage positions of draggable HUD panels within the canvas. */
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
+  /**
+   * After first-run settings intro is finished, stays true so the welcome callout does not repeat.
+   * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
+   */
+  hasSeenSettingsIntro: boolean;
 }
 
 const SYNC_KEY = "tabocalypseSync";
@@ -410,6 +415,7 @@ export interface ISyncSlice {
   backgroundGradientCenterXPct: number;
   backgroundGradientCenterYPct: number;
   debugPluginSource: boolean;
+  hasSeenSettingsIntro: boolean;
 }
 
 export interface ILocalSlice {
@@ -532,6 +538,7 @@ export function defaultSettings(): ISettings {
     hudLayoutChaotic: false,
     hudLayoutLocked: false,
     hudPanelPositions: mergeHudPanelPositions(undefined),
+    hasSeenSettingsIntro: false,
   };
 }
 
@@ -565,6 +572,7 @@ function toSync(s: ISettings): ISyncSlice {
     backgroundGradientCenterXPct: s.backgroundGradientCenterXPct,
     backgroundGradientCenterYPct: s.backgroundGradientCenterYPct,
     debugPluginSource: s.debugPluginSource,
+    hasSeenSettingsIntro: s.hasSeenSettingsIntro,
   };
 }
 
@@ -667,6 +675,12 @@ function mergeSettings(
     }),
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
+    hasSeenSettingsIntro:
+      typeof sync?.hasSeenSettingsIntro === "boolean"
+        ? sync.hasSeenSettingsIntro
+        : sync
+          ? true
+          : d.hasSeenSettingsIntro,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
     searchEngine: sync?.searchEngine ?? d.searchEngine,
     weatherLat: sync?.weatherLat ?? d.weatherLat,

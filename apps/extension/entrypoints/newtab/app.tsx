@@ -226,7 +226,7 @@ function SupportLinkIcon({ kind }: { kind: TSupportLinkKind }) {
 
 function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Element {
   const [settings, setSettings] = useState<ISettings>(initialSettings);
-  const [openSettings, setOpenSettings] = useState(false);
+  const [openSettings, setOpenSettings] = useState(() => !initialSettings.hasSeenSettingsIntro);
   const [warnSpicy, setWarnSpicy] = useState(false);
   const [pendingIntensity, setPendingIntensity] = useState<THumorIntensity | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
@@ -575,6 +575,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     },
     [clearMyLinesDebouncedSaveTimer],
   );
+
+  const acknowledgeSettingsIntro = useCallback(() => {
+    void persist((cur) =>
+      cur.hasSeenSettingsIntro ? cur : { ...cur, hasSeenSettingsIntro: true },
+    );
+  }, [persist]);
+
+  const closeSettingsModal = useCallback(() => {
+    setOpenSettings(false);
+    const cur = latestSettingsRef.current;
+    if (!cur.hasSeenSettingsIntro) {
+      void persist((next) =>
+        next.hasSeenSettingsIntro ? next : { ...next, hasSeenSettingsIntro: true },
+      );
+    }
+  }, [persist]);
 
   useEffect(() => {
     if (!settings.weatherAutoGeo) {
@@ -1350,7 +1366,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     <div className="shell">
       <div className="glitch-overlay" aria-hidden />
       {openSettings ? (
-        <div className="modal-backdrop" role="presentation" onClick={() => setOpenSettings(false)}>
+        <div className="modal-backdrop" role="presentation" onClick={closeSettingsModal}>
           <div
             className="modal settings-modal"
             role="dialog"
@@ -1359,16 +1375,33 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           >
             <header className="modal-head">
               <h2>Settings</h2>
-              <button
-                type="button"
-                className="btn ghost has-icon"
-                onClick={() => setOpenSettings(false)}
-              >
+              <button type="button" className="btn ghost has-icon" onClick={closeSettingsModal}>
                 <X size={18} strokeWidth={2} aria-hidden />
                 <span>Close</span>
               </button>
             </header>
             <div className="modal-body">
+              {!s.hasSeenSettingsIntro ? (
+                <section
+                  className="settings-welcome"
+                  role="region"
+                  aria-label="Welcome to Tabocalypse"
+                >
+                  <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
+                  <p className="settings-welcome-lead">
+                    This new tab is a small HUD you control: turn widgets on or off, pick a theme
+                    and background, tune the humor strip, import plugins, and more—all from this
+                    panel.
+                  </p>
+                  <p className="settings-welcome-note">
+                    Open settings anytime from the gear button in the header. Your choices stay on
+                    this device unless you use browser sync.
+                  </p>
+                  <button type="button" className="btn primary" onClick={acknowledgeSettingsIntro}>
+                    Got it
+                  </button>
+                </section>
+              ) : null}
               <div className="settings-accordion">
                 <details className="acc-item" open>
                   <summary className="acc-summary">
@@ -2735,6 +2768,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                   humorGenZMode?: unknown;
                                 },
                               ),
+                              hasSeenSettingsIntro:
+                                typeof parsed.hasSeenSettingsIntro === "boolean"
+                                  ? parsed.hasSeenSettingsIntro
+                                  : true,
                             };
                             void persist(merged);
                           } catch {

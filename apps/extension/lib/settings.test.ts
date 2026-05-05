@@ -106,6 +106,7 @@ describe("defaultSettings", () => {
     expect(s.humorBuiltinVoice).toBe("default");
     expect(s.notes).toEqual([]);
     expect(s.notePanels).toEqual([]);
+    expect(s.hasSeenSettingsIntro).toBe(false);
   });
 });
 
@@ -258,6 +259,43 @@ describe("loadSettings", () => {
     expect(s.widgets.search).toBe(true);
     expect(s.themeMode).toBe("light");
     expect(s.themePalette).toBe("ocean");
+    expect(s.hasSeenSettingsIntro).toBe(true);
+  });
+
+  it("honors explicit hasSeenSettingsIntro false in sync", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "glitch",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: [],
+        spicyContentAcknowledged: false,
+        widgets: {},
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherTemperatureUnit: "celsius",
+        clockHourFormat: "24h",
+        weatherAutoGeo: false,
+        useOpenWeather: false,
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        backgroundGradientMid: "#1a1a1f",
+        backgroundGradientEnd: "#2a2a33",
+        backgroundGradientShape: "linear",
+        backgroundGradientAngleDeg: 145,
+        backgroundGradientCenterXPct: 50,
+        backgroundGradientCenterYPct: 50,
+        debugPluginSource: false,
+        hasSeenSettingsIntro: false,
+      },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.hasSeenSettingsIntro).toBe(false);
   });
 
   it("prefers local sync mirror over cloud sync for overlapping fields", async () => {
