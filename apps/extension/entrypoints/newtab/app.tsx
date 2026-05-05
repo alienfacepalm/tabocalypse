@@ -1498,12 +1498,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <div className="acc-body">
                     <select
                       value={s.searchEngine}
-                      onChange={(e) =>
-                        void persist((cur) => ({
-                          ...cur,
-                          searchEngine: e.target.value as ISettings["searchEngine"],
-                        }))
-                      }
+                      onChange={(e) => {
+                        const engine = e.target.value as ISettings["searchEngine"];
+                        void persist((cur) => ({ ...cur, searchEngine: engine }));
+                      }}
                     >
                       <option value="ddg">DuckDuckGo</option>
                       <option value="google">Google</option>
@@ -1991,9 +1989,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         type="number"
                         step="0.01"
                         value={s.weatherLat}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, weatherLat: Number(e.target.value) }))
-                        }
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          void persist((cur) => ({ ...cur, weatherLat: v }));
+                        }}
                       />
                     </label>
                     <label className="block">
@@ -2002,9 +2001,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         type="number"
                         step="0.01"
                         value={s.weatherLon}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, weatherLon: Number(e.target.value) }))
-                        }
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          void persist((cur) => ({ ...cur, weatherLon: v }));
+                        }}
                       />
                     </label>
                   </div>
@@ -2241,17 +2241,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       type="password"
                       autoComplete="off"
                       value={s.openaiApiKey}
-                      onChange={(e) =>
-                        void persist((cur) => ({ ...cur, openaiApiKey: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        void persist((cur) => ({ ...cur, openaiApiKey: v }));
+                      }}
                       className="w-full"
                     />
                     <input
                       placeholder="Base URL"
                       value={s.openaiBaseUrl}
-                      onChange={(e) =>
-                        void persist((cur) => ({ ...cur, openaiBaseUrl: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
+                      }}
                       className="mt-2 w-full"
                     />
                     <button type="submit" className="btn has-icon mt-2">
