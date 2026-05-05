@@ -607,6 +607,14 @@ export async function loadSettings(): Promise<ISettings> {
   return mergeSettings(sync, local);
 }
 
+function isSyncQuotaError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message;
+  return (
+    msg.includes("MAX_WRITE_OPERATIONS") || msg.includes("QUOTA_BYTES") || msg.includes("MAX_ITEMS")
+  );
+}
+
 export async function saveSettings(s: ISettings): Promise<void> {
   const syncPayload = toSync(s);
   const writes: Promise<unknown>[] = [
@@ -616,7 +624,19 @@ export async function saveSettings(s: ISettings): Promise<void> {
     }),
   ];
   if (browser.storage.sync) {
-    writes.push(browser.storage.sync.set({ [SYNC_KEY]: syncPayload }));
+    writes.push(
+      browser.storage.sync.set({ [SYNC_KEY]: syncPayload }).catch((err: unknown) => {
+        if (isSyncQuotaError(err)) {
+          if (import.meta.env.DEV) {
+            console.warn("[Tabocalypse] sync write throttled:", err);
+          }
+          throw new Error(
+            "Settings are changing too fast for browser sync. Your changes are saved locally — they'll sync once things settle down. Wait a moment before making more changes.",
+          );
+        }
+        throw err;
+      }),
+    );
   }
   await Promise.all(writes);
 }

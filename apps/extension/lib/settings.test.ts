@@ -378,4 +378,19 @@ describe("saveSettings", () => {
       mockBrowser.storage.sync = { get: syncGet, set: syncSet };
     }
   });
+
+  it("replaces sync quota errors with a user-friendly message", async () => {
+    syncSet.mockRejectedValueOnce(
+      new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota."),
+    );
+    const s = defaultSettings();
+    await expect(saveSettings(s)).rejects.toThrow(/saved locally/);
+    expect(localSet).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-throws non-quota sync errors unchanged", async () => {
+    syncSet.mockRejectedValueOnce(new Error("network down"));
+    const s = defaultSettings();
+    await expect(saveSettings(s)).rejects.toThrow("network down");
+  });
 });
