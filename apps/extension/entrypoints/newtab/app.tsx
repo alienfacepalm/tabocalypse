@@ -1389,6 +1389,28 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </span>
                       </label>
                     ))}
+                    <p className="muted sm mt-3">
+                      Your own lines (one per line) are mixed with the packs you enable — same pool
+                      as the banner and the clock roast. Saved locally as you type.
+                    </p>
+                    <label htmlFor="tabocalypse-my-lines" className="block mt-2">
+                      <span className="muted sm">Your lines</span>
+                      <textarea
+                        id="tabocalypse-my-lines"
+                        rows={6}
+                        className="mt-1 w-full"
+                        placeholder="e.g. Another standup? Bold. Another reorg? Bolder."
+                        value={s.myLines.join("\n")}
+                        onChange={(e) =>
+                          scheduleMyLinesPersist(
+                            e.target.value
+                              .split("\n")
+                              .map((x) => x.trim())
+                              .filter(Boolean),
+                          )
+                        }
+                      />
+                    </label>
                   </div>
                 </details>
 
@@ -2178,24 +2200,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </button>
                   </form>
                   {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
-                </section>
-
-                <section className="settings-block">
-                  <h3>My lines (local)</h3>
-                  <textarea
-                    rows={4}
-                    className="w-full"
-                    placeholder="One joke per line — saved as you type"
-                    value={s.myLines.join("\n")}
-                    onChange={(e) =>
-                      scheduleMyLinesPersist(
-                        e.target.value
-                          .split("\n")
-                          .map((x) => x.trim())
-                          .filter(Boolean),
-                      )
-                    }
-                  />
                 </section>
 
                 <section className="settings-block">

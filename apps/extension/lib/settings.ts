@@ -371,7 +371,7 @@ export function defaultSettings(): ISettings {
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     humorEnabled: true,
     humorIntensity: "mild",
-    humorBuiltinPackIds: ["tab_shame", "error_messages", "dev_snark"],
+    humorBuiltinPackIds: ["office_absurd", "tab_shame", "error_messages", "dev_snark"],
     spicyContentAcknowledged: false,
     widgets: { ...DEFAULT_WIDGETS },
     searchEngine: "ddg",
