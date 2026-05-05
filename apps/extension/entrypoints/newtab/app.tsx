@@ -22,6 +22,7 @@ import {
   Moon,
   Move,
   Paintbrush,
+  Pencil,
   Scale,
   Sun,
   Settings as SettingsIcon,
@@ -121,6 +122,8 @@ const BG_TOTAL_LABEL = "6 MB";
 type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 
 type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
+
+type TPendingAlarm = { name: string; scheduledTime: number; message: string };
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
@@ -253,6 +256,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
   const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
+  const [pendingAlarms, setPendingAlarms] = useState<TPendingAlarm[]>([]);
+  const [editingAlarmName, setEditingAlarmName] = useState<string | null>(null);
   const alarmWhenInputRef = useRef<HTMLInputElement>(null);
   const alarmDatetimeMin = useMemo(() => formatDatetimeLocalFromDate(new Date()), [openSettings]);
   const supportActions = useMemo(() => getSupportActions(), []);
@@ -621,11 +626,35 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     void refreshOptionalApiPerms();
   }, [openSettings, refreshOptionalApiPerms]);
 
+  const refreshPendingAlarms = useCallback(async () => {
+    try {
+      const alarms = await browser.alarms.getAll();
+      const r = await browser.storage.local.get("alarmMeta");
+      const meta = (typeof r.alarmMeta === "object" && r.alarmMeta ? r.alarmMeta : {}) as Record<
+        string,
+        string
+      >;
+      const pending: TPendingAlarm[] = alarms
+        .filter((a) => a.name.startsWith("tabocalypse:"))
+        .map((a) => ({
+          name: a.name,
+          scheduledTime: a.scheduledTime,
+          message: meta[a.name] ?? "Tabocalypse alarm",
+        }))
+        .sort((a, b) => a.scheduledTime - b.scheduledTime);
+      setPendingAlarms(pending);
+    } catch {
+      // alarms API unavailable outside extension context
+    }
+  }, []);
+
   useEffect(() => {
     if (!openSettings) return;
     setAlarmScheduleBanner(null);
+    setEditingAlarmName(null);
     setAlarmWhen((prev) => (prev ? prev : defaultAlarmWhenLocal()));
-  }, [openSettings]);
+    void refreshPendingAlarms();
+  }, [openSettings, refreshPendingAlarms]);
 
   const openAlarmWhenPicker = useCallback(() => {
     const el = alarmWhenInputRef.current;
@@ -1122,10 +1151,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       });
       return;
     }
-    const id = crypto.randomUUID();
-    const name = `tabocalypse:${id}`;
     const metaKey = "alarmMeta";
+    const isEdit = editingAlarmName !== null;
     try {
+      if (isEdit) {
+        await browser.alarms.clear(editingAlarmName);
+      }
+      const name = isEdit ? editingAlarmName : `tabocalypse:${crypto.randomUUID()}`;
       const cur = await browser.storage.local.get(metaKey);
       const meta = {
         ...(typeof cur[metaKey] === "object" && cur[metaKey] ? cur[metaKey] : {}),
@@ -1142,14 +1174,52 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     setAlarmMessage("");
     setAlarmWhen("");
+    setEditingAlarmName(null);
     setAlarmScheduleBanner({
       kind: "ok",
-      message:
-        "Scheduled. You will get a browser notification at that time (if notifications are allowed for this extension).",
+      message: isEdit
+        ? "Alarm updated."
+        : "Scheduled. You will get a browser notification at that time (if notifications are allowed for this extension).",
     });
+    void refreshPendingAlarms();
     window.setTimeout(() => {
       setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
     }, 6000);
+  };
+
+  const deleteAlarm = async (name: string) => {
+    try {
+      await browser.alarms.clear(name);
+      const r = await browser.storage.local.get("alarmMeta");
+      const meta = (typeof r.alarmMeta === "object" && r.alarmMeta ? r.alarmMeta : {}) as Record<
+        string,
+        string
+      >;
+      const { [name]: _, ...rest } = meta;
+      await browser.storage.local.set({ alarmMeta: rest });
+    } catch {
+      // ignore
+    }
+    if (editingAlarmName === name) {
+      setEditingAlarmName(null);
+      setAlarmWhen(defaultAlarmWhenLocal());
+      setAlarmMessage("");
+    }
+    void refreshPendingAlarms();
+  };
+
+  const startEditAlarm = (alarm: TPendingAlarm) => {
+    setEditingAlarmName(alarm.name);
+    setAlarmWhen(formatDatetimeLocalFromDate(new Date(alarm.scheduledTime)));
+    setAlarmMessage(alarm.message === "Tabocalypse alarm" ? "" : alarm.message);
+    setAlarmScheduleBanner(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingAlarmName(null);
+    setAlarmWhen(defaultAlarmWhenLocal());
+    setAlarmMessage("");
+    setAlarmScheduleBanner(null);
   };
 
   const runByoAiTest = async () => {
@@ -2269,12 +2339,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         aria-label="Alarm notification message"
                       />
                     </label>
-                    <HudTip tip="Save this one-time reminder using the time and message above">
-                      <button type="submit" className="btn primary has-icon">
-                        <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                        <span>Schedule</span>
-                      </button>
-                    </HudTip>
+                    <div className="flex items-center gap-2">
+                      <HudTip
+                        tip={
+                          editingAlarmName
+                            ? "Save changes to this alarm"
+                            : "Save this one-time reminder using the time and message above"
+                        }
+                      >
+                        <button type="submit" className="btn primary has-icon">
+                          <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                          <span>{editingAlarmName ? "Update" : "Schedule"}</span>
+                        </button>
+                      </HudTip>
+                      {editingAlarmName ? (
+                        <button type="button" className="btn ghost" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      ) : null}
+                    </div>
                     {alarmScheduleBanner ? (
                       <p
                         role="status"
@@ -2288,6 +2371,48 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </p>
                     ) : null}
                   </form>
+                  {pendingAlarms.length > 0 ? (
+                    <>
+                      <h4 className="mt-6 mb-2">Scheduled alarms</h4>
+                      <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
+                        {pendingAlarms.map((alarm) => (
+                          <li
+                            key={alarm.name}
+                            className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="font-mono text-xs opacity-70">
+                                {new Date(alarm.scheduledTime).toLocaleString()}
+                              </span>
+                              {alarm.message && alarm.message !== "Tabocalypse alarm" ? (
+                                <span className="ml-2">{alarm.message}</span>
+                              ) : null}
+                            </div>
+                            <HudTip tip="Edit this alarm">
+                              <button
+                                type="button"
+                                className="btn ghost sm icon-only"
+                                aria-label="Edit alarm"
+                                onClick={() => startEditAlarm(alarm)}
+                              >
+                                <Pencil size={16} strokeWidth={2} aria-hidden />
+                              </button>
+                            </HudTip>
+                            <HudTip tip="Delete this alarm">
+                              <button
+                                type="button"
+                                className="btn ghost sm icon-only"
+                                aria-label="Delete alarm"
+                                onClick={() => void deleteAlarm(alarm.name)}
+                              >
+                                <Trash2 size={16} strokeWidth={2} aria-hidden />
+                              </button>
+                            </HudTip>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
                 </section>
 
                 <section className="settings-block">
