@@ -103,7 +103,7 @@ describe("defaultSettings", () => {
     expect(s.clockHourFormat).toBe("24h");
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
-    expect(s.humorGenZMode).toBe(false);
+    expect(s.humorBuiltinVoice).toBe("default");
     expect(s.notes).toEqual([]);
     expect(s.notePanels).toEqual([]);
   });
@@ -169,6 +169,22 @@ describe("loadSettings", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("migrates legacy humorGenZMode from sync to humorBuiltinVoice gen_z", async () => {
+    syncGet.mockResolvedValue({ [SYNC_KEY]: { humorGenZMode: true } });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.humorBuiltinVoice).toBe("gen_z");
+  });
+
+  it("prefers humorBuiltinVoice over legacy humorGenZMode when both exist", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: { humorGenZMode: true, humorBuiltinVoice: "unsuck_classics" },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.humorBuiltinVoice).toBe("unsuck_classics");
   });
 
   it("merges empty storage into defaults", async () => {

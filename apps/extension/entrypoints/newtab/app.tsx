@@ -60,6 +60,7 @@ import {
   coerceBackgroundGradientShape,
   coerceBackgroundRotateMinutes,
   coerceClockHourFormat,
+  coerceHumorBuiltinVoice,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
   defaultSettings,
   type IHudPanelPosition,
@@ -740,7 +741,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     () => ({
       humorEnabled: settings.humorEnabled,
       humorIntensity: settings.humorIntensity,
-      humorGenZMode: settings.humorGenZMode,
+      humorBuiltinVoice: settings.humorBuiltinVoice,
       enabledBuiltinPackIds: settings.humorBuiltinPackIds,
       importedPacks: settings.importedPacks,
       myLines: settings.myLines,
@@ -1581,20 +1582,63 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       />
                       <span>Humor on</span>
                     </label>
-                    <label className="check-row">
-                      <input
-                        type="checkbox"
-                        checked={s.humorGenZMode}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, humorGenZMode: v }));
-                        }}
-                      />
-                      <span>Gen-Z mode</span>
-                    </label>
-                    <p className="muted sm -mt-2 mb-2">
-                      Built-in roasts use Gen-Z voice only; pack toggles below are ignored. Your
-                      lines and imported packs still mix in.
+                    <fieldset className="m-0 min-w-0 border-0 p-0">
+                      <legend className="text-sm font-medium">Built-in voice</legend>
+                      <p className="muted sm mb-2 mt-1">
+                        Pick one specialty voice, or default to mix the built-in packs you toggle
+                        below. Your lines and imported packs still mix in.
+                      </p>
+                      <div className="flex flex-col gap-1">
+                        <label className="check-row">
+                          <input
+                            type="radio"
+                            name="humor-builtin-voice"
+                            checked={s.humorBuiltinVoice === "default"}
+                            onChange={() =>
+                              void persist((cur) => ({ ...cur, humorBuiltinVoice: "default" }))
+                            }
+                          />
+                          <span>Default (pack toggles)</span>
+                        </label>
+                        <label className="check-row">
+                          <input
+                            type="radio"
+                            name="humor-builtin-voice"
+                            checked={s.humorBuiltinVoice === "gen_z"}
+                            onChange={() =>
+                              void persist((cur) => ({ ...cur, humorBuiltinVoice: "gen_z" }))
+                            }
+                          />
+                          <span>Gen-Z</span>
+                        </label>
+                        <label className="check-row">
+                          <input
+                            type="radio"
+                            name="humor-builtin-voice"
+                            checked={s.humorBuiltinVoice === "unsuck_classics"}
+                            onChange={() =>
+                              void persist((cur) => ({
+                                ...cur,
+                                humorBuiltinVoice: "unsuck_classics",
+                              }))
+                            }
+                          />
+                          <span>Classic jargon</span>
+                        </label>
+                      </div>
+                    </fieldset>
+                    <p className="muted sm -mt-1 mb-2">
+                      Classic jargon uses satirical business-term definitions (the same spirit as{" "}
+                      <HudTip tip="Open Unsuck It Classics in a new browser tab">
+                        <button
+                          type="button"
+                          className="linkish p-0"
+                          onClick={() => openExternal("https://www.unsuck-it.com/classics")}
+                        >
+                          Unsuck It — Classics
+                        </button>
+                      </HudTip>
+                      ). Specialty voices ignore the built-in pack toggles below.
                     </p>
                     <label className="block">
                       Intensity
@@ -1614,7 +1658,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <input
                           type="checkbox"
                           checked={s.humorBuiltinPackIds.includes(p.id)}
-                          disabled={s.humorGenZMode}
+                          disabled={s.humorBuiltinVoice !== "default"}
                           onChange={(e) => togglePack(p.id, e.target.checked)}
                         />
                         <span>
@@ -2683,6 +2727,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               clockHourFormat: coerceClockHourFormat(
                                 parsed.clockHourFormat,
                                 d.clockHourFormat,
+                              ),
+                              humorBuiltinVoice: coerceHumorBuiltinVoice(
+                                parsed as {
+                                  humorBuiltinVoice?: unknown;
+                                  humorGenZMode?: unknown;
+                                },
                               ),
                             };
                             void persist(merged);

@@ -1,6 +1,6 @@
-import type { THumorIntensity } from "../settings";
+import type { THumorBuiltinVoice, THumorIntensity } from "../settings";
 import type { IImportedUserPack } from "../settings";
-import { BUILTIN_PACKS, GEN_Z_PACK_ID } from "./builtin-packs";
+import { BUILTIN_PACKS, GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
 import { passesBuiltinHardFilter } from "./filter";
 
 const RANK: Record<THumorIntensity, number> = {
@@ -19,11 +19,17 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
+function voiceLockedPackId(voice: THumorBuiltinVoice): string | null {
+  if (voice === "gen_z") return GEN_Z_PACK_ID;
+  if (voice === "unsuck_classics") return UNSUCK_CLASSICS_PACK_ID;
+  return null;
+}
+
 export interface IHumorContext {
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
-  /** When true, built-in lines come only from the Gen-Z pack; pack toggles below are ignored. */
-  humorGenZMode: boolean;
+  /** When not `default`, built-in lines come only from that voice’s pack; pack toggles are ignored. */
+  humorBuiltinVoice: THumorBuiltinVoice;
   enabledBuiltinPackIds: string[];
   importedPacks: IImportedUserPack[];
   myLines: string[];
@@ -46,10 +52,10 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
 
   const candidates: string[] = [];
 
-  const genZOnly = ctx.humorGenZMode;
+  const lockedId = voiceLockedPackId(ctx.humorBuiltinVoice);
   for (const pack of BUILTIN_PACKS) {
-    if (genZOnly) {
-      if (pack.id !== GEN_Z_PACK_ID) continue;
+    if (lockedId) {
+      if (pack.id !== lockedId) continue;
     } else if (!ctx.enabledBuiltinPackIds.includes(pack.id)) continue;
     if (!builtinPackAllowed(ctx.humorIntensity, pack.maxIntensity)) continue;
     for (const line of pack.lines) {

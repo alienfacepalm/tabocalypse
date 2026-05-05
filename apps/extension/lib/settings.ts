@@ -26,6 +26,20 @@ export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
 
+/** Built-in roast “voice” for the humor banner. Only one specialty voice at a time; `default` uses per-pack toggles. */
+export type THumorBuiltinVoice = "default" | "gen_z" | "unsuck_classics";
+
+/** Normalize legacy `humorGenZMode` and unknown values when merging stored or imported settings. */
+export function coerceHumorBuiltinVoice(input: {
+  humorBuiltinVoice?: unknown;
+  humorGenZMode?: unknown;
+}): THumorBuiltinVoice {
+  const v = input.humorBuiltinVoice;
+  if (v === "default" || v === "gen_z" || v === "unsuck_classics") return v;
+  if (input.humorGenZMode === true) return "gen_z";
+  return "default";
+}
+
 export type TWidgetKey =
   | "search"
   | "clock"
@@ -273,8 +287,8 @@ export interface ISettings {
   themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
-  /** When true, built-in roast lines use Gen-Z voice only (see humor engine). */
-  humorGenZMode: boolean;
+  /** Specialty built-in voice, or default mix controlled by `humorBuiltinPackIds`. */
+  humorBuiltinVoice: THumorBuiltinVoice;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -376,8 +390,7 @@ export interface ISyncSlice {
   themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
-  /** When true, built-in roast lines use Gen-Z voice only (see humor engine). */
-  humorGenZMode: boolean;
+  humorBuiltinVoice: THumorBuiltinVoice;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -472,7 +485,7 @@ export function defaultSettings(): ISettings {
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     humorEnabled: true,
     humorIntensity: "mild",
-    humorGenZMode: false,
+    humorBuiltinVoice: "default",
     humorBuiltinPackIds: [
       "office_absurd",
       "tab_shame",
@@ -532,7 +545,7 @@ function toSync(s: ISettings): ISyncSlice {
     themeCustomAccent2: s.themeCustomAccent2,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
-    humorGenZMode: s.humorGenZMode,
+    humorBuiltinVoice: s.humorBuiltinVoice,
     humorBuiltinPackIds: s.humorBuiltinPackIds,
     spicyContentAcknowledged: s.spicyContentAcknowledged,
     widgets: s.widgets,
@@ -648,7 +661,10 @@ function mergeSettings(
     themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
-    humorGenZMode: sync?.humorGenZMode ?? d.humorGenZMode,
+    humorBuiltinVoice: coerceHumorBuiltinVoice({
+      humorBuiltinVoice: sync?.humorBuiltinVoice,
+      humorGenZMode: (sync as { humorGenZMode?: boolean } | undefined)?.humorGenZMode,
+    }),
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
