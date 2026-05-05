@@ -26,6 +26,14 @@ export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
 
+export type TPresetKey = "focus" | "balanced" | "chaos";
+
+/** Validates stored/imported preset; unknown values fall back (fresh installs → chaos). */
+export function coercePreset(raw: unknown, fallback: TPresetKey): TPresetKey {
+  if (raw === "focus" || raw === "balanced" || raw === "chaos") return raw;
+  return fallback;
+}
+
 /** Built-in roast “voice” for the humor banner. Only one specialty voice at a time; `default` uses per-pack toggles. */
 export type THumorBuiltinVoice = "default" | "gen_z" | "unsuck_classics";
 
@@ -278,7 +286,7 @@ export function resolveUserBackgroundImage(
 
 export interface ISettings {
   version: 1;
-  preset: "focus" | "balanced" | "chaos";
+  preset: TPresetKey;
   themeMode: TThemeMode;
   themePalette: TThemePalette;
   /** Primary accent when `themePalette` is `custom`; preserved when using presets so Custom restores the last choice. */
@@ -624,6 +632,21 @@ function buildUserBackgroundImagesFromLocal(
   }));
 }
 
+/** Chaos preset spicy jokes + humor strip (parity with {@link applyPreset} chaos branch). */
+export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
+  if (s.preset !== "chaos") return s;
+  let humorIntensity = s.humorIntensity;
+  if (humorIntensity === "off" || humorIntensity === "mild") {
+    humorIntensity = "spicy";
+  }
+  return {
+    ...s,
+    humorEnabled: true,
+    humorIntensity,
+    widgets: { ...s.widgets, humorBanner: true },
+  };
+}
+
 function mergeSettings(
   sync: Partial<ISyncSlice> | undefined,
   local: Partial<ILocalSlice> | undefined,
@@ -661,9 +684,12 @@ function mergeSettings(
   }
   const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
   const mergedNotePanels = coerceNotePanels(local?.notePanels, mergedNoteIds);
-  return {
+
+  const preset = coercePreset(sync?.preset, d.preset);
+
+  const mergedBase: ISettings = {
     version: 1,
-    preset: sync?.preset ?? d.preset,
+    preset,
     themeMode: resolvedThemeMode,
     themePalette: coerceThemePalette(sync?.themePalette, d.themePalette),
     themeCustomAccent: coerceThemeHex(sync?.themeCustomAccent, d.themeCustomAccent),
@@ -739,6 +765,7 @@ function mergeSettings(
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
   };
+  return applyChaosPresetHumorHarmony(mergedBase);
 }
 
 export async function loadSettings(): Promise<ISettings> {

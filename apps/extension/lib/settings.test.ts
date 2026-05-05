@@ -29,6 +29,8 @@ const {
   saveSettings,
   defaultSettings,
   applyPreset,
+  applyChaosPresetHumorHarmony,
+  coercePreset,
   DEFAULT_WIDGETS,
   mergeWidgets,
   WIDGET_LABELS,
@@ -57,6 +59,46 @@ describe("mergeWidgets", () => {
     expect(m.clock).toBe(false);
     expect(m.humorBanner).toBe(true);
     expect(Object.keys(m).sort()).toEqual(Object.keys(DEFAULT_WIDGETS).sort());
+  });
+});
+
+describe("coercePreset", () => {
+  it("preserves known preset keys", () => {
+    const d = defaultSettings();
+    expect(coercePreset("focus", d.preset)).toBe("focus");
+    expect(coercePreset("balanced", d.preset)).toBe("balanced");
+    expect(coercePreset("chaos", d.preset)).toBe("chaos");
+  });
+
+  it("falls back when preset is unknown or malformed", () => {
+    const d = defaultSettings();
+    expect(coercePreset("garbage", d.preset)).toBe(d.preset);
+    expect(coercePreset(42, d.preset)).toBe(d.preset);
+    expect(coercePreset(null, "balanced")).toBe("balanced");
+  });
+});
+
+describe("applyChaosPresetHumorHarmony", () => {
+  it("elevates mild/off to spicy while preserving unhinged", () => {
+    const spicy = applyChaosPresetHumorHarmony({
+      ...defaultSettings(),
+      humorIntensity: "mild",
+    });
+    expect(spicy.humorIntensity).toBe("spicy");
+    expect(spicy.humorEnabled).toBe(true);
+    expect(spicy.widgets.humorBanner).toBe(true);
+
+    const unhinged = applyChaosPresetHumorHarmony({
+      ...defaultSettings(),
+      humorIntensity: "unhinged",
+    });
+    expect(unhinged.humorIntensity).toBe("unhinged");
+  });
+
+  it("does not change balanced profiles", () => {
+    const s = applyChaosPresetHumorHarmony({ ...defaultSettings(), preset: "balanced" });
+    expect(s.preset).toBe("balanced");
+    expect(s.humorIntensity).toBe(defaultSettings().humorIntensity);
   });
 });
 
@@ -197,6 +239,39 @@ describe("loadSettings", () => {
     localGet.mockResolvedValue({});
     const s = await loadSettings();
     expect(s.humorBuiltinVoice).toBe("unsuck_classics");
+  });
+
+  it("defaults missing preset to chaos and aligns mild leftovers with Chaos humor", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: { humorIntensity: "mild", humorEnabled: true },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.preset).toBe("chaos");
+    expect(s.humorIntensity).toBe("spicy");
+    expect(s.humorEnabled).toBe(true);
+    expect(s.widgets.humorBanner).toBe(true);
+  });
+
+  it("coerces invalid preset tokens to chaos and harmonizes joke intensity", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: { preset: "garbage-token", humorIntensity: "mild", humorEnabled: true },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.preset).toBe("chaos");
+    expect(s.humorIntensity).toBe("spicy");
+    expect(s.widgets.humorBanner).toBe(true);
+  });
+
+  it("keeps unhinged when preset is chaos", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: { preset: "chaos", humorIntensity: "unhinged", humorEnabled: true },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.preset).toBe("chaos");
+    expect(s.humorIntensity).toBe("unhinged");
   });
 
   it("merges empty storage into defaults", async () => {

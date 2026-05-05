@@ -49,6 +49,7 @@ import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weather/weather-units";
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
+  applyChaosPresetHumorHarmony,
   applyPreset,
   BACKGROUND_ROTATE_MINUTES_MAX,
   BACKGROUND_ROTATE_MINUTES_MIN,
@@ -58,6 +59,7 @@ import {
   coerceBackgroundRotateMinutes,
   coerceClockHourFormat,
   coerceHumorBuiltinVoice,
+  coercePreset,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
   defaultSettings,
   type IHudPanelPosition,
@@ -2728,6 +2730,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               ...d,
                               ...parsed,
                               version: 1,
+                              preset: coercePreset(parsed.preset, d.preset),
                               widgets: mergeWidgets(
                                 parsed.widgets as Partial<Record<string, unknown>> | undefined,
                               ),
@@ -2784,7 +2787,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                   ? parsed.hasSeenSettingsIntro
                                   : true,
                             };
-                            void persist(merged);
+                            void persist(applyChaosPresetHumorHarmony(merged));
                           } catch {
                             setImportErr("Invalid settings JSON");
                           }
