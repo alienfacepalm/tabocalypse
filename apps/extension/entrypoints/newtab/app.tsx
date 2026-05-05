@@ -16,8 +16,8 @@ import {
   Images,
   LayoutGrid,
   Layers,
+  LocateFixed,
   Lock as LucideLock,
-  MapPin,
   MessageSquare,
   Moon,
   Move,
@@ -249,6 +249,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     bookmarks: false,
     tabs: false,
   });
+  const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
   const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
@@ -557,6 +558,39 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     },
     [clearMyLinesDebouncedSaveTimer],
   );
+
+  useEffect(() => {
+    if (!settings.weatherAutoGeo) {
+      setGeoStatus(null);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setGeoStatus("unavailable");
+      void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+      return;
+    }
+    let cancelled = false;
+    setGeoStatus("detecting");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        setGeoStatus(null);
+        void persist((cur) => ({
+          ...cur,
+          weatherLat: pos.coords.latitude,
+          weatherLon: pos.coords.longitude,
+        }));
+      },
+      () => {
+        if (cancelled) return;
+        setGeoStatus("denied");
+        void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [persist, settings.weatherAutoGeo]);
 
   const hudCanvasRef = useRef<HTMLDivElement | null>(null);
   const commitHudPanel = useCallback(
@@ -1965,23 +1999,44 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <button
                     type="button"
                     className="btn has-icon"
-                    onClick={() => {
-                      if (!navigator.geolocation) return;
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          void persist((cur) => ({
-                            ...cur,
-                            weatherLat: pos.coords.latitude,
-                            weatherLon: pos.coords.longitude,
-                          }));
-                        },
-                        () => undefined,
-                      );
-                    }}
+                    disabled={geoStatus === "detecting"}
+                    onClick={() => void persist((cur) => ({ ...cur, weatherAutoGeo: true }))}
                   >
-                    <MapPin size={18} strokeWidth={2} aria-hidden />
-                    <span>Use my location (once)</span>
+                    <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                    <span>
+                      {geoStatus === "detecting"
+                        ? "Detecting…"
+                        : s.weatherAutoGeo
+                          ? "Re-detect my location"
+                          : "Auto-detect my location"}
+                    </span>
                   </button>
+                  {s.weatherAutoGeo ? (
+                    <p className="muted sm mt-1">
+                      Location is refreshed automatically on each new tab.{" "}
+                      <button
+                        type="button"
+                        className="linkish"
+                        onClick={() => {
+                          void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+                          setGeoStatus(null);
+                        }}
+                      >
+                        Switch to manual
+                      </button>
+                    </p>
+                  ) : null}
+                  {geoStatus === "denied" ? (
+                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                      Location permission denied. Allow location access in your browser and try
+                      again, or enter coordinates manually below.
+                    </p>
+                  ) : null}
+                  {geoStatus === "unavailable" ? (
+                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                      Geolocation is not available in this browser.
+                    </p>
+                  ) : null}
                   <div className="row">
                     <label className="block">
                       Lat
@@ -1989,6 +2044,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         type="number"
                         step="0.01"
                         value={s.weatherLat}
+                        disabled={s.weatherAutoGeo}
                         onChange={(e) => {
                           const v = Number(e.target.value);
                           void persist((cur) => ({ ...cur, weatherLat: v }));
@@ -2001,6 +2057,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         type="number"
                         step="0.01"
                         value={s.weatherLon}
+                        disabled={s.weatherAutoGeo}
                         onChange={(e) => {
                           const v = Number(e.target.value);
                           void persist((cur) => ({ ...cur, weatherLon: v }));
