@@ -1415,7 +1415,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <div className="row wrap">
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
+                        aria-pressed={s.preset === "focus"}
                         onClick={() => void persist((cur) => applyPreset("focus", cur))}
                       >
                         <Target size={18} strokeWidth={2} aria-hidden />
@@ -1423,7 +1424,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </button>
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={
+                          s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
+                        }
+                        aria-pressed={s.preset === "balanced"}
                         onClick={() => void persist((cur) => applyPreset("balanced", cur))}
                       >
                         <Scale size={18} strokeWidth={2} aria-hidden />
@@ -1431,7 +1435,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </button>
                       <button
                         type="button"
-                        className="btn has-icon"
+                        className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
+                        aria-pressed={s.preset === "chaos"}
                         onClick={() => void persist((cur) => applyPreset("chaos", cur))}
                       >
                         <Flame size={18} strokeWidth={2} aria-hidden />
