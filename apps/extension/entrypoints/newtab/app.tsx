@@ -3106,6 +3106,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 >
                   <NotesWidget
                     variant="panel"
+                    panelElasticHeight={typeof np.position.heightPx !== "number"}
                     notes={s.notes}
                     panelNoteId={np.noteId}
                     onUpdateNote={(noteId, patch) =>

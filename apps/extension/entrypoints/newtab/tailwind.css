@@ -137,6 +137,11 @@
     @apply flex min-h-0 flex-1 flex-col overflow-hidden;
   }
 
+  /* Notes: when not user-height-resized, hug content instead of flex-filling → no useless gutter scrollbar */
+  .hud-panel-size-host > .card.hud-notes-detached-panel {
+    @apply max-h-[min(92vh,calc(100vh-5.25rem))] min-h-0 flex-none overflow-hidden;
+  }
+
   .hud-panel-size-host > .card > h3 {
     @apply shrink-0;
   }

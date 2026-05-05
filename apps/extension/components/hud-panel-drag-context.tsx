@@ -19,12 +19,27 @@ export function useHudPanelDrag(): IHudPanelDragContextValue | null {
 export function HudPanelBody({
   children,
   className,
+  sizeToContent,
 }: {
   children: React.ReactNode;
   className?: string;
+  /**
+   * When true, do not stretch to fill leftover HUD slot height — size to children and only scroll
+   * when taller than the cap (used for draggable note panels without a saved pixel height).
+   */
+  sizeToContent?: boolean;
 }) {
   return (
-    <div className={["min-h-0 flex-1 overflow-y-auto", className].filter(Boolean).join(" ")}>
+    <div
+      className={[
+        sizeToContent
+          ? "max-h-[min(70vh,calc(100vh-12rem))] flex-none overflow-y-auto"
+          : "min-h-0 flex-1 overflow-y-auto",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {children}
     </div>
   );

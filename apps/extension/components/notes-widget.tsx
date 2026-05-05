@@ -1,5 +1,5 @@
 import { ExternalLink, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { INote, INotePanel } from "../lib/settings";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
@@ -18,6 +18,8 @@ type TNotesWidgetPanelProps = {
   variant: "panel";
   notes: INote[];
   panelNoteId: string;
+  /** When false, the HUD row has a saved pixel height — fill it like other resizable panels. */
+  panelElasticHeight?: boolean;
   onUpdateNote: (noteId: string, patch: Partial<Pick<INote, "name" | "tags" | "text">>) => void;
   onDeleteNote: (noteId: string) => void;
   onClosePanel?: () => void;
@@ -26,6 +28,34 @@ type TNotesWidgetPanelProps = {
 /** Stops draggable title bar (`HudPanelTitle`) from capturing pointer → drag when using header actions */
 function stopDragSurfacePropagation(e: React.PointerEvent): void {
   e.stopPropagation();
+}
+
+function NotesElasticTextarea({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const ta = ref.current;
+    if (!ta) return;
+    ta.style.height = "0px";
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Type here…"
+      rows={1}
+      className="min-h-[2.75rem] w-full resize-none overflow-hidden"
+    />
+  );
 }
 
 export type TNotesWidgetProps = TNotesWidgetSwitcherProps | TNotesWidgetPanelProps;
@@ -225,10 +255,13 @@ function NotesSwitcher({
 function NotesDetachedPanel({
   notes,
   panelNoteId,
+  panelElasticHeight,
   onUpdateNote,
   onDeleteNote,
   onClosePanel,
 }: TNotesWidgetPanelProps) {
+  const elastic = panelElasticHeight ?? true;
+
   const selected = useMemo(
     () => notes.find((n) => n.id === panelNoteId) ?? null,
     [notes, panelNoteId],
@@ -244,7 +277,9 @@ function NotesDetachedPanel({
   };
 
   return (
-    <section className="card">
+    <section
+      className={["card", elastic ? "hud-notes-detached-panel" : ""].filter(Boolean).join(" ")}
+    >
       <HudPanelTitle>
         <span className="row min-w-0 justify-between gap-2">
           <span className="min-w-0 flex-1 truncate" title={selected?.name}>
@@ -277,7 +312,10 @@ function NotesDetachedPanel({
           ) : null}
         </span>
       </HudPanelTitle>
-      <HudPanelBody className="flex min-h-0 flex-col">
+      <HudPanelBody
+        sizeToContent={elastic}
+        className={elastic ? "flex flex-col" : "flex min-h-0 flex-col"}
+      >
         {selected ? (
           <>
             <div className="row mb-2 flex-wrap gap-2">
@@ -289,13 +327,20 @@ function NotesDetachedPanel({
               </span>
             </div>
 
-            <textarea
-              value={selected.text}
-              onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}
-              placeholder="Type here…"
-              rows={6}
-              className="min-h-[12rem] w-full flex-1 resize-y"
-            />
+            {elastic ? (
+              <NotesElasticTextarea
+                value={selected.text}
+                onChange={(next) => onUpdateNote(selected.id, { text: next })}
+              />
+            ) : (
+              <textarea
+                value={selected.text}
+                onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}
+                placeholder="Type here…"
+                rows={6}
+                className="min-h-[12rem] w-full flex-1 resize-y"
+              />
+            )}
           </>
         ) : (
           <div className="flex flex-1 flex-col gap-2 py-4">
