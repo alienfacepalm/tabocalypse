@@ -732,7 +732,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
   }, [shellStyle]);
 
-  const dailyLine = useMemo(() => pickDailyLine(humorCtx), [humorCtx]);
+  const [bannerLine, setBannerLine] = useState(() => pickDailyLine(humorCtx));
+  useEffect(() => {
+    setBannerLine(pickDailyLine(humorCtx));
+    const t = window.setInterval(() => setBannerLine(pickDailyLine(humorCtx)), 5 * 60_000);
+    return () => window.clearInterval(t);
+  }, [humorCtx]);
 
   const s = settings;
 
@@ -1996,45 +2001,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
                 <section className="settings-block">
                   <h3>Weather location</h3>
-                  <button
-                    type="button"
-                    className="btn has-icon"
-                    disabled={geoStatus === "detecting"}
-                    onClick={() => void persist((cur) => ({ ...cur, weatherAutoGeo: true }))}
-                  >
-                    <LocateFixed size={18} strokeWidth={2} aria-hidden />
-                    <span>
-                      {geoStatus === "detecting"
-                        ? "Detecting…"
-                        : s.weatherAutoGeo
-                          ? "Re-detect my location"
-                          : "Auto-detect my location"}
-                    </span>
-                  </button>
                   {s.weatherAutoGeo ? (
-                    <p className="muted sm mt-1">
-                      Location is refreshed automatically on each new tab.{" "}
-                      <button
-                        type="button"
-                        className="linkish"
-                        onClick={() => {
-                          void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
-                          setGeoStatus(null);
-                        }}
-                      >
-                        Switch to manual
-                      </button>
-                    </p>
-                  ) : null}
-                  {geoStatus === "denied" ? (
-                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                      Location permission denied. Allow location access in your browser and try
-                      again, or enter coordinates manually below.
-                    </p>
-                  ) : null}
-                  {geoStatus === "unavailable" ? (
-                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                      Geolocation is not available in this browser.
+                    <p className="muted sm mb-2">
+                      Auto-detect is on — coordinates refresh each new tab. Disable it in Optional
+                      permissions above to enter manually.
                     </p>
                   ) : null}
                   <div className="row">
@@ -2205,7 +2175,45 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           : "Enable Tab guilt (tabs)"}
                       </span>
                     </button>
+                    <button
+                      type="button"
+                      className="btn has-icon"
+                      disabled={geoStatus === "detecting"}
+                      aria-label={
+                        s.weatherAutoGeo
+                          ? "Disable auto-detect location"
+                          : "Enable auto-detect location"
+                      }
+                      onClick={() => {
+                        if (s.weatherAutoGeo) {
+                          void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+                          setGeoStatus(null);
+                        } else {
+                          void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                        }
+                      }}
+                    >
+                      <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                      <span>
+                        {geoStatus === "detecting"
+                          ? "Detecting…"
+                          : s.weatherAutoGeo
+                            ? "Disable Location (geo)"
+                            : "Enable Location (geo)"}
+                      </span>
+                    </button>
                   </div>
+                  {geoStatus === "denied" ? (
+                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                      Location permission denied. Allow location access in your browser and try
+                      again, or enter coordinates manually in Weather location.
+                    </p>
+                  ) : null}
+                  {geoStatus === "unavailable" ? (
+                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                      Geolocation is not available in this browser.
+                    </p>
+                  ) : null}
                 </section>
 
                 <section className="settings-block">
@@ -2783,9 +2791,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         </div>
       ) : null}
 
-      {s.widgets.humorBanner && dailyLine ? (
+      {s.widgets.humorBanner && bannerLine ? (
         <div className="humor-banner">
-          <span>{dailyLine}</span>
+          <span>{bannerLine}</span>
         </div>
       ) : null}
 
