@@ -1,5 +1,6 @@
 import { defineBackground } from "wxt/sandbox";
 import browser from "webextension-polyfill";
+import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import {
   arrayBufferToBase64,
   isPrivilegedExtensionFetchUrlAllowed,
@@ -66,7 +67,7 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener(async (alarm) => {
     if (!alarm.name.startsWith(ALARM_PREFIX)) return;
     const meta = await getMeta();
-    const message = meta[alarm.name] ?? "Tabocalypse alarm.";
+    const message = coerceAlarmMetaMessage(meta[alarm.name]) || "Tabocalypse alarm.";
     const { [alarm.name]: _, ...rest } = meta;
     await browser.storage.local.set({ [META_KEY]: rest });
 

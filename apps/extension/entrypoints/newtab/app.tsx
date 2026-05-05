@@ -98,6 +98,7 @@ import {
 } from "../../lib/fetch-bing-wallpaper";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
+import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
 import { clampHudScalar, DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
 import {
   applyDocumentTheme,
@@ -675,7 +676,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         .map((a) => ({
           name: a.name,
           scheduledTime: a.scheduledTime,
-          message: meta[a.name] ?? "Tabocalypse alarm",
+          message: coerceAlarmMetaMessage(meta[a.name]) || "Tabocalypse alarm",
         }))
         .sort((a, b) => a.scheduledTime - b.scheduledTime);
       setPendingAlarms(pending);
@@ -1247,7 +1248,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const startEditAlarm = (alarm: TPendingAlarm) => {
     setEditingAlarmName(alarm.name);
     setAlarmWhen(formatDatetimeLocalFromDate(new Date(alarm.scheduledTime)));
-    setAlarmMessage(alarm.message === "Tabocalypse alarm" ? "" : alarm.message);
+    setAlarmMessage(
+      alarm.message === "Tabocalypse alarm" ? "" : coerceAlarmMetaMessage(alarm.message),
+    );
     setAlarmScheduleBanner(null);
   };
 
