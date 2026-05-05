@@ -1,0 +1,13 @@
+---
+description: Prefer native OS shell syntax (PowerShell on Windows, bash/zsh on macOS/Linux)
+alwaysApply: true
+---
+
+# Prefer the native OS shell
+
+When proposing commands, **prefer the user's native OS shell**:
+
+- **Windows**: PowerShell (`pwsh`/`powershell`) syntax (no bash heredocs)
+- **macOS/Linux**: bash/zsh syntax
+
+If a command needs different quoting/escaping across shells, provide the **PowerShell version first** on Windows and avoid shell-specific constructs unless necessary.

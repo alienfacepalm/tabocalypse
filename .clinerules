@@ -1,0 +1,22 @@
+Tabocalypse agent rules (for Cline and similar tools)
+
+Source of truth:
+- AGENTS.md (behavior)
+- .cursor/rules/project-conventions.mdc (repo + product constraints)
+- .cursor/rules/*.mdc with alwaysApply: true (additional Cursor rules)
+- doc/AGENT-INSTRUCTIONS.md (agent-agnostic rule index; keep this file aligned)
+
+Hard constraints:
+- pnpm only (no npm)
+- extension UI: Tailwind only
+- TypeScript: no `any`
+- naming: interfaces I*, type aliases T*
+- filenames: kebab-case
+- product: no publisher backend/keys; declarative plugins only (no user JS execution)
+- never paste secrets (.env, tokens, API keys, user data)
+
+Workflow:
+- prefer small, surgical diffs; avoid whole-file rewrites
+- ask for patch-shaped output per file
+- verify before done: pnpm run check; and pnpm run build when extension UI/packaging/tooling is touched
+

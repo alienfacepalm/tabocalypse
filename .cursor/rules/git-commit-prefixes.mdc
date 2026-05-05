@@ -1,0 +1,37 @@
+---
+description: Use Conventional Commits-style prefixes for git commit messages
+alwaysApply: true
+---
+
+# Git commit prefixes (best practice)
+
+Use **Conventional Commits-style** prefixes so history is scannable and changelogs are possible.
+
+## Format
+
+`<type>(<scope>)!: <summary>`
+
+- **type**: required, lowercase
+- **scope**: optional, short, kebab-case (package/app/area name)
+- **!**: optional, indicates a breaking change
+- **summary**: imperative, present tense; avoid “wip”, “oops”, or “fix stuff”
+
+## Allowed types (use the smallest correct one)
+
+- **feat**: user-facing feature
+- **fix**: bug fix
+- **docs**: documentation only
+- **refactor**: code change without behavior change
+- **test**: add/adjust tests only
+- **chore**: upkeep that doesn’t change shipped code behavior (tooling, deps, repo hygiene)
+- **build**: build system / bundling output behavior
+- **ci**: CI config/scripts
+- **perf**: performance improvement
+- **revert**: revert a prior commit
+
+## Examples
+
+- `feat(extension): add notes widget`
+- `fix(settings): preserve widget toggles on upgrade`
+- `docs: clarify local testing steps for Chrome, Edge, Firefox, Safari`
+- `refactor(plugin-sdk): simplify manifest validation`

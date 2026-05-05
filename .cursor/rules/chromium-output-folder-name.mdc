@@ -1,0 +1,16 @@
+---
+description: Chromium MV3 output folder is chrome_edge-mv3 (not chrome-mv3)
+alwaysApply: true
+---
+
+# Chromium output folder naming
+
+When documenting, loading unpacked, or referencing build artifacts for Chromium browsers (**Chrome** and **Microsoft Edge**):
+
+- Use **`apps/extension/output/chrome_edge-mv3/`** as the Chromium MV3 output folder name.
+- Do not refer to **`chrome-mv3`**; the build pipeline renames it to make “Chrome/Edge” explicit.
+
+Safari and Firefox outputs stay as:
+
+- **`apps/extension/output/safari-mv3/`**
+- **`apps/extension/output/firefox-mv2/`**
