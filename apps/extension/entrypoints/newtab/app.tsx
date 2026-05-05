@@ -2192,66 +2192,74 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <section className="settings-block">
-                  <h3>Weather location</h3>
-                  {s.weatherAutoGeo ? (
-                    <p className="muted sm mb-2">
-                      Auto-detect is on — coordinates refresh each new tab. Disable it in Optional
-                      permissions below to enter manually.
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Weather</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2 mt-0">
+                      Location and units for the weather widget. Turn on the Weather widget under
+                      Widgets, and use Optional permissions for auto-detect location.
                     </p>
-                  ) : null}
-                  <div className="row">
-                    <label className="block">
-                      Lat
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={s.weatherLat}
-                        disabled={s.weatherAutoGeo}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          void persist((cur) => ({ ...cur, weatherLat: v }));
-                        }}
-                      />
-                    </label>
-                    <label className="block">
-                      Lon
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={s.weatherLon}
-                        disabled={s.weatherAutoGeo}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          void persist((cur) => ({ ...cur, weatherLon: v }));
-                        }}
-                      />
-                    </label>
-                  </div>
-                  <p className="muted sm mb-2 mt-4">Temperature units</p>
-                  <div className="row wrap" role="group" aria-label="Temperature units">
-                    {WEATHER_TEMPERATURE_UNITS.map((u) => (
-                      <HudTip
-                        key={u}
-                        tip={
-                          u === "celsius"
-                            ? "Switch forecast and readings to Celsius"
-                            : "Switch forecast and readings to Fahrenheit"
-                        }
-                      >
-                        <button
-                          type="button"
-                          className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
-                          onClick={() =>
-                            void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                    {s.weatherAutoGeo ? (
+                      <p className="muted sm mb-2">
+                        Auto-detect is on — coordinates refresh each new tab. Disable it in Optional
+                        permissions below to enter manually.
+                      </p>
+                    ) : null}
+                    <div className="row">
+                      <label className="block">
+                        Lat
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={s.weatherLat}
+                          disabled={s.weatherAutoGeo}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            void persist((cur) => ({ ...cur, weatherLat: v }));
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        Lon
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={s.weatherLon}
+                          disabled={s.weatherAutoGeo}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            void persist((cur) => ({ ...cur, weatherLon: v }));
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="muted sm mb-2 mt-4">Temperature units</p>
+                    <div className="row wrap" role="group" aria-label="Temperature units">
+                      {WEATHER_TEMPERATURE_UNITS.map((u) => (
+                        <HudTip
+                          key={u}
+                          tip={
+                            u === "celsius"
+                              ? "Switch forecast and readings to Celsius"
+                              : "Switch forecast and readings to Fahrenheit"
                           }
                         >
-                          {WEATHER_UNIT_LABELS[u]}
-                        </button>
-                      </HudTip>
-                    ))}
+                          <button
+                            type="button"
+                            className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                            }
+                          >
+                            {WEATHER_UNIT_LABELS[u]}
+                          </button>
+                        </HudTip>
+                      ))}
+                    </div>
                   </div>
-                </section>
+                </details>
 
                 <section className="settings-block">
                   <h3>Optional permissions</h3>
@@ -2399,7 +2407,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   {geoStatus === "denied" ? (
                     <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
                       Location permission denied. Allow location access in your browser and try
-                      again, or enter coordinates manually in Weather location.
+                      again, or enter coordinates manually under Weather.
                     </p>
                   ) : null}
                   {geoStatus === "unavailable" ? (
@@ -2409,174 +2417,189 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   ) : null}
                 </section>
 
-                <section className="settings-block">
-                  <h3>Alarm (notification)</h3>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void scheduleAlarm();
-                    }}
-                    className="grid gap-3"
-                  >
-                    <label className="block">
-                      <span className="muted sm">Date and time</span>
-                      <div className="mt-1 flex max-w-md gap-2">
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Alarms</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-3 mt-0">
+                      One-time reminders as browser notifications (when the extension alarm API is
+                      available).
+                    </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void scheduleAlarm();
+                      }}
+                      className="grid gap-3"
+                    >
+                      <label className="block">
+                        <span className="muted sm">Date and time</span>
+                        <div className="mt-1 flex max-w-md gap-2">
+                          <input
+                            ref={alarmWhenInputRef}
+                            id="tabocalypse-alarm-when"
+                            type="datetime-local"
+                            step={60}
+                            min={alarmDatetimeMin}
+                            className="min-w-0 flex-1"
+                            value={alarmWhen}
+                            onChange={(e) => {
+                              setAlarmWhen(e.target.value);
+                              setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
+                            }}
+                            aria-label="Alarm date and time"
+                          />
+                          <HudTip tip="Open the date and time picker">
+                            <button
+                              type="button"
+                              className="btn ghost sm icon-only shrink-0"
+                              aria-label="Open date and time picker"
+                              onClick={() => openAlarmWhenPicker()}
+                            >
+                              <Calendar size={18} strokeWidth={2} aria-hidden />
+                            </button>
+                          </HudTip>
+                        </div>
+                      </label>
+                      <label className="block">
+                        <span className="muted sm">Message (optional)</span>
                         <input
-                          ref={alarmWhenInputRef}
-                          id="tabocalypse-alarm-when"
-                          type="datetime-local"
-                          step={60}
-                          min={alarmDatetimeMin}
-                          className="min-w-0 flex-1"
-                          value={alarmWhen}
+                          id="tabocalypse-alarm-msg"
+                          type="text"
+                          placeholder="What the notification should say"
+                          className="mt-1 w-full"
+                          value={alarmMessage}
                           onChange={(e) => {
-                            setAlarmWhen(e.target.value);
+                            setAlarmMessage(e.target.value);
                             setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
                           }}
-                          aria-label="Alarm date and time"
+                          aria-label="Alarm notification message"
                         />
-                        <HudTip tip="Open the date and time picker">
-                          <button
-                            type="button"
-                            className="btn ghost sm icon-only shrink-0"
-                            aria-label="Open date and time picker"
-                            onClick={() => openAlarmWhenPicker()}
-                          >
-                            <Calendar size={18} strokeWidth={2} aria-hidden />
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <HudTip
+                          tip={
+                            editingAlarmName
+                              ? "Save changes to this alarm"
+                              : "Save this one-time reminder using the time and message above"
+                          }
+                        >
+                          <button type="submit" className="btn primary has-icon">
+                            <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                            <span>{editingAlarmName ? "Update" : "Schedule"}</span>
                           </button>
                         </HudTip>
+                        {editingAlarmName ? (
+                          <button type="button" className="btn ghost" onClick={cancelEdit}>
+                            Cancel
+                          </button>
+                        ) : null}
                       </div>
-                    </label>
-                    <label className="block">
-                      <span className="muted sm">Message (optional)</span>
-                      <input
-                        id="tabocalypse-alarm-msg"
-                        type="text"
-                        placeholder="What the notification should say"
-                        className="mt-1 w-full"
-                        value={alarmMessage}
-                        onChange={(e) => {
-                          setAlarmMessage(e.target.value);
-                          setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
-                        }}
-                        aria-label="Alarm notification message"
-                      />
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <HudTip
-                        tip={
-                          editingAlarmName
-                            ? "Save changes to this alarm"
-                            : "Save this one-time reminder using the time and message above"
-                        }
-                      >
-                        <button type="submit" className="btn primary has-icon">
-                          <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                          <span>{editingAlarmName ? "Update" : "Schedule"}</span>
-                        </button>
-                      </HudTip>
-                      {editingAlarmName ? (
-                        <button type="button" className="btn ghost" onClick={cancelEdit}>
-                          Cancel
-                        </button>
+                      {alarmScheduleBanner ? (
+                        <p
+                          role="status"
+                          className={
+                            alarmScheduleBanner.kind === "err"
+                              ? "err sm m-0"
+                              : "m-0 text-sm text-accent"
+                          }
+                        >
+                          {alarmScheduleBanner.message}
+                        </p>
                       ) : null}
-                    </div>
-                    {alarmScheduleBanner ? (
-                      <p
-                        role="status"
-                        className={
-                          alarmScheduleBanner.kind === "err"
-                            ? "err sm m-0"
-                            : "m-0 text-sm text-accent"
-                        }
-                      >
-                        {alarmScheduleBanner.message}
-                      </p>
+                    </form>
+                    {pendingAlarms.length > 0 ? (
+                      <>
+                        <h4 className="mt-6 mb-2">Scheduled alarms</h4>
+                        <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
+                          {pendingAlarms.map((alarm) => {
+                            const reminderLine = formatAlarmReminderForList(alarm.message);
+                            return (
+                              <li
+                                key={alarm.name}
+                                className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-mono text-xs opacity-70">
+                                    {new Date(alarm.scheduledTime).toLocaleString()}
+                                  </span>
+                                  {reminderLine ? (
+                                    <span className="ml-2">{reminderLine}</span>
+                                  ) : null}
+                                </div>
+                                <HudTip tip="Edit this alarm">
+                                  <button
+                                    type="button"
+                                    className="btn ghost sm icon-only"
+                                    aria-label="Edit alarm"
+                                    onClick={() => startEditAlarm(alarm)}
+                                  >
+                                    <Pencil size={16} strokeWidth={2} aria-hidden />
+                                  </button>
+                                </HudTip>
+                                <HudTip tip="Delete this alarm">
+                                  <button
+                                    type="button"
+                                    className="btn ghost sm icon-only"
+                                    aria-label="Delete alarm"
+                                    onClick={() => void deleteAlarm(alarm.name)}
+                                  >
+                                    <Trash2 size={16} strokeWidth={2} aria-hidden />
+                                  </button>
+                                </HudTip>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </>
                     ) : null}
-                  </form>
-                  {pendingAlarms.length > 0 ? (
-                    <>
-                      <h4 className="mt-6 mb-2">Scheduled alarms</h4>
-                      <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
-                        {pendingAlarms.map((alarm) => {
-                          const reminderLine = formatAlarmReminderForList(alarm.message);
-                          return (
-                            <li
-                              key={alarm.name}
-                              className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
-                            >
-                              <div className="min-w-0 flex-1">
-                                <span className="font-mono text-xs opacity-70">
-                                  {new Date(alarm.scheduledTime).toLocaleString()}
-                                </span>
-                                {reminderLine ? <span className="ml-2">{reminderLine}</span> : null}
-                              </div>
-                              <HudTip tip="Edit this alarm">
-                                <button
-                                  type="button"
-                                  className="btn ghost sm icon-only"
-                                  aria-label="Edit alarm"
-                                  onClick={() => startEditAlarm(alarm)}
-                                >
-                                  <Pencil size={16} strokeWidth={2} aria-hidden />
-                                </button>
-                              </HudTip>
-                              <HudTip tip="Delete this alarm">
-                                <button
-                                  type="button"
-                                  className="btn ghost sm icon-only"
-                                  aria-label="Delete alarm"
-                                  onClick={() => void deleteAlarm(alarm.name)}
-                                >
-                                  <Trash2 size={16} strokeWidth={2} aria-hidden />
-                                </button>
-                              </HudTip>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </>
-                  ) : null}
-                </section>
+                  </div>
+                </details>
 
-                <section className="settings-block">
-                  <h3>BYO AI (OpenAI-compatible)</h3>
-                  <p className="muted sm">
-                    You pay your provider. Nothing is sent without your key.
-                  </p>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void runByoAiTest();
-                    }}
-                  >
-                    <input
-                      placeholder="API key"
-                      type="password"
-                      autoComplete="off"
-                      value={s.openaiApiKey}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        void persist((cur) => ({ ...cur, openaiApiKey: v }));
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">BYO AI</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mt-0 mb-2">
+                      OpenAI-compatible endpoints: you pay your provider. Nothing is sent without
+                      your key.
+                    </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void runByoAiTest();
                       }}
-                      className="w-full"
-                    />
-                    <input
-                      placeholder="Base URL"
-                      value={s.openaiBaseUrl}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
-                      }}
-                      className="mt-2 w-full"
-                    />
-                    <button type="submit" className="btn has-icon mt-2">
-                      <Sparkles size={18} strokeWidth={2} aria-hidden />
-                      <span>Test chat completion</span>
-                    </button>
-                  </form>
-                  {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
-                </section>
+                    >
+                      <input
+                        placeholder="API key"
+                        type="password"
+                        autoComplete="off"
+                        value={s.openaiApiKey}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          void persist((cur) => ({ ...cur, openaiApiKey: v }));
+                        }}
+                        className="w-full"
+                      />
+                      <input
+                        placeholder="Base URL"
+                        value={s.openaiBaseUrl}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
+                        }}
+                        className="mt-2 w-full"
+                      />
+                      <button type="submit" className="btn has-icon mt-2">
+                        <Sparkles size={18} strokeWidth={2} aria-hidden />
+                        <span>Test chat completion</span>
+                      </button>
+                    </form>
+                    {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
+                  </div>
+                </details>
 
                 <section className="settings-block">
                   <h3>Import pack (.zip with pack.json or .json)</h3>
