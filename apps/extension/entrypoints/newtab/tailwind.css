@@ -14,7 +14,8 @@
     --color-surface2: rgb(0 0 0 / 0.6);
     --color-surface-weak: rgb(0 0 0 / 0.3);
     --color-surface-strong: rgb(0 0 0 / 0.8);
-    --color-modal: rgb(5 5 5 / 0.86);
+    /* Raised surfaces (menus, snackbars)—not naming “modal” (that implies a singular blocking UX). */
+    --color-elevated: rgb(5 5 5 / 0.86);
     --color-input-bg: rgb(0 0 0 / 0.4);
     --color-btn-bg: #000000;
     --color-on-accent: #0a0a0a;
@@ -357,12 +358,12 @@
     @apply border-accent;
   }
 
-  .modal-backdrop {
-    /* Above `.glitch-overlay` (z-50) so settings stay interactive. */
+  .dialog-backdrop {
+    /* Above `.glitch-overlay` (z-50) so dialogs stay interactive. */
     @apply fixed inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-backdrop px-4 py-8;
   }
 
-  .modal {
+  .dialog {
     @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden border;
     border-color: rgb(148 163 184 / 0.24);
     background:
@@ -380,7 +381,7 @@
       6px 6px 0 0 var(--color-shadow-hard);
   }
 
-  .settings-modal .modal-head {
+  .settings-dialog .dialog-head {
     @apply border-b-2 border-accent shadow-[4px_4px_0px_0px_var(--color-accent)];
   }
 
@@ -445,19 +446,19 @@
     @apply px-4 py-3;
   }
 
-  .modal.small {
+  .dialog.small {
     @apply w-[min(420px,100%)];
   }
 
-  .modal-head {
+  .dialog-head {
     @apply flex items-center justify-between border-b-2 border-border px-5 py-4;
   }
 
-  .modal-head h2 {
+  .dialog-head h2 {
     @apply m-0 font-display text-xl font-bold;
   }
 
-  .modal-body {
+  .dialog-body {
     @apply overflow-y-auto px-5 pb-6 pt-4;
   }
 
@@ -587,7 +588,7 @@
       4px 4px 0 0 var(--color-accent2);
   }
 
-  [data-theme="light"] .modal {
+  [data-theme="light"] .dialog {
     border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
     background:
       linear-gradient(

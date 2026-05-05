@@ -565,7 +565,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     );
   }, [persist]);
 
-  const closeSettingsModal = useCallback(() => {
+  const closeSettingsDialog = useCallback(() => {
     setOpenSettings(false);
     const cur = latestSettingsRef.current;
     if (!cur.hasSeenSettingsIntro) {
@@ -1349,21 +1349,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     <div className="shell">
       <div className="glitch-overlay" aria-hidden />
       {openSettings ? (
-        <div className="modal-backdrop" role="presentation" onClick={closeSettingsModal}>
+        <div className="dialog-backdrop" role="presentation" onClick={closeSettingsDialog}>
           <div
-            className="modal settings-modal"
+            className="dialog settings-dialog"
             role="dialog"
             aria-label="Settings"
             onClick={(e) => e.stopPropagation()}
           >
-            <header className="modal-head">
+            <header className="dialog-head">
               <h2>Settings</h2>
-              <button type="button" className="btn ghost has-icon" onClick={closeSettingsModal}>
+              <button type="button" className="btn ghost has-icon" onClick={closeSettingsDialog}>
                 <X size={18} strokeWidth={2} aria-hidden />
                 <span>Close</span>
               </button>
             </header>
-            <div className="modal-body">
+            <div className="dialog-body">
               {!s.hasSeenSettingsIntro ? (
                 <section
                   className="settings-welcome"
@@ -1373,8 +1373,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
                   <p className="settings-welcome-lead">
                     This new tab is a small HUD you control: turn widgets on or off, pick a theme
-                    and background, tune the humor strip, import plugins, and more—all from this
-                    panel.
+                    and background, tune the humor strip, import plugins, and more—all in this
+                    dialog.
                   </p>
                   <p className="settings-welcome-note">
                     Open settings anytime from the gear button in the header. Your choices stay on
@@ -2801,9 +2801,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       ) : null}
 
       {warnSpicy ? (
-        <div className="modal-backdrop" role="presentation">
+        <div className="dialog-backdrop" role="presentation">
           <div
-            className="modal small flex flex-col gap-4 p-6"
+            className="dialog small flex flex-col gap-4 p-6"
             role="dialog"
             aria-label="Content notice"
           >
@@ -2889,7 +2889,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               )}
             </button>
           </HudTip>
-          <HudTip tip="Open Tabocalypse settings">
+          <HudTip tip="Open the Settings dialog">
             <button
               type="button"
               className={openSettings ? "btn primary icon-only" : "btn ghost icon-only"}
@@ -2910,7 +2910,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           ref={userBgContextMenuRef}
           role="menu"
           aria-label="Background photo"
-          className="fixed z-[100] flex min-w-[13rem] flex-col border-2 border-accent bg-modal py-1 shadow-[4px_4px_0_0_var(--color-shadow-hard)]"
+          className="fixed z-[100] flex min-w-[13rem] flex-col border-2 border-accent bg-elevated py-1 shadow-[4px_4px_0_0_var(--color-shadow-hard)]"
           style={{ left: userBgContextMenu.clientX, top: userBgContextMenu.clientY }}
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -2973,7 +2973,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
       {userBgRepositionMode && s.backgroundKind === "image" && userChosenUrl ? (
         <div
-          className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-modal px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
+          className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-elevated px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
           role="status"
           aria-live="polite"
         >

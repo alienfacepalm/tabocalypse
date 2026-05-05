@@ -16,7 +16,7 @@ export default {
         accent2: "var(--color-accent2)",
         accent3: "var(--color-accent3)",
         danger: "var(--color-danger)",
-        modal: "var(--color-modal)",
+        elevated: "var(--color-elevated)",
         codebg: "var(--color-codebg)",
         input: "var(--color-input-bg)",
         "btn-bg": "var(--color-btn-bg)",
