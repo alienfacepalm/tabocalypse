@@ -315,10 +315,6 @@
     @apply text-[0.8rem];
   }
 
-  .clock-roast {
-    @apply mt-3 italic text-muted;
-  }
-
   .todo-list {
     @apply m-0 list-none p-0;
   }

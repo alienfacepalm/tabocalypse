@@ -2964,7 +2964,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               onCommit={(pos) => commitHudPanel("clock", pos)}
             >
               <ClockWidget
-                humor={humorCtx}
                 hourFormat={s.clockHourFormat}
                 onHourFormatChange={(clockHourFormat) =>
                   void persist((cur) => ({ ...cur, clockHourFormat }))

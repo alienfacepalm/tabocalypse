@@ -4,32 +4,22 @@ import {
   CLOCK_HOUR_FORMATS,
   type TClockHourFormat,
 } from "../lib/clock-hour-format";
-import { pickDailyLine, type IHumorContext } from "../lib/humor/engine";
 import { HudPanelBody, HudPanelTitleInline } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
 export function ClockWidget({
-  humor,
   hourFormat,
   onHourFormatChange,
 }: {
-  humor: IHumorContext;
   hourFormat: TClockHourFormat;
   onHourFormatChange: (next: TClockHourFormat) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
-  const [subtitle, setSubtitle] = useState<string | null>(null);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    const t = window.setInterval(() => setSubtitle(pickDailyLine(humor)), 12000);
-    setSubtitle(pickDailyLine(humor));
-    return () => window.clearInterval(t);
-  }, [humor]);
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const timeOpts = useMemo(
@@ -81,7 +71,6 @@ export function ClockWidget({
           })}
         </div>
         <div className="clock-tz muted">{tz}</div>
-        {subtitle ? <p className="clock-roast">{subtitle}</p> : null}
       </HudPanelBody>
     </section>
   );
