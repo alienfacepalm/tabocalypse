@@ -1587,14 +1587,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         className="mt-1 w-full"
                         placeholder="e.g. Another standup? Bold. Another reorg? Bolder."
                         value={s.myLines.join("\n")}
-                        onChange={(e) =>
-                          scheduleMyLinesPersist(
-                            e.target.value
-                              .split("\n")
-                              .map((x) => x.trim())
-                              .filter(Boolean),
-                          )
-                        }
+                        onChange={(e) => scheduleMyLinesPersist(e.target.value.split("\n"))}
                       />
                     </label>
                   </div>
