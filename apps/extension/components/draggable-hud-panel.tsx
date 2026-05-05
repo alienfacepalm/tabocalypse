@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HudPanelDragContext, type IHudPanelDragContextValue } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 import {
+  HUD_DRAG_Z_LIFT,
   HUD_PANEL_WIDTH_CLASSES,
   HUD_SNAP_GRID_PX,
   type IHudPanelPosition,
@@ -18,6 +19,7 @@ export function DraggableHudPanel({
   position,
   chaotic,
   locked,
+  zIndexBase,
   onCommit,
   children,
 }: {
@@ -26,6 +28,8 @@ export function DraggableHudPanel({
   position: IHudPanelPosition;
   chaotic: boolean;
   locked: boolean;
+  /** Resting stack order; lift on drag/resize adds `HUD_DRAG_Z_LIFT`. Default 10. */
+  zIndexBase?: number;
   onCommit: (next: IHudPanelPosition) => void;
   children: React.ReactNode;
 }) {
@@ -278,7 +282,7 @@ export function DraggableHudPanel({
       style={{
         left: `${display.xPct}%`,
         top: `${display.yPct}%`,
-        zIndex: zLift ? 30 : 10,
+        zIndex: (zIndexBase ?? 10) + (zLift ? HUD_DRAG_Z_LIFT : 0),
         ...(effectiveW != null ? { width: effectiveW } : {}),
         ...(effectiveH != null ? { height: effectiveH } : {}),
       }}

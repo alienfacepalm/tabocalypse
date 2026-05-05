@@ -65,6 +65,7 @@ import {
   type IHudPanelPosition,
   type ISettings,
   isTabocalypseSettingsStorageChange,
+  newNoteId,
   type IUserBackgroundImage,
   loadSettings,
   mergeWidgets,
@@ -97,7 +98,7 @@ import {
 } from "../../lib/fetch-bing-wallpaper";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
-import { DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
+import { clampHudScalar, DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
 import {
   applyDocumentTheme,
   coerceThemeHex,
@@ -603,6 +604,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       void persist((cur) => ({
         ...cur,
         hudPanelPositions: { ...cur.hudPanelPositions, [id]: pos },
+      }));
+    },
+    [persist],
+  );
+
+  const commitNotePanel = useCallback(
+    (noteId: string, pos: IHudPanelPosition) => {
+      void persist((cur) => ({
+        ...cur,
+        notePanels: cur.notePanels.map((p) => (p.noteId === noteId ? { ...p, position: pos } : p)),
       }));
     },
     [persist],
@@ -3044,20 +3055,137 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             </DraggableHudPanel>
           ) : null}
           {s.widgets.notes ? (
-            <DraggableHudPanel
-              key="notes"
-              panelId="notes"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.notes}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("notes", pos)}
-            >
-              <NotesWidget
-                value={s.notesText}
-                onChange={(notesText) => void persist((cur) => ({ ...cur, notesText }))}
-              />
-            </DraggableHudPanel>
+            <>
+              {s.notePanels.map((np) => (
+                <DraggableHudPanel
+                  key={`notes-open-${np.noteId}`}
+                  panelId="notes"
+                  canvasRef={hudCanvasRef}
+                  position={np.position}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  zIndexBase={52}
+                  onCommit={(pos) => commitNotePanel(np.noteId, pos)}
+                >
+                  <NotesWidget
+                    variant="panel"
+                    notes={s.notes}
+                    panelNoteId={np.noteId}
+                    onUpdateNote={(noteId, patch) =>
+                      void persist((cur) => ({
+                        ...cur,
+                        notes: cur.notes.map((n) =>
+                          n.id === noteId ? { ...n, ...patch, updatedAt: Date.now() } : n,
+                        ),
+                      }))
+                    }
+                    onDeleteNote={(noteId) =>
+                      void persist((cur) => ({
+                        ...cur,
+                        notes: cur.notes.filter((n) => n.id !== noteId),
+                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                      }))
+                    }
+                    onClosePanel={() =>
+                      void persist((cur) => ({
+                        ...cur,
+                        notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
+                      }))
+                    }
+                  />
+                </DraggableHudPanel>
+              ))}
+              <DraggableHudPanel
+                key="notes-master"
+                panelId="notes"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.notes}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                zIndexBase={10}
+                onCommit={(pos) => commitHudPanel("notes", pos)}
+              >
+                <NotesWidget
+                  variant="switcher"
+                  notes={s.notes}
+                  notePanels={s.notePanels}
+                  onToggleNotePanel={(noteId) =>
+                    void persist((cur) => {
+                      if (cur.notePanels.some((p) => p.noteId === noteId)) {
+                        return {
+                          ...cur,
+                          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                        };
+                      }
+                      const anchor = cur.hudPanelPositions.notes;
+                      const stagger = cur.notePanels.length * 5;
+                      const position: IHudPanelPosition = {
+                        xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
+                        yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
+                      };
+                      if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
+                        position.widthPx = anchor.widthPx;
+                      }
+                      if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
+                        position.heightPx = anchor.heightPx;
+                      }
+                      return {
+                        ...cur,
+                        notePanels: [...cur.notePanels, { noteId, position }],
+                      };
+                    })
+                  }
+                  onCreateNote={({ name, tags }) =>
+                    void persist((cur) => {
+                      const id = newNoteId();
+                      const now = Date.now();
+                      const anchor = cur.hudPanelPositions.notes;
+                      const stagger = cur.notePanels.length * 5;
+                      const position: IHudPanelPosition = {
+                        xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
+                        yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
+                      };
+                      if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
+                        position.widthPx = anchor.widthPx;
+                      }
+                      if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
+                        position.heightPx = anchor.heightPx;
+                      }
+                      return {
+                        ...cur,
+                        notes: [
+                          {
+                            id,
+                            name,
+                            tags,
+                            text: "",
+                            createdAt: now,
+                            updatedAt: now,
+                          },
+                          ...cur.notes,
+                        ],
+                        notePanels: [...cur.notePanels, { noteId: id, position }],
+                      };
+                    })
+                  }
+                  onUpdateNote={(noteId, patch) =>
+                    void persist((cur) => ({
+                      ...cur,
+                      notes: cur.notes.map((n) =>
+                        n.id === noteId ? { ...n, ...patch, updatedAt: Date.now() } : n,
+                      ),
+                    }))
+                  }
+                  onDeleteNote={(noteId) =>
+                    void persist((cur) => ({
+                      ...cur,
+                      notes: cur.notes.filter((n) => n.id !== noteId),
+                      notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                    }))
+                  }
+                />
+              </DraggableHudPanel>
+            </>
           ) : null}
         </div>
       </main>

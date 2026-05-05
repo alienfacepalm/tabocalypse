@@ -52,6 +52,92 @@ export interface ITodoItem {
   done: boolean;
 }
 
+export interface INote {
+  id: string;
+  name: string;
+  tags: string[];
+  text: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A pinned note opens as its own draggable panel with an independent HUD position. */
+export interface INotePanel {
+  noteId: string;
+  position: IHudPanelPosition;
+}
+
+export function newNoteId(): string {
+  const c = globalThis.crypto?.randomUUID;
+  if (typeof c === "function") return c.call(globalThis.crypto);
+  return `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function coerceNotes(raw: unknown): INote[] {
+  if (!Array.isArray(raw)) return [];
+  const out: INote[] = [];
+  const now = Date.now();
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as Record<string, unknown>;
+    const id = typeof o.id === "string" && o.id.trim().length > 0 ? o.id.trim() : "";
+    if (!id.length) continue;
+    const name =
+      typeof o.name === "string" && o.name.trim().length > 0 ? o.name.trim() : "Untitled";
+    const text = typeof o.text === "string" ? o.text : "";
+    const tags = Array.isArray(o.tags)
+      ? (o.tags as unknown[]).filter((t): t is string => typeof t === "string")
+      : [];
+    const createdAt =
+      typeof o.createdAt === "number" && Number.isFinite(o.createdAt) ? o.createdAt : now;
+    const updatedAt =
+      typeof o.updatedAt === "number" && Number.isFinite(o.updatedAt) ? o.updatedAt : createdAt;
+    out.push({ id, name, tags, text, createdAt, updatedAt });
+  }
+  return out;
+}
+
+function coerceNotePanels(raw: unknown, validNoteIds: ReadonlySet<string>): INotePanel[] {
+  if (!Array.isArray(raw)) return [];
+  const out: INotePanel[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as Record<string, unknown>;
+    const noteId =
+      typeof o.noteId === "string" && o.noteId.trim().length > 0 ? o.noteId.trim() : "";
+    if (!noteId.length || !validNoteIds.has(noteId)) continue;
+    const p = o.position;
+    if (typeof p !== "object" || p === null) continue;
+    const pr = p as Record<string, unknown>;
+    const xPct = typeof pr.xPct === "number" && Number.isFinite(pr.xPct) ? pr.xPct : 0;
+    const yPct = typeof pr.yPct === "number" && Number.isFinite(pr.yPct) ? pr.yPct : 0;
+    const pos: IHudPanelPosition = { xPct, yPct };
+    if (typeof pr.widthPx === "number" && Number.isFinite(pr.widthPx) && pr.widthPx > 0) {
+      pos.widthPx = pr.widthPx;
+    }
+    if (typeof pr.heightPx === "number" && Number.isFinite(pr.heightPx) && pr.heightPx > 0) {
+      pos.heightPx = pr.heightPx;
+    }
+    out.push({ noteId, position: pos });
+  }
+  return out;
+}
+
+function migrateLegacyNotesTextIntoNotes(text: string, now: number): INote[] {
+  const trimmed = text.trim();
+  if (!trimmed.length) return [];
+  return [
+    {
+      id: newNoteId(),
+      name: "Note",
+      tags: [],
+      text: trimmed,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+}
+
 /** One user-uploaded background image with framing stored locally (not synced). */
 export interface IUserBackgroundImage {
   id: string;
@@ -235,7 +321,11 @@ export interface ISettings {
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
   debugPluginSource: boolean;
+  /** @deprecated Prefer `notes`; kept for storage/load migration only. */
   notesText: string;
+  notes: INote[];
+  /** Pinned-note editor panels shown on the HUD canvas. */
+  notePanels: INotePanel[];
   todos: ITodoItem[];
   /** When true, panels are not snapped to the HUD grid on drop. */
   hudLayoutChaotic: boolean;
@@ -326,6 +416,8 @@ export interface ILocalSlice {
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
   notesText: string;
+  notes?: INote[];
+  notePanels?: INotePanel[];
   todos: ITodoItem[];
   hudLayoutChaotic?: boolean;
   hudLayoutLocked?: boolean;
@@ -421,6 +513,8 @@ export function defaultSettings(): ISettings {
     importedPlugins: [],
     debugPluginSource: false,
     notesText: "",
+    notes: [],
+    notePanels: [],
     todos: [],
     hudLayoutChaotic: false,
     hudLayoutLocked: false,
@@ -479,6 +573,8 @@ function toLocal(s: ISettings): ILocalSlice {
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
     notesText: s.notesText,
+    notes: s.notes,
+    notePanels: s.notePanels,
     todos: s.todos,
     hudLayoutChaotic: s.hudLayoutChaotic,
     hudLayoutLocked: s.hudLayoutLocked,
@@ -535,6 +631,14 @@ function mergeSettings(
     local?.backgroundRotateMinutesUser,
     d.backgroundRotateMinutesUser,
   );
+  const mergeNow = Date.now();
+  let mergedNotes = coerceNotes(local?.notes);
+  const legacyNotesText = typeof local?.notesText === "string" ? local.notesText : "";
+  if (mergedNotes.length === 0 && legacyNotesText.trim().length > 0) {
+    mergedNotes = migrateLegacyNotesTextIntoNotes(legacyNotesText, mergeNow);
+  }
+  const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
+  const mergedNotePanels = coerceNotePanels(local?.notePanels, mergedNoteIds);
   return {
     version: 1,
     preset: sync?.preset ?? d.preset,
@@ -593,7 +697,9 @@ function mergeSettings(
     myLines: local?.myLines ?? d.myLines,
     importedPacks: local?.importedPacks ?? d.importedPacks,
     importedPlugins: local?.importedPlugins ?? d.importedPlugins,
-    notesText: local?.notesText ?? d.notesText,
+    notesText: "",
+    notes: mergedNotes,
+    notePanels: mergedNotePanels,
     todos: local?.todos ?? d.todos,
     hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,

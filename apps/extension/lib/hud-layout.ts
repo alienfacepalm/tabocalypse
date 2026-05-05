@@ -97,6 +97,9 @@ export function clampHudScalar(value: number, min: number, max: number): number 
   return Math.min(max, Math.max(min, value));
 }
 
+/** Default lift added while dragging/resizing so the active panel stacks above other HUD panels. */
+export const HUD_DRAG_Z_LIFT = 100;
+
 export function mergeHudPanelPositions(
   partial: Partial<Record<THudPanelId, IHudPanelPosition>> | undefined,
 ): Record<THudPanelId, IHudPanelPosition> {

@@ -104,6 +104,8 @@ describe("defaultSettings", () => {
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.humorGenZMode).toBe(false);
+    expect(s.notes).toEqual([]);
+    expect(s.notePanels).toEqual([]);
   });
 });
 
@@ -231,7 +233,10 @@ describe("loadSettings", () => {
     expect(s.searchEngine).toBe("google");
     expect(s.openaiBaseUrl).toBe("https://example.com/v1");
     expect(s.myLines).toEqual(["line"]);
-    expect(s.notesText).toBe("n");
+    expect(s.notesText).toBe("");
+    expect(s.notes).toHaveLength(1);
+    expect(s.notes[0]?.text).toBe("n");
+    expect(s.notePanels).toEqual([]);
     expect(s.todos).toEqual([{ id: "1", text: "t", done: false }]);
     expect(s.widgets.humorBanner).toBe(false);
     expect(s.widgets.search).toBe(true);
