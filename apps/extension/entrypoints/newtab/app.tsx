@@ -1375,9 +1375,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <input
                         type="checkbox"
                         checked={s.hudLayoutChaotic}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, hudLayoutChaotic: e.target.checked }))
-                        }
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, hudLayoutChaotic: v }));
+                        }}
                       />
                       <span>Chaotic layout (no snap to grid)</span>
                     </label>
@@ -1385,9 +1386,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <input
                         type="checkbox"
                         checked={s.hudLayoutLocked}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, hudLayoutLocked: e.target.checked }))
-                        }
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, hudLayoutLocked: v }));
+                        }}
                       />
                       <span>Lock panel positions</span>
                     </label>
@@ -1416,9 +1418,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <input
                         type="checkbox"
                         checked={s.humorEnabled}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, humorEnabled: e.target.checked }))
-                        }
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, humorEnabled: v }));
+                        }}
                       />
                       <span>Humor on</span>
                     </label>
@@ -1426,9 +1429,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <input
                         type="checkbox"
                         checked={s.humorGenZMode}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, humorGenZMode: e.target.checked }))
-                        }
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, humorGenZMode: v }));
+                        }}
                       />
                       <span>Gen-Z mode</span>
                     </label>
@@ -1604,9 +1608,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <input
                         type="checkbox"
                         checked={s.backgroundRotate}
-                        onChange={(e) =>
-                          void persist((cur) => ({ ...cur, backgroundRotate: e.target.checked }))
-                        }
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, backgroundRotate: v }));
+                        }}
                       />
                       <span>Rotate background</span>
                     </label>
@@ -2296,14 +2301,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <input
                           type="checkbox"
                           checked={p.enabled}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const v = e.target.checked;
                             void persist((cur) => ({
                               ...cur,
                               importedPacks: cur.importedPacks.map((x) =>
-                                x.id === p.id ? { ...x, enabled: e.target.checked } : x,
+                                x.id === p.id ? { ...x, enabled: v } : x,
                               ),
-                            }))
-                          }
+                            }));
+                          }}
                         />
                         <span>{p.name}</span>
                       </label>
@@ -2329,14 +2335,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <input
                           type="checkbox"
                           checked={p.enabled}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const v = e.target.checked;
                             void persist((cur) => ({
                               ...cur,
                               importedPlugins: cur.importedPlugins.map((x) =>
-                                x.id === p.id ? { ...x, enabled: e.target.checked } : x,
+                                x.id === p.id ? { ...x, enabled: v } : x,
                               ),
-                            }))
-                          }
+                            }));
+                          }}
                         />
                         <span>{p.name}</span>
                       </label>
@@ -2363,9 +2370,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <input
                       type="checkbox"
                       checked={s.debugPluginSource}
-                      onChange={(e) =>
-                        void persist((cur) => ({ ...cur, debugPluginSource: e.target.checked }))
-                      }
+                      onChange={(e) => {
+                        const v = e.target.checked;
+                        void persist((cur) => ({ ...cur, debugPluginSource: v }));
+                      }}
                     />
                     <span>Show plugin widget types</span>
                   </label>
