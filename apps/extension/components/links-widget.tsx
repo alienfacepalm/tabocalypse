@@ -4,11 +4,13 @@ import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import { faviconUrl } from "../lib/favicon-url";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
-export function TopSitesWidget() {
+export function TopSitesWidget({ permissionsEpoch }: { permissionsEpoch: number }) {
   const [sites, setSites] = React.useState<{ url?: string; title?: string }[]>([]);
   const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    setErr(null);
+    setSites([]);
     const api = browser.topSites;
     if (!api?.get) {
       setErr("Enable Top sites in settings (permission).");
@@ -18,7 +20,7 @@ export function TopSitesWidget() {
       .get()
       .then((s) => setSites(s.slice(0, 12)))
       .catch(() => setErr("Enable Top sites in settings (permission)."));
-  }, []);
+  }, [permissionsEpoch]);
 
   if (err)
     return (
@@ -55,11 +57,13 @@ export function TopSitesWidget() {
   );
 }
 
-export function BookmarksWidget() {
+export function BookmarksWidget({ permissionsEpoch }: { permissionsEpoch: number }) {
   const [marks, setMarks] = React.useState<{ id: string; title?: string; url?: string }[]>([]);
   const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    setErr(null);
+    setMarks([]);
     const api = browser.bookmarks;
     if (!api?.getRecent) {
       setErr("Enable Bookmarks strip in settings (permission).");
@@ -69,7 +73,7 @@ export function BookmarksWidget() {
       .getRecent(16)
       .then(setMarks)
       .catch(() => setErr("Enable Bookmarks strip in settings (permission)."));
-  }, []);
+  }, [permissionsEpoch]);
 
   if (err)
     return (
