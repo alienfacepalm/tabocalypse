@@ -38,6 +38,7 @@ import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { UserBackgroundGallery } from "../../components/user-background-gallery";
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
+import { HudColorInput } from "../../components/hud-color-input";
 import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/clock-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
@@ -629,6 +630,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     () => ({
       humorEnabled: settings.humorEnabled,
       humorIntensity: settings.humorIntensity,
+      humorGenZMode: settings.humorGenZMode,
       enabledBuiltinPackIds: settings.humorBuiltinPackIds,
       importedPacks: settings.importedPacks,
       myLines: settings.myLines,
@@ -1282,10 +1284,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <div className="color-accent-row">
                       <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
                       <HudTip tip="Main HUD highlight color (buttons, borders)">
-                        <input
+                        <HudColorInput
                           id="tabocalypse-accent-primary"
-                          type="color"
-                          className="color-input-hud"
                           aria-label="Primary accent color"
                           value={
                             getResolvedAccentPair(s.themePalette, {
@@ -1294,17 +1294,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             }).accent
                           }
                           onChange={onAccentPrimaryColorChange}
-                          onInput={onAccentPrimaryColorChange}
                         />
                       </HudTip>
                     </div>
                     <div className="color-accent-row">
                       <label htmlFor="tabocalypse-accent-secondary">Secondary accent</label>
                       <HudTip tip="Second highlight for hovers and contrast accents">
-                        <input
+                        <HudColorInput
                           id="tabocalypse-accent-secondary"
-                          type="color"
-                          className="color-input-hud"
                           aria-label="Secondary accent color"
                           value={
                             getResolvedAccentPair(s.themePalette, {
@@ -1313,7 +1310,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             }).accent2
                           }
                           onChange={onAccentSecondaryColorChange}
-                          onInput={onAccentSecondaryColorChange}
                         />
                       </HudTip>
                     </div>
@@ -1398,6 +1394,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       />
                       <span>Humor on</span>
                     </label>
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={s.humorGenZMode}
+                        onChange={(e) =>
+                          void persist((cur) => ({ ...cur, humorGenZMode: e.target.checked }))
+                        }
+                      />
+                      <span>Gen-Z mode</span>
+                    </label>
+                    <p className="muted sm -mt-2 mb-2">
+                      Built-in roasts use Gen-Z voice only; pack toggles below are ignored. Your
+                      lines and imported packs still mix in.
+                    </p>
                     <label className="block">
                       Intensity
                       <select
@@ -1416,6 +1426,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <input
                           type="checkbox"
                           checked={s.humorBuiltinPackIds.includes(p.id)}
+                          disabled={s.humorGenZMode}
                           onChange={(e) => togglePack(p.id, e.target.checked)}
                         />
                         <span>
@@ -1651,14 +1662,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           <div className="color-accent-row">
                             <label htmlFor="tabocalypse-bg-solid">Background color</label>
                             <HudTip tip="Solid fill for the new tab behind the HUD">
-                              <input
+                              <HudColorInput
                                 id="tabocalypse-bg-solid"
-                                type="color"
-                                className="color-input-hud"
                                 aria-label="Background color"
                                 value={s.backgroundSolid}
                                 onChange={onBackgroundSolidColorChange}
-                                onInput={onBackgroundSolidColorChange}
                               />
                             </HudTip>
                           </div>
@@ -1667,28 +1675,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             <div className="color-accent-row">
                               <label htmlFor="tabocalypse-bg-grad-start">Gradient start</label>
                               <HudTip tip="First color in the background blend">
-                                <input
+                                <HudColorInput
                                   id="tabocalypse-bg-grad-start"
-                                  type="color"
-                                  className="color-input-hud"
                                   aria-label="Gradient start color"
                                   value={s.backgroundSolid}
                                   onChange={onBackgroundSolidColorChange}
-                                  onInput={onBackgroundSolidColorChange}
                                 />
                               </HudTip>
                             </div>
                             <div className="color-accent-row">
                               <label htmlFor="tabocalypse-bg-grad-end">Gradient end</label>
                               <HudTip tip="Second color in the background blend">
-                                <input
+                                <HudColorInput
                                   id="tabocalypse-bg-grad-end"
-                                  type="color"
-                                  className="color-input-hud"
                                   aria-label="Gradient end color"
                                   value={s.backgroundGradientEnd}
                                   onChange={onBackgroundGradientEndColorChange}
-                                  onInput={onBackgroundGradientEndColorChange}
                                 />
                               </HudTip>
                             </div>
