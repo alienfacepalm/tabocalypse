@@ -12,6 +12,7 @@ import {
   FolderUp,
   Heart,
   Image,
+  ImagePlus,
   Images,
   LayoutGrid,
   Layers,
@@ -1537,43 +1538,55 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <Paintbrush size={18} strokeWidth={2} aria-hidden />
                         <span>Gradient</span>
                       </button>
-                      <HudTip
-                        tip={
-                          s.userBackgroundImages.length > 0
-                            ? "Use your saved photo library as the new tab background"
-                            : "Add at least one photo before you can pick this background"
-                        }
-                      >
-                        <button
-                          type="button"
-                          className={
-                            s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
-                          }
-                          aria-pressed={s.backgroundKind === "image"}
-                          disabled={s.userBackgroundImages.length === 0}
-                          onClick={() =>
-                            void persist((cur) => {
-                              if (cur.userBackgroundImages.length === 0) return cur;
-                              const primary =
-                                cur.userBackgroundImages.find(
-                                  (row) => row.id === cur.userBackgroundActiveId,
-                                ) ?? cur.userBackgroundImages[0];
-                              return {
-                                ...cur,
-                                backgroundKind: "image",
-                                userBackgroundActiveId: primary?.id ?? cur.userBackgroundActiveId,
-                                userBackgroundDataUrl: primary?.dataUrl ?? null,
-                                userBackgroundDataUrls: cur.userBackgroundImages.map(
-                                  (row) => row.dataUrl,
-                                ),
-                              };
-                            })
-                          }
-                        >
-                          <Image size={18} strokeWidth={2} aria-hidden />
-                          <span>My photos</span>
-                        </button>
-                      </HudTip>
+                      {s.userBackgroundImages.length > 0 ? (
+                        <HudTip tip="Use your saved photo library as the new tab background">
+                          <button
+                            type="button"
+                            className={
+                              s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
+                            }
+                            aria-pressed={s.backgroundKind === "image"}
+                            onClick={() =>
+                              void persist((cur) => {
+                                if (cur.userBackgroundImages.length === 0) return cur;
+                                const primary =
+                                  cur.userBackgroundImages.find(
+                                    (row) => row.id === cur.userBackgroundActiveId,
+                                  ) ?? cur.userBackgroundImages[0];
+                                return {
+                                  ...cur,
+                                  backgroundKind: "image",
+                                  userBackgroundActiveId: primary?.id ?? cur.userBackgroundActiveId,
+                                  userBackgroundDataUrl: primary?.dataUrl ?? null,
+                                  userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                    (row) => row.dataUrl,
+                                  ),
+                                };
+                              })
+                            }
+                          >
+                            <Image size={18} strokeWidth={2} aria-hidden />
+                            <span>My photos</span>
+                          </button>
+                        </HudTip>
+                      ) : (
+                        <HudTip tip="Pick images from your device to use as background">
+                          <label className="btn has-icon">
+                            <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                            <span>Upload first photo</span>
+                            <input
+                              hidden
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => {
+                                void onPickBackgrounds(e.target.files);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                        </HudTip>
+                      )}
                       <button
                         type="button"
                         className={
