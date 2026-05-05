@@ -11,9 +11,11 @@ export interface IHudColorInputProps {
 function openOrActivateColorInput(el: HTMLInputElement): void {
   const pick = el.showPicker;
   if (typeof pick === "function") {
-    void Promise.resolve(pick.call(el)).catch(() => {
+    try {
+      pick.call(el);
+    } catch {
       el.click();
-    });
+    }
   } else {
     el.click();
   }

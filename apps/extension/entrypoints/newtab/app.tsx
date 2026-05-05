@@ -704,9 +704,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
   const onBackgroundSolidColorChange = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
+      const raw = e.currentTarget.value;
       void persist((cur) => ({
         ...cur,
-        backgroundSolid: coerceThemeHex(e.currentTarget.value, cur.backgroundSolid),
+        backgroundSolid: coerceThemeHex(raw, cur.backgroundSolid),
       }));
     },
     [persist],
@@ -714,9 +715,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const onBackgroundGradientEndColorChange = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
+      const raw = e.currentTarget.value;
       void persist((cur) => ({
         ...cur,
-        backgroundGradientEnd: coerceThemeHex(e.currentTarget.value, cur.backgroundGradientEnd),
+        backgroundGradientEnd: coerceThemeHex(raw, cur.backgroundGradientEnd),
       }));
     },
     [persist],
@@ -724,8 +726,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const onAccentPrimaryColorChange = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
+      const raw = e.currentTarget.value;
       void persist((cur) => {
-        const hex = coerceThemeHex(e.currentTarget.value, cur.themeCustomAccent);
+        const hex = coerceThemeHex(raw, cur.themeCustomAccent);
         const pair = getResolvedAccentPair(cur.themePalette, {
           accent: cur.themeCustomAccent,
           accent2: cur.themeCustomAccent2,
@@ -743,8 +746,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const onAccentSecondaryColorChange = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
+      const raw = e.currentTarget.value;
       void persist((cur) => {
-        const hex = coerceThemeHex(e.currentTarget.value, cur.themeCustomAccent2);
+        const hex = coerceThemeHex(raw, cur.themeCustomAccent2);
         const pair = getResolvedAccentPair(cur.themePalette, {
           accent: cur.themeCustomAccent,
           accent2: cur.themeCustomAccent2,
