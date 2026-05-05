@@ -26,6 +26,7 @@
     "check:sdk": "tsc --noEmit -p packages/plugin-sdk/tsconfig.json",
     "check:extension": "pnpm --filter extension exec tsc --noEmit -p tsconfig.json",
     "check": "pnpm run format:check && pnpm run lint && pnpm run test && pnpm run check:sdk && pnpm run check:extension",
+    "scrape:unsuck-classics": "pnpm --filter extension scrape:unsuck-classics",
     "prepare": "husky"
   },
   "lint-staged": {

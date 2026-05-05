@@ -1,6 +1,6 @@
 {
   "name": "extension",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "build:firefox": "wxt build -b firefox",
     "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "scrape:unsuck-classics": "node scripts/scrape-unsuck-classics.mjs"
   },
   "dependencies": {
     "@fontsource/audiowide": "^5.2.7",

@@ -1,4 +1,5 @@
 import type { THumorIntensity } from "../settings";
+import { UNSUCK_CLASSICS_SCRAPED_LINES } from "./unsuck-classics-lines.generated";
 
 /** Built-in pack used when Settings → Chaos → Gen-Z voice is selected. */
 export const GEN_Z_PACK_ID = "gen_z" as const;
@@ -287,38 +288,7 @@ export const BUILTIN_PACKS: IBuiltinPack[] = [
     id: UNSUCK_CLASSICS_PACK_ID,
     name: "Classic jargon",
     maxIntensity: "mild",
-    lines: [
-      "Synergy — when two wrong ideas hold hands and call it strategy.",
-      "Circle back — meet again so nobody has to decide today.",
-      "Deep dive — read the subject line out loud and call it research.",
-      "Bandwidth — polite way to say “no” while sounding generous.",
-      "Touch base — schedule a meeting to discuss scheduling meetings.",
-      "Best-in-class — the least embarrassing option from a biased slide deck.",
-      "Leverage — use a noun you do not understand until the sentence sounds serious.",
-      "Quick win — look busy before anyone checks the spreadsheet.",
-      "Low-hanging fruit — tasks we mention loudly so we can ignore the hard ones.",
-      "Action items — regrets written down in bullet form.",
-      "Stakeholder — anyone CC\u2019d enough times to deserve blame.",
-      "Alignment — agreeing the chart is pretty while avoiding the question.",
-      "Thought leadership — tweeting a platitude and booking a keynote.",
-      "North star metric — the number we worship until quarterly panic.",
-      "Scaling — doing the same chaos with more headcount.",
-      "Optimize — rearrange labels until morale improves.",
-      "Stakeholder sync — empathy theater with a calendar invite.",
-      "Mission-critical — important enough to interrupt lunch, not enough to fund.",
-      "Culture fit — “we like people who already agree with us.”",
-      "Run it up the flagpole — test if blame can fly before we commit.",
-      "Rightsize — resize, but with fewer apologies.",
-      "Operationalize — turn a memo into a process that owns you.",
-      "Paradigm shift — rename the folder and declare victory.",
-      "Hypergrowth — velocity measured in anxiety, not revenue.",
-      "Customer-centric — we thought about users during the deck animation.",
-      "Swim lane — your box in the RACI where responsibility evaporates.",
-      "New tab — a fresh canvas for the same procrastination.",
-      "Bookmark bar — a graveyard of intentions with favicon headstones.",
-      "Async update — typing “following up” into the void.",
-      "Multitasking — believing tab 40 is still one coherent errand.",
-    ],
+    lines: [...UNSUCK_CLASSICS_SCRAPED_LINES],
   },
   {
     id: GEN_Z_PACK_ID,
