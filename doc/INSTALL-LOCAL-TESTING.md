@@ -7,7 +7,7 @@ This page is for **testers** and **early users** who want to run the extension o
 - **Google Chrome**, **Microsoft Edge**, **Mozilla Firefox**, or **Apple Safari** (recent version). **Safari Web Extensions** are built and run on **macOS** (see [Safari](#safari) below).
 - Either:
   - **A zip file** built by a developer (`pnpm run zip` from the project — produces a store-style archive), **or**
-  - **An unpacked folder** such as `apps/extension/output/chrome-mv3`, `safari-mv3`, or `firefox-mv2` after someone runs `pnpm run build` for you.
+  - **An unpacked folder** such as `apps/extension/output/chrome_edge-mv3`, `safari-mv3`, or `firefox-mv2` after someone runs `pnpm run build` for you.
 
 Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.dmg`. You load it through the browser’s **developer / temporary add-on** flow.
 
@@ -18,7 +18,7 @@ Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.d
    - Chrome: paste `chrome://extensions` in the address bar.
    - Edge: paste `edge://extensions`.
 3. Turn on **Developer mode** (toggle in the corner).
-4. Click **Load unpacked** and select the folder that contains **`manifest.json`** (for local builds, that is usually `chrome-mv3` inside `apps/extension/output`).
+4. Click **Load unpacked** and select the folder that contains **`manifest.json`** (for local builds, that is usually `chrome_edge-mv3` inside `apps/extension/output`).
 5. Open a **new tab** — it should show Tabocalypse instead of the default new tab page.
 
 **Updates:** When you get a newer build, click **Remove** for the old entry, then **Load unpacked** again on the new folder (or use **Reload** after replacing files in the same folder).
@@ -32,7 +32,7 @@ Temporary add-ons **do not persist** across browser restarts; for longer testing
 
 ## Safari
 
-Safari does **not** use Chrome’s **Load unpacked** flow. You need an **MV3** extension folder (from this repo, `apps/extension/output/safari-mv3` or `chrome-mv3` after `pnpm run build`) and a **Mac** with **Xcode**.
+Safari does **not** use Chrome’s **Load unpacked** flow. You need an **MV3** extension folder (from this repo, `apps/extension/output/safari-mv3` or `chrome_edge-mv3` after `pnpm run build`) and a **Mac** with **Xcode**.
 
 1. Install **Xcode** (or Apple’s Command Line Tools that ship **`safari-web-extension-converter`**).
 2. Convert the extension bundle, for example:

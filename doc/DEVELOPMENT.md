@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **Node.js** 20 or newer (see root `package.json` → `engines`)
-- **pnpm** 10.x — this repo uses [`packageManager`](../package.json) and [`.npmrc`](../.npmrc) (`package-manager-strict=true`). Install via [pnpm.io/installation](https://pnpm.io/installation) or Corepack: `corepack enable && corepack prepare pnpm@10.11.0 --activate`
+- **pnpm** 10.x — this repo uses [`packageManager`](../package.json) and [`.npmrc`](../.npmrc) (`package-manager-strict=true`). Install via [pnpm.io/installation](https://pnpm.io/installation) or Corepack: `corepack enable && corepack prepare pnpm@latest --activate`
 
 ## Clone and install
 
@@ -30,26 +30,26 @@ Use a normal **git** clone so the **Husky** `pre-commit` hook (lint-staged) can 
 
 All commands run from the **repo root** unless noted.
 
-| Command                  | Purpose                                                                                            |
-| ------------------------ | -------------------------------------------------------------------------------------------------- |
-| `pnpm run dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes             |
-| `pnpm run dev:firefox`   | Same for Firefox                                                                                   |
-| `pnpm run build`         | Production build → `chrome-mv3/`, `safari-mv3/`, and `firefox-mv2/` under `apps/extension/output/` |
-| `pnpm run build:firefox` | Firefox only → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)               |
-| `pnpm run build:safari`  | Safari MV3 only → `apps/extension/output/safari-mv3/`                                              |
-| `pnpm run zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))                       |
-| `pnpm run check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                        |
-| `pnpm run format`        | Prettier write on tracked file types                                                               |
-| `pnpm run test`          | Vitest                                                                                             |
+| Command                  | Purpose                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `pnpm run dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes                  |
+| `pnpm run dev:firefox`   | Same for Firefox                                                                                        |
+| `pnpm run build`         | Production build → `chrome_edge-mv3/`, `safari-mv3/`, and `firefox-mv2/` under `apps/extension/output/` |
+| `pnpm run build:firefox` | Firefox only → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)                    |
+| `pnpm run build:safari`  | Safari MV3 only → `apps/extension/output/safari-mv3/`                                                   |
+| `pnpm run zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))                            |
+| `pnpm run check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                             |
+| `pnpm run format`        | Prettier write on tracked file types                                                                    |
+| `pnpm run test`          | Vitest                                                                                                  |
 
-**Safari** ships from **`safari-mv3`** (or **`chrome-mv3`**; both are MV3) with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
+**Safari** ships from **`safari-mv3`** (or **`chrome_edge-mv3`**; both are MV3) with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
 
 ## Load the extension during development
 
 1. Run `pnpm run dev` (or `pnpm run build` for a static folder).
-2. **Chrome / Edge:** `chrome://extensions` → **Developer mode** → **Load unpacked** → choose `apps/extension/output/chrome-mv3`.
+2. **Chrome / Edge:** `chrome://extensions` → **Developer mode** → **Load unpacked** → choose `apps/extension/output/chrome_edge-mv3`.
 3. **Firefox:** `about:debugging` → **This Firefox** → **Load Temporary Add-on** → pick `manifest.json` inside the Firefox output folder under `apps/extension/output/`.
-4. **Safari:** On macOS, convert `apps/extension/output/safari-mv3` (or `chrome-mv3`) and run from Xcode — same links as above.
+4. **Safari:** On macOS, convert `apps/extension/output/safari-mv3` (or `chrome_edge-mv3`) and run from Xcode — same links as above.
 
 After code changes, use the browser’s **reload extension** control; for `dev`, WXT may rebuild — reload again if the new tab page looks stale.
 

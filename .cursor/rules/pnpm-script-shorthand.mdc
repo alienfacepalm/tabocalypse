@@ -1,0 +1,12 @@
+---
+description: Prefer pnpm script shorthand (no `run`) by default
+alwaysApply: true
+---
+
+# pnpm script shorthand
+
+- Prefer **`pnpm <script>`** over **`pnpm run <script>`** for package.json scripts.
+  - Examples: `pnpm test`, `pnpm lint`, `pnpm check:extension`, `pnpm format:check`
+- Keep using pnpm’s **built-in subcommands** normally (these are not scripts):
+  - `pnpm add`, `pnpm install`, `pnpm exec`, `pnpm dlx`, `pnpm why`, `pnpm -r`, `pnpm --filter …`
+- Exception: if the shorthand is **ambiguous** or **fails** for a given command in this repo/tooling, use the explicit form **`pnpm run <script>`** (or the correct pnpm subcommand) for that case.

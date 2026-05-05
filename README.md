@@ -2,7 +2,7 @@
 
 **by AlienFacepalm** — Cross-browser (Chrome / Edge / Firefox / Safari) Manifest V3 extension that replaces the new tab page with utility widgets, curated humor packs, optional user-imported packs, declarative plugins, alarms/notifications, and BYO OpenAI-compatible API testing.
 
-**Agents / AI:** follow [AGENTS.md](AGENTS.md) and [`.cursor/rules/project-conventions.mdc`](.cursor/rules/project-conventions.mdc) (always-on Cursor rules).
+**Agents / AI:** follow [AGENTS.md](AGENTS.md), [`.cursor/rules/project-conventions.mdc`](.cursor/rules/project-conventions.mdc) (always-on Cursor rules), and per-tool wrappers (`CLAUDE.md`, `ANTIGRAVITY.md`, `.clinerules`, etc. — kept in sync via [doc/AGENT-INSTRUCTIONS.md](doc/AGENT-INSTRUCTIONS.md)).
 
 ## Documentation
 
@@ -17,6 +17,8 @@ Guides live under **`doc/`**. Start at [doc/README.md](doc/README.md); every mar
 - [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md) — common issues
 - [doc/PLUGIN-SCHEMA.md](doc/PLUGIN-SCHEMA.md) — declarative plugin JSON (v1)
 - [doc/STORE-LISTING.md](doc/STORE-LISTING.md) — short store listing checklist
+- [doc/ALPHA-SETUP.md](doc/ALPHA-SETUP.md) — clone, build, and install in developer mode
+- [doc/AGENT-INSTRUCTIONS.md](doc/AGENT-INSTRUCTIONS.md) — agent-agnostic rules and sync targets
 
 ## Product notes
 
@@ -41,7 +43,7 @@ pnpm run dev          # Chrome (default)
 pnpm run dev:firefox
 ```
 
-After **`pnpm run build`**, WXT writes **`apps/extension/output/chrome-mv3`** (Chrome/Edge MV3), **`apps/extension/output/safari-mv3`** (Safari-targeted MV3), and **`apps/extension/output/firefox-mv2`** (Firefox; WXT emits MV2 for Firefox in this project). Load **Load unpacked** from `chrome-mv3` for Chromium browsers. **Safari** does not use Chromium’s **Load unpacked** flow: on macOS, point Apple’s **Safari Web Extension** converter at **`safari-mv3`** or **`chrome-mv3`**, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
+After **`pnpm run build`**, WXT writes **`apps/extension/output/chrome_edge-mv3`** (Chrome/Edge MV3), **`apps/extension/output/safari-mv3`** (Safari-targeted MV3), and **`apps/extension/output/firefox-mv2`** (Firefox; WXT emits MV2 for Firefox in this project). Load **Load unpacked** from `chrome_edge-mv3` for Chromium browsers. **Safari** does not use Chromium’s **Load unpacked** flow: on macOS, point Apple’s **Safari Web Extension** converter at **`safari-mv3`** or **`chrome_edge-mv3`**, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
 
 Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) if you use WXT env vars (or follow WXT’s env file discovery for that app).
 

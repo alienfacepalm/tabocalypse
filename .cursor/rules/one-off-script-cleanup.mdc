@@ -1,0 +1,29 @@
+---
+description: Remove finished one-off/migration scripts and unwind references
+alwaysApply: true
+---
+
+# One-off and migration scripts — clean up after use
+
+Some scripts exist only for a **single task** (data migration, one-time rename, scrape → generated file committed once, fixture conversion). After that work is **merged and verified**, treat leftover script files as **repo cruft**.
+
+## When to delete
+
+- The script **no longer produces value** on future installs or builds — the outcome lives in tracked source, settings, or data that already landed.
+- The same workflow is **unlikely to repeat**; if it might, prefer **minimal inline docs** (`doc/*.md`) or **short comments** near the artifact instead of keeping a brittle script indefinitely.
+
+## When to keep
+
+- **Ongoing tooling**: codegen, scrape → refresh committed output on demand, CI helpers, packaging steps referenced from **`package.json`** with a stable name/purpose.
+- **Reversible migrations** users maintainers may need again — then keep it but **name and document** it (one-line header comment or `doc/` pointer), and keep **`package.json`** entries accurate.
+
+## Before calling the task done
+
+1. **Remove** the script file(s) you added for the one-off job (or that became dead after the migration).
+2. **Unwind references**: `package.json` scripts, `README` / `doc/` steps, CI, other scripts that `import` or `spawn` the removed file.
+3. **Run** `pnpm run check` (and any script you removed from `package.json` should not break the tree).
+
+## Relation to other guidance
+
+- Matches **AGENTS.md** — *clean up only your own mess*; do not delete **pre-existing** scripts another path still uses unless the user asked.
+- **Generated output** already committed on purpose (e.g. `*.generated.ts`) is **not** “a script to delete” — remove only the **generator** if it was truly one-shot and will never be refreshed.

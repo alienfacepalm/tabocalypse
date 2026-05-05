@@ -21,7 +21,7 @@ Typical layout under [`apps/extension/entrypoints/`](../apps/extension/entrypoin
 - **`newtab/`** — New tab page (main user interface).
 - **`background.ts`** — MV3 service worker: alarms, notifications, and other background tasks.
 
-Generated types and dev cache live under **`.wxt/`** (gitignored); shipped browser folders (**`chrome-mv3`**, **`safari-mv3`**, **`firefox-mv2`**) are built under **`apps/extension/output/`** (gitignored). **Safari** App Store packaging still uses Apple’s **Safari Web Extension** tools on macOS from the **`safari-mv3`** (or **`chrome-mv3`**) folder. Do not edit generated files by hand.
+Generated types and dev cache live under **`.wxt/`** (gitignored); shipped browser folders (**`chrome_edge-mv3`**, **`safari-mv3`**, **`firefox-mv2`**) are built under **`apps/extension/output/`** (gitignored). **Safari** App Store packaging still uses Apple’s **Safari Web Extension** tools on macOS from the **`safari-mv3`** (or **`chrome_edge-mv3`**) folder. Do not edit generated files by hand.
 
 ## Data flow (simplified)
 

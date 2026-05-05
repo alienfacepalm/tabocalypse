@@ -2,7 +2,7 @@
 
 ## “Load unpacked” fails or the extension does not appear
 
-- Select the directory that contains **`manifest.json` at its root** — for Chrome MV3 builds from this repo, that is usually `apps/extension/output/chrome-mv3`, not the repo root and not `output` alone (pick the `chrome-mv3` folder, not the parent `output` folder).
+- Select the directory that contains **`manifest.json` at its root** — for Chrome MV3 builds from this repo, that is usually `apps/extension/output/chrome_edge-mv3`, not the repo root and not `output` alone (pick the `chrome_edge-mv3` folder, not the parent `output` folder).
 - If you used a **zip**, unzip first; Chrome does not load zip files directly for unpacked installs.
 
 ## New tab still shows the default page

@@ -16,18 +16,18 @@ This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, 
 From the repo root:
 
 ```bash
-pnpm run build           # chrome-mv3 + safari-mv3 + firefox-mv2 → apps/extension/output/
+pnpm run build           # chrome_edge-mv3 + safari-mv3 + firefox-mv2 → apps/extension/output/
 pnpm run build:firefox   # Firefox only → apps/extension/output/firefox-mv2/
 pnpm run build:safari    # Safari MV3 only → apps/extension/output/safari-mv3/
 pnpm run zip             # Store-style zip (WXT); confirm output path in the CLI log
 ```
 
-For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging uses Apple’s tools on a Mac against the **`safari-mv3`** folder (or **`chrome-mv3`**; both are MV3 from the same build) — see [Safari (Mac App Store)](#safari-mac-app-store).
+For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome_edge-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging uses Apple’s tools on a Mac against the **`safari-mv3`** folder (or **`chrome_edge-mv3`**; both are MV3 from the same build) — see [Safari (Mac App Store)](#safari-mac-app-store).
 
 ## Chrome Web Store
 
 - **Developer program:** one-time registration fee; use a Google account tied to your publisher identity.
-- **Upload:** New item → upload the **zip** from `pnpm run zip` (or zip `chrome-mv3` yourself ensuring `manifest.json` is at the root).
+- **Upload:** New item → upload the **zip** from `pnpm run zip` (or zip `chrome_edge-mv3` yourself ensuring `manifest.json` is at the root).
 - **Listing:** Title, short + long description, category, screenshots, **privacy practices** questionnaire.
 - **Review:** Google may take from hours to several days; respond to policy questions in the dashboard.
 
@@ -62,7 +62,7 @@ Official: [Distribute your extension](https://extensionworkshop.com/documentatio
 
 ## Safari (Mac App Store)
 
-WXT emits **`apps/extension/output/safari-mv3/`** (Manifest V3 for Safari). The default **`pnpm run build`** refreshes **`chrome-mv3`**, **`safari-mv3`**, and **`firefox-mv2`** together; you can also run **`pnpm run build:safari`** for Safari only.
+WXT emits **`apps/extension/output/safari-mv3/`** (Manifest V3 for Safari). The default **`pnpm run build`** refreshes **`chrome_edge-mv3`**, **`safari-mv3`**, and **`firefox-mv2`** together; you can also run **`pnpm run build:safari`** for Safari only.
 
 1. Run **`pnpm run build`** (or **`pnpm run build:safari`**) so `apps/extension/output/safari-mv3/` is up to date.
 2. On a **Mac**, use Apple’s **`safari-web-extension-converter`** (from Xcode / Command Line Tools) to turn that folder into a **Safari Web Extension** Xcode project — same idea as local testing in [Install and test locally](INSTALL-LOCAL-TESTING.md#safari).
