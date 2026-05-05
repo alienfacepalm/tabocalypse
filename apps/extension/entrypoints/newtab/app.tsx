@@ -2586,217 +2586,251 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <section className="settings-block">
-                  <h3>Import pack (.zip with pack.json or .json)</h3>
-                  <label className="btn has-icon">
-                    <FolderUp size={18} strokeWidth={2} aria-hidden />
-                    <span>Choose file</span>
-                    <input
-                      hidden
-                      type="file"
-                      accept=".zip,.json,application/json"
-                      onChange={(e) => void importPackFile(e.target.files![0]!)}
-                    />
-                  </label>
-                  <p className="muted sm">You are responsible for imported content.</p>
-                </section>
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Import pack</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2 mt-0">
+                      Accepts .zip with pack.json, or standalone .json.
+                    </p>
+                    <label className="btn has-icon">
+                      <FolderUp size={18} strokeWidth={2} aria-hidden />
+                      <span>Choose file</span>
+                      <input
+                        hidden
+                        type="file"
+                        accept=".zip,.json,application/json"
+                        onChange={(e) => void importPackFile(e.target.files![0]!)}
+                      />
+                    </label>
+                    <p className="muted sm">You are responsible for imported content.</p>
+                  </div>
+                </details>
 
-                <section className="settings-block">
-                  <h3>Import declarative plugin (tabocalypse-plugin.json)</h3>
-                  <label className="btn has-icon">
-                    <Braces size={18} strokeWidth={2} aria-hidden />
-                    <span>Choose JSON</span>
-                    <input
-                      hidden
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={(e) => void importPluginFile(e.target.files![0]!)}
-                    />
-                  </label>
-                  <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
-                </section>
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Import declarative plugin</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2 mt-0">Manifest tabocalypse-plugin.json.</p>
+                    <label className="btn has-icon">
+                      <Braces size={18} strokeWidth={2} aria-hidden />
+                      <span>Choose JSON</span>
+                      <input
+                        hidden
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={(e) => void importPluginFile(e.target.files![0]!)}
+                      />
+                    </label>
+                    <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
+                  </div>
+                </details>
 
-                <section className="settings-block">
-                  <h3>Manage imports</h3>
-                  <p className="muted sm">Packs</p>
-                  {s.importedPacks.map((p) => (
-                    <div key={p.id} className="row manage-row">
-                      <label className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={p.enabled}
-                          onChange={(e) => {
-                            const v = e.target.checked;
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Manage imports</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2 mt-0">Packs</p>
+                    {s.importedPacks.map((p) => (
+                      <div key={p.id} className="row manage-row">
+                        <label className="check-row">
+                          <input
+                            type="checkbox"
+                            checked={p.enabled}
+                            onChange={(e) => {
+                              const v = e.target.checked;
+                              void persist((cur) => ({
+                                ...cur,
+                                importedPacks: cur.importedPacks.map((x) =>
+                                  x.id === p.id ? { ...x, enabled: v } : x,
+                                ),
+                              }));
+                            }}
+                          />
+                          <span>{p.name}</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="btn ghost sm has-icon"
+                          onClick={() =>
                             void persist((cur) => ({
                               ...cur,
-                              importedPacks: cur.importedPacks.map((x) =>
-                                x.id === p.id ? { ...x, enabled: v } : x,
-                              ),
-                            }));
-                          }}
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                      <button
-                        type="button"
-                        className="btn ghost sm has-icon"
-                        onClick={() =>
-                          void persist((cur) => ({
-                            ...cur,
-                            importedPacks: cur.importedPacks.filter((x) => x.id !== p.id),
-                          }))
-                        }
-                      >
-                        <Trash2 size={18} strokeWidth={2} aria-hidden />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  ))}
-                  <p className="muted sm">Plugins</p>
-                  {s.importedPlugins.map((p) => (
-                    <div key={p.id} className="row manage-row">
-                      <label className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={p.enabled}
-                          onChange={(e) => {
-                            const v = e.target.checked;
-                            void persist((cur) => ({
-                              ...cur,
-                              importedPlugins: cur.importedPlugins.map((x) =>
-                                x.id === p.id ? { ...x, enabled: v } : x,
-                              ),
-                            }));
-                          }}
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                      <button
-                        type="button"
-                        className="btn ghost sm has-icon"
-                        onClick={() =>
-                          void persist((cur) => ({
-                            ...cur,
-                            importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
-                          }))
-                        }
-                      >
-                        <Trash2 size={18} strokeWidth={2} aria-hidden />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  ))}
-                </section>
-
-                <section className="settings-block">
-                  <h3>Debug</h3>
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={s.debugPluginSource}
-                      onChange={(e) => {
-                        const v = e.target.checked;
-                        void persist((cur) => ({ ...cur, debugPluginSource: v }));
-                      }}
-                    />
-                    <span>Show plugin widget types</span>
-                  </label>
-                </section>
-
-                <section className="settings-block">
-                  <h3>Data</h3>
-                  <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
-                    <Download size={18} strokeWidth={2} aria-hidden />
-                    <span>Export settings JSON</span>
-                  </button>
-                  <label className="btn has-icon ml-2">
-                    <Upload size={18} strokeWidth={2} aria-hidden />
-                    <span>Import settings JSON</span>
-                    <input
-                      hidden
-                      type="file"
-                      accept="application/json"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          try {
-                            const parsed = JSON.parse(String(reader.result)) as Partial<ISettings>;
-                            const d = defaultSettings();
-                            const importThemeMode = coerceThemeMode(parsed.themeMode, d.themeMode);
-                            const importGradFallback = themeGradientStops(importThemeMode);
-                            const merged: ISettings = {
-                              ...d,
-                              ...parsed,
-                              version: 1,
-                              preset: coercePreset(parsed.preset, d.preset),
-                              widgets: mergeWidgets(
-                                parsed.widgets as Partial<Record<string, unknown>> | undefined,
-                              ),
-                              themeMode: importThemeMode,
-                              themePalette: coerceThemePalette(parsed.themePalette, d.themePalette),
-                              themeCustomAccent: coerceThemeHex(
-                                parsed.themeCustomAccent,
-                                d.themeCustomAccent,
-                              ),
-                              themeCustomAccent2: coerceThemeHex(
-                                parsed.themeCustomAccent2,
-                                d.themeCustomAccent2,
-                              ),
-                              backgroundSolid: coerceThemeHex(
-                                parsed.backgroundSolid,
-                                d.backgroundSolid,
-                              ),
-                              backgroundGradientMid: coerceThemeHex(
-                                parsed.backgroundGradientMid,
-                                importGradFallback.mid,
-                              ),
-                              backgroundGradientEnd: coerceThemeHex(
-                                parsed.backgroundGradientEnd,
-                                importGradFallback.end,
-                              ),
-                              backgroundGradientShape: coerceBackgroundGradientShape(
-                                parsed.backgroundGradientShape,
-                                d.backgroundGradientShape,
-                              ),
-                              backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
-                                parsed.backgroundGradientAngleDeg,
-                                d.backgroundGradientAngleDeg,
-                              ),
-                              backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
-                                parsed.backgroundGradientCenterXPct,
-                                d.backgroundGradientCenterXPct,
-                              ),
-                              backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
-                                parsed.backgroundGradientCenterYPct,
-                                d.backgroundGradientCenterYPct,
-                              ),
-                              clockHourFormat: coerceClockHourFormat(
-                                parsed.clockHourFormat,
-                                d.clockHourFormat,
-                              ),
-                              humorBuiltinVoice: coerceHumorBuiltinVoice(
-                                parsed as {
-                                  humorBuiltinVoice?: unknown;
-                                  humorGenZMode?: unknown;
-                                },
-                              ),
-                              hasSeenSettingsIntro:
-                                typeof parsed.hasSeenSettingsIntro === "boolean"
-                                  ? parsed.hasSeenSettingsIntro
-                                  : true,
-                            };
-                            void persist(applyChaosPresetHumorHarmony(merged));
-                          } catch {
-                            setImportErr("Invalid settings JSON");
+                              importedPacks: cur.importedPacks.filter((x) => x.id !== p.id),
+                            }))
                           }
-                        };
-                        reader.readAsText(f);
-                      }}
-                    />
-                  </label>
-                </section>
+                        >
+                          <Trash2 size={18} strokeWidth={2} aria-hidden />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    ))}
+                    <p className="muted sm mb-2 mt-4">Plugins</p>
+                    {s.importedPlugins.map((p) => (
+                      <div key={p.id} className="row manage-row">
+                        <label className="check-row">
+                          <input
+                            type="checkbox"
+                            checked={p.enabled}
+                            onChange={(e) => {
+                              const v = e.target.checked;
+                              void persist((cur) => ({
+                                ...cur,
+                                importedPlugins: cur.importedPlugins.map((x) =>
+                                  x.id === p.id ? { ...x, enabled: v } : x,
+                                ),
+                              }));
+                            }}
+                          />
+                          <span>{p.name}</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="btn ghost sm has-icon"
+                          onClick={() =>
+                            void persist((cur) => ({
+                              ...cur,
+                              importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
+                            }))
+                          }
+                        >
+                          <Trash2 size={18} strokeWidth={2} aria-hidden />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Debug</span>
+                  </summary>
+                  <div className="acc-body">
+                    <label className="check-row mt-0">
+                      <input
+                        type="checkbox"
+                        checked={s.debugPluginSource}
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, debugPluginSource: v }));
+                        }}
+                      />
+                      <span>Show plugin widget types</span>
+                    </label>
+                  </div>
+                </details>
+
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Data</span>
+                  </summary>
+                  <div className="acc-body">
+                    <div className="row wrap gap-2">
+                      <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
+                        <Download size={18} strokeWidth={2} aria-hidden />
+                        <span>Export settings JSON</span>
+                      </button>
+                      <label className="btn has-icon">
+                        <Upload size={18} strokeWidth={2} aria-hidden />
+                        <span>Import settings JSON</span>
+                        <input
+                          hidden
+                          type="file"
+                          accept="application/json"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              try {
+                                const parsed = JSON.parse(
+                                  String(reader.result),
+                                ) as Partial<ISettings>;
+                                const d = defaultSettings();
+                                const importThemeMode = coerceThemeMode(
+                                  parsed.themeMode,
+                                  d.themeMode,
+                                );
+                                const importGradFallback = themeGradientStops(importThemeMode);
+                                const merged: ISettings = {
+                                  ...d,
+                                  ...parsed,
+                                  version: 1,
+                                  preset: coercePreset(parsed.preset, d.preset),
+                                  widgets: mergeWidgets(
+                                    parsed.widgets as Partial<Record<string, unknown>> | undefined,
+                                  ),
+                                  themeMode: importThemeMode,
+                                  themePalette: coerceThemePalette(
+                                    parsed.themePalette,
+                                    d.themePalette,
+                                  ),
+                                  themeCustomAccent: coerceThemeHex(
+                                    parsed.themeCustomAccent,
+                                    d.themeCustomAccent,
+                                  ),
+                                  themeCustomAccent2: coerceThemeHex(
+                                    parsed.themeCustomAccent2,
+                                    d.themeCustomAccent2,
+                                  ),
+                                  backgroundSolid: coerceThemeHex(
+                                    parsed.backgroundSolid,
+                                    d.backgroundSolid,
+                                  ),
+                                  backgroundGradientMid: coerceThemeHex(
+                                    parsed.backgroundGradientMid,
+                                    importGradFallback.mid,
+                                  ),
+                                  backgroundGradientEnd: coerceThemeHex(
+                                    parsed.backgroundGradientEnd,
+                                    importGradFallback.end,
+                                  ),
+                                  backgroundGradientShape: coerceBackgroundGradientShape(
+                                    parsed.backgroundGradientShape,
+                                    d.backgroundGradientShape,
+                                  ),
+                                  backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
+                                    parsed.backgroundGradientAngleDeg,
+                                    d.backgroundGradientAngleDeg,
+                                  ),
+                                  backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
+                                    parsed.backgroundGradientCenterXPct,
+                                    d.backgroundGradientCenterXPct,
+                                  ),
+                                  backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
+                                    parsed.backgroundGradientCenterYPct,
+                                    d.backgroundGradientCenterYPct,
+                                  ),
+                                  clockHourFormat: coerceClockHourFormat(
+                                    parsed.clockHourFormat,
+                                    d.clockHourFormat,
+                                  ),
+                                  humorBuiltinVoice: coerceHumorBuiltinVoice(
+                                    parsed as {
+                                      humorBuiltinVoice?: unknown;
+                                      humorGenZMode?: unknown;
+                                    },
+                                  ),
+                                  hasSeenSettingsIntro:
+                                    typeof parsed.hasSeenSettingsIntro === "boolean"
+                                      ? parsed.hasSeenSettingsIntro
+                                      : true,
+                                };
+                                void persist(applyChaosPresetHumorHarmony(merged));
+                              } catch {
+                                setImportErr("Invalid settings JSON");
+                              }
+                            };
+                            reader.readAsText(f);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
