@@ -490,7 +490,7 @@
   }
 
   .footer {
-    @apply mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4;
+    @apply mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4;
   }
 
   .linkish {

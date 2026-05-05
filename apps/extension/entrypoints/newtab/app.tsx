@@ -2802,7 +2802,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       </main>
 
       <footer className="footer muted sm">
-        <span>{humorCtx.humorEnabled ? (dailyLine ?? "…") : "Focus mode engaged."}</span>
         <div className="row wrap gap-3">
           {supportActions.map((action) => (
             <button
