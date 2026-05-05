@@ -443,12 +443,13 @@ export interface ILocalSlice {
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
 }
 
+/** HUD defaults align with three-column positions in `hud-layout`; optional-permission widgets stay off. */
 export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   search: true,
   clock: true,
-  notes: false,
-  todo: false,
-  weather: false,
+  notes: true,
+  todo: true,
+  weather: true,
   topSites: false,
   bookmarksStrip: false,
   tabGuilt: false,

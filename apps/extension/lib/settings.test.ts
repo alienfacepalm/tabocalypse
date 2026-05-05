@@ -97,6 +97,14 @@ describe("defaultSettings", () => {
     expect(s.themeMode).toBe("dark");
     expect(s.themePalette).toBe("glitch");
     expect(s.widgets.search).toBe(true);
+    expect(s.widgets.clock).toBe(true);
+    expect(s.widgets.notes).toBe(true);
+    expect(s.widgets.todo).toBe(true);
+    expect(s.widgets.weather).toBe(true);
+    expect(s.widgets.humorBanner).toBe(true);
+    expect(s.widgets.topSites).toBe(false);
+    expect(s.widgets.bookmarksStrip).toBe(false);
+    expect(s.widgets.tabGuilt).toBe(false);
     expect(s.importedPacks).toEqual([]);
     expect(s.importedPlugins).toEqual([]);
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
