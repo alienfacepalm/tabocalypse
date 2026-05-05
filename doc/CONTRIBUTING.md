@@ -8,13 +8,13 @@
 4. **Verify** before opening a PR:
 
    ```bash
-   pnpm run check
-   pnpm run build
+   pnpm check
+   pnpm build
    ```
 
-   CI runs the same checks plus a production build (see [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+   There is no GitHub Actions workflow yet; those commands match what CI would run once added.
 
-5. **Pre-commit** — Staged files run through **lint-staged** (ESLint + Prettier). Fix reported issues or run `pnpm run format` and `pnpm run lint` locally.
+5. **Pre-commit** — Staged files run through **lint-staged** (ESLint + Prettier). Fix reported issues or run `pnpm format` and `pnpm lint` locally.
 
 ## Conventions
 

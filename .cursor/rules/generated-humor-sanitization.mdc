@@ -1,0 +1,26 @@
+---
+description: Scraped or generated humor data must be sanitized before commit
+globs: apps/extension/lib/humor/*.generated.ts,apps/extension/scripts/scrape-*.ts
+alwaysApply: false
+---
+
+# Generated humor data sanitization
+
+All **scraped or auto-generated humor lines** committed to the repo (e.g. `*.generated.ts` under `apps/extension/lib/humor/`) must pass sanitization before the file is written and committed.
+
+## Requirements
+
+1. **Safety filter**: every generated line must pass the **builtin hard filter** (`passesBuiltinHardFilter` in [`apps/extension/lib/humor/filter.ts`](../../apps/extension/lib/humor/filter.ts)). Scraper scripts must mirror or import this filter and **throw** on blocked lines rather than silently including them.
+2. **HTML cleanup**: scraped HTML must be fully decoded (entities, tags stripped) and whitespace-normalized before generating lines. Artifacts like `"Item deA"`, truncated words, or leftover HTML tags indicate a scraper bug — fix the parser, do not commit broken lines.
+3. **Manual spot-check**: after running a scraper, **review the diff** of the `*.generated.ts` file before committing. Look for:
+   - Garbled text or encoding artifacts
+   - Incomplete definitions or cut-off sentences
+   - Offensive, legally risky, or off-brand content the hard filter does not catch
+4. **Attribution**: generated files must include a header comment citing the **source URL** and the **scraper script path** so provenance is traceable.
+5. **Idempotency**: re-running a scraper against an unchanged upstream should produce a **byte-identical** output file (deterministic ordering, no timestamps in output).
+
+## When adding a new scraper
+
+- Follow the same pattern as `apps/extension/scripts/scrape-unsuck-classics.ts`.
+- Wire a `package.json` script and document it in `doc/DEVELOPMENT.md`.
+- Add a minimum-entry-count assertion so a structurally changed upstream page fails loudly instead of silently producing an empty or partial file.

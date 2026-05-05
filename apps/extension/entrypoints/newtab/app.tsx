@@ -81,6 +81,7 @@ import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
+import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
 import { getSupportActions, openExternal, type TSupportLinkKind } from "../../lib/support-links";
 import {
   estimateImportedBytes,
@@ -1329,10 +1330,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     const plugin = r.plugin;
     setPluginValidateLog([...r.errors, ...r.warnings.map((w) => `warning: ${w}`)].join("\n"));
-    void persist((cur) => {
-      const next = cur.importedPlugins.filter((p) => p.id !== plugin.id).concat(plugin);
-      return { ...cur, importedPlugins: next };
-    });
+    void persist((cur) => ({
+      ...cur,
+      importedPlugins: mergeImportedPlugin(cur.importedPlugins, plugin),
+    }));
   };
 
   const exportSettingsJson = () => {
@@ -2630,7 +2631,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         onClick={() =>
                           void persist((cur) => ({
                             ...cur,
-                            importedPlugins: cur.importedPlugins.filter((x) => x.id !== p.id),
+                            importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
                           }))
                         }
                       >

@@ -25,7 +25,7 @@
     "test:watch": "vitest",
     "check:sdk": "tsc --noEmit -p packages/plugin-sdk/tsconfig.json",
     "check:extension": "pnpm --filter extension exec tsc --noEmit -p tsconfig.json",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run test && pnpm run check:sdk && pnpm run check:extension",
+    "check": "pnpm format:check && pnpm lint && pnpm test && pnpm check:sdk && pnpm check:extension",
     "scrape:unsuck-classics": "pnpm --filter extension scrape:unsuck-classics",
     "prepare": "husky"
   },
@@ -44,6 +44,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.4.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.22.0",
     "vitest": "^3.0.5"

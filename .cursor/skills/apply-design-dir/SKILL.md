@@ -21,7 +21,7 @@ disable-model-invocation: true
 3. **Encode primitives** in `tailwind.css` (`.top-bar`, `.card`, `.btn`, overlays, grid helpers).
 4. **Refactor layout** in `app.tsx` to match the example (header search, stable grid zones, HUD feel).
 5. **Minimize component churn**: prefer changing shared classes over rewriting every widget.
-6. **Validate**: `pnpm run check`, and if UI/build was touched: `pnpm run build`.
+6. **Validate**: `pnpm check`, and if UI/build was touched: `pnpm build`.
 7. **Finish meaningful work**: commit + push (unless user asked not to).
 
 ## Translation defaults (glitch-core)

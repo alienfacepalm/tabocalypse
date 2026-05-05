@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pkgPath = join(root, "apps/extension/package.json");
 const raw = readFileSync(pkgPath, "utf8");
-const pkg = JSON.parse(raw);
+const pkg = JSON.parse(raw) as { version: string };
 const current = pkg.version;
 if (typeof current !== "string") {
   throw new Error("apps/extension/package.json: missing version string");

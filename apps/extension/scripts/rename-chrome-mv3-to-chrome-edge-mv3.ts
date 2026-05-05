@@ -1,4 +1,3 @@
-/* global console */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,11 +9,11 @@ const outputDir = path.join(__dirname, "..", "output");
 const chromeMv3Dir = path.join(outputDir, "chrome-mv3");
 const chromeEdgeMv3Dir = path.join(outputDir, "chrome_edge-mv3");
 
-async function pathExists(targetPath) {
+async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.stat(targetPath);
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
       return false;
     }

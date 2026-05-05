@@ -60,11 +60,11 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 
 ## Formatting and static analysis
 
-- **Prettier** — config: [`prettier.config.mjs`](../../prettier.config.mjs) (explicit Prettier defaults: double quotes, semicolons, `trailingComma: "all"`, `printWidth: 100`). Use **`pnpm run format`** when you edit matching files; CI or pre-merge should run **`pnpm run format:check`**.
-- **ESLint** — [`eslint.config.mjs`](../../eslint.config.mjs): **`@typescript-eslint/no-explicit-any`**, **`@typescript-eslint/consistent-type-imports`**, **`@typescript-eslint/naming-convention`** (interfaces **`I` + PascalCase**, type aliases **`T` + PascalCase**; see [typescript-type-prefixes.mdc](typescript-type-prefixes.mdc)), **`no-eval` / `no-implied-eval` / `no-new-func`** (aligns with declarative-only / no user JS execution); **`unicorn/filename-case`** (**kebab-case** for `apps/**` and `packages/**`, with ignores for `wxt.config.ts`, `*.test.ts`, `*.spec.ts`); unused vars must be used or prefixed with `_`. **`pnpm run lint`** uses **`--max-warnings=0`**.
+- **Prettier** — config: [`prettier.config.mjs`](../../prettier.config.mjs) (explicit Prettier defaults: double quotes, semicolons, `trailingComma: "all"`, `printWidth: 100`). Use **`pnpm format`** when you edit matching files; CI or pre-merge should run **`pnpm format:check`**.
+- **ESLint** — [`eslint.config.mjs`](../../eslint.config.mjs): **`@typescript-eslint/no-explicit-any`**, **`@typescript-eslint/consistent-type-imports`**, **`@typescript-eslint/naming-convention`** (interfaces **`I` + PascalCase**, type aliases **`T` + PascalCase**; see [typescript-type-prefixes.mdc](typescript-type-prefixes.mdc)), **`no-eval` / `no-implied-eval` / `no-new-func`** (aligns with declarative-only / no user JS execution); **`unicorn/filename-case`** (**kebab-case** for `apps/**` and `packages/**`, with ignores for `wxt.config.ts`, `*.test.ts`, `*.spec.ts`); unused vars must be used or prefixed with `_`. **`pnpm lint`** uses **`--max-warnings=0`**.
 - **Git hooks** — [`.husky/pre-commit`](../../.husky/pre-commit) runs **`lint-staged`** (ESLint `--fix` + Prettier on staged files). Requires a normal **git** clone; after `pnpm install`, hooks are installed via the **`prepare`** script.
-- **Typecheck** — **`pnpm run check:sdk`** and **`pnpm run check:extension`**, or **`pnpm run check`** for format check + lint + tests + both typechecks, before calling a change done.
-- **Meaningful change closure** — run checks (and extension **`pnpm run build`** when relevant), then **commit** and **push**; see [validate-commit-push.mdc](validate-commit-push.mdc).
+- **Typecheck** — **`pnpm check:sdk`** and **`pnpm check:extension`**, or **`pnpm check`** for format check + lint + tests + both typechecks, before calling a change done.
+- **Meaningful change closure** — run checks (and extension **`pnpm build`** when relevant), then **commit** and **push**; see [validate-commit-push.mdc](validate-commit-push.mdc).
 
 ## Cursor skills (use when relevant)
 
@@ -72,6 +72,7 @@ Read the skill file before following it; do not improvise when a skill applies.
 
 | Topic | Skill |
 |-------|--------|
+| GitHub Actions / CI workflows | **[github-actions-opt-in.mdc](github-actions-opt-in.mdc)** — do not add `/.github/workflows/**` unless the owner explicitly asks |
 | Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc); WXT out dir: [extension-build-output.mdc](extension-build-output.mdc); validate / commit / push: [validate-commit-push.mdc](validate-commit-push.mdc); UI labels: [user-facing-copy.mdc](user-facing-copy.mdc) |
 | Authoring new agent skills | `create-skill` |
 | Cursor hooks / automation around agent events | `create-hook` |

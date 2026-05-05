@@ -11,14 +11,14 @@ When you finish work that is **meaningful** — not a one-line typo in a comment
 
 Examples: behavior, UI, permissions or **`wxt.config.ts` / manifest**, plugin validation or import paths, **`packages/plugin-sdk`** public API, dependencies or **`pnpm-lock.yaml`**, CI, build tooling, security-sensitive code, settings/storage shape, cross-package contracts, or docs that describe **shipped** behavior.
 
-Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant **`pnpm run format`** / staged lint if you touched formatted file types; use judgment on whether a full **`pnpm run check`** is worth the round-trip.
+Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant **`pnpm format`** / staged lint if you touched formatted file types; use judgment on whether a full **`pnpm check`** is worth the round-trip.
 
 ## Validate
 
-1. From the **repo root**: **`pnpm run check`** (format check, ESLint, tests, SDK + extension `tsc`).
-2. After **meaningful / major updates**, also run **`pnpm run build`** to ensure the extension still packages cleanly for **Chrome, Safari MV3, and Firefox**. You may skip this only when the change is **clearly unrelated** to the extension (e.g. isolated `packages/plugin-sdk` internal refactors with no impact on `apps/extension`, or non-shipped internal notes).
-3. Use **`pnpm run build:firefox`** or **`pnpm run build:safari`** when you only need one target (faster iteration) instead of the full **`pnpm run build`** matrix.
-4. Fix failures before committing. Run **`pnpm run format`** when Prettier reports drift.
+1. From the **repo root**: **`pnpm check`** (format check, ESLint, tests, SDK + extension `tsc`).
+2. After **meaningful / major updates**, also run **`pnpm build`** to ensure the extension still packages cleanly for **Chrome, Safari MV3, and Firefox**. You may skip this only when the change is **clearly unrelated** to the extension (e.g. isolated `packages/plugin-sdk` internal refactors with no impact on `apps/extension`, or non-shipped internal notes).
+3. Use **`pnpm build:firefox`** or **`pnpm build:safari`** when you only need one target (faster iteration) instead of the full **`pnpm build`** matrix.
+4. Fix failures before committing. Run **`pnpm format`** when Prettier reports drift.
 
 ## Commit
 
@@ -33,4 +33,4 @@ Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant
 
 ## Relation to hooks
 
-**`lint-staged`** on pre-commit only covers **staged** files. **`pnpm run check`** still matters so unstaged files and the **full** test/typecheck matrix pass before you call the work done.
+**`lint-staged`** on pre-commit only covers **staged** files. **`pnpm check`** still matters so unstaged files and the **full** test/typecheck matrix pass before you call the work done.

@@ -21,8 +21,8 @@ This repo sets **`package-manager-strict=true`** in [`.npmrc`](../.npmrc). Use *
 
 ## Husky / pre-commit did not run
 
-Hooks install when **`pnpm install`** runs inside a **git** clone. If you downloaded a source zip without `.git`, hooks will not install—run `pnpm run check` manually before committing.
+Hooks install when **`pnpm install`** runs inside a **git** clone. If you downloaded a source zip without `.git`, hooks will not install—run `pnpm check` manually before committing.
 
 ## Development build looks stale
 
-After `pnpm run dev`, WXT rebuilds on save; use the browser’s **reload extension** and refresh the new tab.
+After `pnpm dev`, WXT rebuilds on save; use the browser’s **reload extension** and refresh the new tab.

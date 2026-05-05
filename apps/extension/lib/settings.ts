@@ -87,7 +87,7 @@ export function newNoteId(): string {
   return `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function coerceNotes(raw: unknown): INote[] {
+export function coerceNotes(raw: unknown): INote[] {
   if (!Array.isArray(raw)) return [];
   const out: INote[] = [];
   const now = Date.now();
@@ -111,7 +111,7 @@ function coerceNotes(raw: unknown): INote[] {
   return out;
 }
 
-function coerceNotePanels(raw: unknown, validNoteIds: ReadonlySet<string>): INotePanel[] {
+export function coerceNotePanels(raw: unknown, validNoteIds: ReadonlySet<string>): INotePanel[] {
   if (!Array.isArray(raw)) return [];
   const out: INotePanel[] = [];
   for (const item of raw) {
@@ -137,7 +137,7 @@ function coerceNotePanels(raw: unknown, validNoteIds: ReadonlySet<string>): INot
   return out;
 }
 
-function migrateLegacyNotesTextIntoNotes(text: string, now: number): INote[] {
+export function migrateLegacyNotesTextIntoNotes(text: string, now: number): INote[] {
   const trimmed = text.trim();
   if (!trimmed.length) return [];
   return [

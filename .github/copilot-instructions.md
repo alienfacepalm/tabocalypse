@@ -30,5 +30,5 @@ These instructions apply to GitHub Copilot Chat / coding agent features operatin
 
 Before calling work done:
 
-- `pnpm run check`
-- If extension UI/packaging/tooling was touched: `pnpm run build`
+- `pnpm check`
+- If extension UI/packaging/tooling was touched: `pnpm build`

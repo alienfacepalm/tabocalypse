@@ -24,5 +24,5 @@
 
 ### Verification
 
-- `pnpm run check`
-- If extension UI/packaging/tooling was touched: `pnpm run build`
+- `pnpm check`
+- If extension UI/packaging/tooling was touched: `pnpm build`

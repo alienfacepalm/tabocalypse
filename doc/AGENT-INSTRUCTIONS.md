@@ -28,8 +28,8 @@ This repo supports multiple coding agents. These rules are **agent-agnostic** an
 
 From repo root:
 
-- `pnpm run check`
-- If extension UI/packaging/tooling was touched: `pnpm run build`
+- `pnpm check`
+- If extension UI/packaging/tooling was touched: `pnpm build`
 
 ## Alignment rule (keep agent files synced)
 

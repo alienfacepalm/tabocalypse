@@ -21,7 +21,7 @@ Some scripts exist only for a **single task** (data migration, one-time rename, 
 
 1. **Remove** the script file(s) you added for the one-off job (or that became dead after the migration).
 2. **Unwind references**: `package.json` scripts, `README` / `doc/` steps, CI, other scripts that `import` or `spawn` the removed file.
-3. **Run** `pnpm run check` (and any script you removed from `package.json` should not break the tree).
+3. **Run** `pnpm check` (and any script you removed from `package.json` should not break the tree).
 
 ## Relation to other guidance
 

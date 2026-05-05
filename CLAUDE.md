@@ -32,5 +32,5 @@ This repository also contains the “source of truth” for behavior and repo co
 
 From repo root:
 
-- `pnpm run check`
-- If extension UI/packaging/tooling was touched: `pnpm run build`
+- `pnpm check`
+- If extension UI/packaging/tooling was touched: `pnpm build`

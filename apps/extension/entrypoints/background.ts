@@ -1,5 +1,6 @@
 import { defineBackground } from "wxt/sandbox";
 import browser from "webextension-polyfill";
+import { ALARM_PREFIX, META_KEY, removeAlarmMeta, type TAlarmMeta } from "../lib/alarm-meta";
 import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import {
   arrayBufferToBase64,
@@ -9,11 +10,6 @@ import {
   type TPrivilegedFetchBytesResponse,
   type TPrivilegedFetchJsonResponse,
 } from "../lib/privileged-extension-fetch";
-
-const ALARM_PREFIX = "tabocalypse:";
-const META_KEY = "alarmMeta";
-
-type TAlarmMeta = Record<string, string>;
 
 async function getMeta(): Promise<TAlarmMeta> {
   const r = await browser.storage.local.get(META_KEY);
@@ -68,8 +64,7 @@ export default defineBackground(() => {
     if (!alarm.name.startsWith(ALARM_PREFIX)) return;
     const meta = await getMeta();
     const message = coerceAlarmMetaMessage(meta[alarm.name]) || "Tabocalypse alarm.";
-    const { [alarm.name]: _, ...rest } = meta;
-    await browser.storage.local.set({ [META_KEY]: rest });
+    await browser.storage.local.set({ [META_KEY]: removeAlarmMeta(meta, alarm.name) });
 
     try {
       await browser.notifications.create(`tabocalypse-${alarm.name}`, {

@@ -39,21 +39,21 @@ From the **repository root**:
 
 ```bash
 pnpm install
-pnpm run dev          # Chrome (default)
-pnpm run dev:firefox
+pnpm dev          # Chrome (default)
+pnpm dev:firefox
 ```
 
-After **`pnpm run build`**, WXT writes **`apps/extension/output/chrome_edge-mv3`** (Chrome/Edge MV3), **`apps/extension/output/safari-mv3`** (Safari-targeted MV3), and **`apps/extension/output/firefox-mv2`** (Firefox; WXT emits MV2 for Firefox in this project). Load **Load unpacked** from `chrome_edge-mv3` for Chromium browsers. **Safari** does not use Chromium’s **Load unpacked** flow: on macOS, point Apple’s **Safari Web Extension** converter at **`safari-mv3`** or **`chrome_edge-mv3`**, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
+After **`pnpm build`**, WXT writes **`apps/extension/output/chrome_edge-mv3`** (Chrome/Edge MV3), **`apps/extension/output/safari-mv3`** (Safari-targeted MV3), and **`apps/extension/output/firefox-mv2`** (Firefox; WXT emits MV2 for Firefox in this project). Load **Load unpacked** from `chrome_edge-mv3` for Chromium browsers. **Safari** does not use Chromium’s **Load unpacked** flow: on macOS, point Apple’s **Safari Web Extension** converter at **`safari-mv3`** or **`chrome_edge-mv3`**, then run/sign via Xcode — see [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) and [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md).
 
 Put `.env` next to [`apps/extension/wxt.config.ts`](apps/extension/wxt.config.ts) if you use WXT env vars (or follow WXT’s env file discovery for that app).
 
 ## Build
 
 ```bash
-pnpm run build
-pnpm run build:firefox
-pnpm run build:safari
-pnpm run zip
+pnpm build
+pnpm build:firefox
+pnpm build:safari
+pnpm zip
 ```
 
 ## Quality (format, lint, tests, types)
@@ -61,14 +61,14 @@ pnpm run zip
 From the **repository root**:
 
 ```bash
-pnpm run format        # Prettier — write
-pnpm run format:check  # Prettier — CI-style check
-pnpm run lint          # ESLint (incl. no-explicit-any)
-pnpm run test          # Vitest
-pnpm run check         # format:check + lint + test + tsc (SDK + extension)
+pnpm format        # Prettier — write
+pnpm format:check  # Prettier — CI-style check
+pnpm lint          # ESLint (incl. no-explicit-any)
+pnpm test          # Vitest
+pnpm check         # format:check + lint + test + tsc (SDK + extension)
 ```
 
-GitHub Actions runs **`pnpm run check`** then **`pnpm run build`** on pushes and pull requests to `main` / `master` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+GitHub Actions CI is **not** wired up in this repo yet—run **`pnpm check`** and (for packaging-sensitive changes) **`pnpm build`** locally before merging.
 
 **pnpm-only:** `.npmrc` sets `package-manager-strict=true`. Use a **git** clone so `pnpm install` can install the **Husky** pre-commit hook (`lint-staged`: ESLint + Prettier on staged files).
 

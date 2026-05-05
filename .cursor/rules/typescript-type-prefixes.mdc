@@ -33,4 +33,4 @@ When re-exporting SDK types, use the prefixed names (`export type { IImportedPlu
 
 ## Fixing violations
 
-Run `pnpm run lint`. Rename the declaration and every import/reference, or split a collision (e.g. rename a poorly named interface rather than fighting the prefix rule).
+Run `pnpm lint`. Rename the declaration and every import/reference, or split a collision (e.g. rename a poorly named interface rather than fighting the prefix rule).

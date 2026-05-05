@@ -1,17 +1,17 @@
 {
   "name": "extension",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build && node scripts/rename-chrome-mv3-to-chrome-edge-mv3.mjs && wxt build -b safari --mv3 && wxt build -b firefox",
+    "build": "wxt build && tsx scripts/rename-chrome-mv3-to-chrome-edge-mv3.ts && wxt build -b safari --mv3 && wxt build -b firefox",
     "build:firefox": "wxt build -b firefox",
     "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
-    "scrape:unsuck-classics": "node scripts/scrape-unsuck-classics.mjs"
+    "scrape:unsuck-classics": "tsx scripts/scrape-unsuck-classics.ts"
   },
   "dependencies": {
     "@fontsource/audiowide": "^5.2.7",

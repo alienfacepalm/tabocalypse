@@ -14,7 +14,7 @@ Whenever you add or edit **supported browser** lists, **store / publishing** tar
 ## Consistency
 
 - Use one consistent ordering per document (e.g. **Chrome, Edge, Firefox, Safari**) and mirror the same order in nearby lists.
-- If you document **build output folders** or **WXT targets**, keep Safari aligned with **actual repo tooling**: default **`pnpm run build`** emits **`output/chrome_edge-mv3/`**, **`output/safari-mv3/`** (WXT `wxt build -b safari --mv3`), and **`output/firefox-mv2/`**; **`pnpm run build:safari`** rebuilds Safari only; Apple’s converter still runs on macOS for loading/signing.
+- If you document **build output folders** or **WXT targets**, keep Safari aligned with **actual repo tooling**: default **`pnpm build`** emits **`output/chrome_edge-mv3/`**, **`output/safari-mv3/`** (WXT `wxt build -b safari --mv3`), and **`output/firefox-mv2/`**; **`pnpm build:safari`** rebuilds Safari only; Apple’s converter still runs on macOS for loading/signing.
 
 ## Implementation touchpoints (non-exhaustive)
 

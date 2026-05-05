@@ -65,7 +65,7 @@ Notes:
 From the repo root:
 
 ```bash
-pnpm run build
+pnpm build
 ```
 
 Build outputs are written to:
@@ -120,8 +120,8 @@ Reference: [Safari Web Extensions](https://developer.apple.com/safari/extensions
 From the repo root:
 
 ```bash
-pnpm run dev          # Chrome target by default
-pnpm run dev:firefox
+pnpm dev          # Chrome target by default
+pnpm dev:firefox
 ```
 
 After changes, use the browser’s **Reload** control for the installed extension, then open a fresh new tab.

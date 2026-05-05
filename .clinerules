@@ -18,5 +18,5 @@ Hard constraints:
 Workflow:
 - prefer small, surgical diffs; avoid whole-file rewrites
 - ask for patch-shaped output per file
-- verify before done: pnpm run check; and pnpm run build when extension UI/packaging/tooling is touched
+- verify before done: pnpm check; and pnpm build when extension UI/packaging/tooling is touched
 
