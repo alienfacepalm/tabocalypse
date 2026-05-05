@@ -599,6 +599,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [persist, settings.weatherAutoGeo]);
 
   const hudCanvasRef = useRef<HTMLDivElement | null>(null);
+  /** When opening a pinned note temporarily unlocks HUD, dragging that note prompts to re-lock. */
+  const relockPromptNoteIdAfterAutoHudUnlockRef = useRef<string | null>(null);
+
   const commitHudPanel = useCallback(
     (id: THudPanelId, pos: IHudPanelPosition) => {
       void persist((cur) => ({
@@ -611,10 +614,32 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const commitNotePanel = useCallback(
     (noteId: string, pos: IHudPanelPosition) => {
-      void persist((cur) => ({
-        ...cur,
-        notePanels: cur.notePanels.map((p) => (p.noteId === noteId ? { ...p, position: pos } : p)),
-      }));
+      const snapshot = latestSettingsRef.current;
+      const prev = snapshot.notePanels.find((p) => p.noteId === noteId)?.position;
+      const moved =
+        prev != null &&
+        (prev.xPct !== pos.xPct ||
+          prev.yPct !== pos.yPct ||
+          prev.widthPx !== pos.widthPx ||
+          prev.heightPx !== pos.heightPx);
+
+      void (async () => {
+        await persist((cur) => ({
+          ...cur,
+          notePanels: cur.notePanels.map((p) =>
+            p.noteId === noteId ? { ...p, position: pos } : p,
+          ),
+        }));
+        if (!moved) return;
+        if (relockPromptNoteIdAfterAutoHudUnlockRef.current !== noteId) return;
+        relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+        const ok = window.confirm(
+          "Lock the panel layout again? You can toggle this anytime in the header.",
+        );
+        if (ok) {
+          void persist((cur) => ({ ...cur, hudLayoutLocked: true }));
+        }
+      })();
     },
     [persist],
   );
@@ -3080,17 +3105,27 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       }))
                     }
                     onDeleteNote={(noteId) =>
-                      void persist((cur) => ({
-                        ...cur,
-                        notes: cur.notes.filter((n) => n.id !== noteId),
-                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                      }))
+                      void persist((cur) => {
+                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                        }
+                        return {
+                          ...cur,
+                          notes: cur.notes.filter((n) => n.id !== noteId),
+                          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                        };
+                      })
                     }
                     onClosePanel={() =>
-                      void persist((cur) => ({
-                        ...cur,
-                        notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
-                      }))
+                      void persist((cur) => {
+                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === np.noteId) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                        }
+                        return {
+                          ...cur,
+                          notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
+                        };
+                      })
                     }
                   />
                 </DraggableHudPanel>
@@ -3112,10 +3147,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   onToggleNotePanel={(noteId) =>
                     void persist((cur) => {
                       if (cur.notePanels.some((p) => p.noteId === noteId)) {
+                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                        }
                         return {
                           ...cur,
                           notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
                         };
+                      }
+                      let hudLayoutLockedNext = cur.hudLayoutLocked;
+                      if (cur.hudLayoutLocked) {
+                        relockPromptNoteIdAfterAutoHudUnlockRef.current = noteId;
+                        hudLayoutLockedNext = false;
                       }
                       const anchor = cur.hudPanelPositions.notes;
                       const stagger = cur.notePanels.length * 5;
@@ -3131,6 +3174,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       }
                       return {
                         ...cur,
+                        hudLayoutLocked: hudLayoutLockedNext,
                         notePanels: [...cur.notePanels, { noteId, position }],
                       };
                     })
@@ -3139,6 +3183,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     void persist((cur) => {
                       const id = newNoteId();
                       const now = Date.now();
+                      let hudLayoutLockedNext = cur.hudLayoutLocked;
+                      if (cur.hudLayoutLocked) {
+                        relockPromptNoteIdAfterAutoHudUnlockRef.current = id;
+                        hudLayoutLockedNext = false;
+                      }
                       const anchor = cur.hudPanelPositions.notes;
                       const stagger = cur.notePanels.length * 5;
                       const position: IHudPanelPosition = {
@@ -3153,6 +3202,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       }
                       return {
                         ...cur,
+                        hudLayoutLocked: hudLayoutLockedNext,
                         notes: [
                           {
                             id,
@@ -3177,11 +3227,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     }))
                   }
                   onDeleteNote={(noteId) =>
-                    void persist((cur) => ({
-                      ...cur,
-                      notes: cur.notes.filter((n) => n.id !== noteId),
-                      notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                    }))
+                    void persist((cur) => {
+                      if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                        relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                      }
+                      return {
+                        ...cur,
+                        notes: cur.notes.filter((n) => n.id !== noteId),
+                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                      };
+                    })
                   }
                 />
               </DraggableHudPanel>
