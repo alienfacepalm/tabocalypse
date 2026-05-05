@@ -42,7 +42,7 @@ function NotesElasticTextarea({
   useLayoutEffect(() => {
     const ta = ref.current;
     if (!ta) return;
-    ta.style.height = "0px";
+    ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
   }, [value]);
 
@@ -312,13 +312,10 @@ function NotesDetachedPanel({
           ) : null}
         </span>
       </HudPanelTitle>
-      <HudPanelBody
-        sizeToContent={elastic}
-        className={elastic ? "flex flex-col" : "flex min-h-0 flex-col"}
-      >
+      <HudPanelBody sizeToContent={elastic} bodyOverflow={false} className="flex min-h-0 flex-col">
         {selected ? (
           <>
-            <div className="row mb-2 flex-wrap gap-2">
+            <div className="row mb-2 shrink-0 flex-wrap gap-2">
               <span className="muted sm">Local only.</span>
               <span className="muted sm"> · </span>
               <span className="muted sm row gap-1">
@@ -328,18 +325,22 @@ function NotesDetachedPanel({
             </div>
 
             {elastic ? (
-              <NotesElasticTextarea
-                value={selected.text}
-                onChange={(next) => onUpdateNote(selected.id, { text: next })}
-              />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <NotesElasticTextarea
+                  value={selected.text}
+                  onChange={(next) => onUpdateNote(selected.id, { text: next })}
+                />
+              </div>
             ) : (
-              <textarea
-                value={selected.text}
-                onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}
-                placeholder="Type here…"
-                rows={6}
-                className="min-h-[12rem] w-full flex-1 resize-y"
-              />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <textarea
+                  value={selected.text}
+                  onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}
+                  placeholder="Type here…"
+                  rows={6}
+                  className="min-h-[12rem] w-full resize-none"
+                />
+              </div>
             )}
           </>
         ) : (

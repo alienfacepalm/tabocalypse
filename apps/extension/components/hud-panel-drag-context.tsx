@@ -20,6 +20,7 @@ export function HudPanelBody({
   children,
   className,
   sizeToContent,
+  bodyOverflow,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -28,13 +29,20 @@ export function HudPanelBody({
    * when taller than the cap (used for draggable note panels without a saved pixel height).
    */
   sizeToContent?: boolean;
+  /** When false, hides body scrollbars; callers wrap overflow content for targeted scrolling. */
+  bodyOverflow?: boolean;
 }) {
+  const scrollCls =
+    bodyOverflow === false
+      ? "overflow-x-hidden overflow-y-hidden"
+      : "overflow-x-hidden overflow-y-auto";
+
   return (
     <div
       className={[
         sizeToContent
-          ? "max-h-[min(70vh,calc(100vh-12rem))] flex-none overflow-y-auto"
-          : "min-h-0 flex-1 overflow-y-auto",
+          ? `flex max-h-[min(70vh,calc(100vh-12rem))] flex-col flex-none ${scrollCls} min-h-0`
+          : `min-h-0 flex-1 ${scrollCls}`,
         className,
       ]
         .filter(Boolean)
