@@ -3267,18 +3267,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
 export default App as React.FC<{ initialSettings: ISettings }>;
 
+/** How often to re-query the current window tab count so the panel stays accurate. */
+const TAB_GUILT_POLL_MS = 2000;
+
 function TabGuilt() {
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
-    const tabs = browser.tabs;
-    if (!tabs?.query) {
+    const tabsApi = browser.tabs;
+    if (!tabsApi?.query) {
       setN(null);
       return;
     }
-    void tabs
-      .query({ currentWindow: true })
-      .then((t) => setN(t.length))
-      .catch(() => setN(null));
+    let cancelled = false;
+    const refresh = (): void => {
+      void tabsApi
+        .query({ currentWindow: true })
+        .then((t) => {
+          if (!cancelled) setN(t.length);
+        })
+        .catch(() => {
+          if (!cancelled) setN(null);
+        });
+    };
+    refresh();
+    const id = window.setInterval(refresh, TAB_GUILT_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, []);
   if (n === null)
     return (
