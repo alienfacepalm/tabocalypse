@@ -1211,6 +1211,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <span className="acc-title">Presets</span>
                   </summary>
                   <div className="acc-body">
+                    <p className="muted sm mb-2">
+                      Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
+                      Theme, background, and the rest of Appearance are unchanged.
+                    </p>
                     <div className="row wrap">
                       <button
                         type="button"
@@ -1236,6 +1240,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <Flame size={18} strokeWidth={2} aria-hidden />
                         <span>Chaos</span>
                       </button>
+                    </div>
+                    <div className="muted sm mt-3 flex flex-col gap-1.5">
+                      <p className="m-0">
+                        <span className="text-text">Focus</span>
+                        {" — "}
+                        Turns jokes off, hides the humor strip, and switches Search and Clock on.
+                        Other widgets keep their current toggles.
+                      </p>
+                      <p className="m-0">
+                        <span className="text-text">Balanced</span>
+                        {" — "}
+                        Mild jokes and the humor strip on. Widget toggles merge defaults with yours.
+                      </p>
+                      <p className="m-0">
+                        <span className="text-text">Chaos</span>
+                        {" — "}
+                        Spicier jokes and the humor strip on. Other widget toggles stay as they are.
+                      </p>
                     </div>
                   </div>
                 </details>

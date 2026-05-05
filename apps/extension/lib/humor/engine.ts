@@ -1,6 +1,6 @@
 import type { THumorIntensity } from "../settings";
 import type { IImportedUserPack } from "../settings";
-import { BUILTIN_PACKS } from "./builtin-packs";
+import { BUILTIN_PACKS, GEN_Z_PACK_ID } from "./builtin-packs";
 import { passesBuiltinHardFilter } from "./filter";
 
 const RANK: Record<THumorIntensity, number> = {
@@ -22,6 +22,8 @@ function hashString(s: string): number {
 export interface IHumorContext {
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
+  /** When true, built-in lines come only from the Gen-Z pack; pack toggles below are ignored. */
+  humorGenZMode: boolean;
   enabledBuiltinPackIds: string[];
   importedPacks: IImportedUserPack[];
   myLines: string[];
@@ -43,8 +45,11 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
 
   const candidates: string[] = [];
 
+  const genZOnly = ctx.humorGenZMode;
   for (const pack of BUILTIN_PACKS) {
-    if (!ctx.enabledBuiltinPackIds.includes(pack.id)) continue;
+    if (genZOnly) {
+      if (pack.id !== GEN_Z_PACK_ID) continue;
+    } else if (!ctx.enabledBuiltinPackIds.includes(pack.id)) continue;
     if (!builtinPackAllowed(ctx.humorIntensity, pack.maxIntensity)) continue;
     for (const line of pack.lines) {
       if (passesBuiltinHardFilter(line)) candidates.push(line);

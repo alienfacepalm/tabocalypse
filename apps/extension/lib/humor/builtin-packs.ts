@@ -1,5 +1,8 @@
 import type { THumorIntensity } from "../settings";
 
+/** Built-in pack used when Settings → Chaos → Gen-Z mode is on. */
+export const GEN_Z_PACK_ID = "gen_z" as const;
+
 export interface IBuiltinPack {
   id: string;
   name: string;
@@ -106,6 +109,33 @@ export const BUILTIN_PACKS: IBuiltinPack[] = [
       "Touch grass? You can’t even touch ‘Save’.",
       "Your backlog has a backlog. Inception, but stupid.",
       "Zero inbox is a myth. Like ‘just one more tab’.",
+    ],
+  },
+  {
+    id: GEN_Z_PACK_ID,
+    name: "Gen Z",
+    maxIntensity: "mild",
+    lines: [
+      "Another tab? That’s giving main-character energy. No cap.",
+      "Your tab bar is doing the most, and it’s not the serve you think.",
+      "Bookmark who? Bestie, you’re not even bookmarking focus.",
+      "The way you’re hoarding tabs is… a choice. Respectfully.",
+      "Touch grass? You’re choosing Chrome tabs. Vibe check: failed.",
+      "This ain’t it — it’s giving procrastination lore.",
+      "You’re not built different; you’re built like tab 87.",
+      "Rent free in your browser and still no clarity? Wild.",
+      "Slay? More like slay your RAM. Those tabs are not it.",
+      "Lowkey you’re speedrunning burnout with extra tabs.",
+      "NPC arc: open tab, pretend you’ll read it, repeat.",
+      "It’s giving ‘I’ll read this later’ since forever.",
+      "You’re cooking… absolutely nothing. Mid workflow energy.",
+      "Fr fr your backlog is the real final boss.",
+      "Skill issue (tabs edition).",
+      "She’s not girlbossing; she’s tab-hoarding in HD.",
+      "Main character syndrome, supporting cast tab count.",
+      "That tab pile is sending me — and not in a good way.",
+      "Delulu is the solulu, except for this tab count: still real.",
+      "Clock app who? You live here now. Stay hydrated.",
     ],
   },
 ];

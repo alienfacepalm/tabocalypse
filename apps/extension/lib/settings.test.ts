@@ -103,6 +103,7 @@ describe("defaultSettings", () => {
     expect(s.clockHourFormat).toBe("24h");
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
+    expect(s.humorGenZMode).toBe(false);
   });
 });
 

@@ -187,6 +187,8 @@ export interface ISettings {
   themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
+  /** When true, built-in roast lines use Gen-Z voice only (see humor engine). */
+  humorGenZMode: boolean;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -284,6 +286,8 @@ export interface ISyncSlice {
   themeCustomAccent2: string;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
+  /** When true, built-in roast lines use Gen-Z voice only (see humor engine). */
+  humorGenZMode: boolean;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -376,6 +380,7 @@ export function defaultSettings(): ISettings {
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     humorEnabled: true,
     humorIntensity: "mild",
+    humorGenZMode: false,
     humorBuiltinPackIds: ["office_absurd", "tab_shame", "error_messages", "dev_snark"],
     spicyContentAcknowledged: false,
     widgets: { ...DEFAULT_WIDGETS },
@@ -427,6 +432,7 @@ function toSync(s: ISettings): ISyncSlice {
     themeCustomAccent2: s.themeCustomAccent2,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
+    humorGenZMode: s.humorGenZMode,
     humorBuiltinPackIds: s.humorBuiltinPackIds,
     spicyContentAcknowledged: s.spicyContentAcknowledged,
     widgets: s.widgets,
@@ -532,6 +538,7 @@ function mergeSettings(
     themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
+    humorGenZMode: sync?.humorGenZMode ?? d.humorGenZMode,
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
