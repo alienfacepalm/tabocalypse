@@ -249,6 +249,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     bookmarks: false,
     tabs: false,
   });
+  /** Bumped when optional/extension permissions change so HUD widgets refetch (mount-only effects otherwise stay stale). */
+  const [permissionsEpoch, setPermissionsEpoch] = useState(0);
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
@@ -665,9 +667,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         browser.permissions.contains({ permissions: ["tabs"] }),
       ]);
       setOptionalApiPerms({ topSites, bookmarks, tabs });
+      setPermissionsEpoch((e) => e + 1);
     } catch {
       // Ignore: API unavailable in non-extension contexts.
     }
+  }, []);
+
+  useEffect(() => {
+    const perms = browser.permissions;
+    if (!perms?.onAdded || !perms?.onRemoved) return;
+    const bump = (): void => {
+      setPermissionsEpoch((e) => e + 1);
+    };
+    perms.onAdded.addListener(bump);
+    perms.onRemoved.addListener(bump);
+    return () => {
+      perms.onAdded.removeListener(bump);
+      perms.onRemoved.removeListener(bump);
+    };
   }, []);
 
   useEffect(() => {
@@ -2247,161 +2264,169 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <section className="settings-block">
-                  <h3>Optional permissions</h3>
-                  <div className="row wrap">
-                    <button
-                      type="button"
-                      className="btn has-icon"
-                      aria-label={
-                        optionalApiPerms.topSites
-                          ? "Disable Top sites permission"
-                          : "Enable Top sites permission"
-                      }
-                      onClick={async () => {
-                        if (optionalApiPerms.topSites) {
-                          const ok = await browser.permissions.remove({
-                            permissions: ["topSites"],
-                          });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, topSites: false },
-                            }));
-                          }
-                        } else {
-                          const ok = await browser.permissions.request({
-                            permissions: ["topSites"],
-                          });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, topSites: true },
-                            }));
-                          }
+                <details className="acc-item">
+                  <summary className="acc-summary">
+                    <span className="acc-title">Optional permissions</span>
+                  </summary>
+                  <div className="acc-body">
+                    <p className="muted sm mb-2 mt-0">
+                      Request browser access for HUD widgets — Top sites, bookmarks strip, Tab guilt
+                      — or geo auto-detect for Weather.
+                    </p>
+                    <div className="row wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        aria-label={
+                          optionalApiPerms.topSites
+                            ? "Disable Top sites permission"
+                            : "Enable Top sites permission"
                         }
-                        void refreshOptionalApiPerms();
-                      }}
-                    >
-                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                      <span>
-                        {optionalApiPerms.topSites ? "Disable Top sites" : "Enable Top sites"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn has-icon"
-                      aria-label={
-                        optionalApiPerms.bookmarks
-                          ? "Disable Bookmarks permission"
-                          : "Enable Bookmarks permission"
-                      }
-                      onClick={async () => {
-                        if (optionalApiPerms.bookmarks) {
-                          const ok = await browser.permissions.remove({
-                            permissions: ["bookmarks"],
-                          });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, bookmarksStrip: false },
-                            }));
+                        onClick={async () => {
+                          if (optionalApiPerms.topSites) {
+                            const ok = await browser.permissions.remove({
+                              permissions: ["topSites"],
+                            });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, topSites: false },
+                              }));
+                            }
+                          } else {
+                            const ok = await browser.permissions.request({
+                              permissions: ["topSites"],
+                            });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, topSites: true },
+                              }));
+                            }
                           }
-                        } else {
-                          const ok = await browser.permissions.request({
-                            permissions: ["bookmarks"],
-                          });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, bookmarksStrip: true },
-                            }));
-                          }
+                          void refreshOptionalApiPerms();
+                        }}
+                      >
+                        <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                        <span>
+                          {optionalApiPerms.topSites ? "Disable Top sites" : "Enable Top sites"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        aria-label={
+                          optionalApiPerms.bookmarks
+                            ? "Disable Bookmarks permission"
+                            : "Enable Bookmarks permission"
                         }
-                        void refreshOptionalApiPerms();
-                      }}
-                    >
-                      <Bookmark size={18} strokeWidth={2} aria-hidden />
-                      <span>
-                        {optionalApiPerms.bookmarks ? "Disable Bookmarks" : "Enable Bookmarks"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn has-icon"
-                      aria-label={
-                        optionalApiPerms.tabs
-                          ? "Disable Tab guilt (tabs) permission"
-                          : "Enable Tab guilt (tabs) permission"
-                      }
-                      onClick={async () => {
-                        if (optionalApiPerms.tabs) {
-                          const ok = await browser.permissions.remove({ permissions: ["tabs"] });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, tabGuilt: false },
-                            }));
+                        onClick={async () => {
+                          if (optionalApiPerms.bookmarks) {
+                            const ok = await browser.permissions.remove({
+                              permissions: ["bookmarks"],
+                            });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, bookmarksStrip: false },
+                              }));
+                            }
+                          } else {
+                            const ok = await browser.permissions.request({
+                              permissions: ["bookmarks"],
+                            });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, bookmarksStrip: true },
+                              }));
+                            }
                           }
-                        } else {
-                          const ok = await browser.permissions.request({ permissions: ["tabs"] });
-                          if (ok) {
-                            await persist((cur) => ({
-                              ...cur,
-                              widgets: { ...cur.widgets, tabGuilt: true },
-                            }));
+                          void refreshOptionalApiPerms();
+                        }}
+                      >
+                        <Bookmark size={18} strokeWidth={2} aria-hidden />
+                        <span>
+                          {optionalApiPerms.bookmarks ? "Disable Bookmarks" : "Enable Bookmarks"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        aria-label={
+                          optionalApiPerms.tabs
+                            ? "Disable Tab guilt (tabs) permission"
+                            : "Enable Tab guilt (tabs) permission"
+                        }
+                        onClick={async () => {
+                          if (optionalApiPerms.tabs) {
+                            const ok = await browser.permissions.remove({ permissions: ["tabs"] });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, tabGuilt: false },
+                              }));
+                            }
+                          } else {
+                            const ok = await browser.permissions.request({ permissions: ["tabs"] });
+                            if (ok) {
+                              await persist((cur) => ({
+                                ...cur,
+                                widgets: { ...cur.widgets, tabGuilt: true },
+                              }));
+                            }
                           }
+                          void refreshOptionalApiPerms();
+                        }}
+                      >
+                        <Layers size={18} strokeWidth={2} aria-hidden />
+                        <span>
+                          {optionalApiPerms.tabs
+                            ? "Disable Tab guilt (tabs)"
+                            : "Enable Tab guilt (tabs)"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn has-icon"
+                        disabled={geoStatus === "detecting"}
+                        aria-label={
+                          s.weatherAutoGeo
+                            ? "Disable auto-detect location"
+                            : "Enable auto-detect location"
                         }
-                        void refreshOptionalApiPerms();
-                      }}
-                    >
-                      <Layers size={18} strokeWidth={2} aria-hidden />
-                      <span>
-                        {optionalApiPerms.tabs
-                          ? "Disable Tab guilt (tabs)"
-                          : "Enable Tab guilt (tabs)"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn has-icon"
-                      disabled={geoStatus === "detecting"}
-                      aria-label={
-                        s.weatherAutoGeo
-                          ? "Disable auto-detect location"
-                          : "Enable auto-detect location"
-                      }
-                      onClick={() => {
-                        if (s.weatherAutoGeo) {
-                          void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
-                          setGeoStatus(null);
-                        } else {
-                          void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
-                        }
-                      }}
-                    >
-                      <LocateFixed size={18} strokeWidth={2} aria-hidden />
-                      <span>
-                        {geoStatus === "detecting"
-                          ? "Detecting…"
-                          : s.weatherAutoGeo
-                            ? "Disable Location (geo)"
-                            : "Enable Location (geo)"}
-                      </span>
-                    </button>
+                        onClick={() => {
+                          if (s.weatherAutoGeo) {
+                            void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+                            setGeoStatus(null);
+                          } else {
+                            void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                          }
+                        }}
+                      >
+                        <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                        <span>
+                          {geoStatus === "detecting"
+                            ? "Detecting…"
+                            : s.weatherAutoGeo
+                              ? "Disable Location (geo)"
+                              : "Enable Location (geo)"}
+                        </span>
+                      </button>
+                    </div>
+                    {geoStatus === "denied" ? (
+                      <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                        Location permission denied. Allow location access in your browser and try
+                        again, or enter coordinates manually under Weather.
+                      </p>
+                    ) : null}
+                    {geoStatus === "unavailable" ? (
+                      <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                        Geolocation is not available in this browser.
+                      </p>
+                    ) : null}
                   </div>
-                  {geoStatus === "denied" ? (
-                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                      Location permission denied. Allow location access in your browser and try
-                      again, or enter coordinates manually under Weather.
-                    </p>
-                  ) : null}
-                  {geoStatus === "unavailable" ? (
-                    <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                      Geolocation is not available in this browser.
-                    </p>
-                  ) : null}
-                </section>
+                </details>
 
                 <details className="acc-item">
                   <summary className="acc-summary">
@@ -3125,7 +3150,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               locked={s.hudLayoutLocked}
               onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
             >
-              <TabGuilt />
+              <TabGuilt permissionsEpoch={permissionsEpoch} />
             </DraggableHudPanel>
           ) : null}
           {s.widgets.weather ? (
@@ -3158,7 +3183,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               locked={s.hudLayoutLocked}
               onCommit={(pos) => commitHudPanel("topSites", pos)}
             >
-              <TopSitesWidget />
+              <TopSitesWidget permissionsEpoch={permissionsEpoch} />
             </DraggableHudPanel>
           ) : null}
           {s.widgets.bookmarksStrip ? (
@@ -3171,7 +3196,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               locked={s.hudLayoutLocked}
               onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
             >
-              <BookmarksWidget />
+              <BookmarksWidget permissionsEpoch={permissionsEpoch} />
             </DraggableHudPanel>
           ) : null}
           {s.importedPlugins.some((p) => p.enabled) ? (
@@ -3379,7 +3404,7 @@ export default App as React.FC<{ initialSettings: ISettings }>;
 /** How often to re-query the current window tab count so the panel stays accurate. */
 const TAB_GUILT_POLL_MS = 2000;
 
-function TabGuilt() {
+function TabGuilt({ permissionsEpoch }: { permissionsEpoch: number }) {
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
     const tabsApi = browser.tabs;
@@ -3404,7 +3429,7 @@ function TabGuilt() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, []);
+  }, [permissionsEpoch]);
   if (n === null)
     return (
       <section className="card">
