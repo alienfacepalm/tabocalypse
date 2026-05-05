@@ -469,18 +469,6 @@
     @apply mb-2 mt-0 text-[0.95rem] text-muted;
   }
 
-  .support-actions-form {
-    @apply mt-3 flex flex-col;
-  }
-
-  .support-action-row {
-    @apply flex items-center justify-between gap-3 border-b border-border py-2.5 first:pt-0 last:border-b-0 last:pb-0;
-  }
-
-  .support-action-label {
-    @apply min-w-0 flex-1 text-[0.9rem] text-text;
-  }
-
   .check-row {
     @apply my-1 flex items-center gap-2 text-[0.9rem];
   }

@@ -1,4 +1,4 @@
-/** Drives default icon choice in the settings “Feedback and support” form (build-time JSON only). */
+/** Parses optional `kind` on each support link (`WXT_TABOCALYPSE_SUPPORT_*`, build-time only). Footer uses label text. */
 export type TSupportLinkKind = "feedback" | "donate" | "source" | "link";
 
 export interface ISupportAction {

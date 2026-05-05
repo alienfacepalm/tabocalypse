@@ -76,7 +76,7 @@ GitHub Actions CI is **not** wired up in this repo yet—run **`pnpm check`** an
 
 Copy [`apps/extension/.env.example`](apps/extension/.env.example) to `apps/extension/.env` (or project root per WXT docs).
 
-**Option A — JSON list (any number of rows):** set `WXT_TABOCALYPSE_SUPPORT_LINKS` to a single-line JSON array. Each object needs `label` and `url` (`https://` or `http://`). Optional `kind` picks the default icon: `feedback`, `donate`, `source`, or `link`.
+**Option A — JSON list (any number of rows):** set `WXT_TABOCALYPSE_SUPPORT_LINKS` to a single-line JSON array. Each object needs `label` and `url` (`https://` or `http://`). Optional `kind` categorizes links as `feedback`, `donate`, `source`, or `link`; the footer shows plain-text labels only.
 
 Example:
 

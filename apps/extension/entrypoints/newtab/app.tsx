@@ -7,10 +7,8 @@ import {
   CheckCircle2,
   CircleX,
   Download,
-  ExternalLink,
   Flame,
   FolderUp,
-  Heart,
   Image,
   ImagePlus,
   Images,
@@ -18,7 +16,6 @@ import {
   Layers,
   LocateFixed,
   Lock as LucideLock,
-  MessageSquare,
   Moon,
   Move,
   Paintbrush,
@@ -82,7 +79,7 @@ import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
 import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
-import { getSupportActions, openExternal, type TSupportLinkKind } from "../../lib/support-links";
+import { getSupportActions, openExternal } from "../../lib/support-links";
 import {
   estimateImportedBytes,
   MAX_TOTAL_IMPORTED_BYTES,
@@ -207,20 +204,6 @@ function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void 
     if (v === undefined) continue;
     if (typeof v === "number") t[String(k)] = String(v);
     else t[String(k)] = String(v);
-  }
-}
-
-function SupportLinkIcon({ kind }: { kind: TSupportLinkKind }) {
-  const iconProps = { size: 18, strokeWidth: 2, "aria-hidden": true as const };
-  switch (kind) {
-    case "feedback":
-      return <MessageSquare {...iconProps} />;
-    case "donate":
-      return <Heart {...iconProps} />;
-    case "source":
-      return <Braces {...iconProps} />;
-    default:
-      return <ExternalLink {...iconProps} />;
   }
 }
 
@@ -2810,51 +2793,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       }}
                     />
                   </label>
-                </section>
-
-                <section className="settings-block support-block">
-                  <h3>Feedback and support</h3>
-                  <p className="muted sm">
-                    Opens the site you pick in a new tab. Donations and tips go through third-party
-                    pages — Tabocalypse does not process payments.
-                  </p>
-                  {supportActions.length > 0 ? (
-                    <form
-                      className="support-actions-form"
-                      onSubmit={(event) => event.preventDefault()}
-                      noValidate
-                    >
-                      <fieldset className="m-0 border-0 p-0">
-                        <legend className="sr-only">Feedback and optional support links</legend>
-                        {supportActions.map((action) => (
-                          <div key={action.url + action.label} className="support-action-row">
-                            <span className="support-action-label">{action.label}</span>
-                            <HudTip tip="Open this link in a new browser tab">
-                              <button
-                                type="button"
-                                className="btn primary has-icon sm"
-                                onClick={() => openExternal(action.url)}
-                                aria-label={`Open ${action.label} in a new tab`}
-                              >
-                                <SupportLinkIcon kind={action.kind} />
-                                <span>Open</span>
-                              </button>
-                            </HudTip>
-                          </div>
-                        ))}
-                      </fieldset>
-                    </form>
-                  ) : (
-                    <p className="muted sm">No links are configured yet.</p>
-                  )}
-                  <p className="muted sm">
-                    Set <code>WXT_TABOCALYPSE_SUPPORT_LINKS</code> to a JSON array of{" "}
-                    <code>label</code>, <code>url</code>, and optional <code>kind</code> (
-                    <code>feedback</code>, <code>donate</code>, <code>source</code>,{" "}
-                    <code>link</code>), or set <code>WXT_TABOCALYPSE_FEATURE_URL</code>,{" "}
-                    <code>WXT_TABOCALYPSE_DONATE_URL</code>, and{" "}
-                    <code>WXT_TABOCALYPSE_GITHUB_URL</code> in <code>.env</code>.
-                  </p>
                 </section>
               </div>
             </div>
