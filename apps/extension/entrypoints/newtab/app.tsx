@@ -697,6 +697,65 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const s = settings;
 
+  /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
+  const onBackgroundSolidColorChange = useCallback(
+    (e: React.FormEvent<HTMLInputElement>) => {
+      void persist((cur) => ({
+        ...cur,
+        backgroundSolid: coerceThemeHex(e.currentTarget.value, cur.backgroundSolid),
+      }));
+    },
+    [persist],
+  );
+
+  const onBackgroundGradientEndColorChange = useCallback(
+    (e: React.FormEvent<HTMLInputElement>) => {
+      void persist((cur) => ({
+        ...cur,
+        backgroundGradientEnd: coerceThemeHex(e.currentTarget.value, cur.backgroundGradientEnd),
+      }));
+    },
+    [persist],
+  );
+
+  const onAccentPrimaryColorChange = useCallback(
+    (e: React.FormEvent<HTMLInputElement>) => {
+      void persist((cur) => {
+        const hex = coerceThemeHex(e.currentTarget.value, cur.themeCustomAccent);
+        const pair = getResolvedAccentPair(cur.themePalette, {
+          accent: cur.themeCustomAccent,
+          accent2: cur.themeCustomAccent2,
+        });
+        return {
+          ...cur,
+          themePalette: "custom",
+          themeCustomAccent: hex,
+          themeCustomAccent2: pair.accent2,
+        };
+      });
+    },
+    [persist],
+  );
+
+  const onAccentSecondaryColorChange = useCallback(
+    (e: React.FormEvent<HTMLInputElement>) => {
+      void persist((cur) => {
+        const hex = coerceThemeHex(e.currentTarget.value, cur.themeCustomAccent2);
+        const pair = getResolvedAccentPair(cur.themePalette, {
+          accent: cur.themeCustomAccent,
+          accent2: cur.themeCustomAccent2,
+        });
+        return {
+          ...cur,
+          themePalette: "custom",
+          themeCustomAccent: pair.accent,
+          themeCustomAccent2: hex,
+        };
+      });
+    },
+    [persist],
+  );
+
   /** Same gates as `onBackgroundPanPointerDown` for uploaded wallpaper pan (avoid a move cursor when drag is a no-op). */
   const userBackgroundWallpaperPanDraggable = useMemo(() => {
     if (s.hudLayoutLocked) return false;
@@ -1233,21 +1292,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               accent2: s.themeCustomAccent2,
                             }).accent
                           }
-                          onChange={(e) => {
-                            const hex = coerceThemeHex(e.target.value, s.themeCustomAccent);
-                            void persist((cur) => {
-                              const pair = getResolvedAccentPair(cur.themePalette, {
-                                accent: cur.themeCustomAccent,
-                                accent2: cur.themeCustomAccent2,
-                              });
-                              return {
-                                ...cur,
-                                themePalette: "custom",
-                                themeCustomAccent: hex,
-                                themeCustomAccent2: pair.accent2,
-                              };
-                            });
-                          }}
+                          onChange={onAccentPrimaryColorChange}
+                          onInput={onAccentPrimaryColorChange}
                         />
                       </HudTip>
                     </div>
@@ -1265,21 +1311,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               accent2: s.themeCustomAccent2,
                             }).accent2
                           }
-                          onChange={(e) => {
-                            const hex = coerceThemeHex(e.target.value, s.themeCustomAccent2);
-                            void persist((cur) => {
-                              const pair = getResolvedAccentPair(cur.themePalette, {
-                                accent: cur.themeCustomAccent,
-                                accent2: cur.themeCustomAccent2,
-                              });
-                              return {
-                                ...cur,
-                                themePalette: "custom",
-                                themeCustomAccent: pair.accent,
-                                themeCustomAccent2: hex,
-                              };
-                            });
-                          }}
+                          onChange={onAccentSecondaryColorChange}
+                          onInput={onAccentSecondaryColorChange}
                         />
                       </HudTip>
                     </div>
@@ -1623,15 +1656,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                 className="color-input-hud"
                                 aria-label="Background color"
                                 value={s.backgroundSolid}
-                                onChange={(e) =>
-                                  void persist((cur) => ({
-                                    ...cur,
-                                    backgroundSolid: coerceThemeHex(
-                                      e.target.value,
-                                      cur.backgroundSolid,
-                                    ),
-                                  }))
-                                }
+                                onChange={onBackgroundSolidColorChange}
+                                onInput={onBackgroundSolidColorChange}
                               />
                             </HudTip>
                           </div>
@@ -1646,15 +1672,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                   className="color-input-hud"
                                   aria-label="Gradient start color"
                                   value={s.backgroundSolid}
-                                  onChange={(e) =>
-                                    void persist((cur) => ({
-                                      ...cur,
-                                      backgroundSolid: coerceThemeHex(
-                                        e.target.value,
-                                        cur.backgroundSolid,
-                                      ),
-                                    }))
-                                  }
+                                  onChange={onBackgroundSolidColorChange}
+                                  onInput={onBackgroundSolidColorChange}
                                 />
                               </HudTip>
                             </div>
@@ -1667,15 +1686,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                   className="color-input-hud"
                                   aria-label="Gradient end color"
                                   value={s.backgroundGradientEnd}
-                                  onChange={(e) =>
-                                    void persist((cur) => ({
-                                      ...cur,
-                                      backgroundGradientEnd: coerceThemeHex(
-                                        e.target.value,
-                                        cur.backgroundGradientEnd,
-                                      ),
-                                    }))
-                                  }
+                                  onChange={onBackgroundGradientEndColorChange}
+                                  onInput={onBackgroundGradientEndColorChange}
                                 />
                               </HudTip>
                             </div>

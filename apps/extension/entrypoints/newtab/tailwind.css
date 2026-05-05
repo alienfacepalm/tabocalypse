@@ -467,8 +467,10 @@
     @apply min-w-[8.5rem] font-display text-[0.65rem] font-bold uppercase tracking-widest text-muted;
   }
 
+  /* No `bg-input` here: that semi-opaque fill sits on top of the native swatch in WebKit/Safari,
+     so the square reads as dark gray instead of the chosen color. */
   .color-input-hud {
-    @apply h-9 w-12 shrink-0 cursor-pointer border-2 border-border bg-input p-0 shadow-[3px_3px_0_0_var(--color-accent)];
+    @apply h-9 w-12 shrink-0 cursor-pointer border-2 border-border bg-transparent p-0 shadow-[3px_3px_0_0_var(--color-accent)];
   }
 
   .color-input-hud::-webkit-color-swatch-wrapper {
