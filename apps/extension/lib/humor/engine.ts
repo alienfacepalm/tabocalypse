@@ -30,9 +30,10 @@ export interface IHumorContext {
   locale: string;
 }
 
-export function dailySeed(): string {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
+/** Seed that changes every `minutesBucket` minutes (default 5). */
+export function timeBucketSeed(minutesBucket = 5): string {
+  const bucket = Math.floor(Date.now() / (minutesBucket * 60_000));
+  return `tb-${bucket}`;
 }
 
 function builtinPackAllowed(user: THumorIntensity, packMax: THumorIntensity): boolean {
@@ -69,7 +70,8 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
 
   if (candidates.length === 0) return null;
 
-  const idx = hashString(`${dailySeed()}|${ctx.locale}|${candidates.length}`) % candidates.length;
+  const idx =
+    hashString(`${timeBucketSeed()}|${ctx.locale}|${candidates.length}`) % candidates.length;
   return candidates[idx] ?? null;
 }
 
