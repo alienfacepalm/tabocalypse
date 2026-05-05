@@ -275,7 +275,7 @@ export function DraggableHudPanel({
       className={[
         "hud-draggable-panel pointer-events-auto absolute flex max-w-full min-h-0 flex-col overflow-hidden",
         useDefaultWidth ? widthClass : "",
-        effectiveH == null ? "max-h-[min(75vh,calc(100vh-9rem))]" : "",
+        effectiveH == null ? "max-h-[min(92vh,calc(100vh-5.25rem))]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
