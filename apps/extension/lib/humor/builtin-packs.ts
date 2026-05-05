@@ -318,6 +318,7 @@ export const BUILTIN_PACKS: IBuiltinPack[] = [
       "This tab bar is my villain origin story.",
       "Tabs on tabs on tabs. It\u2019s giving anxiety-core.",
       "Respectfully, your browser is cooked.",
+      "Still \u2018just organizing\u2019 this tab avalanche? You\u2019re cooked, chat.",
       "You\u2019re gatekeeping productivity from yourself.",
       "Your browser tabs are a whole cinematic universe at this point.",
       "The Roman Empire of tab counts. You think about it daily.",

@@ -372,7 +372,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       setBingRefreshing(false);
       return;
     }
-    const rotate = settings?.backgroundRotate ?? false;
+    const rotate = settings?.backgroundRotate ?? true;
     const bingRotateMs = Math.max(
       60_000,
       (settings?.backgroundRotateMinutesBing ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
@@ -2843,7 +2843,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             tip={
               s.hudLayoutChaotic
                 ? "Turn on grid snap so panels align to the layout grid"
-                : "Turn on free-form layout so panels ignore the snap grid"
+                : "Turn on Chaotic layout so panels ignore the snap grid"
             }
           >
             <button
@@ -2853,7 +2853,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               aria-label={
                 s.hudLayoutChaotic
                   ? "Chaotic layout on; press to snap panels to a grid"
-                  : "Snap to grid on; press for free-form layout"
+                  : "Snap to grid on; press for Chaotic layout"
               }
               onClick={() =>
                 void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))

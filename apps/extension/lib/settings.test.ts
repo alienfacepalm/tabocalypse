@@ -111,6 +111,8 @@ describe("defaultSettings", () => {
     expect(s.clockHourFormat).toBe("24h");
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
+    expect(s.backgroundRotate).toBe(true);
+    expect(s.hudLayoutChaotic).toBe(true);
     expect(s.humorIntensity).toBe("spicy");
     expect(s.humorBuiltinVoice).toBe("gen_z");
     expect(s.notes).toEqual([]);
