@@ -1,5 +1,6 @@
 import React from "react";
 import browser from "webextension-polyfill";
+import { faviconUrl } from "../lib/favicon-url";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
 export function TopSitesWidget() {
@@ -36,6 +37,13 @@ export function TopSitesWidget() {
           {sites.map((s, i) => (
             <li key={i}>
               <a href={s.url} target="_blank" rel="noreferrer">
+                <img
+                  src={faviconUrl(s.url ?? "")}
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="favicon"
+                />
                 {s.title || s.url}
               </a>
             </li>
@@ -80,6 +88,13 @@ export function BookmarksWidget() {
           {marks.map((b) => (
             <li key={b.id}>
               <a href={b.url} target="_blank" rel="noreferrer">
+                <img
+                  src={faviconUrl(b.url ?? "")}
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="favicon"
+                />
                 {b.title || b.url}
               </a>
             </li>

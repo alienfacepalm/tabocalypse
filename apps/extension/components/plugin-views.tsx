@@ -1,5 +1,6 @@
 import React from "react";
 import type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
+import { faviconUrl } from "../lib/favicon-url";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 
 function StaticText({ props }: { props: { text: string } }) {
@@ -22,6 +23,7 @@ function LinkGrid({ props }: { props: { links: { label: string; url: string }[] 
       {props.links.map((l, idx) => (
         <li key={idx}>
           <a href={l.url} target="_blank" rel="noreferrer">
+            <img src={faviconUrl(l.url)} alt="" width={16} height={16} className="favicon" />
             {l.label}
           </a>
         </li>

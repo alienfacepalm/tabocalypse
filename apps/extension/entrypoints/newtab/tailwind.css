@@ -340,7 +340,12 @@
   }
 
   .link-grid a {
-    @apply border-b border-transparent text-text no-underline;
+    @apply flex items-center gap-2 border-b border-transparent text-text no-underline;
+  }
+
+  .favicon {
+    @apply inline-block shrink-0;
+    image-rendering: pixelated;
   }
 
   .link-grid a:hover {
