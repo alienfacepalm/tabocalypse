@@ -100,6 +100,7 @@ describe("defaultSettings", () => {
     expect(s.importedPacks).toEqual([]);
     expect(s.importedPlugins).toEqual([]);
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
+    expect(s.clockHourFormat).toBe("24h");
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
   });

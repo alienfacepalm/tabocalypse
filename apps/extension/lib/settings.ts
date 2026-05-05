@@ -11,6 +11,7 @@ import {
   type TThemeMode,
   type TThemePalette,
 } from "./theme";
+import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 import {
   coerceWeatherTemperatureUnit,
   type TWeatherTemperatureUnit,
@@ -19,6 +20,7 @@ import {
 export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
 
 export type { TThemeMode, TThemePalette } from "./theme";
+export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 export type { TWeatherTemperatureUnit } from "./weather/weather-units";
 export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
@@ -192,6 +194,8 @@ export interface ISettings {
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
+  /** Clock widget only: 12-hour (with AM/PM) vs 24-hour time. */
+  clockHourFormat: TClockHourFormat;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
@@ -287,6 +291,7 @@ export interface ISyncSlice {
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
+  clockHourFormat: TClockHourFormat;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
@@ -378,6 +383,7 @@ export function defaultSettings(): ISettings {
     weatherLat: 40.7128,
     weatherLon: -74.006,
     weatherTemperatureUnit: "celsius",
+    clockHourFormat: "24h",
     weatherAutoGeo: false,
     useOpenWeather: false,
     backgroundKind: "gradient",
@@ -428,6 +434,7 @@ function toSync(s: ISettings): ISyncSlice {
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
     weatherTemperatureUnit: s.weatherTemperatureUnit,
+    clockHourFormat: s.clockHourFormat,
     weatherAutoGeo: s.weatherAutoGeo,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
@@ -535,6 +542,7 @@ function mergeSettings(
       sync?.weatherTemperatureUnit,
       d.weatherTemperatureUnit,
     ),
+    clockHourFormat: coerceClockHourFormat(sync?.clockHourFormat, d.clockHourFormat),
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,

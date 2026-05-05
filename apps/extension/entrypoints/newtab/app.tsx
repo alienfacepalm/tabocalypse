@@ -56,6 +56,7 @@ import {
   coerceBackgroundGradientCenterPct,
   coerceBackgroundGradientShape,
   coerceBackgroundRotateMinutes,
+  coerceClockHourFormat,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
   defaultSettings,
   type IHudPanelPosition,
@@ -2396,6 +2397,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                 parsed.backgroundGradientCenterYPct,
                                 d.backgroundGradientCenterYPct,
                               ),
+                              clockHourFormat: coerceClockHourFormat(
+                                parsed.clockHourFormat,
+                                d.clockHourFormat,
+                              ),
                             };
                             void persist(merged);
                           } catch {
@@ -2723,7 +2728,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               locked={s.hudLayoutLocked}
               onCommit={(pos) => commitHudPanel("clock", pos)}
             >
-              <ClockWidget humor={humorCtx} />
+              <ClockWidget
+                humor={humorCtx}
+                hourFormat={s.clockHourFormat}
+                onHourFormatChange={(clockHourFormat) =>
+                  void persist((cur) => ({ ...cur, clockHourFormat }))
+                }
+              />
             </DraggableHudPanel>
           ) : null}
           {s.widgets.tabGuilt ? (
