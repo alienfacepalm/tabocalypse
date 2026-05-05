@@ -99,12 +99,15 @@ const LIGHT_NEUTRAL: Record<string, string> = {
 };
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
+const HEX8 = /^#[0-9a-fA-F]{8}$/;
 const HEX3 = /^#[0-9a-fA-F]{3}$/;
 
 export function coerceThemeHex(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
   const t = value.trim();
   if (HEX6.test(t)) return t.toLowerCase();
+  /** Some browsers emit `#rrggbbaa` from `<input type="color">`; we store opaque RGB only. */
+  if (HEX8.test(t)) return `#${t.slice(1, 7).toLowerCase()}`;
   if (HEX3.test(t)) {
     const r = t[1];
     const g = t[2];

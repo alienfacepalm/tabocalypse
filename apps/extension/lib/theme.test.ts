@@ -94,6 +94,10 @@ describe("coerceThemeHex", () => {
     expect(coerceThemeHex("#f0a", "#000000")).toBe("#ff00aa");
   });
 
+  it("strips alpha from 8-digit hex (color input)", () => {
+    expect(coerceThemeHex("#AabbCcFf", "#000000")).toBe("#aabbcc");
+  });
+
   it("falls back when invalid", () => {
     expect(coerceThemeHex("red", "#010203")).toBe("#010203");
     expect(coerceThemeHex("", "#010203")).toBe("#010203");

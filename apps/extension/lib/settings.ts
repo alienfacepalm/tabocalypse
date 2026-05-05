@@ -541,7 +541,7 @@ function mergeSettings(
     backgroundRotate: local?.backgroundRotate ?? d.backgroundRotate,
     backgroundRotateMinutesBing,
     backgroundRotateMinutesUser,
-    backgroundSolid: sync?.backgroundSolid ?? d.backgroundSolid,
+    backgroundSolid: coerceThemeHex(sync?.backgroundSolid, d.backgroundSolid),
     backgroundGradientMid: coerceThemeHex(sync?.backgroundGradientMid, bgGradientFallback.mid),
     backgroundGradientEnd: coerceThemeHex(sync?.backgroundGradientEnd, bgGradientFallback.end),
     backgroundGradientShape: coerceBackgroundGradientShape(
