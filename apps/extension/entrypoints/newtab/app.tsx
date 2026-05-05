@@ -491,6 +491,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     const applyUserBackground = (): void => {
       const c = latestSettingsRef.current;
+      const rotateOn = c.backgroundRotate ?? true;
       const userMs = Math.max(
         60_000,
         (c.backgroundRotateMinutesUser ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
@@ -498,14 +499,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const resolved = resolveUserBackgroundImage(
         c.userBackgroundImages,
         c.userBackgroundActiveId,
-        c.backgroundRotate,
+        rotateOn,
         userMs,
       );
       setUserChosenUrl(resolved?.dataUrl ?? null);
       setUserBackgroundDisplayId(resolved?.id ?? null);
     };
     applyUserBackground();
-    if (!settings.backgroundRotate) return;
+    if (!(settings.backgroundRotate ?? true)) return;
     const userMs = Math.max(
       60_000,
       (settings.backgroundRotateMinutesUser ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
@@ -1822,7 +1823,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <label className="check-row mt-3">
                       <input
                         type="checkbox"
-                        checked={s.backgroundRotate}
+                        checked={s.backgroundRotate ?? true}
                         onChange={(e) => {
                           const v = e.target.checked;
                           void persist((cur) => ({ ...cur, backgroundRotate: v }));
@@ -1889,7 +1890,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <UserBackgroundGallery
                         images={s.userBackgroundImages}
                         activeId={s.userBackgroundActiveId}
-                        backgroundRotate={s.backgroundRotate}
+                        backgroundRotate={s.backgroundRotate ?? true}
                         onPickFiles={(files) => void onPickBackgrounds(files)}
                         onSetActiveId={(id) =>
                           void persist((cur) => {
@@ -2814,6 +2815,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       humorGenZMode?: unknown;
                                     },
                                   ),
+                                  backgroundRotate:
+                                    typeof parsed.backgroundRotate === "boolean"
+                                      ? parsed.backgroundRotate
+                                      : d.backgroundRotate,
                                   hasSeenSettingsIntro:
                                     typeof parsed.hasSeenSettingsIntro === "boolean"
                                       ? parsed.hasSeenSettingsIntro

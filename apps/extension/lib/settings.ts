@@ -723,7 +723,8 @@ function mergeSettings(
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
-    backgroundRotate: local?.backgroundRotate ?? d.backgroundRotate,
+    backgroundRotate:
+      typeof local?.backgroundRotate === "boolean" ? local.backgroundRotate : d.backgroundRotate,
     backgroundRotateMinutesBing,
     backgroundRotateMinutesUser,
     backgroundSolid: coerceThemeHex(sync?.backgroundSolid, d.backgroundSolid),

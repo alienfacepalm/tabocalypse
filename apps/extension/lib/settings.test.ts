@@ -281,6 +281,27 @@ describe("loadSettings", () => {
     expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   });
 
+  it("defaults backgroundRotate when local slice has non-boolean garbage", async () => {
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: "junk" as unknown as boolean,
+        openWeatherApiKey: "",
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+    });
+    const s = await loadSettings();
+    expect(s.backgroundRotate).toBe(true);
+  });
+
   it("loads from local only when storage.sync is unavailable", async () => {
     mockBrowser.storage.sync = null;
     try {
