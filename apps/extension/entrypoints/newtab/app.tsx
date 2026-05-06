@@ -47,7 +47,17 @@ import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
-import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weather/weather-units";
+import {
+  WEATHER_TEMPERATURE_UNITS,
+  WEATHER_TEMPERATURE_UNIT_AUTO_LABEL,
+  WEATHER_UNIT_LABELS,
+  coerceWeatherTemperatureUnit,
+} from "../../lib/weather/weather-units";
+import {
+  getNavigatorFormattingLocale,
+  resolveEffectiveClockHourFormat,
+  resolveEffectiveWeatherTemperatureUnit,
+} from "../../lib/locale-units";
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
   applyChaosPresetHumorHarmony,
@@ -867,6 +877,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [humorCtx]);
 
   const s = settings;
+
+  const hudNumberLocale = useMemo(() => getNavigatorFormattingLocale(), []);
+  const effectiveWeatherTemperatureUnit = useMemo(
+    () => resolveEffectiveWeatherTemperatureUnit(s),
+    [s.weatherTemperatureUnit, s.weatherTemperatureUnitAuto],
+  );
+  const effectiveClockHourFormat = useMemo(
+    () => resolveEffectiveClockHourFormat(s),
+    [s.clockHourFormat, s.clockHourFormatAuto],
+  );
 
   /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
   const onBackgroundSolidColorChange = useCallback(
@@ -2328,27 +2348,72 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </>
                     ) : null}
                     <p className="muted sm mb-2 mt-4">Temperature units</p>
+                    <p className="muted text-xs mb-2 mt-0">
+                      Automatic picks Celsius or Fahrenheit from your browser locale (for example
+                      United States regions use °F).
+                    </p>
                     <div className="row wrap" role="group" aria-label="Temperature units">
+                      <HudTip tip="Use Celsius or Fahrenheit based on your browser locale">
+                        <button
+                          type="button"
+                          className={s.weatherTemperatureUnitAuto ? "btn primary" : "btn"}
+                          onClick={() =>
+                            void persist((cur) => ({ ...cur, weatherTemperatureUnitAuto: true }))
+                          }
+                        >
+                          {WEATHER_TEMPERATURE_UNIT_AUTO_LABEL}
+                        </button>
+                      </HudTip>
                       {WEATHER_TEMPERATURE_UNITS.map((u) => (
                         <HudTip
                           key={u}
                           tip={
                             u === "celsius"
-                              ? "Switch forecast and readings to Celsius"
-                              : "Switch forecast and readings to Fahrenheit"
+                              ? "Always show readings in Celsius"
+                              : "Always show readings in Fahrenheit"
                           }
                         >
                           <button
                             type="button"
-                            className={s.weatherTemperatureUnit === u ? "btn primary" : "btn"}
+                            className={
+                              !s.weatherTemperatureUnitAuto && s.weatherTemperatureUnit === u
+                                ? "btn primary"
+                                : "btn"
+                            }
                             onClick={() =>
-                              void persist((cur) => ({ ...cur, weatherTemperatureUnit: u }))
+                              void persist((cur) => ({
+                                ...cur,
+                                weatherTemperatureUnitAuto: false,
+                                weatherTemperatureUnit: u,
+                              }))
                             }
                           >
                             {WEATHER_UNIT_LABELS[u]}
                           </button>
                         </HudTip>
                       ))}
+                    </div>
+                    <p className="muted sm mb-2 mt-4">2 Lakes</p>
+                    <p className="muted text-xs mb-2 mt-0">
+                      Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget,
+                      embedding 2lakes.app in the panel. The site must allow framing; if it does
+                      not, use Open in tab from the widget instead.
+                    </p>
+                    <div className="row wrap gap-2">
+                      <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">
+                        <button
+                          type="button"
+                          className={s.weatherLakesEmbedEnabled ? "btn primary" : "btn"}
+                          onClick={() =>
+                            void persist((cur) => ({
+                              ...cur,
+                              weatherLakesEmbedEnabled: !cur.weatherLakesEmbedEnabled,
+                            }))
+                          }
+                        >
+                          {s.weatherLakesEmbedEnabled ? "Panel embed on" : "Panel embed off"}
+                        </button>
+                      </HudTip>
                     </div>
                   </div>
                 </details>
@@ -2928,6 +2993,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     parsed.clockHourFormat,
                                     d.clockHourFormat,
                                   ),
+                                  clockHourFormatAuto:
+                                    typeof parsed.clockHourFormatAuto === "boolean"
+                                      ? parsed.clockHourFormatAuto
+                                      : d.clockHourFormatAuto,
+                                  weatherTemperatureUnit: coerceWeatherTemperatureUnit(
+                                    parsed.weatherTemperatureUnit,
+                                    d.weatherTemperatureUnit,
+                                  ),
+                                  weatherTemperatureUnitAuto:
+                                    typeof parsed.weatherTemperatureUnitAuto === "boolean"
+                                      ? parsed.weatherTemperatureUnitAuto
+                                      : d.weatherTemperatureUnitAuto,
                                   humorBuiltinVoice: coerceHumorBuiltinVoice(
                                     parsed as {
                                       humorBuiltinVoice?: unknown;
@@ -3231,9 +3308,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               onCommit={(pos) => commitHudPanel("clock", pos)}
             >
               <ClockWidget
-                hourFormat={s.clockHourFormat}
-                onHourFormatChange={(clockHourFormat) =>
-                  void persist((cur) => ({ ...cur, clockHourFormat }))
+                locale={hudNumberLocale}
+                effectiveHourFormat={effectiveClockHourFormat}
+                hourFormatAuto={s.clockHourFormatAuto}
+                onSelectAutomaticHourFormat={() =>
+                  void persist((cur) => ({ ...cur, clockHourFormatAuto: true }))
+                }
+                onSelectExplicitHourFormat={(clockHourFormat) =>
+                  void persist((cur) => ({ ...cur, clockHourFormatAuto: false, clockHourFormat }))
                 }
               />
             </DraggableHudPanel>
@@ -3264,10 +3346,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               <WeatherWidget
                 lat={s.weatherLat}
                 lon={s.weatherLon}
-                temperatureUnit={s.weatherTemperatureUnit}
-                onTemperatureUnitChange={(weatherTemperatureUnit) =>
-                  void persist((cur) => ({ ...cur, weatherTemperatureUnit }))
+                effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
+                temperatureUnitAuto={s.weatherTemperatureUnitAuto}
+                displayLocale={hudNumberLocale}
+                onSelectAutomaticTemperatureUnit={() =>
+                  void persist((cur) => ({ ...cur, weatherTemperatureUnitAuto: true }))
                 }
+                onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
+                  void persist((cur) => ({
+                    ...cur,
+                    weatherTemperatureUnitAuto: false,
+                    weatherTemperatureUnit,
+                  }))
+                }
+                lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
               />
             </DraggableHudPanel>
           ) : null}

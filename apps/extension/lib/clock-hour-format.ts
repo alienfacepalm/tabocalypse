@@ -15,3 +15,6 @@ export const CLOCK_HOUR_FORMAT_LABELS: Record<TClockHourFormat, string> = {
   "12h": "12-hour",
   "24h": "24-hour",
 };
+
+/** Label for matching clock style to the browser locale. */
+export const CLOCK_HOUR_FORMAT_AUTO_LABEL = "Automatic";

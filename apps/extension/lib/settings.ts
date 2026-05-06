@@ -340,6 +340,8 @@ export interface ISettings {
   /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
+  /** When true, the Weather HUD panel can switch to an embedded 2lakes.app view (Settings → Weather). */
+  weatherLakesEmbedEnabled: boolean;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
   /** If true and the chosen background kind supports it, the background rotates over time. */
@@ -449,6 +451,7 @@ export interface ISyncSlice {
   clockHourFormat: TClockHourFormat;
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
+  weatherLakesEmbedEnabled: boolean;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
   backgroundSolid: string;
@@ -556,6 +559,7 @@ export function defaultSettings(): ISettings {
     clockHourFormat: "24h",
     clockHourFormatAuto: true,
     weatherAutoGeo: false,
+    weatherLakesEmbedEnabled: false,
     useOpenWeather: false,
     backgroundKind: "gradient",
     backgroundRotate: true,
@@ -614,6 +618,7 @@ function toSync(s: ISettings): ISyncSlice {
     clockHourFormat: s.clockHourFormat,
     clockHourFormatAuto: s.clockHourFormatAuto,
     weatherAutoGeo: s.weatherAutoGeo,
+    weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
     backgroundSolid: s.backgroundSolid,
@@ -782,6 +787,12 @@ function mergeSettings(
           ? d.clockHourFormatAuto
           : false,
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
+    weatherLakesEmbedEnabled:
+      typeof sync?.weatherLakesEmbedEnabled === "boolean"
+        ? sync.weatherLakesEmbedEnabled
+        : sync === undefined
+          ? d.weatherLakesEmbedEnabled
+          : false,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
     backgroundRotate:

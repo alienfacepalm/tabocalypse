@@ -151,6 +151,8 @@ describe("defaultSettings", () => {
     expect(s.importedPlugins).toEqual([]);
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
     expect(s.clockHourFormat).toBe("24h");
+    expect(s.weatherTemperatureUnitAuto).toBe(true);
+    expect(s.clockHourFormatAuto).toBe(true);
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);
@@ -274,6 +276,8 @@ describe("loadSettings", () => {
     localGet.mockResolvedValue({});
     const s = await loadSettings();
     expect(s.humorIncludeUnsuckClassics).toBe(false);
+    expect(s.weatherTemperatureUnitAuto).toBe(false);
+    expect(s.clockHourFormatAuto).toBe(false);
   });
 
   it("defaults missing preset to chaos and aligns mild leftovers with Chaos humor", async () => {

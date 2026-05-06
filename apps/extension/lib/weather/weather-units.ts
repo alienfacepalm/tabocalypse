@@ -15,3 +15,6 @@ export const WEATHER_UNIT_LABELS: Record<TWeatherTemperatureUnit, string> = {
   celsius: "Celsius",
   fahrenheit: "Fahrenheit",
 };
+
+/** Label for matching temperature units to the browser locale. */
+export const WEATHER_TEMPERATURE_UNIT_AUTO_LABEL = "Automatic";

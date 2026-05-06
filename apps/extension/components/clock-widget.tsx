@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  CLOCK_HOUR_FORMAT_AUTO_LABEL,
   CLOCK_HOUR_FORMAT_LABELS,
   CLOCK_HOUR_FORMATS,
   type TClockHourFormat,
@@ -8,11 +9,17 @@ import { HudPanelBody, HudPanelTitleInline } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
 export function ClockWidget({
-  hourFormat,
-  onHourFormatChange,
+  locale,
+  effectiveHourFormat,
+  hourFormatAuto,
+  onSelectAutomaticHourFormat,
+  onSelectExplicitHourFormat,
 }: {
-  hourFormat: TClockHourFormat;
-  onHourFormatChange: (next: TClockHourFormat) => void;
+  locale: string;
+  effectiveHourFormat: TClockHourFormat;
+  hourFormatAuto: boolean;
+  onSelectAutomaticHourFormat: () => void;
+  onSelectExplicitHourFormat: (next: TClockHourFormat) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
 
@@ -28,9 +35,9 @@ export function ClockWidget({
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-        hour12: hourFormat === "12h",
+        hour12: effectiveHourFormat === "12h",
       }) as const,
-    [hourFormat],
+    [effectiveHourFormat],
   );
 
   return (
@@ -39,19 +46,30 @@ export function ClockWidget({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <HudPanelTitleInline>Clock</HudPanelTitleInline>
           <div className="row wrap" role="group" aria-label="Clock format">
+            <HudTip tip="Use 12-hour or 24-hour time based on your browser locale">
+              <button
+                type="button"
+                className={hourFormatAuto ? "btn primary sm" : "btn sm"}
+                onClick={() => onSelectAutomaticHourFormat()}
+              >
+                {CLOCK_HOUR_FORMAT_AUTO_LABEL}
+              </button>
+            </HudTip>
             {CLOCK_HOUR_FORMATS.map((f) => (
               <HudTip
                 key={f}
                 tip={
                   f === "12h"
-                    ? "Show time with AM or PM"
-                    : "Show time on a 24-hour scale (no AM/PM)"
+                    ? "Always show time with AM or PM"
+                    : "Always show time on a 24-hour scale (no AM/PM)"
                 }
               >
                 <button
                   type="button"
-                  className={hourFormat === f ? "btn primary sm" : "btn sm"}
-                  onClick={() => onHourFormatChange(f)}
+                  className={
+                    !hourFormatAuto && effectiveHourFormat === f ? "btn primary sm" : "btn sm"
+                  }
+                  onClick={() => onSelectExplicitHourFormat(f)}
                 >
                   {CLOCK_HOUR_FORMAT_LABELS[f]}
                 </button>
@@ -61,9 +79,9 @@ export function ClockWidget({
         </div>
       </div>
       <HudPanelBody>
-        <div className="clock-time">{now.toLocaleTimeString(undefined, timeOpts)}</div>
+        <div className="clock-time">{now.toLocaleTimeString(locale, timeOpts)}</div>
         <div className="clock-date muted">
-          {now.toLocaleDateString(undefined, {
+          {now.toLocaleDateString(locale, {
             weekday: "long",
             month: "long",
             day: "numeric",
