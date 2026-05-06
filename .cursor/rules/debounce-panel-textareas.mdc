@@ -1,0 +1,27 @@
+---
+description: Debounce persisted textarea writes in HUD panels
+globs: apps/extension/**/*.tsx
+alwaysApply: false
+---
+
+# Debounce persisted textarea writes in panels
+
+When a `<textarea>` lives in a **draggable HUD panel** and its `onChange` path writes to **persisted settings/storage**, do **not** persist on every keystroke.
+
+- **Goal**: keep typing and autosize responsive, but avoid hot-loop storage writes and cascading re-renders.
+- **Pattern**: keep an **immediate local draft** value for the textarea, then **debounce the persistence** (typically \(200–400ms\)), and **flush on blur** (and on unmount / panel close).
+
+## Recommended implementation
+
+- **Local draft state**: `const [draft, setDraft] = useState(sourceValue)`
+- **Debounced persist**: schedule saves via a debounced callback
+- **Flush points**:
+  - on `blur`: cancel pending timer and persist the latest `draft`
+  - on `selected id` / panel target changes: cancel pending timer and reset draft to the new source
+  - on `unmount`: cancel pending timer (avoid writing stale data after navigation)
+
+## Avoid
+
+- Persisting in a textarea `onChange` by calling `persist(...)` / `saveSettings(...)` directly on every keystroke.
+- “Flush then persist” double-writes (flush already calls persist). Prefer **cancel + persist latest** on blur.
+

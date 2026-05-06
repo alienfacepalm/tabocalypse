@@ -1,6 +1,7 @@
 import { ExternalLink, Lock, Pencil, Pin, PinOff, Plus, Trash2, Unlock, X } from "lucide-react";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { INote, INotePanel, TNotePersistPatch } from "../lib/settings";
+import { useDebouncedCallback } from "../lib/use-debounced-callback";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
@@ -33,9 +34,13 @@ function stopDragSurfacePropagation(e: React.PointerEvent): void {
 function NotesElasticTextarea({
   value,
   onChange,
+  onFocus,
+  onBlur,
 }: {
   value: string;
   onChange: (next: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -56,6 +61,8 @@ function NotesElasticTextarea({
       ref={ref}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
+      onBlur={onBlur}
       placeholder="Type here…"
       rows={1}
       className="min-h-[2.75rem] w-full resize-none overflow-hidden"
@@ -307,6 +314,38 @@ function NotesDetachedPanel({
     [notes, panelNoteId],
   );
 
+  const [draftText, setDraftText] = useState("");
+  const [editing, setEditing] = useState(false);
+
+  const debouncedSaveText = useDebouncedCallback(
+    (noteId: string, text: string) => onUpdateNote(noteId, { text }),
+    300,
+  );
+
+  const flushSaveText = () => {
+    if (!selected) return;
+    debouncedSaveText.cancel();
+    onUpdateNote(selected.id, { text: draftText });
+  };
+
+  const onTextChange = (next: string) => {
+    if (!selected) return;
+    setDraftText(next);
+    debouncedSaveText.call(selected.id, next);
+  };
+
+  React.useEffect(() => {
+    debouncedSaveText.cancel();
+    setDraftText(selected?.text ?? "");
+    setEditing(false);
+  }, [debouncedSaveText, selected?.id]);
+
+  React.useEffect(() => {
+    if (!selected) return;
+    if (editing) return;
+    setDraftText(selected.text);
+  }, [editing, selected?.text]);
+
   const requestDeleteSelected = () => {
     if (!selected || selected.locked) return;
     const ok = window.confirm(
@@ -408,15 +447,25 @@ function NotesDetachedPanel({
             ) : elastic ? (
               <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto">
                 <NotesElasticTextarea
-                  value={selected.text}
-                  onChange={(next) => onUpdateNote(selected.id, { text: next })}
+                  value={draftText}
+                  onChange={onTextChange}
+                  onFocus={() => setEditing(true)}
+                  onBlur={() => {
+                    setEditing(false);
+                    flushSaveText();
+                  }}
                 />
               </div>
             ) : (
               <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto">
                 <textarea
-                  value={selected.text}
-                  onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}
+                  value={draftText}
+                  onChange={(e) => onTextChange(e.target.value)}
+                  onFocus={() => setEditing(true)}
+                  onBlur={() => {
+                    setEditing(false);
+                    flushSaveText();
+                  }}
                   placeholder="Type here…"
                   rows={6}
                   className="min-h-[12rem] w-full resize-none"
