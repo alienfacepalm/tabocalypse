@@ -138,6 +138,51 @@ export function mergeNotesPreferNewerBaseline(
   return out;
 }
 
+function mergeNotePanelsWhenEpochMatches(
+  baseline: readonly INotePanel[],
+  incoming: readonly INotePanel[],
+  validNoteIds: ReadonlySet<string>,
+): INotePanel[] {
+  const incomingC = coerceNotePanels(incoming, validNoteIds);
+  const baselineC = coerceNotePanels(baseline, validNoteIds);
+  const incById = new Map(incomingC.map((p) => [p.noteId, p]));
+  const baseById = new Map(baselineC.map((p) => [p.noteId, p]));
+  const order: string[] = [];
+  for (const p of incomingC) {
+    if (!order.includes(p.noteId)) order.push(p.noteId);
+  }
+  for (const p of baselineC) {
+    if (!order.includes(p.noteId)) order.push(p.noteId);
+  }
+  const out: INotePanel[] = [];
+  for (const id of order) {
+    const b = baseById.get(id);
+    const i = incById.get(id);
+    out.push(b ?? i!);
+  }
+  return out;
+}
+
+/**
+ * Resolve `notePanels` when applying a storage reload alongside in-memory baseline.
+ * Disk snapshots can briefly omit a panel that is already open locally (different write ordering),
+ * or include a stale layout before a close persists; {@link mergeNotesPreferNewerBaseline}
+ * fixes note text — this uses a monotonic `notePanelsEpoch` (bumped whenever `notePanels` changes).
+ */
+export function mergeNotePanelsForStorageReload(
+  baseline: readonly INotePanel[],
+  incoming: readonly INotePanel[],
+  baselineEpoch: number,
+  incomingEpoch: number,
+  validNoteIds: ReadonlySet<string>,
+): INotePanel[] {
+  const bE = Number.isFinite(baselineEpoch) ? Math.max(0, Math.floor(baselineEpoch)) : 0;
+  const iE = Number.isFinite(incomingEpoch) ? Math.max(0, Math.floor(incomingEpoch)) : 0;
+  if (bE > iE) return coerceNotePanels(baseline, validNoteIds);
+  if (iE > bE) return coerceNotePanels(incoming, validNoteIds);
+  return mergeNotePanelsWhenEpochMatches(baseline, incoming, validNoteIds);
+}
+
 /** A pinned note opens as its own draggable panel with an independent HUD position. */
 export interface INotePanel {
   noteId: string;
@@ -419,6 +464,11 @@ export interface ISettings {
   notes: INote[];
   /** Pinned-note editor panels shown on the HUD canvas. */
   notePanels: INotePanel[];
+  /**
+   * Bump whenever {@link notePanels} is replaced (open/close/drag commit). Used to ignore stale
+   * `notePanels` from `storage.onChanged` while saves are reordering (see merge on reload).
+   */
+  notePanelsEpoch: number;
   todos: ITodoItem[];
   /** When true, panels are not snapped to the HUD grid on drop. */
   hudLayoutChaotic: boolean;
@@ -521,6 +571,8 @@ export interface ILocalSlice {
   notesText: string;
   notes?: INote[];
   notePanels?: INotePanel[];
+  /** Increments whenever stored `notePanels` changes (local only). */
+  notePanelsEpoch?: number;
   todos: ITodoItem[];
   hudLayoutChaotic?: boolean;
   hudLayoutLocked?: boolean;
@@ -625,6 +677,7 @@ export function defaultSettings(): ISettings {
     notesText: "",
     notes: [],
     notePanels: [],
+    notePanelsEpoch: 0,
     todos: [],
     hudLayoutChaotic: true,
     hudLayoutLocked: false,
@@ -692,6 +745,7 @@ function toLocal(s: ISettings): ILocalSlice {
     notesText: s.notesText,
     notes: s.notes,
     notePanels: s.notePanels,
+    notePanelsEpoch: s.notePanelsEpoch,
     todos: s.todos,
     hudLayoutChaotic: s.hudLayoutChaotic,
     hudLayoutLocked: s.hudLayoutLocked,
@@ -771,6 +825,12 @@ function mergeSettings(
   }
   const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
   const mergedNotePanels = coerceNotePanels(local?.notePanels, mergedNoteIds);
+  const notePanelsEpoch =
+    typeof local?.notePanelsEpoch === "number" && Number.isFinite(local.notePanelsEpoch)
+      ? Math.max(0, Math.floor(local.notePanelsEpoch))
+      : mergedNotePanels.length > 0
+        ? 1
+        : 0;
 
   const preset = coercePreset(sync?.preset, d.preset);
 
@@ -876,6 +936,7 @@ function mergeSettings(
     notesText: "",
     notes: mergedNotes,
     notePanels: mergedNotePanels,
+    notePanelsEpoch,
     todos: local?.todos ?? d.todos,
     hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,

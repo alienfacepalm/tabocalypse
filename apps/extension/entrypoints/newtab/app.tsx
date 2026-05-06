@@ -81,6 +81,7 @@ import {
   newNoteId,
   type IUserBackgroundImage,
   loadSettings,
+  mergeNotePanelsForStorageReload,
   mergeWidgets,
   mergeNotesPreferNewerBaseline,
   resolveUserBackgroundImage,
@@ -250,6 +251,30 @@ function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void 
   }
 }
 
+function mergeHydratedSettingsWithBaseline(
+  baseline: ISettings,
+  disk: ISettings,
+  preserveMyLinesDraft: boolean,
+): ISettings {
+  const mergedNotes = mergeNotesPreferNewerBaseline(baseline.notes, disk.notes);
+  const validNoteIds = new Set(mergedNotes.map((n) => n.id));
+  const bEpoch = baseline.notePanelsEpoch ?? 0;
+  const dEpoch = disk.notePanelsEpoch ?? 0;
+  return {
+    ...disk,
+    notes: mergedNotes,
+    notePanels: mergeNotePanelsForStorageReload(
+      baseline.notePanels,
+      disk.notePanels,
+      bEpoch,
+      dEpoch,
+      validNoteIds,
+    ),
+    notePanelsEpoch: Math.max(bEpoch, dEpoch),
+    ...(preserveMyLinesDraft ? { myLines: baseline.myLines } : {}),
+  };
+}
+
 function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Element {
   const [settings, setSettings] = useState<ISettings>(initialSettings);
   const [openSettings, setOpenSettings] = useState(() => !initialSettings.hasSeenSettingsIntro);
@@ -390,10 +415,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   useEffect(() => {
     void loadSettings().then((next) => {
       const baseline = latestSettingsRef.current;
-      const merged: ISettings = {
-        ...next,
-        notes: mergeNotesPreferNewerBaseline(baseline.notes, next.notes),
-      };
+      const merged = mergeHydratedSettingsWithBaseline(
+        baseline,
+        next,
+        myLinesSaveTimerRef.current !== null,
+      );
       latestSettingsRef.current = merged;
       setSettings(merged);
     });
@@ -408,10 +434,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       if (!isTabocalypseSettingsStorageChange(changes, areaName)) return;
       void loadSettings().then((next) => {
         const baseline = latestSettingsRef.current;
-        const merged: ISettings = {
-          ...next,
-          notes: mergeNotesPreferNewerBaseline(baseline.notes, next.notes),
-        };
+        const merged = mergeHydratedSettingsWithBaseline(
+          baseline,
+          next,
+          myLinesSaveTimerRef.current !== null,
+        );
         latestSettingsRef.current = merged;
         setSettings(merged);
       });
@@ -612,7 +639,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const run = async (): Promise<boolean> => {
         clearMyLinesDebouncedSaveTimer();
         const current = latestSettingsRef.current;
-        const resolved = typeof next === "function" ? next(current) : next;
+        const raw = typeof next === "function" ? next(current) : next;
+        const resolved: ISettings =
+          raw.notePanels !== current.notePanels
+            ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
+            : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
         latestSettingsRef.current = resolved;
         setSettings(resolved);
         try {

@@ -42,8 +42,13 @@ function NotesElasticTextarea({
   useLayoutEffect(() => {
     const ta = ref.current;
     if (!ta) return;
+    const active = document.activeElement === ta;
+    const selStart = ta.selectionStart;
+    const selEnd = ta.selectionEnd;
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
+    if (!active || selStart === null || selEnd === null) return;
+    ta.setSelectionRange(selStart, selEnd);
   }, [value]);
 
   return (

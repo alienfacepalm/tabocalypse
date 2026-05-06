@@ -163,6 +163,7 @@ describe("defaultSettings", () => {
     expect(s.humorIncludeUnsuckClassics).toBe(true);
     expect(s.notes).toEqual([]);
     expect(s.notePanels).toEqual([]);
+    expect(s.notePanelsEpoch).toBe(0);
     expect(s.hasSeenSettingsIntro).toBe(false);
   });
 });

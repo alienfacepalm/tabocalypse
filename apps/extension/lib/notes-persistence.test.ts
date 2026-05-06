@@ -16,6 +16,7 @@ const {
   migrateLegacyNotesTextIntoNotes,
   applyNotePersistPatch,
   mergeNotesPreferNewerBaseline,
+  mergeNotePanelsForStorageReload,
 } = await import("./settings");
 
 describe("coerceNotes", () => {
@@ -183,6 +184,37 @@ describe("mergeNotesPreferNewerBaseline", () => {
     expect(merged.map((n) => n.id)).toEqual(["y", "x"]);
     expect(merged.find((n) => n.id === "y")?.text).toBe("");
     expect(merged.find((n) => n.id === "x")).toEqual(mk("x", "local only", 50));
+  });
+});
+
+describe("mergeNotePanelsForStorageReload", () => {
+  const pos = { xPct: 10, yPct: 20 };
+  const ids = () => new Set(["n1"]);
+
+  it("prefers baseline when baseline epoch is higher (stale disk omits open panel)", () => {
+    expect(
+      mergeNotePanelsForStorageReload([{ noteId: "n1", position: pos }], [], 5, 0, ids()),
+    ).toEqual([{ noteId: "n1", position: pos }]);
+  });
+
+  it("prefers incoming when incoming epoch is higher", () => {
+    expect(
+      mergeNotePanelsForStorageReload([], [{ noteId: "n1", position: pos }], 0, 3, ids()),
+    ).toEqual([{ noteId: "n1", position: pos }]);
+  });
+
+  it("prefers baseline position when epochs tie", () => {
+    const basePos = { xPct: 1, yPct: 2 };
+    const diskPos = { xPct: 99, yPct: 88 };
+    expect(
+      mergeNotePanelsForStorageReload(
+        [{ noteId: "n1", position: basePos }],
+        [{ noteId: "n1", position: diskPos }],
+        1,
+        1,
+        ids(),
+      ),
+    ).toEqual([{ noteId: "n1", position: basePos }]);
   });
 });
 
