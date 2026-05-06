@@ -10,6 +10,7 @@ function baseCtx(over: Partial<IHumorContext>): IHumorContext {
     humorEnabled: true,
     humorIntensity: "mild",
     humorBuiltinVoice: "default",
+    humorIncludeUnsuckClassics: false,
     enabledBuiltinPackIds: [],
     importedPacks: [],
     myLines: [],
@@ -59,5 +60,28 @@ describe("pickDailyLine", () => {
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
     expect(unsuckLines).toContain(line);
+  });
+
+  it("merges classic jargon into Gen-Z rotation when Include Classic jargon is on", () => {
+    const ctx = baseCtx({
+      humorBuiltinVoice: "gen_z",
+      humorIncludeUnsuckClassics: true,
+      enabledBuiltinPackIds: ["office_absurd"],
+    });
+    const line = pickDailyLine(ctx);
+    expect(line).toBeTruthy();
+    expect([...genZLines, ...unsuckLines]).toContain(line);
+  });
+
+  it("adds classic jargon to default pack mix when Include Classic jargon is on", () => {
+    const ctx = baseCtx({
+      humorBuiltinVoice: "default",
+      humorIncludeUnsuckClassics: true,
+      enabledBuiltinPackIds: ["tab_shame"],
+    });
+    const line = pickDailyLine(ctx);
+    expect(line).toBeTruthy();
+    const tabShameLines = BUILTIN_PACKS.find((p) => p.id === "tab_shame")?.lines ?? [];
+    expect([...tabShameLines, ...unsuckLines]).toContain(line);
   });
 });

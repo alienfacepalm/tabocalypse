@@ -157,6 +157,7 @@ describe("defaultSettings", () => {
     expect(s.hudLayoutChaotic).toBe(true);
     expect(s.humorIntensity).toBe("spicy");
     expect(s.humorBuiltinVoice).toBe("gen_z");
+    expect(s.humorIncludeUnsuckClassics).toBe(true);
     expect(s.notes).toEqual([]);
     expect(s.notePanels).toEqual([]);
     expect(s.hasSeenSettingsIntro).toBe(false);
@@ -239,6 +240,40 @@ describe("loadSettings", () => {
     localGet.mockResolvedValue({});
     const s = await loadSettings();
     expect(s.humorBuiltinVoice).toBe("unsuck_classics");
+  });
+
+  it("defaults humorIncludeUnsuckClassics off when sync exists but omits the flag (upgrade)", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "chaos",
+        humorEnabled: true,
+        humorIntensity: "spicy",
+        humorBuiltinVoice: "gen_z",
+        humorBuiltinPackIds: [],
+        spicyContentAcknowledged: false,
+        widgets: {},
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherTemperatureUnit: "celsius",
+        clockHourFormat: "24h",
+        weatherAutoGeo: false,
+        useOpenWeather: false,
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        backgroundGradientMid: "#1a1a1f",
+        backgroundGradientEnd: "#2a2a33",
+        backgroundGradientShape: "linear",
+        backgroundGradientAngleDeg: 145,
+        backgroundGradientCenterXPct: 50,
+        backgroundGradientCenterYPct: 50,
+        debugPluginSource: false,
+      },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.humorIncludeUnsuckClassics).toBe(false);
   });
 
   it("defaults missing preset to chaos and aligns mild leftovers with Chaos humor", async () => {

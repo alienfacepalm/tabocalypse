@@ -28,12 +28,33 @@ function voiceLockedPackId(voice: THumorBuiltinVoice): string | null {
 export interface IHumorContext {
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
-  /** When not `default`, built-in lines come only from that voice’s pack; pack toggles are ignored. */
+  /**
+   * Built-in line pools: `default` uses `enabledBuiltinPackIds`; specialty voices lock to one pack.
+   * When `humorIncludeUnsuckClassics` is true, classic jargon lines are merged unless that voice is already classic jargon only.
+   */
   humorBuiltinVoice: THumorBuiltinVoice;
+  /** When true, adds the Classic jargon pack to the built-in pool alongside the primary voice / pack toggles (humor on). */
+  humorIncludeUnsuckClassics: boolean;
   enabledBuiltinPackIds: string[];
   importedPacks: IImportedUserPack[];
   myLines: string[];
   locale: string;
+}
+
+function activeBuiltinPackIds(ctx: IHumorContext): Set<string> {
+  const lockedId = voiceLockedPackId(ctx.humorBuiltinVoice);
+  const ids = new Set<string>();
+  if (lockedId) {
+    ids.add(lockedId);
+  } else {
+    for (const id of ctx.enabledBuiltinPackIds) {
+      ids.add(id);
+    }
+  }
+  if (ctx.humorIncludeUnsuckClassics && !ids.has(UNSUCK_CLASSICS_PACK_ID)) {
+    ids.add(UNSUCK_CLASSICS_PACK_ID);
+  }
+  return ids;
 }
 
 /** Seed that changes every `minutesBucket` minutes (default 5). */
@@ -52,11 +73,9 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
 
   const candidates: string[] = [];
 
-  const lockedId = voiceLockedPackId(ctx.humorBuiltinVoice);
+  const packIds = activeBuiltinPackIds(ctx);
   for (const pack of BUILTIN_PACKS) {
-    if (lockedId) {
-      if (pack.id !== lockedId) continue;
-    } else if (!ctx.enabledBuiltinPackIds.includes(pack.id)) continue;
+    if (!packIds.has(pack.id)) continue;
     if (!builtinPackAllowed(ctx.humorIntensity, pack.maxIntensity)) continue;
     for (const line of pack.lines) {
       if (passesBuiltinHardFilter(line)) candidates.push(line);

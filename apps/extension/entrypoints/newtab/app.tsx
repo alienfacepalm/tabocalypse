@@ -762,6 +762,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       humorEnabled: settings.humorEnabled,
       humorIntensity: settings.humorIntensity,
       humorBuiltinVoice: settings.humorBuiltinVoice,
+      humorIncludeUnsuckClassics: settings.humorIncludeUnsuckClassics,
       enabledBuiltinPackIds: settings.humorBuiltinPackIds,
       importedPacks: settings.importedPacks,
       myLines: settings.myLines,
@@ -1628,7 +1629,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <legend className="text-sm font-medium">Built-in voice</legend>
                       <p className="muted sm mb-2 mt-1">
                         Pick one specialty voice, or default to mix the built-in packs you toggle
-                        below. Your lines and imported packs still mix in.
+                        below. Your lines and imported packs still mix in. Use “Include Classic
+                        jargon” to blend glossary-style lines with Gen-Z or your pack mix.
                       </p>
                       <div className="flex flex-col gap-1">
                         <label className="check-row">
@@ -1669,6 +1671,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </label>
                       </div>
                     </fieldset>
+                    {s.humorBuiltinVoice !== "unsuck_classics" ? (
+                      <label className="check-row mt-2">
+                        <input
+                          type="checkbox"
+                          checked={s.humorIncludeUnsuckClassics}
+                          disabled={!s.humorEnabled}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, humorIncludeUnsuckClassics: v }));
+                          }}
+                        />
+                        <span>Include Classic jargon</span>
+                      </label>
+                    ) : null}
                     <p className="muted sm -mt-1 mb-2">
                       Classic jargon uses satirical business-term definitions (the same spirit as{" "}
                       <HudTip tip="Open Unsuck It Classics in a new browser tab">
@@ -2840,6 +2856,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       humorGenZMode?: unknown;
                                     },
                                   ),
+                                  humorIncludeUnsuckClassics:
+                                    typeof parsed.humorIncludeUnsuckClassics === "boolean"
+                                      ? parsed.humorIncludeUnsuckClassics
+                                      : d.humorIncludeUnsuckClassics,
                                   backgroundRotate:
                                     typeof parsed.backgroundRotate === "boolean"
                                       ? parsed.backgroundRotate

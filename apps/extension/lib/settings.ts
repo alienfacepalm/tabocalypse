@@ -34,7 +34,11 @@ export function coercePreset(raw: unknown, fallback: TPresetKey): TPresetKey {
   return fallback;
 }
 
-/** Built-in roast “voice” for the humor banner. Only one specialty voice at a time; `default` uses per-pack toggles. */
+/**
+ * Built-in roast “voice” for the humor banner.
+ * Only one specialty voice at a time; `default` uses per-pack toggles.
+ * Classic jargon can still be mixed in via `humorIncludeUnsuckClassics` when not already the locked voice.
+ */
 export type THumorBuiltinVoice = "default" | "gen_z" | "unsuck_classics";
 
 /** Normalize legacy `humorGenZMode` and unknown values when merging stored or imported settings. */
@@ -297,6 +301,7 @@ export interface ISettings {
   humorIntensity: THumorIntensity;
   /** Specialty built-in voice, or default mix controlled by `humorBuiltinPackIds`. */
   humorBuiltinVoice: THumorBuiltinVoice;
+  humorIncludeUnsuckClassics: boolean;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -404,6 +409,7 @@ export interface ISyncSlice {
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinVoice: THumorBuiltinVoice;
+  humorIncludeUnsuckClassics: boolean;
   humorBuiltinPackIds: string[];
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
@@ -501,6 +507,8 @@ export function defaultSettings(): ISettings {
     humorEnabled: true,
     humorIntensity: "spicy",
     humorBuiltinVoice: "gen_z",
+    /** Fresh installs: blend Classic jargon with Gen-Z by default; upgraded profiles without the key stay off until opted in. */
+    humorIncludeUnsuckClassics: true,
     humorBuiltinPackIds: [
       "office_absurd",
       "tab_shame",
@@ -562,6 +570,7 @@ function toSync(s: ISettings): ISyncSlice {
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
     humorBuiltinVoice: s.humorBuiltinVoice,
+    humorIncludeUnsuckClassics: s.humorIncludeUnsuckClassics,
     humorBuiltinPackIds: s.humorBuiltinPackIds,
     spicyContentAcknowledged: s.spicyContentAcknowledged,
     widgets: s.widgets,
@@ -703,6 +712,12 @@ function mergeSettings(
             humorBuiltinVoice: sync.humorBuiltinVoice,
             humorGenZMode: (sync as { humorGenZMode?: boolean }).humorGenZMode,
           }),
+    humorIncludeUnsuckClassics:
+      typeof sync?.humorIncludeUnsuckClassics === "boolean"
+        ? sync.humorIncludeUnsuckClassics
+        : sync === undefined
+          ? d.humorIncludeUnsuckClassics
+          : false,
     humorBuiltinPackIds: sync?.humorBuiltinPackIds ?? d.humorBuiltinPackIds,
     spicyContentAcknowledged: sync?.spicyContentAcknowledged ?? d.spicyContentAcknowledged,
     hasSeenSettingsIntro:
