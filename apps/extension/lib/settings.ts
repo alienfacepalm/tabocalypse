@@ -321,6 +321,12 @@ export interface ISettings {
   themeCustomAccent: string;
   /** Secondary accent when `themePalette` is `custom`; same persistence semantics as `themeCustomAccent`. */
   themeCustomAccent2: string;
+  /**
+   * When true and the background is Bing or an uploaded image, primary and secondary accents follow the
+   * wallpaper (lower area → main accent, upper band → secondary) whenever the visible image changes,
+   * stored as the custom palette.
+   */
+  themeAccentsMatchWallpaper: boolean;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   /** Specialty built-in voice, or default mix controlled by `humorBuiltinPackIds`. */
@@ -436,6 +442,7 @@ export interface ISyncSlice {
   themePalette: TThemePalette;
   themeCustomAccent: string;
   themeCustomAccent2: string;
+  themeAccentsMatchWallpaper: boolean;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinVoice: THumorBuiltinVoice;
@@ -537,6 +544,7 @@ export function defaultSettings(): ISettings {
     themePalette: "glitch",
     themeCustomAccent: DEFAULT_THEME_CUSTOM_ACCENT,
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
+    themeAccentsMatchWallpaper: false,
     humorEnabled: true,
     humorIntensity: "spicy",
     humorBuiltinVoice: "gen_z",
@@ -603,6 +611,7 @@ function toSync(s: ISettings): ISyncSlice {
     themePalette: s.themePalette,
     themeCustomAccent: s.themeCustomAccent,
     themeCustomAccent2: s.themeCustomAccent2,
+    themeAccentsMatchWallpaper: s.themeAccentsMatchWallpaper,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
     humorBuiltinVoice: s.humorBuiltinVoice,
@@ -742,6 +751,12 @@ function mergeSettings(
     themePalette: coerceThemePalette(sync?.themePalette, d.themePalette),
     themeCustomAccent: coerceThemeHex(sync?.themeCustomAccent, d.themeCustomAccent),
     themeCustomAccent2: coerceThemeHex(sync?.themeCustomAccent2, d.themeCustomAccent2),
+    themeAccentsMatchWallpaper:
+      typeof sync?.themeAccentsMatchWallpaper === "boolean"
+        ? sync.themeAccentsMatchWallpaper
+        : sync === undefined
+          ? d.themeAccentsMatchWallpaper
+          : false,
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinVoice:

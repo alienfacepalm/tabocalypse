@@ -105,6 +105,7 @@ import {
   compressImageFileToDataUrl,
   estimateDataUrlBytes,
 } from "../../lib/compress-background-image";
+import { extractWallpaperAccentsFromImageUrl } from "../../lib/extract-wallpaper-accents";
 import {
   fetchBingWallpaperImageUrls,
   pickDailyBingWallpaperUrl,
@@ -276,8 +277,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const supportActions = useMemo(() => getSupportActions(), []);
   const extensionVersion = useMemo(() => browser.runtime.getManifest().version, []);
   const bingPaintUrlRef = useRef<string | null>(null);
+  /** Cancels stale async wallpaper color sampling when the image URL changes quickly. */
+  const wallpaperAccentGenRef = useRef(0);
+  /** Last wallpaper `src` for which accent persist completed successfully. */
+  const lastWallpaperAccentAppliedRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
-  const persistChainRef = useRef<Promise<void>>(Promise.resolve());
+  const persistChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const myLinesSaveTimerRef = useRef<number | null>(null);
   const bgPanDragRef = useRef<{
     pointerId: number;
@@ -555,8 +560,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, []);
 
   const persist = useCallback(
-    (next: TSettingsUpdater): Promise<void> => {
-      const run = async () => {
+    (next: TSettingsUpdater): Promise<boolean> => {
+      const run = async (): Promise<boolean> => {
         clearMyLinesDebouncedSaveTimer();
         const current = latestSettingsRef.current;
         const resolved = typeof next === "function" ? next(current) : next;
@@ -565,18 +570,68 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         try {
           await saveSettings(resolved);
           setImportErr(null);
+          return true;
         } catch (e: unknown) {
           setImportErr(e instanceof Error ? e.message : String(e));
+          return false;
         }
       };
 
       persistChainRef.current = persistChainRef.current.then(run).catch((e: unknown) => {
         setImportErr(e instanceof Error ? e.message : String(e));
+        return false;
       });
       return persistChainRef.current;
     },
     [clearMyLinesDebouncedSaveTimer],
   );
+
+  useEffect(() => {
+    if (!settings.themeAccentsMatchWallpaper) {
+      lastWallpaperAccentAppliedRef.current = null;
+      return;
+    }
+    const kind = settings.backgroundKind;
+    const src = kind === "bing" ? bingPaintUrl : kind === "image" ? userChosenUrl : null;
+    if (!src) {
+      lastWallpaperAccentAppliedRef.current = null;
+      return;
+    }
+    if (lastWallpaperAccentAppliedRef.current === src) return;
+
+    const gen = ++wallpaperAccentGenRef.current;
+    let cancelled = false;
+
+    void extractWallpaperAccentsFromImageUrl(src).then((pair) => {
+      if (cancelled || gen !== wallpaperAccentGenRef.current) return;
+      if (!pair) return;
+      if (!latestSettingsRef.current.themeAccentsMatchWallpaper) return;
+      void persist((cur) => {
+        if (!cur.themeAccentsMatchWallpaper) return cur;
+        return {
+          ...cur,
+          themePalette: "custom",
+          themeCustomAccent: pair.accent,
+          themeCustomAccent2: pair.accent2,
+        };
+      }).then((ok) => {
+        if (!ok) return;
+        if (cancelled || gen !== wallpaperAccentGenRef.current) return;
+        if (!latestSettingsRef.current.themeAccentsMatchWallpaper) return;
+        lastWallpaperAccentAppliedRef.current = src;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    settings.themeAccentsMatchWallpaper,
+    settings.backgroundKind,
+    bingPaintUrl,
+    userChosenUrl,
+    persist,
+  ]);
 
   const acknowledgeSettingsIntro = useCallback(() => {
     void persist((cur) =>
@@ -789,9 +844,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       myLinesSaveTimerRef.current = window.setTimeout(() => {
         myLinesSaveTimerRef.current = null;
         persistChainRef.current = persistChainRef.current
-          .then(() => saveLatestToDisk())
+          .then(async (): Promise<boolean> => {
+            await saveLatestToDisk();
+            return true;
+          })
           .catch((e: unknown) => {
             setImportErr(e instanceof Error ? e.message : String(e));
+            return false;
           });
       }, 300);
     },
@@ -1560,6 +1619,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       The swatches match the selected preset. Changing either switches to a custom
                       palette (synced like other appearance settings).
                     </p>
+                    <HudTip tip="When the background is Bing or your photos, the main accent favors the lower area of the image and the secondary accent favors the upper band (such as sky). Saves as a custom palette whenever the visible image changes.">
+                      <label className="check-row mb-3">
+                        <input
+                          type="checkbox"
+                          checked={s.themeAccentsMatchWallpaper}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, themeAccentsMatchWallpaper: v }));
+                          }}
+                        />
+                        <span>Match HUD accents to the wallpaper</span>
+                      </label>
+                    </HudTip>
                     <div className="color-accent-row">
                       <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
                       <HudTip tip="Main HUD highlight color (buttons, borders)">
@@ -2961,6 +3033,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     parsed.themeCustomAccent2,
                                     d.themeCustomAccent2,
                                   ),
+                                  themeAccentsMatchWallpaper:
+                                    typeof parsed.themeAccentsMatchWallpaper === "boolean"
+                                      ? parsed.themeAccentsMatchWallpaper
+                                      : d.themeAccentsMatchWallpaper,
                                   backgroundSolid: coerceThemeHex(
                                     parsed.backgroundSolid,
                                     d.backgroundSolid,
