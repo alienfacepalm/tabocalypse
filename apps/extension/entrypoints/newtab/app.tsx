@@ -213,6 +213,32 @@ function backgroundStyle(s: ISettings, extras?: TBackgroundStyleExtras): React.C
   };
 }
 
+/**
+ * Same wallpaper row the upload pipeline resolves (rotation slot or active still image).
+ * Used so shell + Auto HUD track gallery/rotation switches on the same render as settings —
+ * not one frame behind `userChosenUrl` state (rotation ticks bump that state so time-based slots stay in sync).
+ */
+function resolveVisibleUserBackgroundFromSettings(s: ISettings): {
+  id: string | null;
+  dataUrl: string | null;
+} {
+  if (s.backgroundKind !== "image" || s.userBackgroundImages.length === 0) {
+    return { id: null, dataUrl: null };
+  }
+  const rotateOn = s.backgroundRotate ?? true;
+  const userMs = Math.max(
+    60_000,
+    (s.backgroundRotateMinutesUser ?? DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
+  );
+  const resolved = resolveUserBackgroundImage(
+    s.userBackgroundImages,
+    s.userBackgroundActiveId,
+    rotateOn,
+    userMs,
+  );
+  return { id: resolved?.id ?? null, dataUrl: resolved?.dataUrl ?? null };
+}
+
 function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void {
   const t = target.style as unknown as Record<string, string>;
   for (const k of Object.keys(style) as (keyof React.CSSProperties)[]) {
@@ -237,8 +263,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [bingImageLoadErr, setBingImageLoadErr] = useState<string | null>(null);
   const [bingRefreshing, setBingRefreshing] = useState(false);
   const [userChosenUrl, setUserChosenUrl] = useState<string | null>(null);
-  /** Upload row used for framing / pan (stable while a given photo is visible). */
-  const [userBackgroundDisplayId, setUserBackgroundDisplayId] = useState<string | null>(null);
   const [bgPanLive, setBgPanLive] = useState<{
     kind: "user";
     id: string;
@@ -299,6 +323,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     positionYPct: number;
   } | null>(null);
 
+  const visibleUserBackground = useMemo(
+    () => resolveVisibleUserBackgroundFromSettings(settings),
+    [
+      settings.backgroundKind,
+      settings.userBackgroundImages,
+      settings.userBackgroundActiveId,
+      settings.backgroundRotate,
+      settings.backgroundRotateMinutesUser,
+      userChosenUrl,
+    ],
+  );
+
   useEffect(() => {
     bingPaintUrlRef.current = bingPaintUrl;
   }, [bingPaintUrl]);
@@ -315,7 +351,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setUserBgRepositionMode(false);
     setUserBgRepositionDraft(null);
     setUserBgContextMenu(null);
-  }, [userBackgroundDisplayId, settings.backgroundKind]);
+  }, [visibleUserBackground.id, settings.backgroundKind]);
 
   useEffect(() => {
     if (!userBgContextMenu) return;
@@ -507,7 +543,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const kind = settings?.backgroundKind;
     if (kind !== "image") {
       setUserChosenUrl(null);
-      setUserBackgroundDisplayId(null);
       return;
     }
     const applyUserBackground = (): void => {
@@ -524,7 +559,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         userMs,
       );
       setUserChosenUrl(resolved?.dataUrl ?? null);
-      setUserBackgroundDisplayId(resolved?.id ?? null);
     };
     applyUserBackground();
     if (!(settings.backgroundRotate ?? true)) return;
@@ -592,7 +626,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       return;
     }
     const kind = settings.backgroundKind;
-    const src = kind === "bing" ? bingPaintUrl : kind === "image" ? userChosenUrl : null;
+    const src =
+      kind === "bing"
+        ? bingPaintUrl
+        : kind === "image"
+          ? resolveVisibleUserBackgroundFromSettings(settings).dataUrl
+          : null;
     if (!src) {
       lastWallpaperAccentAppliedRef.current = null;
       return;
@@ -628,6 +667,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [
     settings.themeAccentsMatchWallpaper,
     settings.backgroundKind,
+    settings.backgroundRotate,
+    settings.backgroundRotateMinutesUser,
+    settings.userBackgroundImages,
+    settings.userBackgroundActiveId,
     bingPaintUrl,
     userChosenUrl,
     persist,
@@ -872,12 +915,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   const backgroundPositionStr = useMemo(() => {
+    const visId = visibleUserBackground.id;
     if (
       bgPanLive &&
       bgPanLive.kind === "user" &&
       settings.backgroundKind === "image" &&
-      userBackgroundDisplayId &&
-      bgPanLive.id === userBackgroundDisplayId
+      visId &&
+      bgPanLive.id === visId
     ) {
       return `${bgPanLive.positionXPct}% ${bgPanLive.positionYPct}%`;
     }
@@ -885,8 +929,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const f = settings.bingWallpaperFramings[bingChosenUrl];
       if (f) return `${f.positionXPct}% ${f.positionYPct}%`;
     }
-    if (settings.backgroundKind === "image" && userBackgroundDisplayId) {
-      const im = settings.userBackgroundImages.find((row) => row.id === userBackgroundDisplayId);
+    if (settings.backgroundKind === "image" && visId) {
+      const im = settings.userBackgroundImages.find((row) => row.id === visId);
       if (im) return `${im.positionXPct}% ${im.positionYPct}%`;
     }
     return "50% 50%";
@@ -896,7 +940,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     settings.bingWallpaperFramings,
     settings.userBackgroundImages,
     bingChosenUrl,
-    userBackgroundDisplayId,
+    visibleUserBackground.id,
   ]);
 
   const shellStyle = useMemo(
@@ -905,10 +949,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         // Only paint Bing from a same-origin blob URL. Raw Peapix HTTPS URLs in CSS
         // can trigger cross-origin loads from the extension page (CORS / fetch noise).
         bingImageUrl: bingPaintUrl,
-        userImageUrl: userChosenUrl,
+        userImageUrl: visibleUserBackground.dataUrl,
         backgroundPosition: backgroundPositionStr,
       }),
-    [settings, bingPaintUrl, userChosenUrl, backgroundPositionStr],
+    [settings, bingPaintUrl, visibleUserBackground.dataUrl, backgroundPositionStr],
   );
 
   useLayoutEffect(() => {
@@ -1013,17 +1057,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   /** Same gates as `onBackgroundPanPointerDown` for uploaded wallpaper pan (avoid a move cursor when drag is a no-op). */
   const userBackgroundWallpaperPanDraggable = useMemo(() => {
     if (s.hudLayoutLocked) return false;
-    if (s.backgroundKind !== "image" || !userChosenUrl || !userBgRepositionMode) return false;
-    const id = userBackgroundDisplayId;
+    if (s.backgroundKind !== "image" || !visibleUserBackground.dataUrl || !userBgRepositionMode)
+      return false;
+    const id = visibleUserBackground.id;
     if (!id) return false;
     return s.userBackgroundImages.some((row) => row.id === id);
   }, [
     s.hudLayoutLocked,
     s.backgroundKind,
     s.userBackgroundImages,
-    userChosenUrl,
+    visibleUserBackground.dataUrl,
+    visibleUserBackground.id,
     userBgRepositionMode,
-    userBackgroundDisplayId,
   ]);
 
   const requestIntensity = (hi: THumorIntensity) => {
@@ -1157,9 +1202,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       if (e.button !== 0) return;
       const canvas = hudCanvasRef.current;
       if (!canvas) return;
-      if (s.backgroundKind === "image" && userChosenUrl) {
+      if (s.backgroundKind === "image" && visibleUserBackground.dataUrl) {
         if (!userBgRepositionMode) return;
-        const id = userBackgroundDisplayId;
+        const id = visibleUserBackground.id;
         if (!id) return;
         const im = s.userBackgroundImages.find((row) => row.id === id);
         if (!im) return;
@@ -1185,7 +1230,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         return;
       }
     },
-    [s, userChosenUrl, userBackgroundDisplayId, userBgRepositionMode, userBgRepositionDraft],
+    [
+      s,
+      visibleUserBackground.dataUrl,
+      visibleUserBackground.id,
+      userBgRepositionMode,
+      userBgRepositionDraft,
+    ],
   );
 
   const onBackgroundPanPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -1233,12 +1284,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const onBackgroundPanDoubleClick = useCallback(() => {
     if (s.hudLayoutLocked) return;
-    if (s.backgroundKind === "image" && userBackgroundDisplayId) {
+    if (s.backgroundKind === "image" && visibleUserBackground.id) {
       if (userBgRepositionMode) {
         setUserBgRepositionDraft({ positionXPct: 50, positionYPct: 50 });
         return;
       }
-      const id = userBackgroundDisplayId;
+      const id = visibleUserBackground.id;
       void persist((cur) => ({
         ...cur,
         userBackgroundImages: cur.userBackgroundImages.map((row) =>
@@ -1260,14 +1311,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [
     s.hudLayoutLocked,
     s.backgroundKind,
-    userBackgroundDisplayId,
+    visibleUserBackground.id,
     userBgRepositionMode,
     bingChosenUrl,
     persist,
   ]);
 
   const commitUserBackgroundReposition = useCallback(() => {
-    const id = userBackgroundDisplayId;
+    const id = visibleUserBackground.id;
     if (!id || s.backgroundKind !== "image") return;
     const im = latestSettingsRef.current.userBackgroundImages.find((row) => row.id === id);
     if (!im) return;
@@ -1281,7 +1332,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }));
     setUserBgRepositionMode(false);
     setUserBgRepositionDraft(null);
-  }, [userBackgroundDisplayId, s.backgroundKind, userBgRepositionDraft, persist]);
+  }, [visibleUserBackground.id, s.backgroundKind, userBgRepositionDraft, persist]);
 
   const cancelUserBackgroundReposition = useCallback(() => {
     setUserBgRepositionMode(false);
@@ -1291,7 +1342,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const onUserBackgroundContextMenu = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (s.hudLayoutLocked) return;
-      if (s.backgroundKind !== "image" || !userChosenUrl) return;
+      if (s.backgroundKind !== "image" || !visibleUserBackground.dataUrl) return;
       e.preventDefault();
       const pad = 8;
       const approxW = 220;
@@ -1300,7 +1351,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       const y = Math.min(e.clientY, window.innerHeight - approxH - pad);
       setUserBgContextMenu({ clientX: Math.max(pad, x), clientY: Math.max(pad, y) });
     },
-    [s.hudLayoutLocked, s.backgroundKind, userChosenUrl],
+    [s.hudLayoutLocked, s.backgroundKind, visibleUserBackground.dataUrl],
   );
 
   const scheduleAlarm = async () => {
@@ -3300,7 +3351,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         </div>
       ) : null}
 
-      {userBgRepositionMode && s.backgroundKind === "image" && userChosenUrl ? (
+      {userBgRepositionMode && s.backgroundKind === "image" && visibleUserBackground.dataUrl ? (
         <div
           className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-elevated px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
           role="status"
@@ -3353,7 +3404,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             className={[
               "absolute inset-0 z-[1]",
               !s.hudLayoutLocked &&
-              ((s.backgroundKind === "image" && userChosenUrl) ||
+              ((s.backgroundKind === "image" && visibleUserBackground.dataUrl) ||
                 (s.backgroundKind === "bing" && bingPaintUrl))
                 ? "pointer-events-auto touch-none"
                 : "pointer-events-none",
