@@ -77,9 +77,9 @@ export function WeatherWidget({
   return (
     <section className="card">
       <div className="shrink-0">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <HudPanelTitleInline>Weather</HudPanelTitleInline>
-          <div className="row wrap" role="group" aria-label="Temperature units">
+          <div className="row wrap gap-1" role="group" aria-label="Temperature units">
             <HudTip tip="Use Celsius or Fahrenheit based on your browser locale">
               <button
                 type="button"
@@ -113,11 +113,11 @@ export function WeatherWidget({
             ))}
           </div>
         </div>
-        <p className="muted text-xs">
+        <p className="muted mt-1 text-xs leading-tight">
           Open-Meteo (no key). Coords: {coordFmt.format(lat)}, {coordFmt.format(lon)}
         </p>
         {lakesEmbedEnabled ? (
-          <div className="row wrap gap-2 mt-2" role="group" aria-label="Weather panel view">
+          <div className="row wrap gap-1 mt-1" role="group" aria-label="Weather panel view">
             <HudTip tip="Show the Open-Meteo forecast for your saved coordinates">
               <button
                 type="button"

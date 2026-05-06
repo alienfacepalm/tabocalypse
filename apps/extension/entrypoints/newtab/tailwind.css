@@ -387,7 +387,7 @@
   }
 
   .weather-big {
-    @apply mt-2 text-[1.35rem];
+    @apply mt-1 text-[1.25rem] leading-tight;
   }
 
   .err {
