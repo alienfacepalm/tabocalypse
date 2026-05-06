@@ -1619,7 +1619,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       The swatches match the selected preset. Changing either switches to a custom
                       palette (synced like other appearance settings).
                     </p>
-                    <HudTip tip="When the background is Bing or your photos, the main accent favors the lower area of the image and the secondary accent favors the upper band (such as sky). Saves as a custom palette whenever the visible image changes.">
+                    <HudTip tip="Sample the wallpaper (lower area → primary accent, upper band → secondary) and save a custom palette when the image changes. Sampled colors are lightened for readability—manual accent picks below are unchanged.">
                       <label className="check-row mb-3">
                         <input
                           type="checkbox"
@@ -1629,7 +1629,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             void persist((cur) => ({ ...cur, themeAccentsMatchWallpaper: v }));
                           }}
                         />
-                        <span>Match HUD accents to the wallpaper</span>
+                        <span>Auto HUD</span>
                       </label>
                     </HudTip>
                     <div className="color-accent-row">
@@ -3159,7 +3159,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             <p className="tagline">SYSTEM_STABLE: FALSE</p>
           </div>
         </div>
-        {s.widgets.search ? <SearchWidget engine={s.searchEngine} variant="header" /> : null}
+        {s.widgets.search ? (
+          <SearchWidget
+            engine={s.searchEngine}
+            humorEnabled={s.humorEnabled}
+            humorIntensity={s.humorIntensity}
+            variant="header"
+          />
+        ) : null}
         <div className="flex shrink-0 items-center gap-2">
           <HudTip
             tip={
