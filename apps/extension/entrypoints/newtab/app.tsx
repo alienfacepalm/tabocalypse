@@ -3530,11 +3530,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 lat={s.weatherLat}
                 lon={s.weatherLon}
                 effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
-                temperatureUnitAuto={s.weatherTemperatureUnitAuto}
                 displayLocale={hudNumberLocale}
-                onSelectAutomaticTemperatureUnit={() =>
-                  void persist((cur) => ({ ...cur, weatherTemperatureUnitAuto: true }))
-                }
                 onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
                   void persist((cur) => ({
                     ...cur,

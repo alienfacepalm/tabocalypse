@@ -10,7 +10,6 @@ import { formatTemperatureValue } from "../../lib/weather/format-weather-tempera
 import { fetchOpenMeteo, type IWeatherSnapshot } from "../../lib/weather/fetch-weather";
 import {
   WEATHER_TEMPERATURE_UNITS,
-  WEATHER_TEMPERATURE_UNIT_AUTO_LABEL,
   WEATHER_UNIT_LABELS,
   type TWeatherTemperatureUnit,
 } from "../../lib/weather/weather-units";
@@ -24,20 +23,16 @@ export function WeatherWidget({
   lat,
   lon,
   effectiveTemperatureUnit,
-  temperatureUnitAuto,
   displayLocale,
   lakesEmbedEnabled,
-  onSelectAutomaticTemperatureUnit,
   onSelectExplicitTemperatureUnit,
 }: {
   lat: number;
   lon: number;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
-  temperatureUnitAuto: boolean;
   displayLocale: string;
   /** When true, adds a Forecast / 2 Lakes switch and optional iframe (Settings → Weather). */
   lakesEmbedEnabled: boolean;
-  onSelectAutomaticTemperatureUnit: () => void;
   onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
 }) {
   const [w, setW] = useState<IWeatherSnapshot | null>(null);
@@ -80,15 +75,6 @@ export function WeatherWidget({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <HudPanelTitleInline>Weather</HudPanelTitleInline>
           <div className="row wrap gap-1" role="group" aria-label="Temperature units">
-            <HudTip tip="Use Celsius or Fahrenheit based on your browser locale">
-              <button
-                type="button"
-                className={temperatureUnitAuto ? "btn primary sm" : "btn sm"}
-                onClick={() => onSelectAutomaticTemperatureUnit()}
-              >
-                {WEATHER_TEMPERATURE_UNIT_AUTO_LABEL}
-              </button>
-            </HudTip>
             {WEATHER_TEMPERATURE_UNITS.map((u) => (
               <HudTip
                 key={u}
@@ -100,11 +86,7 @@ export function WeatherWidget({
               >
                 <button
                   type="button"
-                  className={
-                    !temperatureUnitAuto && effectiveTemperatureUnit === u
-                      ? "btn primary sm"
-                      : "btn sm"
-                  }
+                  className={effectiveTemperatureUnit === u ? "btn primary sm" : "btn sm"}
                   onClick={() => onSelectExplicitTemperatureUnit(u)}
                 >
                   {WEATHER_UNIT_LABELS[u]}
