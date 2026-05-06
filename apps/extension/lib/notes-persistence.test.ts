@@ -10,8 +10,13 @@ vi.mock("webextension-polyfill", () => ({
   },
 }));
 
-const { coerceNotes, coerceNotePanels, migrateLegacyNotesTextIntoNotes, applyNotePersistPatch } =
-  await import("./settings");
+const {
+  coerceNotes,
+  coerceNotePanels,
+  migrateLegacyNotesTextIntoNotes,
+  applyNotePersistPatch,
+  mergeNotesPreferNewerBaseline,
+} = await import("./settings");
 
 describe("coerceNotes", () => {
   it("returns empty array for non-array input", () => {
@@ -139,6 +144,45 @@ describe("applyNotePersistPatch", () => {
   it("allows edits and lock toggles on an unlocked note", () => {
     expect(applyNotePersistPatch(baseNote, { text: "next" }, 20)?.text).toBe("next");
     expect(applyNotePersistPatch(baseNote, { locked: true }, 20)?.locked).toBe(true);
+  });
+});
+
+describe("mergeNotesPreferNewerBaseline", () => {
+  const mk = (id: string, text: string, updatedAt: number): INote => ({
+    id,
+    name: "N",
+    tags: [],
+    text,
+    locked: false,
+    createdAt: 1,
+    updatedAt,
+  });
+
+  it("keeps baseline note when baseline updatedAt is newer", () => {
+    const baseline = [mk("a", "typing", 200)];
+    const incoming = [mk("a", "stale", 100)];
+    expect(mergeNotesPreferNewerBaseline(baseline, incoming)).toEqual(baseline);
+  });
+
+  it("accepts incoming when incoming updatedAt is newer", () => {
+    const baseline = [mk("a", "local", 100)];
+    const incoming = [mk("a", "from disk", 200)];
+    expect(mergeNotesPreferNewerBaseline(baseline, incoming)).toEqual(incoming);
+  });
+
+  it("prefers baseline on equal updatedAt so ties do not regress local keystrokes", () => {
+    const baseline = [mk("a", "baa", 100)];
+    const incoming = [mk("a", "bar", 100)];
+    expect(mergeNotesPreferNewerBaseline(baseline, incoming)[0]?.text).toBe("baa");
+  });
+
+  it("preserves incoming order then appends baseline-only notes", () => {
+    const baseline = [mk("x", "local only", 50), mk("y", "", 60)];
+    const incoming = [mk("y", "y disk", 30)];
+    const merged = mergeNotesPreferNewerBaseline(baseline, incoming);
+    expect(merged.map((n) => n.id)).toEqual(["y", "x"]);
+    expect(merged.find((n) => n.id === "y")?.text).toBe("");
+    expect(merged.find((n) => n.id === "x")).toEqual(mk("x", "local only", 50));
   });
 });
 

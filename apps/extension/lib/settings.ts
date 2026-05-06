@@ -109,6 +109,35 @@ export function isNoteDeleteAllowed(note: INote): boolean {
   return !note.locked;
 }
 
+/**
+ * Apply a storage reload without clobbering in-memory note edits that are newer than disk.
+ * - For each id in `incoming`, keep whichever of `(baseline, incoming)` has the greater `updatedAt`
+ *   (ties prefer `baseline` so unsaved local keystrokes win on equal timestamps).
+ * - Appends baseline-only ids so a note created + edited before the first successful write is not dropped.
+ */
+export function mergeNotesPreferNewerBaseline(
+  baseline: readonly INote[],
+  incoming: readonly INote[],
+): INote[] {
+  const prevById = new Map(baseline.map((n) => [n.id, n]));
+  const incomingIds = new Set(incoming.map((n) => n.id));
+  const out: INote[] = [];
+  for (const inc of incoming) {
+    const loc = prevById.get(inc.id);
+    if (!loc || loc.updatedAt < inc.updatedAt) {
+      out.push(inc);
+    } else {
+      out.push(loc);
+    }
+  }
+  for (const loc of baseline) {
+    if (!incomingIds.has(loc.id)) {
+      out.push(loc);
+    }
+  }
+  return out;
+}
+
 /** A pinned note opens as its own draggable panel with an independent HUD position. */
 export interface INotePanel {
   noteId: string;

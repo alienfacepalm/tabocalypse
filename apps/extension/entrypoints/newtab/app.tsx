@@ -82,6 +82,7 @@ import {
   type IUserBackgroundImage,
   loadSettings,
   mergeWidgets,
+  mergeNotesPreferNewerBaseline,
   resolveUserBackgroundImage,
   saveSettings,
   type THumorIntensity,
@@ -387,7 +388,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   useEffect(() => {
-    void loadSettings().then(setSettings);
+    void loadSettings().then((next) => {
+      const baseline = latestSettingsRef.current;
+      const merged: ISettings = {
+        ...next,
+        notes: mergeNotesPreferNewerBaseline(baseline.notes, next.notes),
+      };
+      latestSettingsRef.current = merged;
+      setSettings(merged);
+    });
   }, []);
 
   useEffect(() => {
@@ -398,8 +407,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       if (areaName !== "local" && areaName !== "sync") return;
       if (!isTabocalypseSettingsStorageChange(changes, areaName)) return;
       void loadSettings().then((next) => {
-        latestSettingsRef.current = next;
-        setSettings(next);
+        const baseline = latestSettingsRef.current;
+        const merged: ISettings = {
+          ...next,
+          notes: mergeNotesPreferNewerBaseline(baseline.notes, next.notes),
+        };
+        latestSettingsRef.current = merged;
+        setSettings(merged);
       });
     };
     browser.storage.onChanged.addListener(onStorageChanged);
