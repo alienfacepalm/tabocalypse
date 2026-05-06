@@ -200,7 +200,10 @@ function NotesSwitcher({
             </p>
           </div>
         ) : (
-          <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto pr-1" aria-label="Notes list">
+          <ul
+            className="hud-scrollbar flex min-h-0 flex-col gap-1 overflow-y-auto pr-1"
+            aria-label="Notes list"
+          >
             {sortedNotes.map((n) => {
               const open = notePanels.some((p) => p.noteId === n.id);
               return (
@@ -394,18 +397,18 @@ function NotesDetachedPanel({
             </div>
 
             {selected.locked ? (
-              <div className="min-h-0 flex-1 overflow-y-auto font-sans text-sm">
+              <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto font-sans text-sm">
                 <div className="whitespace-pre-wrap break-words">{selected.text}</div>
               </div>
             ) : elastic ? (
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto">
                 <NotesElasticTextarea
                   value={selected.text}
                   onChange={(next) => onUpdateNote(selected.id, { text: next })}
                 />
               </div>
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto">
                 <textarea
                   value={selected.text}
                   onChange={(e) => onUpdateNote(selected.id, { text: e.target.value })}

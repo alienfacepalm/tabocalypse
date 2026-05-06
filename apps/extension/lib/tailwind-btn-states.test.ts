@@ -30,4 +30,17 @@ describe("tailwind.css shared button states", () => {
     expect(css).toContain(".linkish:hover");
     expect(css).toContain(".linkish:active");
   });
+
+  it("defines .hud-scrollbar theme + webkit/fallback pieces", () => {
+    const css = readFileSync(tailwindCssPath, "utf8");
+    for (const needle of [
+      ".hud-scrollbar",
+      "scrollbar-color",
+      ".hud-scrollbar::-webkit-scrollbar-thumb",
+      ".hud-scrollbar::-webkit-scrollbar-thumb:hover",
+      "--scrollbar-thumb",
+    ]) {
+      expect(css, `missing ${needle}`).toContain(needle);
+    }
+  });
 });

@@ -36,7 +36,7 @@ export function HudPanelBody({
   const scrollCls =
     bodyOverflow === false
       ? "overflow-x-hidden overflow-y-hidden"
-      : "overflow-x-hidden overflow-y-auto";
+      : "hud-scrollbar overflow-x-hidden overflow-y-auto";
 
   return (
     <div
