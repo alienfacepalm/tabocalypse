@@ -15,6 +15,7 @@ export default defineConfig({
       "https://api.open-meteo.com/*",
       "https://peapix.com/*",
       "https://img.peapix.com/*",
+      "https://2lakes.app/*",
     ],
     optional_host_permissions: ["https://api.openai.com/*"],
     action: {},

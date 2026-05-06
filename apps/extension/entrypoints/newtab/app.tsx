@@ -3005,6 +3005,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     typeof parsed.weatherTemperatureUnitAuto === "boolean"
                                       ? parsed.weatherTemperatureUnitAuto
                                       : d.weatherTemperatureUnitAuto,
+                                  weatherLakesEmbedEnabled:
+                                    typeof parsed.weatherLakesEmbedEnabled === "boolean"
+                                      ? parsed.weatherLakesEmbedEnabled
+                                      : d.weatherLakesEmbedEnabled,
                                   humorBuiltinVoice: coerceHumorBuiltinVoice(
                                     parsed as {
                                       humorBuiltinVoice?: unknown;

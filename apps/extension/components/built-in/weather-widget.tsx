@@ -141,7 +141,7 @@ export function WeatherWidget({
       </div>
       <HudPanelBody bodyOverflow={panelView === "lakes" && lakesEmbedEnabled ? false : undefined}>
         {panelView === "lakes" && lakesEmbedEnabled ? (
-          <div className="flex min-h-[min(50vh,28rem)] min-h-0 flex-1 flex-col gap-2">
+          <div className="flex min-h-[min(50vh,28rem)] flex-1 flex-col gap-2">
             <div className="row wrap gap-2 shrink-0">
               <HudTip tip="Open 2lakes.app in a new browser tab">
                 <a
