@@ -354,6 +354,7 @@ export interface ISettings {
    * When true (Auto HUD) and the background is Bing or an uploaded image, primary and secondary
    * accents follow the wallpaper (lower area → main, upper band → secondary) whenever the visible
    * image changes; sampled colors are lightened for HUD readability, stored as the custom palette.
+   * Defaults to on; turn off in Appearance to freeze manual accent colors on those backgrounds.
    */
   themeAccentsMatchWallpaper: boolean;
   humorEnabled: boolean;
@@ -573,7 +574,7 @@ export function defaultSettings(): ISettings {
     themePalette: "glitch",
     themeCustomAccent: DEFAULT_THEME_CUSTOM_ACCENT,
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
-    themeAccentsMatchWallpaper: false,
+    themeAccentsMatchWallpaper: true,
     humorEnabled: true,
     humorIntensity: "spicy",
     humorBuiltinVoice: "gen_z",
@@ -783,9 +784,7 @@ function mergeSettings(
     themeAccentsMatchWallpaper:
       typeof sync?.themeAccentsMatchWallpaper === "boolean"
         ? sync.themeAccentsMatchWallpaper
-        : sync === undefined
-          ? d.themeAccentsMatchWallpaper
-          : false,
+        : d.themeAccentsMatchWallpaper,
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinVoice:

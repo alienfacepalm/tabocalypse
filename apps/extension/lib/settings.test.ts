@@ -138,7 +138,7 @@ describe("defaultSettings", () => {
     expect(s.preset).toBe("chaos");
     expect(s.themeMode).toBe("dark");
     expect(s.themePalette).toBe("glitch");
-    expect(s.themeAccentsMatchWallpaper).toBe(false);
+    expect(s.themeAccentsMatchWallpaper).toBe(true);
     expect(s.widgets.search).toBe(true);
     expect(s.widgets.clock).toBe(true);
     expect(s.widgets.notes).toBe(true);
