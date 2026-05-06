@@ -322,9 +322,9 @@ export interface ISettings {
   /** Secondary accent when `themePalette` is `custom`; same persistence semantics as `themeCustomAccent`. */
   themeCustomAccent2: string;
   /**
-   * When true and the background is Bing or an uploaded image, primary and secondary accents follow the
-   * wallpaper (lower area → main accent, upper band → secondary) whenever the visible image changes,
-   * stored as the custom palette.
+   * When true (Auto HUD) and the background is Bing or an uploaded image, primary and secondary
+   * accents follow the wallpaper (lower area → main, upper band → secondary) whenever the visible
+   * image changes; sampled colors are lightened for HUD readability, stored as the custom palette.
    */
   themeAccentsMatchWallpaper: boolean;
   humorEnabled: boolean;

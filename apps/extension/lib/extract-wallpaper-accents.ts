@@ -73,11 +73,15 @@ function toHex6(r: number, g: number, b: number): string {
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
-/** Nudge saturation and lightness so accents read on the HUD without drifting to white/black. */
-function boostForHudAccent(r: number, g: number, b: number): string {
+/**
+ * Auto HUD (wallpaper accent matching): maps sampled pixels to stored accents. Lightens by halving
+ * distance-to-white on the lightness axis so dark photo colors do not read as muddy HUD accents.
+ */
+function boostWallpaperSampleForHud(r: number, g: number, b: number): string {
   const { h, s, l } = rgbToHsl(r, g, b);
   const s2 = Math.min(1, Math.max(0.4, s * 1.08));
-  const l2 = Math.min(0.7, Math.max(0.3, l));
+  const lLifted = 1 - (1 - l) * 0.5;
+  const l2 = Math.min(0.82, Math.max(0.38, lLifted));
   const o = hslToRgb(h, s2, l2);
   return coerceThemeHex(toHex6(o.r, o.g, o.b), DEFAULT_THEME_CUSTOM_ACCENT);
 }
@@ -231,15 +235,18 @@ export function pickWallpaperAccentsFromRgba(
     }
   }
 
-  const accent = boostForHudAccent(primary.r, primary.g, primary.b);
-  const accent2 = coerceThemeHex(boostForHudAccent(r2, g2, b2), DEFAULT_THEME_CUSTOM_ACCENT2);
+  const accent = boostWallpaperSampleForHud(primary.r, primary.g, primary.b);
+  const accent2 = coerceThemeHex(
+    boostWallpaperSampleForHud(r2, g2, b2),
+    DEFAULT_THEME_CUSTOM_ACCENT2,
+  );
 
   if (accent === accent2) {
     const split = hslToRgb((h1.h + 0.5) % 1, 0.75, 0.52);
     return {
       accent,
       accent2: coerceThemeHex(
-        boostForHudAccent(Math.round(split.r), Math.round(split.g), Math.round(split.b)),
+        boostWallpaperSampleForHud(Math.round(split.r), Math.round(split.g), Math.round(split.b)),
         DEFAULT_THEME_CUSTOM_ACCENT2,
       ),
     };
