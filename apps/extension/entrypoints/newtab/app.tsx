@@ -51,6 +51,7 @@ import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weathe
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
   applyChaosPresetHumorHarmony,
+  applyNotePersistPatch,
   applyPreset,
   BACKGROUND_ROTATE_MINUTES_MAX,
   BACKGROUND_ROTATE_MINUTES_MIN,
@@ -65,6 +66,7 @@ import {
   defaultSettings,
   type IHudPanelPosition,
   type ISettings,
+  isNoteDeleteAllowed,
   isTabocalypseSettingsStorageChange,
   newNoteId,
   type IUserBackgroundImage,
@@ -3327,15 +3329,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     notes={s.notes}
                     panelNoteId={np.noteId}
                     onUpdateNote={(noteId, patch) =>
-                      void persist((cur) => ({
-                        ...cur,
-                        notes: cur.notes.map((n) =>
-                          n.id === noteId ? { ...n, ...patch, updatedAt: Date.now() } : n,
-                        ),
-                      }))
+                      void persist((cur) => {
+                        const now = Date.now();
+                        let changed = false;
+                        const nextNotes = cur.notes.map((n) => {
+                          if (n.id !== noteId) return n;
+                          const merged = applyNotePersistPatch(n, patch, now);
+                          if (!merged) return n;
+                          changed = true;
+                          return merged;
+                        });
+                        if (!changed) return cur;
+                        return { ...cur, notes: nextNotes };
+                      })
                     }
                     onDeleteNote={(noteId) =>
                       void persist((cur) => {
+                        const target = cur.notes.find((n) => n.id === noteId);
+                        if (!target || !isNoteDeleteAllowed(target)) return cur;
                         if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
                           relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
                         }
@@ -3439,6 +3450,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             name,
                             tags,
                             text: "",
+                            locked: false,
                             createdAt: now,
                             updatedAt: now,
                           },
@@ -3449,15 +3461,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     })
                   }
                   onUpdateNote={(noteId, patch) =>
-                    void persist((cur) => ({
-                      ...cur,
-                      notes: cur.notes.map((n) =>
-                        n.id === noteId ? { ...n, ...patch, updatedAt: Date.now() } : n,
-                      ),
-                    }))
+                    void persist((cur) => {
+                      const now = Date.now();
+                      let changed = false;
+                      const nextNotes = cur.notes.map((n) => {
+                        if (n.id !== noteId) return n;
+                        const merged = applyNotePersistPatch(n, patch, now);
+                        if (!merged) return n;
+                        changed = true;
+                        return merged;
+                      });
+                      if (!changed) return cur;
+                      return { ...cur, notes: nextNotes };
+                    })
                   }
                   onDeleteNote={(noteId) =>
                     void persist((cur) => {
+                      const target = cur.notes.find((n) => n.id === noteId);
+                      if (!target || !isNoteDeleteAllowed(target)) return cur;
                       if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
                         relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
                       }

@@ -83,8 +83,30 @@ export interface INote {
   name: string;
   tags: string[];
   text: string;
+  /** When true, body and title cannot change and the note cannot be deleted; panels can still be hidden. */
+  locked: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+export type TNotePersistPatch = Partial<Pick<INote, "name" | "tags" | "text" | "locked">>;
+
+/** Merge a note patch respecting `locked`; returns null if the update is rejected. */
+export function applyNotePersistPatch(
+  note: INote,
+  patch: TNotePersistPatch,
+  now: number,
+): INote | null {
+  if (note.locked) {
+    const keys = Object.keys(patch) as (keyof TNotePersistPatch)[];
+    if (keys.length !== 1 || patch.locked !== false) return null;
+    return { ...note, locked: false, updatedAt: now };
+  }
+  return { ...note, ...patch, updatedAt: now };
+}
+
+export function isNoteDeleteAllowed(note: INote): boolean {
+  return !note.locked;
 }
 
 /** A pinned note opens as its own draggable panel with an independent HUD position. */
@@ -118,7 +140,8 @@ export function coerceNotes(raw: unknown): INote[] {
       typeof o.createdAt === "number" && Number.isFinite(o.createdAt) ? o.createdAt : now;
     const updatedAt =
       typeof o.updatedAt === "number" && Number.isFinite(o.updatedAt) ? o.updatedAt : createdAt;
-    out.push({ id, name, tags, text, createdAt, updatedAt });
+    const locked = o.locked === true;
+    out.push({ id, name, tags, text, locked, createdAt, updatedAt });
   }
   return out;
 }
@@ -158,6 +181,7 @@ export function migrateLegacyNotesTextIntoNotes(text: string, now: number): INot
       name: "Note",
       tags: [],
       text: trimmed,
+      locked: false,
       createdAt: now,
       updatedAt: now,
     },
@@ -309,8 +333,12 @@ export interface ISettings {
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
+  /** When true, temperature units follow the browser locale; when false, `weatherTemperatureUnit` is fixed. */
+  weatherTemperatureUnitAuto: boolean;
   /** Clock widget only: 12-hour (with AM/PM) vs 24-hour time. */
   clockHourFormat: TClockHourFormat;
+  /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
+  clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
@@ -417,7 +445,9 @@ export interface ISyncSlice {
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
+  weatherTemperatureUnitAuto: boolean;
   clockHourFormat: TClockHourFormat;
+  clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
@@ -522,7 +552,9 @@ export function defaultSettings(): ISettings {
     weatherLat: 40.7128,
     weatherLon: -74.006,
     weatherTemperatureUnit: "celsius",
+    weatherTemperatureUnitAuto: true,
     clockHourFormat: "24h",
+    clockHourFormatAuto: true,
     weatherAutoGeo: false,
     useOpenWeather: false,
     backgroundKind: "gradient",
@@ -578,7 +610,9 @@ function toSync(s: ISettings): ISyncSlice {
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
     weatherTemperatureUnit: s.weatherTemperatureUnit,
+    weatherTemperatureUnitAuto: s.weatherTemperatureUnitAuto,
     clockHourFormat: s.clockHourFormat,
+    clockHourFormatAuto: s.clockHourFormatAuto,
     weatherAutoGeo: s.weatherAutoGeo,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
@@ -734,7 +768,19 @@ function mergeSettings(
       sync?.weatherTemperatureUnit,
       d.weatherTemperatureUnit,
     ),
+    weatherTemperatureUnitAuto:
+      typeof sync?.weatherTemperatureUnitAuto === "boolean"
+        ? sync.weatherTemperatureUnitAuto
+        : sync === undefined
+          ? d.weatherTemperatureUnitAuto
+          : false,
     clockHourFormat: coerceClockHourFormat(sync?.clockHourFormat, d.clockHourFormat),
+    clockHourFormatAuto:
+      typeof sync?.clockHourFormatAuto === "boolean"
+        ? sync.clockHourFormatAuto
+        : sync === undefined
+          ? d.clockHourFormatAuto
+          : false,
     weatherAutoGeo: sync?.weatherAutoGeo ?? d.weatherAutoGeo,
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,

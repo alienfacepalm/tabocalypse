@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { INote } from "./settings";
 
 vi.mock("webextension-polyfill", () => ({
   default: {
@@ -9,7 +10,7 @@ vi.mock("webextension-polyfill", () => ({
   },
 }));
 
-const { coerceNotes, coerceNotePanels, migrateLegacyNotesTextIntoNotes } =
+const { coerceNotes, coerceNotePanels, migrateLegacyNotesTextIntoNotes, applyNotePersistPatch } =
   await import("./settings");
 
 describe("coerceNotes", () => {
@@ -46,9 +47,23 @@ describe("coerceNotes", () => {
       name: "Work",
       tags: ["tag1"],
       text: "hello",
+      locked: false,
       createdAt: 1000,
       updatedAt: 2000,
     });
+  });
+
+  it("coerces locked true when set", () => {
+    const result = coerceNotes([
+      { id: "n1", name: "W", tags: [], text: "", locked: true, createdAt: 1, updatedAt: 2 },
+    ]);
+    expect(result[0]?.locked).toBe(true);
+  });
+
+  it("defaults locked to false when absent or not true", () => {
+    expect(coerceNotes([{ id: "n1", name: "W", text: "" }])[0]?.locked).toBe(false);
+    expect(coerceNotes([{ id: "n1", name: "W", text: "", locked: false }])[0]?.locked).toBe(false);
+    expect(coerceNotes([{ id: "n1", name: "W", text: "", locked: "yes" }])[0]?.locked).toBe(false);
   });
 
   it("defaults missing name to 'Untitled'", () => {
@@ -91,6 +106,39 @@ describe("coerceNotes", () => {
     const result = coerceNotes([{ id: "n1", name: "N", createdAt: NaN, updatedAt: Infinity }]);
     expect(result[0]?.createdAt).toBeGreaterThanOrEqual(before);
     expect(result[0]?.updatedAt).toBe(result[0]?.createdAt);
+  });
+});
+
+describe("applyNotePersistPatch", () => {
+  const baseNote: INote = {
+    id: "n1",
+    name: "A",
+    tags: [],
+    text: "hello",
+    locked: false,
+    createdAt: 10,
+    updatedAt: 10,
+  };
+
+  it("rejects non-unlock patches on a locked note", () => {
+    const locked = { ...baseNote, locked: true };
+    expect(applyNotePersistPatch(locked, { text: "x" }, 99)).toBeNull();
+    expect(applyNotePersistPatch(locked, { name: "B" }, 99)).toBeNull();
+    expect(applyNotePersistPatch(locked, { locked: true }, 99)).toBeNull();
+  });
+
+  it("allows only explicit unlock on a locked note", () => {
+    const locked = { ...baseNote, locked: true };
+    expect(applyNotePersistPatch(locked, { locked: false }, 99)).toEqual({
+      ...locked,
+      locked: false,
+      updatedAt: 99,
+    });
+  });
+
+  it("allows edits and lock toggles on an unlocked note", () => {
+    expect(applyNotePersistPatch(baseNote, { text: "next" }, 20)?.text).toBe("next");
+    expect(applyNotePersistPatch(baseNote, { locked: true }, 20)?.locked).toBe(true);
   });
 });
 
@@ -173,6 +221,7 @@ describe("migrateLegacyNotesTextIntoNotes", () => {
     expect(result[0]?.updatedAt).toBe(5000);
     expect(result[0]?.tags).toEqual([]);
     expect(result[0]?.id).toBeTruthy();
+    expect(result[0]?.locked).toBe(false);
   });
 
   it("preserves multiline text (trimmed)", () => {

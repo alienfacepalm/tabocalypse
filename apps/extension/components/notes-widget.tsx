@@ -1,6 +1,6 @@
-import { ExternalLink, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
+import { ExternalLink, Lock, Pencil, Pin, PinOff, Plus, Trash2, Unlock, X } from "lucide-react";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { INote, INotePanel } from "../lib/settings";
+import type { INote, INotePanel, TNotePersistPatch } from "../lib/settings";
 import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
 import { HudTip } from "./hud-tip";
 
@@ -10,7 +10,7 @@ type TNotesWidgetSwitcherProps = {
   notePanels: INotePanel[];
   onToggleNotePanel: (noteId: string) => void;
   onCreateNote: (draft: { name: string; tags: string[] }) => void;
-  onUpdateNote: (noteId: string, patch: Partial<Pick<INote, "name" | "tags" | "text">>) => void;
+  onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
 };
 
@@ -20,7 +20,7 @@ type TNotesWidgetPanelProps = {
   panelNoteId: string;
   /** When false, the HUD row has a saved pixel height — fill it like other resizable panels. */
   panelElasticHeight?: boolean;
-  onUpdateNote: (noteId: string, patch: Partial<Pick<INote, "name" | "tags" | "text">>) => void;
+  onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
   onClosePanel?: () => void;
 };
@@ -86,6 +86,7 @@ function NotesSwitcher({
   const [editName, setEditName] = useState("");
 
   const requestDeleteNote = (note: INote) => {
+    if (note.locked) return;
     const ok = window.confirm(
       `Delete “${note.name}”? This cannot be undone, and its panel will close if open.`,
     );
@@ -93,7 +94,12 @@ function NotesSwitcher({
     onDeleteNote(note.id);
   };
 
+  const toggleNoteLock = (note: INote) => {
+    onUpdateNote(note.id, { locked: !note.locked });
+  };
+
   const openRename = (note: INote) => {
+    if (note.locked) return;
     setEditName(note.name);
     setEditNoteId(note.id);
   };
@@ -117,7 +123,8 @@ function NotesSwitcher({
             </button>
           </HudTip>
           <span className="muted sm grow self-center">
-            Pin notes to open a panel; unpinned notes stay saved here only.
+            Pin a note to open its panel on the canvas. Lock to prevent edits or deletion — you can
+            still hide a panel. Notes without a panel stay in this list only.
           </span>
         </div>
 
@@ -218,25 +225,50 @@ function NotesSwitcher({
                         )}
                       </button>
                     </HudTip>
+                    <HudTip
+                      tip={
+                        n.locked
+                          ? "Unlock to edit or delete (you can still hide the panel)"
+                          : "Lock — no edits or deletes; you can still hide the panel"
+                      }
+                    >
+                      <button
+                        type="button"
+                        className={["btn", n.locked ? "primary" : "ghost", "icon-only", "sm"].join(
+                          " ",
+                        )}
+                        aria-pressed={n.locked}
+                        aria-label={n.locked ? `Unlock ${n.name}` : `Lock ${n.name}`}
+                        onClick={() => toggleNoteLock(n)}
+                      >
+                        {n.locked ? (
+                          <Unlock size={18} strokeWidth={2} aria-hidden />
+                        ) : (
+                          <Lock size={18} strokeWidth={2} aria-hidden />
+                        )}
+                      </button>
+                    </HudTip>
                     <span className="min-w-0 flex-1 truncate self-center text-sm" title={n.name}>
                       {n.name}
                     </span>
-                    <HudTip tip="Rename this note">
+                    <HudTip tip={n.locked ? "Unlock to rename" : "Rename this note"}>
                       <button
                         type="button"
                         className="btn ghost icon-only sm"
                         aria-label={`Rename ${n.name}`}
                         onClick={() => openRename(n)}
+                        disabled={n.locked}
                       >
                         <Pencil size={18} strokeWidth={2} aria-hidden />
                       </button>
                     </HudTip>
-                    <HudTip tip="Delete this note">
+                    <HudTip tip={n.locked ? "Unlock to delete" : "Delete this note"}>
                       <button
                         type="button"
                         className="btn ghost icon-only sm"
                         aria-label={`Delete ${n.name}`}
                         onClick={() => requestDeleteNote(n)}
+                        disabled={n.locked}
                       >
                         <Trash2 size={18} strokeWidth={2} aria-hidden />
                       </button>
@@ -268,7 +300,7 @@ function NotesDetachedPanel({
   );
 
   const requestDeleteSelected = () => {
-    if (!selected) return;
+    if (!selected || selected.locked) return;
     const ok = window.confirm(
       `Delete “${selected.name}”? This cannot be undone, and this panel will close.`,
     );
@@ -287,13 +319,48 @@ function NotesDetachedPanel({
           </span>
           {onClosePanel ? (
             <span className="row gap-1" onPointerDown={stopDragSurfacePropagation}>
-              <HudTip tip={selected ? "Delete this note" : "Nothing to delete"}>
+              <HudTip
+                tip={
+                  selected?.locked
+                    ? "Unlock to edit or delete (you can still hide the panel)"
+                    : "Lock — no edits or deletes; you can still hide the panel"
+                }
+              >
+                <button
+                  type="button"
+                  className={[
+                    "btn",
+                    selected?.locked ? "primary" : "ghost",
+                    "icon-only",
+                    "sm",
+                  ].join(" ")}
+                  aria-pressed={selected?.locked}
+                  aria-label={
+                    selected?.locked
+                      ? `Unlock ${selected.name}`
+                      : selected
+                        ? `Lock ${selected.name}`
+                        : "Lock note"
+                  }
+                  onClick={() =>
+                    selected && onUpdateNote(selected.id, { locked: !selected.locked })
+                  }
+                  disabled={!selected}
+                >
+                  {selected?.locked ? (
+                    <Unlock size={18} strokeWidth={2} aria-hidden />
+                  ) : (
+                    <Lock size={18} strokeWidth={2} aria-hidden />
+                  )}
+                </button>
+              </HudTip>
+              <HudTip tip={selected?.locked ? "Unlock to delete" : "Delete this note"}>
                 <button
                   type="button"
                   className="btn ghost icon-only sm"
                   aria-label="Delete note"
                   onClick={requestDeleteSelected}
-                  disabled={!selected}
+                  disabled={!selected || selected.locked}
                 >
                   <Trash2 size={18} strokeWidth={2} aria-hidden />
                 </button>
@@ -316,6 +383,8 @@ function NotesDetachedPanel({
         {selected ? (
           <>
             <div className="row mb-2 shrink-0 flex-wrap gap-2">
+              {selected.locked ? <span className="muted sm">Locked — reading only.</span> : null}
+              {selected.locked ? <span className="muted sm"> · </span> : null}
               <span className="muted sm">Local only.</span>
               <span className="muted sm"> · </span>
               <span className="muted sm row gap-1">
@@ -324,7 +393,11 @@ function NotesDetachedPanel({
               </span>
             </div>
 
-            {elastic ? (
+            {selected.locked ? (
+              <div className="min-h-0 flex-1 overflow-y-auto font-sans text-sm">
+                <div className="whitespace-pre-wrap break-words">{selected.text}</div>
+              </div>
+            ) : elastic ? (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <NotesElasticTextarea
                   value={selected.text}
