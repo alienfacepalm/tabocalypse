@@ -4,6 +4,7 @@ import { HudTip } from "./hud-tip";
 
 export interface IHudPanelDragContextValue {
   locked: boolean;
+  lockedDragAttemptBump: number;
   onTitlePointerDown: (e: React.PointerEvent<HTMLElement>) => void;
   onTitlePointerMove: (e: React.PointerEvent<HTMLElement>) => void;
   onTitlePointerUp: (e: React.PointerEvent<HTMLElement>) => void;
@@ -62,7 +63,13 @@ export function HudPanelTitle({ children }: { children: React.ReactNode }) {
   if (!ctx) {
     return <h3>{children}</h3>;
   }
-  const { locked, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp } = ctx;
+  const {
+    locked,
+    lockedDragAttemptBump,
+    onTitlePointerDown,
+    onTitlePointerMove,
+    onTitlePointerUp,
+  } = ctx;
   return (
     <HudTip
       tip={
@@ -70,6 +77,7 @@ export function HudPanelTitle({ children }: { children: React.ReactNode }) {
           ? "Unlock layout in the header to move this panel"
           : "Drag the title bar to move this panel on the canvas"
       }
+      bump={locked ? lockedDragAttemptBump : undefined}
     >
       <TitleHeading
         locked={locked}
@@ -91,7 +99,13 @@ export function HudPanelTitleInline({ children }: { children: React.ReactNode })
   if (!ctx) {
     return <h3 className="m-0">{children}</h3>;
   }
-  const { locked, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp } = ctx;
+  const {
+    locked,
+    lockedDragAttemptBump,
+    onTitlePointerDown,
+    onTitlePointerMove,
+    onTitlePointerUp,
+  } = ctx;
   return (
     <HudTip
       tip={
@@ -99,6 +113,7 @@ export function HudPanelTitleInline({ children }: { children: React.ReactNode })
           ? "Unlock layout in the header to move this panel"
           : "Drag the title bar to move this panel on the canvas"
       }
+      bump={locked ? lockedDragAttemptBump : undefined}
     >
       <TitleHeading
         locked={locked}

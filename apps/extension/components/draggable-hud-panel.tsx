@@ -37,6 +37,8 @@ export function DraggableHudPanel({
   const [livePct, setLivePct] = useState<IHudPanelPosition | null>(null);
   const [liveSize, setLiveSize] = useState<{ w: number; h: number } | null>(null);
   const [zLift, setZLift] = useState(false);
+  const [lockedDragAttemptBump, setLockedDragAttemptBump] = useState(0);
+  const lockedDragAttemptAtRef = useRef<number>(0);
   const dragRef = useRef<{
     pointerId: number;
     startClientX: number;
@@ -167,7 +169,15 @@ export function DraggableHudPanel({
 
   const onTitlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      if (locked || e.button !== 0) return;
+      if (e.button !== 0) return;
+      if (locked) {
+        const now = Date.now();
+        if (now - lockedDragAttemptAtRef.current > 1200) {
+          lockedDragAttemptAtRef.current = now;
+          setLockedDragAttemptBump((v) => v + 1);
+        }
+        return;
+      }
       const canvas = canvasRef.current;
       const panel = rootRef.current;
       if (!canvas || !panel) return;
@@ -262,11 +272,12 @@ export function DraggableHudPanel({
   const dragContext = useMemo<IHudPanelDragContextValue>(
     () => ({
       locked,
+      lockedDragAttemptBump,
       onTitlePointerDown,
       onTitlePointerMove,
       onTitlePointerUp,
     }),
-    [locked, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp],
+    [locked, lockedDragAttemptBump, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp],
   );
 
   return (

@@ -8,17 +8,32 @@ import { createPortal } from "react-dom";
  *
  * Renders the bubble in a portal so it is not clipped by HUD panels (`overflow-hidden`).
  */
-export function HudTip({ tip, children }: { tip: string; children: ReactElement }) {
+export function HudTip({
+  tip,
+  children,
+  bump,
+  bumpDurationMs = 1600,
+}: {
+  tip: string;
+  children: ReactElement;
+  /**
+   * Incrementing value that forces the tooltip open briefly.
+   * Useful for “you tried something disabled” nudges (e.g. locked drag handles).
+   */
+  bump?: number;
+  bumpDurationMs?: number;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const [focusInside, setFocusInside] = useState(false);
+  const [forcedOpen, setForcedOpen] = useState(false);
   const [bubbleStyle, setBubbleStyle] = useState<{
     left: number;
     top: number;
     transform: string;
   } | null>(null);
 
-  const open = hovered || focusInside;
+  const open = hovered || focusInside || forcedOpen;
 
   const measure = useCallback(() => {
     const el = wrapRef.current;
@@ -36,6 +51,18 @@ export function HudTip({ tip, children }: { tip: string; children: ReactElement 
       transform: placeAbove ? "translate(-50%, -100%)" : "translate(-50%, 0)",
     });
   }, []);
+
+  useEffect(() => {
+    if (!bump) return;
+    measure();
+    setForcedOpen(true);
+    const t = window.setTimeout(() => {
+      setForcedOpen(false);
+    }, bumpDurationMs);
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [bump, bumpDurationMs, measure]);
 
   useLayoutEffect(() => {
     if (!open) {
