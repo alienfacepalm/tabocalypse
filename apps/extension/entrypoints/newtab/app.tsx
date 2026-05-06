@@ -46,6 +46,7 @@ import { PluginDeck } from "../../components/plugin-views";
 import { SearchWidget } from "../../components/search-widget";
 import { TodoWidget } from "../../components/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
+import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
 import { WEATHER_TEMPERATURE_UNITS, WEATHER_UNIT_LABELS } from "../../lib/weather/weather-units";
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
@@ -252,6 +253,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   /** Bumped when optional/extension permissions change so HUD widgets refetch (mount-only effects otherwise stay stale). */
   const [permissionsEpoch, setPermissionsEpoch] = useState(0);
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
+  const weatherManualGeoEpochRef = useRef(0);
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
   const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
@@ -580,9 +582,38 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
   }, [persist]);
 
+  const fetchWeatherLocationOnce = useCallback(() => {
+    if (latestSettingsRef.current.weatherAutoGeo) return;
+
+    weatherManualGeoEpochRef.current += 1;
+    const epoch = weatherManualGeoEpochRef.current;
+
+    if (!navigator.geolocation) {
+      setGeoStatus("unavailable");
+      return;
+    }
+
+    setGeoStatus("detecting");
+    runOneShotWeatherGeolocation(navigator.geolocation, (outcome) => {
+      if (epoch !== weatherManualGeoEpochRef.current) return;
+      if (latestSettingsRef.current.weatherAutoGeo) {
+        return;
+      }
+      if (outcome.kind === "ok") {
+        setGeoStatus(null);
+        void persist((cur) => ({
+          ...cur,
+          weatherLat: outcome.latitude,
+          weatherLon: outcome.longitude,
+        }));
+        return;
+      }
+      setGeoStatus(outcome.kind);
+    });
+  }, [persist]);
+
   useEffect(() => {
     if (!settings.weatherAutoGeo) {
-      setGeoStatus(null);
       return;
     }
     if (!navigator.geolocation) {
@@ -592,22 +623,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     let cancelled = false;
     setGeoStatus("detecting");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (cancelled) return;
+    runOneShotWeatherGeolocation(navigator.geolocation, (outcome) => {
+      if (cancelled) return;
+      if (outcome.kind === "ok") {
         setGeoStatus(null);
         void persist((cur) => ({
           ...cur,
-          weatherLat: pos.coords.latitude,
-          weatherLon: pos.coords.longitude,
+          weatherLat: outcome.latitude,
+          weatherLon: outcome.longitude,
         }));
-      },
-      () => {
-        if (cancelled) return;
-        setGeoStatus("denied");
-        void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
-      },
-    );
+        return;
+      }
+      setGeoStatus(outcome.kind === "denied" ? "denied" : "unavailable");
+      void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+    });
     return () => {
       cancelled = true;
     };
@@ -2217,15 +2246,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mb-2 mt-0">
-                      Location and units for the weather widget. Turn on the Weather widget under
-                      Widgets, and use Optional permissions for auto-detect location.
+                      Location and units for the Weather widget. Turn Weather on under Widgets if
+                      you use it.
                     </p>
                     {s.weatherAutoGeo ? (
                       <p className="muted sm mb-2">
-                        Auto-detect is on — coordinates refresh each new tab. Disable it in Optional
-                        permissions below to enter manually.
+                        Automatic location updates your saved latitude and longitude with a single
+                        browser lookup each time you open a new Tabocalypse tab—then it stops—not
+                        continuous GPS tracking. Turn automatic location off under Optional
+                        permissions below to edit coordinates manually.
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="muted sm mb-2">
+                        Manual latitude and longitude stay put until you change them. Tabocalypse
+                        does not track your movements in real time.
+                      </p>
+                    )}
                     <div className="row">
                       <label className="block">
                         Lat
@@ -2254,6 +2290,41 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         />
                       </label>
                     </div>
+                    {!s.weatherAutoGeo ? (
+                      <>
+                        <div className="row wrap gap-2 mt-3 mb-2">
+                          <HudTip tip="Fills latitude and longitude once from the browser. Does not enable automatic lookups on future tabs or continuous tracking.">
+                            <button
+                              type="button"
+                              className="btn primary has-icon"
+                              disabled={geoStatus === "detecting"}
+                              aria-label="Use my location once to set latitude and longitude for weather"
+                              onClick={() => {
+                                fetchWeatherLocationOnce();
+                              }}
+                            >
+                              <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                              <span>
+                                {geoStatus === "detecting"
+                                  ? "Getting location once…"
+                                  : "Use my location once"}
+                              </span>
+                            </button>
+                          </HudTip>
+                        </div>
+                        {geoStatus === "denied" ? (
+                          <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
+                            Location permission denied. Allow location in your browser settings and
+                            try again, or enter coordinates manually above.
+                          </p>
+                        ) : null}
+                        {geoStatus === "unavailable" ? (
+                          <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
+                            Location is not available in this browser.
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
                     <p className="muted sm mb-2 mt-4">Temperature units</p>
                     <div className="row wrap" role="group" aria-label="Temperature units">
                       {WEATHER_TEMPERATURE_UNITS.map((u) => (
@@ -2286,8 +2357,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mb-2 mt-0">
-                      Request browser access for HUD widgets — Top sites, bookmarks strip, Tab guilt
-                      — or geo auto-detect for Weather.
+                      Request browser access where HUD widgets need it—Top sites, bookmarks strip,
+                      Tab guilt—or turn on automatic weather location lookups on each Tabocalypse
+                      tab (still a single finite request per tab load, not live tracking—see Weather
+                      for a one-time lookup while manually editing coordinates).
                     </p>
                     <div className="row wrap gap-2">
                       <button
@@ -2402,33 +2475,36 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             : "Enable Tab guilt (tabs)"}
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        className="btn has-icon"
-                        disabled={geoStatus === "detecting"}
-                        aria-label={
-                          s.weatherAutoGeo
-                            ? "Disable auto-detect location"
-                            : "Enable auto-detect location"
-                        }
-                        onClick={() => {
-                          if (s.weatherAutoGeo) {
-                            void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
-                            setGeoStatus(null);
-                          } else {
-                            void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                      <HudTip tip="When on, saves latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
+                        <button
+                          type="button"
+                          className="btn has-icon"
+                          disabled={geoStatus === "detecting"}
+                          aria-label={
+                            s.weatherAutoGeo
+                              ? "Turn off automatic weather location on each tab"
+                              : "Turn on automatic weather location each new Tabocalypse tab"
                           }
-                        }}
-                      >
-                        <LocateFixed size={18} strokeWidth={2} aria-hidden />
-                        <span>
-                          {geoStatus === "detecting"
-                            ? "Detecting…"
-                            : s.weatherAutoGeo
-                              ? "Disable Location (geo)"
-                              : "Enable Location (geo)"}
-                        </span>
-                      </button>
+                          onClick={() => {
+                            if (s.weatherAutoGeo) {
+                              weatherManualGeoEpochRef.current += 1;
+                              void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+                              setGeoStatus(null);
+                            } else {
+                              void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                            }
+                          }}
+                        >
+                          <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                          <span>
+                            {geoStatus === "detecting"
+                              ? "Updating location…"
+                              : s.weatherAutoGeo
+                                ? "Turn off automatic weather location"
+                                : "Turn on automatic weather location"}
+                          </span>
+                        </button>
+                      </HudTip>
                     </div>
                     {geoStatus === "denied" ? (
                       <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
