@@ -15,6 +15,7 @@ Start here for **development**, **local testing** (including non-developers), an
 
 **Reference (technical):**
 
+- [Changelog](CHANGELOG.md) — curated shipped changes (Keep a Changelog style; complements Git history)
 - [Declarative plugin schema (v1)](PLUGIN-SCHEMA.md) — JSON fields and widget types
 - [Store listing checklist](STORE-LISTING.md) — short checklist (expanded in publishing guide)
 - [Privacy policy](../PRIVACY.md) — basis for store privacy disclosures

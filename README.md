@@ -19,6 +19,7 @@ Guides live under **`doc/`**. Start at [doc/README.md](doc/README.md); every mar
 - [doc/STORE-LISTING.md](doc/STORE-LISTING.md) — short store listing checklist
 - [doc/ALPHA-SETUP.md](doc/ALPHA-SETUP.md) — clone, build, and install in developer mode
 - [doc/AGENT-INSTRUCTIONS.md](doc/AGENT-INSTRUCTIONS.md) — agent-agnostic rules and sync targets
+- [doc/CHANGELOG.md](doc/CHANGELOG.md) — curated summary of user-facing and shipped changes (parallel to Git history)
 
 ## Product notes
 
