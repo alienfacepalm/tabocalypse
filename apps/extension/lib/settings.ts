@@ -647,7 +647,7 @@ export function defaultSettings(): ISettings {
     weatherTemperatureUnit: "celsius",
     weatherTemperatureUnitAuto: true,
     clockHourFormat: "24h",
-    clockHourFormatAuto: true,
+    clockHourFormatAuto: false,
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
     useOpenWeather: false,

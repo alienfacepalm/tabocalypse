@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  CLOCK_HOUR_FORMAT_AUTO_LABEL,
   CLOCK_HOUR_FORMAT_LABELS,
   CLOCK_HOUR_FORMATS,
   type TClockHourFormat,
@@ -10,16 +9,12 @@ import { HudTip } from "./hud-tip";
 
 export function ClockWidget({
   locale,
-  effectiveHourFormat,
-  hourFormatAuto,
-  onSelectAutomaticHourFormat,
-  onSelectExplicitHourFormat,
+  hourFormat,
+  onSelectHourFormat,
 }: {
   locale: string;
-  effectiveHourFormat: TClockHourFormat;
-  hourFormatAuto: boolean;
-  onSelectAutomaticHourFormat: () => void;
-  onSelectExplicitHourFormat: (next: TClockHourFormat) => void;
+  hourFormat: TClockHourFormat;
+  onSelectHourFormat: (next: TClockHourFormat) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
 
@@ -35,9 +30,9 @@ export function ClockWidget({
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-        hour12: effectiveHourFormat === "12h",
+        hour12: hourFormat === "12h",
       }) as const,
-    [effectiveHourFormat],
+    [hourFormat],
   );
 
   return (
@@ -46,15 +41,6 @@ export function ClockWidget({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <HudPanelTitleInline>Clock</HudPanelTitleInline>
           <div className="row wrap" role="group" aria-label="Clock format">
-            <HudTip tip="Use 12-hour or 24-hour time based on your browser locale">
-              <button
-                type="button"
-                className={hourFormatAuto ? "btn primary sm" : "btn sm"}
-                onClick={() => onSelectAutomaticHourFormat()}
-              >
-                {CLOCK_HOUR_FORMAT_AUTO_LABEL}
-              </button>
-            </HudTip>
             {CLOCK_HOUR_FORMATS.map((f) => (
               <HudTip
                 key={f}
@@ -66,10 +52,8 @@ export function ClockWidget({
               >
                 <button
                   type="button"
-                  className={
-                    !hourFormatAuto && effectiveHourFormat === f ? "btn primary sm" : "btn sm"
-                  }
-                  onClick={() => onSelectExplicitHourFormat(f)}
+                  className={hourFormat === f ? "btn primary sm" : "btn sm"}
+                  onClick={() => onSelectHourFormat(f)}
                 >
                   {CLOCK_HOUR_FORMAT_LABELS[f]}
                 </button>

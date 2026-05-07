@@ -153,7 +153,7 @@ describe("defaultSettings", () => {
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
     expect(s.clockHourFormat).toBe("24h");
     expect(s.weatherTemperatureUnitAuto).toBe(true);
-    expect(s.clockHourFormatAuto).toBe(true);
+    expect(s.clockHourFormatAuto).toBe(false);
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);

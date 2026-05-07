@@ -55,7 +55,6 @@ import {
 } from "../../lib/weather/weather-units";
 import {
   getNavigatorFormattingLocale,
-  resolveEffectiveClockHourFormat,
   resolveEffectiveWeatherTemperatureUnit,
 } from "../../lib/locale-units";
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
@@ -1031,11 +1030,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     () => resolveEffectiveWeatherTemperatureUnit(s),
     [s.weatherTemperatureUnit, s.weatherTemperatureUnitAuto],
   );
-  const effectiveClockHourFormat = useMemo(
-    () => resolveEffectiveClockHourFormat(s),
-    [s.clockHourFormat, s.clockHourFormatAuto],
-  );
-
   /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
   const onBackgroundSolidColorChange = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
@@ -3492,13 +3486,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             >
               <ClockWidget
                 locale={hudNumberLocale}
-                effectiveHourFormat={effectiveClockHourFormat}
-                hourFormatAuto={s.clockHourFormatAuto}
-                onSelectAutomaticHourFormat={() =>
-                  void persist((cur) => ({ ...cur, clockHourFormatAuto: true }))
-                }
-                onSelectExplicitHourFormat={(clockHourFormat) =>
-                  void persist((cur) => ({ ...cur, clockHourFormatAuto: false, clockHourFormat }))
+                hourFormat={s.clockHourFormat}
+                onSelectHourFormat={(clockHourFormat) =>
+                  void persist((cur) => ({ ...cur, clockHourFormat }))
                 }
               />
             </DraggableHudPanel>
