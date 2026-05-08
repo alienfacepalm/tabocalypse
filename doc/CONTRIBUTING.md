@@ -28,3 +28,5 @@ Product and toolchain rules live in [`.cursor/rules/project-conventions.mdc`](..
 ## Documentation
 
 When you change user-visible behavior, permissions, or network use, update **[PRIVACY.md](../PRIVACY.md)** and, if you maintain store listings, **[Publishing](PUBLISHING-EXTENSION-STORES.md)** / **[STORE-LISTING.md](STORE-LISTING.md)** as needed.
+
+For user-facing shipped changes, also add an entry to **[doc/CHANGELOG.md](CHANGELOG.md)**. That changelog is **major/minor only** (it does not track patch versions), so keep entries under **[Unreleased]** until the next major/minor bump.
