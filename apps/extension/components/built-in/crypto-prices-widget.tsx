@@ -106,20 +106,23 @@ export function CryptoPricesWidget({
   const [btc, setBtc] = useState<ICryptoMarketRow | null>(null);
   const [eth, setEth] = useState<ICryptoMarketRow | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [showCachedHint, setShowCachedHint] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setErr(null);
     setBtc(null);
     setEth(null);
+    setShowCachedHint(false);
     void Promise.all([
       fetchCoinGeckoMarketRow("bitcoin", "BTC", chartDays),
       fetchCoinGeckoMarketRow("ethereum", "ETH", chartDays),
     ])
       .then(([b, e]) => {
         if (!cancelled) {
-          setBtc(b);
-          setEth(e);
+          setBtc(b.row);
+          setEth(e.row);
+          setShowCachedHint(b.stale || e.stale);
         }
       })
       .catch((error: unknown) => {
@@ -163,6 +166,11 @@ export function CryptoPricesWidget({
         </div>
         <p className="muted mt-1 text-xs leading-tight">
           CoinGecko (no key). USD spot and window %.
+          {showCachedHint ? (
+            <span className="block mt-0.5 text-[11px] leading-snug">
+              Showing cached prices while spacing requests for CoinGecko rate limits.
+            </span>
+          ) : null}
         </p>
       </div>
       <HudPanelBody>

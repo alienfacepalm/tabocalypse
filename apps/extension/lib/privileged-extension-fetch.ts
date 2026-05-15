@@ -65,7 +65,8 @@ function hasExtensionSendMessage(): boolean {
   }
 }
 
-async function extensionSendMessage<T>(message: unknown): Promise<T> {
+/** Prefer Chromium `chrome.runtime` first — mirrors {@link privilegedExtensionFetchJson}. */
+export async function extensionRuntimeSendMessage<T>(message: unknown): Promise<T> {
   const sendVia = (run: IChromeRuntimeShim | undefined): Promise<T> | undefined => {
     const sm = run?.sendMessage;
     if (typeof sm !== "function") return undefined;
@@ -149,7 +150,7 @@ async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | undefined
   }
 }
 
-function useBackgroundPrivilegedFetch(): boolean {
+export function useBackgroundPrivilegedFetch(): boolean {
   try {
     if (!hasExtensionSendMessage()) return false;
     if (isPrivilegedFetchExtensionSurface()) return true;
@@ -171,7 +172,7 @@ export async function privilegedExtensionFetchJson(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
   }
-  const pending = extensionSendMessage<TPrivilegedFetchJsonResponse>({
+  const pending = extensionRuntimeSendMessage<TPrivilegedFetchJsonResponse>({
     type: TABOCALYPSE_PRIV_FETCH_JSON,
     url,
   } satisfies TPrivilegedFetchJsonRequest);
@@ -194,7 +195,7 @@ export async function privilegedExtensionFetchBytes(
     const bytes = await res.arrayBuffer();
     return { mime, bytes };
   }
-  const pending = extensionSendMessage<TPrivilegedFetchBytesResponse>({
+  const pending = extensionRuntimeSendMessage<TPrivilegedFetchBytesResponse>({
     type: TABOCALYPSE_PRIV_FETCH_BYTES,
     url,
   } satisfies TPrivilegedFetchBytesRequest);

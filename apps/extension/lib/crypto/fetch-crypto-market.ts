@@ -1,64 +1,75 @@
-import { privilegedExtensionFetchJson } from "../privileged-extension-fetch";
+import {
+  extensionRuntimeSendMessage,
+  privilegedExtensionFetchJson,
+  useBackgroundPrivilegedFetch,
+} from "../privileged-extension-fetch";
+import {
+  TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
+  type TCryptoCoingeckoMarketRowResponse,
+} from "./crypto-coingecko-message";
 import type { TCryptoChartDays } from "./crypto-chart-days";
+import {
+  coinMarketChartUrl,
+  marketRowFromChartPayload,
+  type ICryptoMarketRow,
+  type TCryptoCoinId,
+  type TCryptoTicker,
+} from "./crypto-market-row";
 
-export type TCryptoTicker = "BTC" | "ETH";
+export type { ICryptoMarketRow, TCryptoTicker } from "./crypto-market-row";
 
-export interface ICryptoMarketRow {
-  ticker: TCryptoTicker;
-  /** Display series (downsampled). */
-  prices: readonly number[];
-  /** Window change: first → last sample in the raw series, as a percent. */
-  changePct: number;
-  lastPriceUsd: number;
+export interface IFetchCryptoMarketRowResult {
+  row: ICryptoMarketRow;
+  /** Served from extension cache (spacing window, backoff, or HTTP error fallback). */
+  stale: boolean;
 }
 
-const MAX_SPARK_POINTS = 72;
-
-function downsampleClose(points: readonly number[], maxPoints: number): number[] {
-  if (points.length <= maxPoints) return [...points];
-  const out: number[] = [];
-  const step = (points.length - 1) / (maxPoints - 1);
-  for (let i = 0; i < maxPoints; i++) {
-    const idx = Math.round(i * step);
-    out.push(points[Math.min(idx, points.length - 1)]!);
+function coerceCryptoMarketRowResponse(
+  raw: unknown,
+): TCryptoCoingeckoMarketRowResponse | undefined {
+  if (!raw || typeof raw !== "object" || !("ok" in raw)) return undefined;
+  const ok = (raw as { ok?: unknown }).ok;
+  if (ok === true && "row" in raw && "stale" in raw) {
+    return raw as TCryptoCoingeckoMarketRowResponse;
   }
-  return out;
-}
-
-function percentChangeFirstLast(values: readonly number[]): number {
-  if (values.length < 2) return 0;
-  const first = values[0]!;
-  const last = values[values.length - 1]!;
-  if (!Number.isFinite(first) || !Number.isFinite(last) || first === 0) return 0;
-  return ((last - first) / first) * 100;
-}
-
-function parsePriceSeries(raw: unknown): number[] {
-  if (!raw || typeof raw !== "object") return [];
-  const prices = (raw as { prices?: unknown }).prices;
-  if (!Array.isArray(prices)) return [];
-  const out: number[] = [];
-  for (const row of prices) {
-    if (!Array.isArray(row) || row.length < 2) continue;
-    const y = row[1];
-    if (typeof y === "number" && Number.isFinite(y)) out.push(y);
+  if (ok === false && "error" in raw && typeof (raw as { error?: unknown }).error === "string") {
+    return raw as TCryptoCoingeckoMarketRowResponse;
   }
-  return out;
+  return undefined;
+}
+
+async function fetchCoinGeckoMarketRowViaBackground(
+  coinId: TCryptoCoinId,
+  ticker: TCryptoTicker,
+  days: TCryptoChartDays,
+): Promise<IFetchCryptoMarketRowResult> {
+  const rawUnknown = await extensionRuntimeSendMessage<unknown>({
+    type: TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
+    coinId,
+    ticker,
+    days,
+  });
+  const parsed = coerceCryptoMarketRowResponse(rawUnknown);
+  if (!parsed) {
+    throw new Error("Unexpected crypto background response");
+  }
+  if (!parsed.ok) {
+    throw new Error(parsed.error);
+  }
+  return { row: parsed.row, stale: parsed.stale };
 }
 
 export async function fetchCoinGeckoMarketRow(
-  coinId: "bitcoin" | "ethereum",
+  coinId: TCryptoCoinId,
   ticker: TCryptoTicker,
   days: TCryptoChartDays,
-): Promise<ICryptoMarketRow> {
-  const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
-  const raw = await privilegedExtensionFetchJson(url);
-  const closes = parsePriceSeries(raw);
-  if (closes.length < 2) {
-    throw new Error("Unexpected crypto chart payload");
+): Promise<IFetchCryptoMarketRowResult> {
+  if (useBackgroundPrivilegedFetch()) {
+    return fetchCoinGeckoMarketRowViaBackground(coinId, ticker, days);
   }
-  const changePct = percentChangeFirstLast(closes);
-  const lastPriceUsd = closes[closes.length - 1]!;
-  const prices = downsampleClose(closes, MAX_SPARK_POINTS);
-  return { ticker, prices, changePct, lastPriceUsd };
+
+  const url = coinMarketChartUrl(coinId, days);
+  const raw = await privilegedExtensionFetchJson(url);
+  const row = marketRowFromChartPayload(raw, ticker);
+  return { row, stale: false };
 }
