@@ -4,10 +4,10 @@ import React, { useMemo, useState } from "react";
 import {
   pickSearchPlaceholderLeadForHumorRank,
   searchPlaceholderHumorRank,
-} from "../lib/search-placeholder-leads";
-import type { ISettings, THumorIntensity } from "../lib/settings";
-import { HudPanelTitle } from "./hud-panel-drag-context";
-import { HudTip } from "./hud-tip";
+} from "../../lib/search-placeholder-leads";
+import type { ISettings, THumorIntensity } from "../../lib/settings";
+import { HudPanelTitle } from "../hud-panel-drag-context";
+import { HudTip } from "../hud-tip";
 
 const ENGINES: Record<ISettings["searchEngine"], (q: string) => string> = {
   ddg: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,

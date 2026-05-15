@@ -25,7 +25,7 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     expect(isPrivilegedExtensionFetchUrlAllowed("https://img.peapix.com/x.jpg")).toBe(true);
     expect(
       isPrivilegedExtensionFetchUrlAllowed(
-        "https://api.open-meteo.com/v1/forecast?latitude=1&longitude=2",
+        "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1",
       ),
     ).toBe(true);
   });

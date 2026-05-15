@@ -39,13 +39,14 @@ import { UserBackgroundGallery } from "../../components/user-background-gallery"
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudColorInput } from "../../components/hud-color-input";
 import { HudTip } from "../../components/hud-tip";
-import { ClockWidget } from "../../components/clock-widget";
-import { BookmarksWidget, TopSitesWidget } from "../../components/links-widget";
-import { NotesWidget } from "../../components/notes-widget";
-import { PluginDeck } from "../../components/plugin-views";
-import { SearchWidget } from "../../components/search-widget";
-import { TodoWidget } from "../../components/todo-widget";
+import { ClockWidget } from "../../components/built-in/clock-widget";
+import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
+import { BookmarksWidget, TopSitesWidget } from "../../components/built-in/links-widget";
+import { NotesWidget } from "../../components/built-in/notes-widget";
+import { SearchWidget } from "../../components/built-in/search-widget";
+import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
+import { PluginDeck } from "../../components/plugin-views";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
 import {
   WEATHER_TEMPERATURE_UNITS,
@@ -69,6 +70,7 @@ import {
   coerceBackgroundGradientShape,
   coerceBackgroundRotateMinutes,
   coerceClockHourFormat,
+  coerceCryptoChartDays,
   coerceHumorBuiltinVoice,
   coercePreset,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
@@ -3175,6 +3177,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     typeof parsed.weatherLakesEmbedEnabled === "boolean"
                                       ? parsed.weatherLakesEmbedEnabled
                                       : d.weatherLakesEmbedEnabled,
+                                  cryptoChartDays: coerceCryptoChartDays(
+                                    parsed.cryptoChartDays,
+                                    d.cryptoChartDays,
+                                  ),
                                   humorBuiltinVoice: coerceHumorBuiltinVoice(
                                     parsed as {
                                       humorBuiltinVoice?: unknown;
@@ -3529,6 +3535,27 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   }))
                 }
                 lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
+              />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.crypto ? (
+            <DraggableHudPanel
+              key="crypto"
+              panelId="crypto"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.crypto}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("crypto", pos)}
+            >
+              <CryptoPricesWidget
+                chartDays={s.cryptoChartDays}
+                humorEnabled={s.humorEnabled}
+                humorIntensity={s.humorIntensity}
+                displayLocale={hudNumberLocale}
+                onSelectChartDays={(cryptoChartDays) =>
+                  void persist((cur) => ({ ...cur, cryptoChartDays }))
+                }
               />
             </DraggableHudPanel>
           ) : null}

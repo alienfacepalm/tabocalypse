@@ -87,6 +87,7 @@ const ALLOWED_URL_PREFIXES = [
   "https://peapix.com/",
   "https://img.peapix.com/",
   "https://api.open-meteo.com/",
+  "https://api.coingecko.com/",
 ] as const;
 
 export const TABOCALYPSE_PRIV_FETCH_JSON = "tabocalypse/privilegedFetchJson" as const;

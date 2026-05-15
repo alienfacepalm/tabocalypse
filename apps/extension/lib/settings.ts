@@ -16,6 +16,10 @@ import {
   coerceWeatherTemperatureUnit,
   type TWeatherTemperatureUnit,
 } from "./weather/weather-units";
+import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-chart-days";
+
+export type { TCryptoChartDays };
+export { coerceCryptoChartDays };
 
 export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
 
@@ -58,6 +62,7 @@ export type TWidgetKey =
   | "notes"
   | "todo"
   | "weather"
+  | "crypto"
   | "topSites"
   | "bookmarksStrip"
   | "tabGuilt"
@@ -423,6 +428,8 @@ export interface ISettings {
   weatherAutoGeo: boolean;
   /** When true, the Weather HUD panel can switch to an embedded 2lakes.app view (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
+  /** Crypto widget: CoinGecko chart window (days param). */
+  cryptoChartDays: TCryptoChartDays;
   useOpenWeather: boolean;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
   /** If true and the chosen background kind supports it, the background rotates over time. */
@@ -539,6 +546,7 @@ export interface ISyncSlice {
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   weatherLakesEmbedEnabled: boolean;
+  cryptoChartDays: TCryptoChartDays;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
   backgroundSolid: string;
@@ -586,6 +594,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   notes: true,
   todo: true,
   weather: true,
+  crypto: true,
   topSites: false,
   bookmarksStrip: false,
   tabGuilt: false,
@@ -612,6 +621,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   notes: "Notes",
   todo: "To-do",
   weather: "Weather",
+  crypto: "Crypto prices",
   topSites: "Top sites",
   bookmarksStrip: "Bookmarks strip",
   tabGuilt: "Tab guilt",
@@ -650,6 +660,7 @@ export function defaultSettings(): ISettings {
     clockHourFormatAuto: false,
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
+    cryptoChartDays: 1,
     useOpenWeather: false,
     backgroundKind: "gradient",
     backgroundRotate: true,
@@ -711,6 +722,7 @@ function toSync(s: ISettings): ISyncSlice {
     clockHourFormatAuto: s.clockHourFormatAuto,
     weatherAutoGeo: s.weatherAutoGeo,
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
+    cryptoChartDays: s.cryptoChartDays,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
     backgroundSolid: s.backgroundSolid,
@@ -896,6 +908,7 @@ function mergeSettings(
         : sync === undefined
           ? d.weatherLakesEmbedEnabled
           : false,
+    cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
     backgroundRotate:

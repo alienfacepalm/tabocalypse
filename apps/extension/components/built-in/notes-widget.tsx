@@ -1,9 +1,9 @@
 import { ExternalLink, Lock, Pencil, Pin, PinOff, Plus, Trash2, Unlock, X } from "lucide-react";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { INote, INotePanel, TNotePersistPatch } from "../lib/settings";
-import { useDebouncedCallback } from "../lib/use-debounced-callback";
-import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
-import { HudTip } from "./hud-tip";
+import type { INote, INotePanel, TNotePersistPatch } from "../../lib/settings";
+import { useDebouncedCallback } from "../../lib/use-debounced-callback";
+import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
+import { HudTip } from "../hud-tip";
 
 type TNotesWidgetSwitcherProps = {
   variant: "switcher";

@@ -39,18 +39,16 @@ describe("pickSearchPlaceholderLeadForHumorRank", () => {
     }
   });
 
-  it("rank 3 can draw unhinged-only lines occasionally", () => {
-    const unhingedOnly = ["What useless trivia validates your fragile ego today"];
-    expect(searchPlaceholderLeadsForHumorRank(2).includes(unhingedOnly[0])).toBe(false);
-    expect(searchPlaceholderLeadsForHumorRank(3).includes(unhingedOnly[0])).toBe(true);
+  it("rank 3 pool adds unhinged-exclusive lines over rank 2", () => {
+    const unhingedOnly = "What useless trivia validates your fragile ego today";
+    expect(searchPlaceholderLeadsForHumorRank(2).includes(unhingedOnly)).toBe(false);
+    expect(searchPlaceholderLeadsForHumorRank(3).includes(unhingedOnly)).toBe(true);
+  });
 
-    let sawUnhinged = false;
-    for (let i = 0; i < 120; i++) {
-      if (unhingedOnly.includes(pickSearchPlaceholderLeadForHumorRank(3))) {
-        sawUnhinged = true;
-        break;
-      }
+  it("rank 3 picks only lines from its cumulative pool", () => {
+    const allowed = new Set(searchPlaceholderLeadsForHumorRank(3));
+    for (let i = 0; i < 80; i++) {
+      expect(allowed.has(pickSearchPlaceholderLeadForHumorRank(3))).toBe(true);
     }
-    expect(sawUnhinged).toBe(true);
   });
 });

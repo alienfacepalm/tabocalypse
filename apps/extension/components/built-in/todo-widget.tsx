@@ -1,8 +1,8 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import type { ITodoItem } from "../lib/settings";
-import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
-import { HudTip } from "./hud-tip";
+import type { ITodoItem } from "../../lib/settings";
+import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
+import { HudTip } from "../hud-tip";
 
 export function TodoWidget({
   items,

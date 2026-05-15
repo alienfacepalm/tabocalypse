@@ -144,6 +144,7 @@ describe("defaultSettings", () => {
     expect(s.widgets.notes).toBe(true);
     expect(s.widgets.todo).toBe(true);
     expect(s.widgets.weather).toBe(true);
+    expect(s.widgets.crypto).toBe(true);
     expect(s.widgets.humorBanner).toBe(true);
     expect(s.widgets.topSites).toBe(false);
     expect(s.widgets.bookmarksStrip).toBe(false);
@@ -154,6 +155,7 @@ describe("defaultSettings", () => {
     expect(s.clockHourFormat).toBe("24h");
     expect(s.weatherTemperatureUnitAuto).toBe(true);
     expect(s.clockHourFormatAuto).toBe(false);
+    expect(s.cryptoChartDays).toBe(1);
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);

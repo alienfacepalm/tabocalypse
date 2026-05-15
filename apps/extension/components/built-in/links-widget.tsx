@@ -1,8 +1,8 @@
 import React from "react";
 import browser from "webextension-polyfill";
-import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
-import { faviconUrl } from "../lib/favicon-url";
-import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
+import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
+import { faviconUrl } from "../../lib/favicon-url";
+import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
 
 export function TopSitesWidget({ permissionsEpoch }: { permissionsEpoch: number }) {
   const [sites, setSites] = React.useState<{ url?: string; title?: string }[]>([]);

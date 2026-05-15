@@ -4,6 +4,7 @@ export type THudPanelId =
   | "clock"
   | "tabGuilt"
   | "weather"
+  | "crypto"
   | "topSites"
   | "bookmarksStrip"
   | "notes"
@@ -28,6 +29,7 @@ export const HUD_PANEL_IDS: THudPanelId[] = [
   "clock",
   "tabGuilt",
   "weather",
+  "crypto",
   "topSites",
   "bookmarksStrip",
   "notes",
@@ -40,6 +42,7 @@ export const DEFAULT_HUD_PANEL_POSITIONS: Record<THudPanelId, IHudPanelPosition>
   clock: { xPct: 2, yPct: 28 },
   tabGuilt: { xPct: 2, yPct: 56 },
   weather: { xPct: 34, yPct: 2 },
+  crypto: { xPct: 70, yPct: 32 },
   topSites: { xPct: 34, yPct: 22 },
   bookmarksStrip: { xPct: 34, yPct: 40 },
   pluginDeck: { xPct: 34, yPct: 58 },
@@ -51,6 +54,7 @@ export const HUD_PANEL_WIDTH_CLASSES: Record<THudPanelId, string> = {
   clock: "w-[min(22rem,calc(100vw-2rem))]",
   tabGuilt: "w-[min(22rem,calc(100vw-2rem))]",
   weather: "w-[min(36rem,calc(100vw-2rem))]",
+  crypto: "w-[min(28rem,calc(100vw-2rem))]",
   topSites: "w-[min(36rem,calc(100vw-2rem))]",
   bookmarksStrip: "w-[min(36rem,calc(100vw-2rem))]",
   pluginDeck: "w-[min(56rem,calc(100vw-2rem))]",
@@ -66,6 +70,7 @@ export const HUD_PANEL_SIZE_LIMITS: Record<
   clock: { minW: 260, maxW: 1200, minH: 140, maxH: 1600 },
   tabGuilt: { minW: 260, maxW: 1200, minH: 120, maxH: 1200 },
   weather: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
+  crypto: { minW: 280, maxW: 1200, minH: 160, maxH: 1600 },
   topSites: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   bookmarksStrip: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   pluginDeck: { minW: 320, maxW: 1600, minH: 160, maxH: 2000 },

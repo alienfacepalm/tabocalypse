@@ -3,9 +3,9 @@ import {
   CLOCK_HOUR_FORMAT_LABELS,
   CLOCK_HOUR_FORMATS,
   type TClockHourFormat,
-} from "../lib/clock-hour-format";
-import { HudPanelBody, HudPanelTitleInline } from "./hud-panel-drag-context";
-import { HudTip } from "./hud-tip";
+} from "../../lib/clock-hour-format";
+import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
+import { HudTip } from "../hud-tip";
 
 export function ClockWidget({
   locale,

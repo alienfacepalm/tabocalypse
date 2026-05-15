@@ -2,7 +2,7 @@
 
 ## High level
 
-Tabocalypse is a **browser extension** that overrides the **new tab page** with a React UI: widgets (search, clock, weather, notes, todos, links, plugins, humor), settings persisted in **`browser.storage`**, and a **service worker** background script for alarms/notifications.
+Tabocalypse is a **browser extension** that overrides the **new tab page** with a React UI: widgets (search, clock, weather, crypto prices, notes, todos, links, plugins, humor), settings persisted in **`browser.storage`**, and a **service worker** background script for alarms/notifications.
 
 There is **no publisher-operated backend** for core features; optional network use is **user-directed** (weather, links, BYO AI base URL). See [project conventions](../.cursor/rules/project-conventions.mdc).
 
@@ -28,6 +28,7 @@ Generated types and dev cache live under **`.wxt/`** (gitignored); shipped brows
 1. **Settings** — Read/write via `webextension-polyfill` → `browser.storage.local` / sync (see `lib/settings` and related modules).
 2. **User packs / plugins** — Imported as files or JSON, validated with **`@tabocalypse/plugin-sdk`**, stored locally.
 3. **Weather** — Fetches from **Open-Meteo** when the widget is used, subject to user coordinates or prompt.
+4. **Crypto prices** — Fetches public USD market samples for **BTC** and **ETH** from **CoinGecko** when that widget is enabled (no shipped API key).
 
 ## Further reading
 

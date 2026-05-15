@@ -10,6 +10,7 @@
 ## Network requests (only when you use a feature)
 
 - **Open-Meteo** (`api.open-meteo.com`) when the Weather widget is enabled — approximate location from coordinates you set (or from the browser geolocation prompt if you click “Use my location”).
+- **CoinGecko** (`api.coingecko.com`) when the Crypto prices widget is enabled — public USD spot and chart samples for BTC and ETH (no Tabocalypse account; no API key shipped by the publisher).
 - **Peapix** (`peapix.com`, `img.peapix.com`) when you choose **Bing spotlight** as the new-tab background — the extension loads a public JSON feed that mirrors Bing’s daily images (no Tabocalypse account; subject to Peapix’s and Microsoft’s terms and privacy policies for that imagery).
 - **Search** opens your chosen engine in a new tab (normal web navigation).
 - **BYO AI test** sends a minimal chat request to the **base URL you configure** (e.g. OpenAI) using **your** API key, only when you click “Test chat completion”. You are subject to that provider’s privacy policy and billing.
