@@ -1,6 +1,30 @@
-import type { ReactElement } from "react";
+import type {
+  FocusEvent as ReactFocusEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactElement,
+} from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+/** Hit-test padding so pointer gaps between trigger and bubble do not false-dismiss. */
+const HUD_TIP_HIT_PAD_PX = 8;
+
+/** Poll while hover-open; pointer events can lie around disabled controls / portal bubbles. */
+const HUD_TIP_POINTER_POLL_MS = 100;
+
+function rectContainsClientPoint(
+  r: DOMRect,
+  clientX: number,
+  clientY: number,
+  padPx: number,
+): boolean {
+  return (
+    clientX >= r.left - padPx &&
+    clientX <= r.right + padPx &&
+    clientY >= r.top - padPx &&
+    clientY <= r.bottom + padPx
+  );
+}
 
 /**
  * HUD-styled hover/focus-within hint (Space Mono). Supplemental for sighted users;
@@ -24,6 +48,8 @@ export function HudTip({
   bumpDurationMs?: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLSpanElement | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const [hovered, setHovered] = useState(false);
   const [focusInside, setFocusInside] = useState(false);
   const [forcedOpen, setForcedOpen] = useState(false);
@@ -82,40 +108,77 @@ export function HudTip({
   }, [open, measure]);
 
   /**
-   * Disabled descendants (and some hit-testing edge cases) can skip `pointerleave` on this
-   * wrapper while the pointer moves elsewhere, leaving `hovered` stuck. Sync hover against the
-   * actual event target while a pointer-driven tooltip is open.
+   * Track latest pointer position while hover-driven tooltip is open (capture phase so disabled
+   * descendants still update coords).
    */
   useEffect(() => {
     if (!hovered) return;
-    const syncHover = (e: PointerEvent) => {
-      const root = wrapRef.current;
-      if (!root) return;
-      const t = e.target;
-      if (t instanceof Node && !root.contains(t)) {
-        setHovered(false);
-      }
+    const onMove = (e: PointerEvent) => {
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
     };
-    window.addEventListener("pointermove", syncHover, true);
+    window.addEventListener("pointermove", onMove, true);
     return () => {
-      window.removeEventListener("pointermove", syncHover, true);
+      window.removeEventListener("pointermove", onMove, true);
     };
   }, [hovered]);
 
-  const showFromPointer = useCallback(() => {
-    measure();
-    setHovered(true);
-  }, [measure]);
+  /**
+   * Timer hit-test: `pointerleave` / hit-target checks miss disabled controls and portal tooltips.
+   * Compare cursor to trigger + bubble rects until pointer leaves both (with padding).
+   */
+  useEffect(() => {
+    if (!hovered) return;
+    const tick = () => {
+      const pt = lastPointerRef.current;
+      const wrap = wrapRef.current;
+      if (!pt || !wrap) return;
+      const wr = wrap.getBoundingClientRect();
+      const inWrap = rectContainsClientPoint(wr, pt.x, pt.y, HUD_TIP_HIT_PAD_PX);
+      const bubble = bubbleRef.current;
+      const br = bubble?.getBoundingClientRect();
+      const inBubble =
+        br != null ? rectContainsClientPoint(br, pt.x, pt.y, HUD_TIP_HIT_PAD_PX) : false;
+      if (!inWrap && !inBubble) {
+        setHovered(false);
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, HUD_TIP_POINTER_POLL_MS);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [hovered]);
 
-  const showFromFocus = useCallback(() => {
-    measure();
-    setFocusInside(true);
-  }, [measure]);
+  const showFromPointer = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      measure();
+      setHovered(true);
+    },
+    [measure],
+  );
+
+  /** Mouse clicks focus buttons too; `:focus-visible` is false then, so we avoid “stuck” tooltips. */
+  const showFromFocus = useCallback(
+    (e: ReactFocusEvent<HTMLDivElement>) => {
+      const el = e.target;
+      if (!(el instanceof Element)) return;
+      try {
+        if (!el.matches(":focus-visible")) return;
+      } catch {
+        return;
+      }
+      measure();
+      setFocusInside(true);
+    },
+    [measure],
+  );
 
   const bubble =
     open && bubbleStyle != null
       ? createPortal(
           <span
+            ref={bubbleRef}
             aria-hidden
             style={{
               position: "fixed",

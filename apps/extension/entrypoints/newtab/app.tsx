@@ -41,6 +41,7 @@ import { HudColorInput } from "../../components/hud-color-input";
 import { HudTip } from "../../components/hud-tip";
 import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
+import { SpeedTestWidget } from "../../components/built-in/speed-test-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/built-in/links-widget";
 import { NotesWidget } from "../../components/built-in/notes-widget";
 import { SearchWidget } from "../../components/built-in/search-widget";
@@ -3557,6 +3558,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   void persist((cur) => ({ ...cur, cryptoChartDays }))
                 }
               />
+            </DraggableHudPanel>
+          ) : null}
+          {s.widgets.speedTest ? (
+            <DraggableHudPanel
+              key="speedTest"
+              panelId="speedTest"
+              canvasRef={hudCanvasRef}
+              position={s.hudPanelPositions.speedTest}
+              chaotic={s.hudLayoutChaotic}
+              locked={s.hudLayoutLocked}
+              onCommit={(pos) => commitHudPanel("speedTest", pos)}
+            >
+              <SpeedTestWidget displayLocale={hudNumberLocale} />
             </DraggableHudPanel>
           ) : null}
           {s.widgets.topSites ? (

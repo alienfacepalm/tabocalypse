@@ -63,6 +63,7 @@ export type TWidgetKey =
   | "todo"
   | "weather"
   | "crypto"
+  | "speedTest"
   | "topSites"
   | "bookmarksStrip"
   | "tabGuilt"
@@ -595,6 +596,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   todo: true,
   weather: true,
   crypto: true,
+  speedTest: false,
   topSites: false,
   bookmarksStrip: false,
   tabGuilt: false,
@@ -622,6 +624,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   todo: "To-do",
   weather: "Weather",
   crypto: "Crypto prices",
+  speedTest: "Speed test",
   topSites: "Top sites",
   bookmarksStrip: "Bookmarks strip",
   tabGuilt: "Tab guilt",
