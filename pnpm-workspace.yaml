@@ -4,6 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  sharp: true
   spawn-sync: true
 
 # pnpm 11+ reads overrides here only; package.json `pnpm.overrides` is ignored.

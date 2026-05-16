@@ -1,6 +1,6 @@
 {
   "name": "extension",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
-    "scrape:unsuck-classics": "tsx scripts/scrape-unsuck-classics.ts"
+    "scrape:unsuck-classics": "tsx scripts/scrape-unsuck-classics.ts",
+    "icons:transparent-public": "tsx scripts/generate-transparent-public-icons.ts"
   },
   "dependencies": {
     "@fontsource/audiowide": "^5.2.7",
@@ -26,6 +27,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/webextension-polyfill": "^0.12.5",
+    "@wxt-dev/auto-icons": "^1.1.1",
     "@wxt-dev/module-react": "^1.1.3",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.13",
