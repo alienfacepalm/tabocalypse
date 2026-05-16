@@ -1,6 +1,6 @@
 import { ExternalLink, Lock, Pencil, Pin, PinOff, Plus, Trash2, Unlock, X } from "lucide-react";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { INote, INotePanel, TNotePersistPatch } from "../../lib/settings";
+import { newNoteId, type INote, type INotePanel, type TNotePersistPatch } from "../../lib/settings";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
 import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
@@ -10,7 +10,7 @@ type TNotesWidgetSwitcherProps = {
   notes: INote[];
   notePanels: INotePanel[];
   onToggleNotePanel: (noteId: string) => void;
-  onCreateNote: (draft: { name: string; tags: string[] }) => void;
+  onCreateNote: (draft: { id: string; name: string; tags: string[] }) => void;
   onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
 };
@@ -91,9 +91,6 @@ function NotesSwitcher({
 }: TNotesWidgetSwitcherProps) {
   const sortedNotes = useMemo(() => [...notes].sort((a, b) => b.updatedAt - a.updatedAt), [notes]);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [createName, setCreateName] = useState("");
-
   const [editNoteId, setEditNoteId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
@@ -119,16 +116,16 @@ function NotesSwitcher({
   return (
     <section className="card">
       <HudPanelTitle>Notes</HudPanelTitle>
-      <HudPanelBody className="flex min-h-0 flex-col">
-        <div className="row mb-2 flex-wrap gap-2">
+      <HudPanelBody bodyOverflow={false} className="flex min-h-0 flex-col">
+        <div className="row mb-2 shrink-0 flex-wrap gap-2">
           <HudTip tip="Create a note and open it in a draggable panel">
             <button
               type="button"
               className="btn ghost icon-only sm"
               aria-label="New note"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => {
-                setShowCreate(true);
-                setCreateName("");
+                onCreateNote({ id: newNoteId(), name: "New note", tags: [] });
               }}
             >
               <Plus size={18} strokeWidth={2} aria-hidden />
@@ -140,39 +137,9 @@ function NotesSwitcher({
           </span>
         </div>
 
-        {showCreate ? (
-          <form
-            className="mb-2 grid grid-cols-1 gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const name = createName.trim();
-              if (!name) return;
-              onCreateNote({ name, tags: [] });
-              setShowCreate(false);
-            }}
-          >
-            <label className="block">
-              <span className="muted sm">Name</span>
-              <input
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder="e.g. Work, Game plan, Shopping"
-              />
-            </label>
-            <div className="row justify-end gap-2">
-              <button type="button" className="btn ghost" onClick={() => setShowCreate(false)}>
-                Cancel
-              </button>
-              <button type="submit" className="btn primary" disabled={!createName.trim()}>
-                Create
-              </button>
-            </div>
-          </form>
-        ) : null}
-
         {editNoteId ? (
           <form
-            className="mb-2 grid grid-cols-1 gap-2"
+            className="mb-2 grid shrink-0 grid-cols-1 gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               const name = editName.trim();
@@ -196,7 +163,7 @@ function NotesSwitcher({
           </form>
         ) : null}
 
-        <div className="row mb-2 flex-wrap gap-2">
+        <div className="row mb-2 shrink-0 flex-wrap gap-2">
           <span className="muted sm">Local only.</span>
           <span className="muted sm"> · </span>
           <span className="muted sm row gap-1">
@@ -205,95 +172,103 @@ function NotesSwitcher({
           </span>
         </div>
 
-        {sortedNotes.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center py-4">
-            <p className="muted sm">
-              No notes yet. Tap <span className="font-semibold">New note</span> to add one.
-            </p>
-          </div>
-        ) : (
-          <ul
-            className="hud-scrollbar flex min-h-0 flex-col gap-1 overflow-y-auto pr-1"
-            aria-label="Notes list"
-          >
-            {sortedNotes.map((n) => {
-              const open = notePanels.some((p) => p.noteId === n.id);
-              return (
-                <li key={n.id}>
-                  <div className="row min-h-[2rem] gap-2 rounded border border-solid border-accent/35 bg-black/25 px-2 py-1">
-                    <HudTip
-                      tip={
-                        open ? "Hide notes panel from the canvas" : "Show notes panel on the canvas"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className={["btn", open ? "primary" : "ghost", "icon-only", "sm"].join(" ")}
-                        aria-pressed={open}
-                        aria-label={open ? `Hide panel for ${n.name}` : `Show panel for ${n.name}`}
-                        onClick={() => onToggleNotePanel(n.id)}
+        <div className="hud-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+          {sortedNotes.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-4">
+              <p className="muted sm px-2 text-center">
+                No notes yet. Press <span className="font-semibold">New note (+)</span> to add one.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-1" aria-label="Notes list">
+              {sortedNotes.map((n) => {
+                const open = notePanels.some((p) => p.noteId === n.id);
+                return (
+                  <li key={n.id}>
+                    <div className="row min-h-[2rem] gap-2 rounded border border-solid border-accent/35 bg-black/25 px-2 py-1">
+                      <HudTip
+                        tip={
+                          open
+                            ? "Hide notes panel from the canvas"
+                            : "Show notes panel on the canvas"
+                        }
                       >
-                        {open ? (
-                          <Pin size={18} strokeWidth={2} aria-hidden />
-                        ) : (
-                          <PinOff size={18} strokeWidth={2} aria-hidden />
-                        )}
-                      </button>
-                    </HudTip>
-                    <HudTip
-                      tip={
-                        n.locked
-                          ? "Unlock to edit or delete (you can still hide the panel)"
-                          : "Lock — no edits or deletes; you can still hide the panel"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className={["btn", n.locked ? "primary" : "ghost", "icon-only", "sm"].join(
-                          " ",
-                        )}
-                        aria-pressed={n.locked}
-                        aria-label={n.locked ? `Unlock ${n.name}` : `Lock ${n.name}`}
-                        onClick={() => toggleNoteLock(n)}
+                        <button
+                          type="button"
+                          className={["btn", open ? "primary" : "ghost", "icon-only", "sm"].join(
+                            " ",
+                          )}
+                          aria-pressed={open}
+                          aria-label={
+                            open ? `Hide panel for ${n.name}` : `Show panel for ${n.name}`
+                          }
+                          onClick={() => onToggleNotePanel(n.id)}
+                        >
+                          {open ? (
+                            <Pin size={18} strokeWidth={2} aria-hidden />
+                          ) : (
+                            <PinOff size={18} strokeWidth={2} aria-hidden />
+                          )}
+                        </button>
+                      </HudTip>
+                      <HudTip
+                        tip={
+                          n.locked
+                            ? "Unlock to edit or delete (you can still hide the panel)"
+                            : "Lock — no edits or deletes; you can still hide the panel"
+                        }
                       >
-                        {n.locked ? (
-                          <Unlock size={18} strokeWidth={2} aria-hidden />
-                        ) : (
-                          <Lock size={18} strokeWidth={2} aria-hidden />
-                        )}
-                      </button>
-                    </HudTip>
-                    <span className="min-w-0 flex-1 truncate self-center text-sm" title={n.name}>
-                      {n.name}
-                    </span>
-                    <HudTip tip={n.locked ? "Unlock to rename" : "Rename this note"}>
-                      <button
-                        type="button"
-                        className="btn ghost icon-only sm"
-                        aria-label={`Rename ${n.name}`}
-                        onClick={() => openRename(n)}
-                        disabled={n.locked}
-                      >
-                        <Pencil size={18} strokeWidth={2} aria-hidden />
-                      </button>
-                    </HudTip>
-                    <HudTip tip={n.locked ? "Unlock to delete" : "Delete this note"}>
-                      <button
-                        type="button"
-                        className="btn ghost icon-only sm"
-                        aria-label={`Delete ${n.name}`}
-                        onClick={() => requestDeleteNote(n)}
-                        disabled={n.locked}
-                      >
-                        <Trash2 size={18} strokeWidth={2} aria-hidden />
-                      </button>
-                    </HudTip>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                        <button
+                          type="button"
+                          className={[
+                            "btn",
+                            n.locked ? "primary" : "ghost",
+                            "icon-only",
+                            "sm",
+                          ].join(" ")}
+                          aria-pressed={n.locked}
+                          aria-label={n.locked ? `Unlock ${n.name}` : `Lock ${n.name}`}
+                          onClick={() => toggleNoteLock(n)}
+                        >
+                          {n.locked ? (
+                            <Lock size={18} strokeWidth={2} aria-hidden />
+                          ) : (
+                            <Unlock size={18} strokeWidth={2} aria-hidden />
+                          )}
+                        </button>
+                      </HudTip>
+                      <span className="min-w-0 flex-1 truncate self-center text-sm" title={n.name}>
+                        {n.name}
+                      </span>
+                      <HudTip tip={n.locked ? "Unlock to rename" : "Rename this note"}>
+                        <button
+                          type="button"
+                          className="btn ghost icon-only sm"
+                          aria-label={`Rename ${n.name}`}
+                          onClick={() => openRename(n)}
+                          disabled={n.locked}
+                        >
+                          <Pencil size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                      </HudTip>
+                      <HudTip tip={n.locked ? "Unlock to delete" : "Delete this note"}>
+                        <button
+                          type="button"
+                          className="btn ghost icon-only sm"
+                          aria-label={`Delete ${n.name}`}
+                          onClick={() => requestDeleteNote(n)}
+                          disabled={n.locked}
+                        >
+                          <Trash2 size={18} strokeWidth={2} aria-hidden />
+                        </button>
+                      </HudTip>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </HudPanelBody>
     </section>
   );
@@ -395,9 +370,9 @@ function NotesDetachedPanel({
                   disabled={!selected}
                 >
                   {selected?.locked ? (
-                    <Unlock size={18} strokeWidth={2} aria-hidden />
-                  ) : (
                     <Lock size={18} strokeWidth={2} aria-hidden />
+                  ) : (
+                    <Unlock size={18} strokeWidth={2} aria-hidden />
                   )}
                 </button>
               </HudTip>

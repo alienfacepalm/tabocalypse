@@ -80,7 +80,6 @@ import {
   type ISettings,
   isNoteDeleteAllowed,
   isTabocalypseSettingsStorageChange,
-  newNoteId,
   type IUserBackgroundImage,
   loadSettings,
   mergeNotePanelsForStorageReload,
@@ -3722,9 +3721,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       };
                     })
                   }
-                  onCreateNote={({ name, tags }) =>
+                  onCreateNote={({ id, name, tags }) =>
                     void persist((cur) => {
-                      const id = newNoteId();
                       const now = Date.now();
                       let hudLayoutLockedNext = cur.hudLayoutLocked;
                       if (cur.hudLayoutLocked) {
