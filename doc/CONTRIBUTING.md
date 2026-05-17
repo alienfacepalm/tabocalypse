@@ -1,5 +1,7 @@
 # Contributing
 
+Shipped Tabocalypse—the new tab people use every day—only gets better when someone reads the constraints, runs the checks, and lands a **small, honest** change. **That effort is the product.** If you are contributing, your work reaches real users (clearer UI, safer plugins, fewer rough edges). Thank you for being part of it.
+
 ## Workflow
 
 1. **Fork / branch** from the default branch your team uses (`main` or `master`).
