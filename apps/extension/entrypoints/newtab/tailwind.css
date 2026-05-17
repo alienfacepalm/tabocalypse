@@ -181,6 +181,22 @@
 
   .hud-canvas {
     @apply hud-scrollbar relative isolate min-h-0 w-full flex-1 touch-manipulation overflow-auto;
+    min-height: 100%;
+  }
+
+  .hud-grid-overlay {
+    @apply pointer-events-none;
+  }
+
+  .hud-grid-pattern-stroke {
+    stroke: color-mix(in srgb, var(--color-outline) 55%, transparent);
+  }
+
+  /** Single drop-zone tint while dragging — not per-cell dashed boxes (those read as a local grid). */
+  .hud-grid-drop-target {
+    border: 2px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    box-sizing: border-box;
   }
 
   .hud-draggable-panel {

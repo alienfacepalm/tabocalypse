@@ -22,8 +22,11 @@ export interface IHudPanelPosition {
   heightPx?: number;
 }
 
-/** Pixel step for snap-to-grid (canvas-relative). */
+/** @deprecated Fine pixel step; grid mode uses {@link HUD_LAYOUT_COLUMNS} layout cells instead. */
 export const HUD_SNAP_GRID_PX = 24;
+
+/** Dashboard column count (see DESIGN.md fixed grid). */
+export const HUD_LAYOUT_COLUMNS = 12;
 
 export const HUD_PANEL_IDS: THudPanelId[] = [
   "todo",
@@ -101,6 +104,192 @@ export function clampHudPanelSize(
 export function snapScalarToGrid(value: number, gridPx: number): number {
   if (gridPx <= 0) return value;
   return Math.round(value / gridPx) * gridPx;
+}
+
+/** Panel origin and size in HUD canvas coordinates (pixels). */
+export interface IHudCanvasRectPx {
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+}
+
+/** Inclusive-start, exclusive-end cell indices on the HUD snap grid. */
+export interface IHudGridCellRange {
+  colStart: number;
+  rowStart: number;
+  colEnd: number;
+  rowEnd: number;
+}
+
+/** Layout grid dimensions for the HUD canvas viewport. */
+export interface IHudLayoutMetrics {
+  cols: number;
+  rows: number;
+  cellW: number;
+  cellH: number;
+  canvasW: number;
+  canvasH: number;
+}
+
+/** Drop-target anchor while dragging (cell indices; sizes come from live layout metrics). */
+export interface IHudGridDropHighlight {
+  anchorCol: number;
+  anchorRow: number;
+  panelWidthPx: number;
+  panelHeightPx: number;
+}
+
+/** Measure the HUD canvas box used for layout math (matches drag `getBoundingClientRect`). */
+export function measureHudCanvasSize(canvas: HTMLElement): { widthPx: number; heightPx: number } {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    widthPx: Math.max(1, rect.width),
+    heightPx: Math.max(1, rect.height),
+  };
+}
+
+/** 12-column grid with square-ish cells filling the canvas height. */
+export function getHudLayoutMetrics(
+  canvasWidthPx: number,
+  canvasHeightPx: number,
+): IHudLayoutMetrics {
+  const cols = HUD_LAYOUT_COLUMNS;
+  const safeW = Math.max(1, canvasWidthPx);
+  const safeH = Math.max(1, canvasHeightPx);
+  const cellW = safeW / cols;
+  const rows = Math.max(1, Math.floor(safeH / cellW));
+  const cellH = safeH / rows;
+  return { cols, rows, cellW, cellH, canvasW: safeW, canvasH: safeH };
+}
+
+/** Snaps a panel origin to the nearest layout cell (top-left of cell). */
+export function snapPanelOriginToLayoutGrid(
+  leftPx: number,
+  topPx: number,
+  metrics: IHudLayoutMetrics,
+): { leftPx: number; topPx: number; col: number; row: number } {
+  const col = clampHudScalar(Math.round(leftPx / metrics.cellW), 0, metrics.cols - 1);
+  const row = clampHudScalar(Math.round(topPx / metrics.cellH), 0, metrics.rows - 1);
+  return {
+    leftPx: col * metrics.cellW,
+    topPx: row * metrics.cellH,
+    col,
+    row,
+  };
+}
+
+/** Grid cells a panel would occupy when its top-left is anchored at `(anchorCol, anchorRow)`. */
+export function getHudPanelDropCellRange(
+  anchorCol: number,
+  anchorRow: number,
+  panelWidthPx: number,
+  panelHeightPx: number,
+  metrics: IHudLayoutMetrics,
+): IHudGridCellRange {
+  const leftPx = anchorCol * metrics.cellW;
+  const topPx = anchorRow * metrics.cellH;
+  const rightPx = leftPx + Math.max(0, panelWidthPx);
+  const bottomPx = topPx + Math.max(0, panelHeightPx);
+  const colStart = clampHudScalar(anchorCol, 0, metrics.cols - 1);
+  const rowStart = clampHudScalar(anchorRow, 0, metrics.rows - 1);
+  const colEnd = clampHudScalar(
+    Math.max(colStart + 1, Math.ceil(rightPx / metrics.cellW)),
+    colStart + 1,
+    metrics.cols,
+  );
+  const rowEnd = clampHudScalar(
+    Math.max(rowStart + 1, Math.ceil(bottomPx / metrics.cellH)),
+    rowStart + 1,
+    metrics.rows,
+  );
+  return { colStart, rowStart, colEnd, rowEnd };
+}
+
+/** Drop preview anchor from a canvas position (snaps to nearest cell). */
+export function getHudGridDropHighlight(
+  leftPx: number,
+  topPx: number,
+  panelWidthPx: number,
+  panelHeightPx: number,
+  metrics: IHudLayoutMetrics,
+): IHudGridDropHighlight {
+  const snapped = snapPanelOriginToLayoutGrid(leftPx, topPx, metrics);
+  return {
+    anchorCol: snapped.col,
+    anchorRow: snapped.row,
+    panelWidthPx,
+    panelHeightPx,
+  };
+}
+
+/** Cell range for a drop highlight using current layout metrics (e.g. after browser resize). */
+export function resolveHudGridDropCellRange(
+  highlight: IHudGridDropHighlight,
+  metrics: IHudLayoutMetrics,
+): IHudGridCellRange {
+  return getHudPanelDropCellRange(
+    highlight.anchorCol,
+    highlight.anchorRow,
+    highlight.panelWidthPx,
+    highlight.panelHeightPx,
+    metrics,
+  );
+}
+
+/** One rectangle covering snapped drop cells (% of full canvas grid; not per-cell boxes). */
+export function resolveHudDropTargetPct(
+  highlight: IHudGridDropHighlight,
+  metrics: IHudLayoutMetrics,
+): { leftPct: number; topPct: number; widthPct: number; heightPct: number } {
+  const range = resolveHudGridDropCellRange(highlight, metrics);
+  return {
+    leftPct: (range.colStart / metrics.cols) * 100,
+    topPct: (range.rowStart / metrics.rows) * 100,
+    widthPct: ((range.colEnd - range.colStart) / metrics.cols) * 100,
+    heightPct: ((range.rowEnd - range.rowStart) / metrics.rows) * 100,
+  };
+}
+
+/** Lists occupied cells for highlight rendering. */
+export function listHudGridCells(range: IHudGridCellRange): { col: number; row: number }[] {
+  const cells: { col: number; row: number }[] = [];
+  for (let row = range.rowStart; row < range.rowEnd; row += 1) {
+    for (let col = range.colStart; col < range.colEnd; col += 1) {
+      cells.push({ col, row });
+    }
+  }
+  return cells;
+}
+
+/**
+ * Canvas-space rect while dragging a panel (matches snap-on-drop when `snapPosition` is true).
+ */
+export function computeHudDragCanvasRectPx(
+  originLeftCanvasPx: number,
+  originTopCanvasPx: number,
+  deltaClientX: number,
+  deltaClientY: number,
+  panelWidthPx: number,
+  panelHeightPx: number,
+  metrics: IHudLayoutMetrics,
+  snapPosition: boolean,
+): IHudCanvasRectPx {
+  let leftPx = originLeftCanvasPx + deltaClientX;
+  let topPx = originTopCanvasPx + deltaClientY;
+  const maxLeft = Math.max(0, metrics.canvasW - panelWidthPx);
+  const maxTop = Math.max(0, metrics.canvasH - panelHeightPx);
+  if (snapPosition) {
+    const snapped = snapPanelOriginToLayoutGrid(leftPx, topPx, metrics);
+    leftPx = snapped.leftPx;
+    topPx = snapped.topPx;
+  }
+  return {
+    leftPx: clampHudScalar(leftPx, 0, maxLeft),
+    topPx: clampHudScalar(topPx, 0, maxTop),
+    widthPx: panelWidthPx,
+    heightPx: panelHeightPx,
+  };
 }
 
 export function clampHudScalar(value: number, min: number, max: number): number {

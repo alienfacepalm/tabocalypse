@@ -35,6 +35,9 @@ import {
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
+import { HudCanvasGrid } from "../../components/hud-canvas-grid";
+import { HudLayoutMetricsSync } from "../../components/hud-layout-metrics-sync";
+import { HudPlacementProvider } from "../../components/hud-placement-context";
 import { UserBackgroundGallery } from "../../components/user-background-gallery";
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudColorInput } from "../../components/hud-color-input";
@@ -1783,7 +1786,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mb-2">
-                      Drag panels by the grip in each header. Use the top bar for quick layout lock
+                      Drag panels by the grip in each header. In grid mode (not chaotic), a
+                      12-column dashed overlay fills the HUD while layout is unlocked; drop targets
+                      highlight the cells the panel will snap into. Use the top bar for layout lock
                       and chaotic mode.
                     </p>
                     <label className="check-row">
@@ -3267,8 +3272,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           <HudTip
             tip={
               s.hudLayoutChaotic
-                ? "Turn on grid snap so panels align to the layout grid"
-                : "Turn on Chaotic layout so panels ignore the snap grid"
+                ? "Turn on grid snap so panels align to the layout grid and show the dashed overlay"
+                : "Turn on Chaotic layout so panels ignore the snap grid and hide the overlay"
             }
           >
             <button
@@ -3444,191 +3449,328 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
       <main className="hud-main">
         <div ref={hudCanvasRef} className="hud-canvas">
-          <div
-            role="presentation"
-            className={[
-              "absolute inset-0 z-[1]",
-              !s.hudLayoutLocked &&
-              ((s.backgroundKind === "image" && visibleUserBackground.dataUrl) ||
-                (s.backgroundKind === "bing" && bingPaintUrl))
-                ? "pointer-events-auto touch-none"
-                : "pointer-events-none",
-              userBackgroundWallpaperPanDraggable ? "cursor-move" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onPointerDown={onBackgroundPanPointerDown}
-            onPointerMove={onBackgroundPanPointerMove}
-            onPointerUp={finishBackgroundPan}
-            onPointerCancel={finishBackgroundPan}
-            onDoubleClick={onBackgroundPanDoubleClick}
-            onContextMenu={onUserBackgroundContextMenu}
-          />
-          {s.widgets.todo ? (
-            <DraggableHudPanel
-              key="todo"
-              panelId="todo"
+          <HudPlacementProvider>
+            <div
+              role="presentation"
+              className={[
+                "absolute inset-0 z-[1]",
+                !s.hudLayoutLocked &&
+                ((s.backgroundKind === "image" && visibleUserBackground.dataUrl) ||
+                  (s.backgroundKind === "bing" && bingPaintUrl))
+                  ? "pointer-events-auto touch-none"
+                  : "pointer-events-none",
+                userBackgroundWallpaperPanDraggable ? "cursor-move" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onPointerDown={onBackgroundPanPointerDown}
+              onPointerMove={onBackgroundPanPointerMove}
+              onPointerUp={finishBackgroundPan}
+              onPointerCancel={finishBackgroundPan}
+              onDoubleClick={onBackgroundPanDoubleClick}
+              onContextMenu={onUserBackgroundContextMenu}
+            />
+            <HudLayoutMetricsSync
               canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.todo}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("todo", pos)}
-            >
-              <TodoWidget
-                items={s.todos}
-                onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
-              />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.clock ? (
-            <DraggableHudPanel
-              key="clock"
-              panelId="clock"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.clock}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("clock", pos)}
-            >
-              <ClockWidget
-                locale={hudNumberLocale}
-                hourFormat={s.clockHourFormat}
-                onSelectHourFormat={(clockHourFormat) =>
-                  void persist((cur) => ({ ...cur, clockHourFormat }))
-                }
-              />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.tabGuilt ? (
-            <DraggableHudPanel
-              key="tabGuilt"
-              panelId="tabGuilt"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.tabGuilt}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
-            >
-              <TabGuilt permissionsEpoch={permissionsEpoch} />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.weather ? (
-            <DraggableHudPanel
-              key="weather"
-              panelId="weather"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.weather}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("weather", pos)}
-            >
-              <WeatherWidget
-                lat={s.weatherLat}
-                lon={s.weatherLon}
-                effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
-                displayLocale={hudNumberLocale}
-                onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
-                  void persist((cur) => ({
-                    ...cur,
-                    weatherTemperatureUnitAuto: false,
-                    weatherTemperatureUnit,
-                  }))
-                }
-                lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
-              />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.crypto ? (
-            <DraggableHudPanel
-              key="crypto"
-              panelId="crypto"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.crypto}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("crypto", pos)}
-            >
-              <CryptoPricesWidget
-                chartDays={s.cryptoChartDays}
-                humorEnabled={s.humorEnabled}
-                humorIntensity={s.humorIntensity}
-                displayLocale={hudNumberLocale}
-                onSelectChartDays={(cryptoChartDays) =>
-                  void persist((cur) => ({ ...cur, cryptoChartDays }))
-                }
-              />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.speedTest ? (
-            <DraggableHudPanel
-              key="speedTest"
-              panelId="speedTest"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.speedTest}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("speedTest", pos)}
-            >
-              <SpeedTestWidget displayLocale={hudNumberLocale} />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.topSites ? (
-            <DraggableHudPanel
-              key="topSites"
-              panelId="topSites"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.topSites}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("topSites", pos)}
-            >
-              <TopSitesWidget permissionsEpoch={permissionsEpoch} />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.bookmarksStrip ? (
-            <DraggableHudPanel
-              key="bookmarksStrip"
-              panelId="bookmarksStrip"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.bookmarksStrip}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
-            >
-              <BookmarksWidget permissionsEpoch={permissionsEpoch} />
-            </DraggableHudPanel>
-          ) : null}
-          {s.importedPlugins.some((p) => p.enabled) ? (
-            <DraggableHudPanel
-              key="pluginDeck"
-              panelId="pluginDeck"
-              canvasRef={hudCanvasRef}
-              position={s.hudPanelPositions.pluginDeck}
-              chaotic={s.hudLayoutChaotic}
-              locked={s.hudLayoutLocked}
-              onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
-            >
-              <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
-            </DraggableHudPanel>
-          ) : null}
-          {s.widgets.notes ? (
-            <>
-              {s.notePanels.map((np) => (
+              enabled={!s.hudLayoutChaotic && !s.hudLayoutLocked}
+            />
+            <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
+            {s.widgets.todo ? (
+              <DraggableHudPanel
+                key="todo"
+                panelId="todo"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.todo}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("todo", pos)}
+              >
+                <TodoWidget
+                  items={s.todos}
+                  onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
+                />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.clock ? (
+              <DraggableHudPanel
+                key="clock"
+                panelId="clock"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.clock}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("clock", pos)}
+              >
+                <ClockWidget
+                  locale={hudNumberLocale}
+                  hourFormat={s.clockHourFormat}
+                  onSelectHourFormat={(clockHourFormat) =>
+                    void persist((cur) => ({ ...cur, clockHourFormat }))
+                  }
+                />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.tabGuilt ? (
+              <DraggableHudPanel
+                key="tabGuilt"
+                panelId="tabGuilt"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.tabGuilt}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
+              >
+                <TabGuilt permissionsEpoch={permissionsEpoch} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.weather ? (
+              <DraggableHudPanel
+                key="weather"
+                panelId="weather"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.weather}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("weather", pos)}
+              >
+                <WeatherWidget
+                  lat={s.weatherLat}
+                  lon={s.weatherLon}
+                  effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
+                  displayLocale={hudNumberLocale}
+                  onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
+                    void persist((cur) => ({
+                      ...cur,
+                      weatherTemperatureUnitAuto: false,
+                      weatherTemperatureUnit,
+                    }))
+                  }
+                  lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
+                />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.crypto ? (
+              <DraggableHudPanel
+                key="crypto"
+                panelId="crypto"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.crypto}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("crypto", pos)}
+              >
+                <CryptoPricesWidget
+                  chartDays={s.cryptoChartDays}
+                  humorEnabled={s.humorEnabled}
+                  humorIntensity={s.humorIntensity}
+                  displayLocale={hudNumberLocale}
+                  onSelectChartDays={(cryptoChartDays) =>
+                    void persist((cur) => ({ ...cur, cryptoChartDays }))
+                  }
+                />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.speedTest ? (
+              <DraggableHudPanel
+                key="speedTest"
+                panelId="speedTest"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.speedTest}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("speedTest", pos)}
+              >
+                <SpeedTestWidget displayLocale={hudNumberLocale} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.topSites ? (
+              <DraggableHudPanel
+                key="topSites"
+                panelId="topSites"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.topSites}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("topSites", pos)}
+              >
+                <TopSitesWidget permissionsEpoch={permissionsEpoch} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.bookmarksStrip ? (
+              <DraggableHudPanel
+                key="bookmarksStrip"
+                panelId="bookmarksStrip"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.bookmarksStrip}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
+              >
+                <BookmarksWidget permissionsEpoch={permissionsEpoch} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.importedPlugins.some((p) => p.enabled) ? (
+              <DraggableHudPanel
+                key="pluginDeck"
+                panelId="pluginDeck"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.pluginDeck}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
+              >
+                <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.notes ? (
+              <>
+                {s.notePanels.map((np) => (
+                  <DraggableHudPanel
+                    key={`notes-open-${np.noteId}`}
+                    panelId="notes"
+                    canvasRef={hudCanvasRef}
+                    position={np.position}
+                    chaotic={s.hudLayoutChaotic}
+                    locked={s.hudLayoutLocked}
+                    zIndexBase={52}
+                    onCommit={(pos) => commitNotePanel(np.noteId, pos)}
+                  >
+                    <NotesWidget
+                      variant="panel"
+                      panelElasticHeight={typeof np.position.heightPx !== "number"}
+                      notes={s.notes}
+                      panelNoteId={np.noteId}
+                      onUpdateNote={(noteId, patch) =>
+                        void persist((cur) => {
+                          const now = Date.now();
+                          let changed = false;
+                          const nextNotes = cur.notes.map((n) => {
+                            if (n.id !== noteId) return n;
+                            const merged = applyNotePersistPatch(n, patch, now);
+                            if (!merged) return n;
+                            changed = true;
+                            return merged;
+                          });
+                          if (!changed) return cur;
+                          return { ...cur, notes: nextNotes };
+                        })
+                      }
+                      onDeleteNote={(noteId) =>
+                        void persist((cur) => {
+                          const target = cur.notes.find((n) => n.id === noteId);
+                          if (!target || !isNoteDeleteAllowed(target)) return cur;
+                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                          }
+                          return {
+                            ...cur,
+                            notes: cur.notes.filter((n) => n.id !== noteId),
+                            notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                          };
+                        })
+                      }
+                      onClosePanel={() =>
+                        void persist((cur) => {
+                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === np.noteId) {
+                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                          }
+                          return {
+                            ...cur,
+                            notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
+                          };
+                        })
+                      }
+                    />
+                  </DraggableHudPanel>
+                ))}
                 <DraggableHudPanel
-                  key={`notes-open-${np.noteId}`}
+                  key="notes-master"
                   panelId="notes"
                   canvasRef={hudCanvasRef}
-                  position={np.position}
+                  position={s.hudPanelPositions.notes}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
-                  zIndexBase={52}
-                  onCommit={(pos) => commitNotePanel(np.noteId, pos)}
+                  zIndexBase={10}
+                  onCommit={(pos) => commitHudPanel("notes", pos)}
                 >
                   <NotesWidget
-                    variant="panel"
-                    panelElasticHeight={typeof np.position.heightPx !== "number"}
+                    variant="switcher"
                     notes={s.notes}
-                    panelNoteId={np.noteId}
+                    notePanels={s.notePanels}
+                    onToggleNotePanel={(noteId) =>
+                      void persist((cur) => {
+                        if (cur.notePanels.some((p) => p.noteId === noteId)) {
+                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                          }
+                          return {
+                            ...cur,
+                            notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                          };
+                        }
+                        let hudLayoutLockedNext = cur.hudLayoutLocked;
+                        if (cur.hudLayoutLocked) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = noteId;
+                          hudLayoutLockedNext = false;
+                        }
+                        const anchor = cur.hudPanelPositions.notes;
+                        const stagger = cur.notePanels.length * 5;
+                        const position: IHudPanelPosition = {
+                          xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
+                          yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
+                        };
+                        if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
+                          position.widthPx = anchor.widthPx;
+                        }
+                        if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
+                          position.heightPx = anchor.heightPx;
+                        }
+                        return {
+                          ...cur,
+                          hudLayoutLocked: hudLayoutLockedNext,
+                          notePanels: [...cur.notePanels, { noteId, position }],
+                        };
+                      })
+                    }
+                    onCreateNote={({ id, name, tags }) =>
+                      void persist((cur) => {
+                        const now = Date.now();
+                        let hudLayoutLockedNext = cur.hudLayoutLocked;
+                        if (cur.hudLayoutLocked) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = id;
+                          hudLayoutLockedNext = false;
+                        }
+                        const anchor = cur.hudPanelPositions.notes;
+                        const stagger = cur.notePanels.length * 5;
+                        const position: IHudPanelPosition = {
+                          xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
+                          yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
+                        };
+                        if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
+                          position.widthPx = anchor.widthPx;
+                        }
+                        if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
+                          position.heightPx = anchor.heightPx;
+                        }
+                        return {
+                          ...cur,
+                          hudLayoutLocked: hudLayoutLockedNext,
+                          notes: [
+                            {
+                              id,
+                              name,
+                              tags,
+                              text: "",
+                              locked: false,
+                              createdAt: now,
+                              updatedAt: now,
+                            },
+                            ...cur.notes,
+                          ],
+                          notePanels: [...cur.notePanels, { noteId: id, position }],
+                        };
+                      })
+                    }
                     onUpdateNote={(noteId, patch) =>
                       void persist((cur) => {
                         const now = Date.now();
@@ -3658,141 +3800,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         };
                       })
                     }
-                    onClosePanel={() =>
-                      void persist((cur) => {
-                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === np.noteId) {
-                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                        }
-                        return {
-                          ...cur,
-                          notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
-                        };
-                      })
-                    }
                   />
                 </DraggableHudPanel>
-              ))}
-              <DraggableHudPanel
-                key="notes-master"
-                panelId="notes"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.notes}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                zIndexBase={10}
-                onCommit={(pos) => commitHudPanel("notes", pos)}
-              >
-                <NotesWidget
-                  variant="switcher"
-                  notes={s.notes}
-                  notePanels={s.notePanels}
-                  onToggleNotePanel={(noteId) =>
-                    void persist((cur) => {
-                      if (cur.notePanels.some((p) => p.noteId === noteId)) {
-                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                        }
-                        return {
-                          ...cur,
-                          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                        };
-                      }
-                      let hudLayoutLockedNext = cur.hudLayoutLocked;
-                      if (cur.hudLayoutLocked) {
-                        relockPromptNoteIdAfterAutoHudUnlockRef.current = noteId;
-                        hudLayoutLockedNext = false;
-                      }
-                      const anchor = cur.hudPanelPositions.notes;
-                      const stagger = cur.notePanels.length * 5;
-                      const position: IHudPanelPosition = {
-                        xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
-                        yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
-                      };
-                      if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
-                        position.widthPx = anchor.widthPx;
-                      }
-                      if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
-                        position.heightPx = anchor.heightPx;
-                      }
-                      return {
-                        ...cur,
-                        hudLayoutLocked: hudLayoutLockedNext,
-                        notePanels: [...cur.notePanels, { noteId, position }],
-                      };
-                    })
-                  }
-                  onCreateNote={({ id, name, tags }) =>
-                    void persist((cur) => {
-                      const now = Date.now();
-                      let hudLayoutLockedNext = cur.hudLayoutLocked;
-                      if (cur.hudLayoutLocked) {
-                        relockPromptNoteIdAfterAutoHudUnlockRef.current = id;
-                        hudLayoutLockedNext = false;
-                      }
-                      const anchor = cur.hudPanelPositions.notes;
-                      const stagger = cur.notePanels.length * 5;
-                      const position: IHudPanelPosition = {
-                        xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
-                        yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
-                      };
-                      if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
-                        position.widthPx = anchor.widthPx;
-                      }
-                      if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
-                        position.heightPx = anchor.heightPx;
-                      }
-                      return {
-                        ...cur,
-                        hudLayoutLocked: hudLayoutLockedNext,
-                        notes: [
-                          {
-                            id,
-                            name,
-                            tags,
-                            text: "",
-                            locked: false,
-                            createdAt: now,
-                            updatedAt: now,
-                          },
-                          ...cur.notes,
-                        ],
-                        notePanels: [...cur.notePanels, { noteId: id, position }],
-                      };
-                    })
-                  }
-                  onUpdateNote={(noteId, patch) =>
-                    void persist((cur) => {
-                      const now = Date.now();
-                      let changed = false;
-                      const nextNotes = cur.notes.map((n) => {
-                        if (n.id !== noteId) return n;
-                        const merged = applyNotePersistPatch(n, patch, now);
-                        if (!merged) return n;
-                        changed = true;
-                        return merged;
-                      });
-                      if (!changed) return cur;
-                      return { ...cur, notes: nextNotes };
-                    })
-                  }
-                  onDeleteNote={(noteId) =>
-                    void persist((cur) => {
-                      const target = cur.notes.find((n) => n.id === noteId);
-                      if (!target || !isNoteDeleteAllowed(target)) return cur;
-                      if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                        relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                      }
-                      return {
-                        ...cur,
-                        notes: cur.notes.filter((n) => n.id !== noteId),
-                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                      };
-                    })
-                  }
-                />
-              </DraggableHudPanel>
-            </>
-          ) : null}
+              </>
+            ) : null}
+          </HudPlacementProvider>
         </div>
       </main>
 
