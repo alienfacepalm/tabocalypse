@@ -1026,8 +1026,6 @@ export function applyPreset(preset: ISettings["preset"], s: ISettings): ISetting
     next.humorEnabled = true;
     next.humorIntensity = "spicy";
     next.widgets = { ...s.widgets, humorBanner: true };
-    // Chaos preset pairs with unsnapped HUD by default (fresh installs already default chaotic).
-    next.hudLayoutChaotic = true;
   }
   return next;
 }

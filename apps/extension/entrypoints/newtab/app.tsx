@@ -1661,9 +1661,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mb-2">
-                      Applies right away. Adjusts jokes, the humor strip, some widget toggles, and
-                      (for Chaos) chaotic HUD layout. New installs default to Chaos. Theme,
-                      background, and the rest of Appearance are unchanged.
+                      Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
+                      Panel snap vs chaotic layout stays under Panel layout and the header shuffle
+                      button. New installs default to Chaos. Theme, background, and the rest of
+                      Appearance are unchanged.
                     </p>
                     <div className="row wrap">
                       <button
@@ -1700,9 +1701,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <p className="m-0">
                         <span className="text-text">Chaos</span>
                         {" — "}
-                        Default personality for Tabocalypse: spicier jokes and the humor strip on,
-                        chaotic HUD layout (panels stay unsnapped from the grid), other widgets stay
-                        as they are.
+                        Default personality for Tabocalypse: spicier jokes and the humor strip on;
+                        other widgets stay as they are. Snap vs chaotic HUD is independent—use Panel
+                        layout or the header shuffle control.
                       </p>
                       <p className="m-0">
                         <span className="text-text">Balanced</span>
