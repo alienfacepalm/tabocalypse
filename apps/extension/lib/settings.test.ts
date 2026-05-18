@@ -212,11 +212,14 @@ describe("applyPreset", () => {
     expect(next.widgets.search).toBe(true);
   });
 
-  it("chaos preset enables spicy intensity and humor banner", () => {
-    const s = applyPreset("chaos", defaultSettings());
+  it("chaos preset enables spicy intensity, humor banner, and chaotic HUD layout", () => {
+    const base = defaultSettings();
+    const snapped = { ...base, hudLayoutChaotic: false };
+    const s = applyPreset("chaos", snapped);
     expect(s.preset).toBe("chaos");
     expect(s.humorIntensity).toBe("spicy");
     expect(s.widgets.humorBanner).toBe(true);
+    expect(s.hudLayoutChaotic).toBe(true);
   });
 });
 

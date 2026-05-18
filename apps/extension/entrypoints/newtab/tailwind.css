@@ -129,7 +129,8 @@
   }
 
   .header-search {
-    @apply hidden flex-1 px-8 lg:block;
+    /* min-w-0: allow this flex item to shrink so extra toolbar buttons do not overflow the top bar */
+    @apply hidden min-w-0 flex-1 px-8 lg:block;
   }
 
   .header-search input {

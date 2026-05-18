@@ -67,13 +67,13 @@ export function SearchWidget({
 
   const form = (
     <form
-      className="row"
+      className="row w-full min-w-0"
       onSubmit={(e) => {
         e.preventDefault();
         goSearch();
       }}
     >
-      <div className="relative min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1 basis-0">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-sans text-xs text-accent">
           USER_LOG@TAB:&gt;
         </span>

@@ -38,6 +38,7 @@ import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { HudCanvasGrid } from "../../components/hud-canvas-grid";
 import { HudLayoutMetricsSync } from "../../components/hud-layout-metrics-sync";
 import { HudPlacementProvider } from "../../components/hud-placement-context";
+import { BackgroundRotateMinutesInput } from "../../components/background-rotate-minutes-input";
 import { UserBackgroundGallery } from "../../components/user-background-gallery";
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudColorInput } from "../../components/hud-color-input";
@@ -72,7 +73,6 @@ import {
   coerceBackgroundGradientAngleDeg,
   coerceBackgroundGradientCenterPct,
   coerceBackgroundGradientShape,
-  coerceBackgroundRotateMinutes,
   coerceClockHourFormat,
   coerceCryptoChartDays,
   coerceHumorBuiltinVoice,
@@ -333,8 +333,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const bingPaintUrlRef = useRef<string | null>(null);
   /** Cancels stale async wallpaper color sampling when the image URL changes quickly. */
   const wallpaperAccentGenRef = useRef(0);
-  /** Last wallpaper `src` for which accent persist completed successfully. */
-  const lastWallpaperAccentAppliedRef = useRef<string | null>(null);
+  /**
+   * Stable identity for the visible Bing spotlight (`bingChosenUrl`) or upload (background row id).
+   * Blob/object URLs churn without the bitmap changing; dedupe accents on this key so `persist` + storage reload cannot oscillate.
+   */
+  const lastWallpaperAccentLogicalRef = useRef<string | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const myLinesSaveTimerRef = useRef<number | null>(null);
@@ -671,21 +674,56 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   useEffect(() => {
     if (!settings.themeAccentsMatchWallpaper) {
-      lastWallpaperAccentAppliedRef.current = null;
+      lastWallpaperAccentLogicalRef.current = null;
       return;
     }
     const kind = settings.backgroundKind;
+    const visibleForAccent =
+      kind === "image" ? resolveVisibleUserBackgroundFromSettings(settings) : null;
     const src =
       kind === "bing"
         ? bingPaintUrl
         : kind === "image"
-          ? resolveVisibleUserBackgroundFromSettings(settings).dataUrl
+          ? (visibleForAccent?.dataUrl ?? null)
           : null;
+
+    const logicalKey =
+      kind === "bing"
+        ? (bingChosenUrl ?? "")
+        : kind === "image"
+          ? (visibleForAccent?.id ?? "")
+          : "";
+
     if (!src) {
-      lastWallpaperAccentAppliedRef.current = null;
+      // Bing clears `bingPaintUrl` to null while fetching/decoding the next blob; do not reset the
+      // last-applied ref or we re-persist identical accents and thrash theme + storage listeners.
+      if (kind === "bing" && bingChosenUrl) {
+        return;
+      }
+      // Uploads: avoid clearing during brief mismatches between resolved wallpaper vs `userChosenUrl`
+      // or rows that have an id before `dataUrl` is ready (same storage-thrash failure mode as Bing).
+      if (kind === "image" && settings.userBackgroundImages.length > 0) {
+        const resolveMissingPaint =
+          visibleForAccent != null &&
+          visibleForAccent.id != null &&
+          visibleForAccent.dataUrl == null;
+        const chosenPendingResolve = userChosenUrl != null && visibleForAccent?.dataUrl == null;
+        if (resolveMissingPaint || chosenPendingResolve) {
+          return;
+        }
+      }
+      lastWallpaperAccentLogicalRef.current = null;
       return;
     }
-    if (lastWallpaperAccentAppliedRef.current === src) return;
+
+    if (logicalKey !== "" && lastWallpaperAccentLogicalRef.current === logicalKey) {
+      if (settings.themePalette === "custom") {
+        return;
+      }
+    }
+    if (logicalKey !== "") {
+      lastWallpaperAccentLogicalRef.current = logicalKey;
+    }
 
     const gen = ++wallpaperAccentGenRef.current;
     let cancelled = false;
@@ -694,6 +732,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       if (cancelled || gen !== wallpaperAccentGenRef.current) return;
       if (!pair) return;
       if (!latestSettingsRef.current.themeAccentsMatchWallpaper) return;
+      const snap = latestSettingsRef.current;
+      if (
+        snap.themePalette === "custom" &&
+        snap.themeCustomAccent.toLowerCase() === pair.accent.toLowerCase() &&
+        snap.themeCustomAccent2.toLowerCase() === pair.accent2.toLowerCase()
+      ) {
+        return;
+      }
       void persist((cur) => {
         if (!cur.themeAccentsMatchWallpaper) return cur;
         return {
@@ -702,11 +748,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           themeCustomAccent: pair.accent,
           themeCustomAccent2: pair.accent2,
         };
-      }).then((ok) => {
-        if (!ok) return;
-        if (cancelled || gen !== wallpaperAccentGenRef.current) return;
-        if (!latestSettingsRef.current.themeAccentsMatchWallpaper) return;
-        lastWallpaperAccentAppliedRef.current = src;
       });
     });
 
@@ -715,11 +756,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
   }, [
     settings.themeAccentsMatchWallpaper,
+    settings.themePalette,
     settings.backgroundKind,
     settings.backgroundRotate,
     settings.backgroundRotateMinutesUser,
     settings.userBackgroundImages,
     settings.userBackgroundActiveId,
+    bingChosenUrl,
     bingPaintUrl,
     userChosenUrl,
     persist,
@@ -1618,18 +1661,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mb-2">
-                      Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
-                      Theme, background, and the rest of Appearance are unchanged.
+                      Applies right away. Adjusts jokes, the humor strip, some widget toggles, and
+                      (for Chaos) chaotic HUD layout. New installs default to Chaos. Theme,
+                      background, and the rest of Appearance are unchanged.
                     </p>
                     <div className="row wrap">
                       <button
                         type="button"
-                        className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
-                        aria-pressed={s.preset === "focus"}
-                        onClick={() => void persist((cur) => applyPreset("focus", cur))}
+                        className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
+                        aria-pressed={s.preset === "chaos"}
+                        onClick={() => void persist((cur) => applyPreset("chaos", cur))}
                       >
-                        <Target size={18} strokeWidth={2} aria-hidden />
-                        <span>Focus</span>
+                        <Flame size={18} strokeWidth={2} aria-hidden />
+                        <span>Chaos</span>
                       </button>
                       <button
                         type="button"
@@ -1644,20 +1688,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </button>
                       <button
                         type="button"
-                        className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
-                        aria-pressed={s.preset === "chaos"}
-                        onClick={() => void persist((cur) => applyPreset("chaos", cur))}
+                        className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
+                        aria-pressed={s.preset === "focus"}
+                        onClick={() => void persist((cur) => applyPreset("focus", cur))}
                       >
-                        <Flame size={18} strokeWidth={2} aria-hidden />
-                        <span>Chaos</span>
+                        <Target size={18} strokeWidth={2} aria-hidden />
+                        <span>Focus</span>
                       </button>
                     </div>
                     <div className="muted sm mt-3 flex flex-col gap-1.5">
                       <p className="m-0">
-                        <span className="text-text">Focus</span>
+                        <span className="text-text">Chaos</span>
                         {" — "}
-                        Turns jokes off, hides the humor strip, and switches Search and Clock on.
-                        Other widgets keep their current toggles.
+                        Default personality for Tabocalypse: spicier jokes and the humor strip on,
+                        chaotic HUD layout (panels stay unsnapped from the grid), other widgets stay
+                        as they are.
                       </p>
                       <p className="m-0">
                         <span className="text-text">Balanced</span>
@@ -1665,9 +1710,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         Mild jokes and the humor strip on. Widget toggles merge defaults with yours.
                       </p>
                       <p className="m-0">
-                        <span className="text-text">Chaos</span>
+                        <span className="text-text">Focus</span>
                         {" — "}
-                        Spicier jokes and the humor strip on. Other widget toggles stay as they are.
+                        Turns jokes off, hides the humor strip, and switches Search and Clock on.
+                        Other widgets keep their current toggles.
                       </p>
                     </div>
                   </div>
@@ -2087,38 +2133,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <label className="block">
                         <span className="muted sm">Bing: minutes between images</span>
-                        <input
-                          type="number"
-                          min={BACKGROUND_ROTATE_MINUTES_MIN}
-                          max={BACKGROUND_ROTATE_MINUTES_MAX}
+                        <BackgroundRotateMinutesInput
                           className="mt-1 w-full max-w-[8rem]"
                           value={s.backgroundRotateMinutesBing}
-                          onChange={(e) => {
-                            const n = coerceBackgroundRotateMinutes(
-                              Number(e.target.value),
-                              s.backgroundRotateMinutesBing,
-                            );
+                          ariaLabel="Minutes between Bing spotlight images when rotation is on"
+                          onCommit={(n) => {
                             void persist((cur) => ({ ...cur, backgroundRotateMinutesBing: n }));
                           }}
-                          aria-label="Minutes between Bing spotlight images when rotation is on"
                         />
                       </label>
                       <label className="block">
                         <span className="muted sm">Uploads: minutes between photos</span>
-                        <input
-                          type="number"
-                          min={BACKGROUND_ROTATE_MINUTES_MIN}
-                          max={BACKGROUND_ROTATE_MINUTES_MAX}
+                        <BackgroundRotateMinutesInput
                           className="mt-1 w-full max-w-[8rem]"
                           value={s.backgroundRotateMinutesUser}
-                          onChange={(e) => {
-                            const n = coerceBackgroundRotateMinutes(
-                              Number(e.target.value),
-                              s.backgroundRotateMinutesUser,
-                            );
+                          ariaLabel="Minutes between uploaded photos when rotation is on"
+                          onCommit={(n) => {
                             void persist((cur) => ({ ...cur, backgroundRotateMinutesUser: n }));
                           }}
-                          aria-label="Minutes between uploaded photos when rotation is on"
                         />
                       </label>
                     </div>
