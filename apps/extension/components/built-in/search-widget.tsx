@@ -25,11 +25,15 @@ const SEARCH_ASSIST_DESTINATION_LABELS: Record<ISettings["searchEngine"], string
 
 export function SearchWidget({
   engine,
+  assistActive,
+  onAssistActiveChange,
   humorEnabled,
   humorIntensity,
   variant = "card",
 }: {
   engine: ISettings["searchEngine"];
+  assistActive: boolean;
+  onAssistActiveChange: (active: boolean) => void;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   variant?: "card" | "header";
@@ -63,6 +67,11 @@ export function SearchWidget({
     setQ("");
   };
 
+  const submit = () => {
+    if (assistActive) goAssist();
+    else goSearch();
+  };
+
   const assistDest = SEARCH_ASSIST_DESTINATION_LABELS[engine];
 
   const form = (
@@ -70,7 +79,7 @@ export function SearchWidget({
       className="row w-full min-w-0"
       onSubmit={(e) => {
         e.preventDefault();
-        goSearch();
+        submit();
       }}
     >
       <div className="relative min-w-0 flex-1 basis-0">
@@ -85,21 +94,52 @@ export function SearchWidget({
           aria-label="Search query"
         />
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2" role="group" aria-label="Search mode">
         <HudTip
-          tip={`Open ${assistDest} in a new tab with this query. Uses your browser session only — Tabocalypse does not send this to our servers or use API keys for it.`}
+          tip={
+            assistActive
+              ? `AI search on — opens ${assistDest} when you press Enter or click again. Uses your browser session only.`
+              : `Switch to AI search (${assistDest}). Uses your browser session only — Tabocalypse does not use API keys for this.`
+          }
         >
           <button
             type="button"
-            className="btn ghost icon-only"
-            aria-label={`Open ${assistDest} with this query`}
-            onClick={goAssist}
+            className={assistActive ? "btn primary icon-only" : "btn ghost icon-only"}
+            aria-pressed={assistActive}
+            aria-label={
+              assistActive
+                ? `AI search on — open ${assistDest} with this query`
+                : `Switch to AI search (${assistDest})`
+            }
+            onClick={() => {
+              if (assistActive) goAssist();
+              else onAssistActiveChange(true);
+            }}
           >
             <Sparkles size={20} strokeWidth={2} aria-hidden />
           </button>
         </HudTip>
-        <HudTip tip="Run search in a new tab with your chosen engine">
-          <button type="submit" className="btn primary icon-only" aria-label="Search">
+        <HudTip
+          tip={
+            assistActive
+              ? "Switch to classic web search on your chosen engine"
+              : "Web search on — runs on your chosen engine when you press Enter or click again"
+          }
+        >
+          <button
+            type="button"
+            className={assistActive ? "btn ghost icon-only" : "btn primary icon-only"}
+            aria-pressed={!assistActive}
+            aria-label={
+              assistActive
+                ? "Switch to web search"
+                : `Web search on — search with ${SEARCH_ENGINE_LABELS[engine]}`
+            }
+            onClick={() => {
+              if (!assistActive) goSearch();
+              else onAssistActiveChange(false);
+            }}
+          >
             <Search size={20} strokeWidth={2} aria-hidden />
           </button>
         </HudTip>

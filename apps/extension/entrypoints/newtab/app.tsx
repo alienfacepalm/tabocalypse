@@ -3296,6 +3296,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         {s.widgets.search ? (
           <SearchWidget
             engine={s.searchEngine}
+            assistActive={s.searchAssistActive}
+            onAssistActiveChange={(active) => {
+              void persist((cur) => ({ ...cur, searchAssistActive: active }));
+            }}
             humorEnabled={s.humorEnabled}
             humorIntensity={s.humorIntensity}
             variant="header"

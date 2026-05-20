@@ -417,6 +417,8 @@ export interface ISettings {
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
   searchEngine: "ddg" | "google" | "bing";
+  /** When true, Enter in the HUD search field opens the assist destination instead of classic web search. */
+  searchAssistActive: boolean;
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
@@ -539,6 +541,7 @@ export interface ISyncSlice {
   spicyContentAcknowledged: boolean;
   widgets: Record<TWidgetKey, boolean>;
   searchEngine: ISettings["searchEngine"];
+  searchAssistActive: boolean;
   weatherLat: number;
   weatherLon: number;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
@@ -655,6 +658,7 @@ export function defaultSettings(): ISettings {
     spicyContentAcknowledged: false,
     widgets: { ...DEFAULT_WIDGETS },
     searchEngine: "ddg",
+    searchAssistActive: false,
     weatherLat: 40.7128,
     weatherLon: -74.006,
     weatherTemperatureUnit: "celsius",
@@ -717,6 +721,7 @@ function toSync(s: ISettings): ISyncSlice {
     spicyContentAcknowledged: s.spicyContentAcknowledged,
     widgets: s.widgets,
     searchEngine: s.searchEngine,
+    searchAssistActive: s.searchAssistActive,
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
     weatherTemperatureUnit: s.weatherTemperatureUnit,
@@ -885,6 +890,10 @@ function mergeSettings(
           : d.hasSeenSettingsIntro,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
     searchEngine: sync?.searchEngine ?? d.searchEngine,
+    searchAssistActive:
+      typeof sync?.searchAssistActive === "boolean"
+        ? sync.searchAssistActive
+        : d.searchAssistActive,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
     weatherTemperatureUnit: coerceWeatherTemperatureUnit(
