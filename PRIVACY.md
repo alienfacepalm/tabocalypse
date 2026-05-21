@@ -4,8 +4,8 @@
 
 ## Data stored on your device
 
-- Preferences and widget toggles may sync via the browser’s extension storage sync (if you use browser sync), controlled by Mozilla/Google/Microsoft/Apple — not by us.
-- API keys (OpenAI-compatible, OpenWeather), imported packs/plugins, notes, todos, and optional background images stay in **local** extension storage on your device.
+- Preferences, widget toggles, and **notes** (text and which note panels are open) may sync via the browser’s extension storage sync (if you use browser sync), controlled by Mozilla/Google/Microsoft/Apple — not by us.
+- API keys (OpenAI-compatible, OpenWeather), imported packs/plugins, todos, note panel **screen positions**, and optional background images stay in **local** extension storage on your device.
 
 ## Network requests (only when you use a feature)
 

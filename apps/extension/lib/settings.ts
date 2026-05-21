@@ -494,12 +494,36 @@ export interface ISettings {
 }
 
 const SYNC_KEY = "tabocalypseSync";
+const NOTES_SYNC_KEY = "tabocalypseNotes";
 const LOCAL_KEY = "tabocalypseLocal";
 /** Same payload as `SYNC_KEY`, stored in `storage.local` so preferences survive sync quota/errors and new tabs read the latest save immediately. */
 const SYNC_LOCAL_MIRROR_KEY = "tabocalypseSyncMirror";
+/** Same payload as `NOTES_SYNC_KEY`, mirrored under `storage.local` for the same reasons as prefs. */
+const NOTES_SYNC_LOCAL_MIRROR_KEY = "tabocalypseNotesMirror";
+
+/** Keys read together from `browser.storage.sync` for settings (also used to filter `storage.onChanged`). */
+export const TABOCALYPSE_SETTINGS_SYNC_KEYS = [SYNC_KEY, NOTES_SYNC_KEY] as const;
 
 /** Keys read together from `browser.storage.local` for settings (also used to filter `storage.onChanged`). */
-export const TABOCALYPSE_SETTINGS_LOCAL_KEYS = [LOCAL_KEY, SYNC_LOCAL_MIRROR_KEY] as const;
+export const TABOCALYPSE_SETTINGS_LOCAL_KEYS = [
+  LOCAL_KEY,
+  SYNC_LOCAL_MIRROR_KEY,
+  NOTES_SYNC_LOCAL_MIRROR_KEY,
+] as const;
+
+/** Chromium per-item byte limit for `storage.sync` values. */
+const SYNC_NOTES_MAX_BYTES = 8192;
+
+export interface INotesSyncSlice {
+  version: 1;
+  notes: INote[];
+  notePanels: INotePanel[];
+  notePanelsEpoch: number;
+}
+
+function syncJsonByteLength(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value)).length;
+}
 
 /** Minimal shape of `browser.storage.StorageChange` for `onChanged` filtering. */
 type TStorageChange = { oldValue?: unknown; newValue?: unknown };
@@ -512,7 +536,7 @@ export function isTabocalypseSettingsStorageChange(
     return TABOCALYPSE_SETTINGS_LOCAL_KEYS.some((k) => changes[k] !== undefined);
   }
   if (areaName === "sync") {
-    return changes[SYNC_KEY] !== undefined;
+    return changes[SYNC_KEY] !== undefined || changes[NOTES_SYNC_KEY] !== undefined;
   }
   return false;
 }
@@ -523,6 +547,82 @@ function mergeSyncFromSources(
 ): Partial<ISyncSlice> | undefined {
   if (!cloud && !mirror) return undefined;
   return { ...cloud, ...mirror };
+}
+
+function mergeNotesSyncFromSources(
+  cloud: Partial<INotesSyncSlice> | undefined,
+  mirror: Partial<INotesSyncSlice> | undefined,
+): Partial<INotesSyncSlice> | undefined {
+  if (!cloud && !mirror) return undefined;
+  return { ...cloud, ...mirror };
+}
+
+/** Resolve notes from sync (cloud + mirror) and legacy local storage on load. */
+function resolveNotesFromStorage(
+  cloud: Partial<INotesSyncSlice> | undefined,
+  mirror: Partial<INotesSyncSlice> | undefined,
+  local: Partial<ILocalSlice> | undefined,
+  mergeNow: number,
+): Pick<ISettings, "notes" | "notePanels" | "notePanelsEpoch"> {
+  const notesSync = mergeNotesSyncFromSources(cloud, mirror);
+  const mirrorNotes = coerceNotes(mirror?.notes);
+  const cloudNotes = coerceNotes(cloud?.notes);
+  let notes = mergeNotesPreferNewerBaseline(mirrorNotes, cloudNotes);
+  const legacyLocalNotes = coerceNotes(local?.notes);
+  if (legacyLocalNotes.length > 0) {
+    notes = mergeNotesPreferNewerBaseline(notes, legacyLocalNotes);
+  }
+  const legacyNotesText = typeof local?.notesText === "string" ? local.notesText : "";
+  if (notes.length === 0 && legacyNotesText.trim().length > 0) {
+    notes = migrateLegacyNotesTextIntoNotes(legacyNotesText, mergeNow);
+  }
+
+  const mergedNoteIds = new Set(notes.map((n) => n.id));
+  const mirrorEpoch =
+    typeof mirror?.notePanelsEpoch === "number" && Number.isFinite(mirror.notePanelsEpoch)
+      ? Math.max(0, Math.floor(mirror.notePanelsEpoch))
+      : 0;
+  const cloudEpoch =
+    typeof cloud?.notePanelsEpoch === "number" && Number.isFinite(cloud.notePanelsEpoch)
+      ? Math.max(0, Math.floor(cloud.notePanelsEpoch))
+      : 0;
+  let notePanels = mergeNotePanelsForStorageReload(
+    coerceNotePanels(mirror?.notePanels, mergedNoteIds),
+    coerceNotePanels(cloud?.notePanels, mergedNoteIds),
+    mirrorEpoch,
+    cloudEpoch,
+    mergedNoteIds,
+  );
+  let notePanelsEpoch = Math.max(mirrorEpoch, cloudEpoch);
+
+  if (local?.notePanels) {
+    const localEpoch =
+      typeof local.notePanelsEpoch === "number" && Number.isFinite(local.notePanelsEpoch)
+        ? Math.max(0, Math.floor(local.notePanelsEpoch))
+        : 0;
+    notePanels = mergeNotePanelsForStorageReload(
+      notePanels,
+      coerceNotePanels(local.notePanels, mergedNoteIds),
+      notePanelsEpoch,
+      localEpoch,
+      mergedNoteIds,
+    );
+    notePanelsEpoch = Math.max(notePanelsEpoch, localEpoch);
+  } else if (notesSync?.notePanels) {
+    notePanels = coerceNotePanels(notesSync.notePanels, mergedNoteIds);
+    if (
+      typeof notesSync.notePanelsEpoch === "number" &&
+      Number.isFinite(notesSync.notePanelsEpoch)
+    ) {
+      notePanelsEpoch = Math.max(0, Math.floor(notesSync.notePanelsEpoch));
+    }
+  }
+
+  if (notePanels.length > 0 && notePanelsEpoch === 0) {
+    notePanelsEpoch = 1;
+  }
+
+  return { notes, notePanels, notePanelsEpoch };
 }
 
 export interface ISyncSlice {
@@ -581,9 +681,11 @@ export interface ILocalSlice {
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
   notesText: string;
+  /** @deprecated Migrated to `storage.sync` — read only when upgrading from older local-only storage. */
   notes?: INote[];
+  /** @deprecated Migrated to `storage.sync` — read only when upgrading from older local-only storage. */
   notePanels?: INotePanel[];
-  /** Increments whenever stored `notePanels` changes (local only). */
+  /** @deprecated Migrated to `storage.sync` — read only when upgrading from older local-only storage. */
   notePanelsEpoch?: number;
   todos: ITodoItem[];
   hudLayoutChaotic?: boolean;
@@ -745,6 +847,15 @@ function toSync(s: ISettings): ISyncSlice {
   };
 }
 
+function toNotesSync(s: ISettings): INotesSyncSlice {
+  return {
+    version: 1,
+    notes: s.notes,
+    notePanels: s.notePanels,
+    notePanelsEpoch: s.notePanelsEpoch,
+  };
+}
+
 function toLocal(s: ISettings): ILocalSlice {
   return {
     version: 1,
@@ -763,9 +874,6 @@ function toLocal(s: ISettings): ILocalSlice {
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
     notesText: s.notesText,
-    notes: s.notes,
-    notePanels: s.notePanels,
-    notePanelsEpoch: s.notePanelsEpoch,
     todos: s.todos,
     hudLayoutChaotic: s.hudLayoutChaotic,
     hudLayoutLocked: s.hudLayoutLocked,
@@ -810,6 +918,8 @@ export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
 
 function mergeSettings(
   sync: Partial<ISyncSlice> | undefined,
+  notesCloud: Partial<INotesSyncSlice> | undefined,
+  notesMirror: Partial<INotesSyncSlice> | undefined,
   local: Partial<ILocalSlice> | undefined,
 ): ISettings {
   const d = defaultSettings();
@@ -838,19 +948,11 @@ function mergeSettings(
     d.backgroundRotateMinutesUser,
   );
   const mergeNow = Date.now();
-  let mergedNotes = coerceNotes(local?.notes);
-  const legacyNotesText = typeof local?.notesText === "string" ? local.notesText : "";
-  if (mergedNotes.length === 0 && legacyNotesText.trim().length > 0) {
-    mergedNotes = migrateLegacyNotesTextIntoNotes(legacyNotesText, mergeNow);
-  }
-  const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
-  const mergedNotePanels = coerceNotePanels(local?.notePanels, mergedNoteIds);
-  const notePanelsEpoch =
-    typeof local?.notePanelsEpoch === "number" && Number.isFinite(local.notePanelsEpoch)
-      ? Math.max(0, Math.floor(local.notePanelsEpoch))
-      : mergedNotePanels.length > 0
-        ? 1
-        : 0;
+  const {
+    notes: mergedNotes,
+    notePanels: mergedNotePanels,
+    notePanelsEpoch,
+  } = resolveNotesFromStorage(notesCloud, notesMirror, local, mergeNow);
 
   const preset = coercePreset(sync?.preset, d.preset);
 
@@ -973,13 +1075,15 @@ function mergeSettings(
 export async function loadSettings(): Promise<ISettings> {
   const localRaw = await browser.storage.local.get([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   const syncRaw = browser.storage.sync
-    ? await browser.storage.sync.get(SYNC_KEY)
+    ? await browser.storage.sync.get([...TABOCALYPSE_SETTINGS_SYNC_KEYS])
     : ({} as Record<string, unknown>);
   const cloudSync = syncRaw[SYNC_KEY] as ISyncSlice | undefined;
   const mirrorSync = localRaw[SYNC_LOCAL_MIRROR_KEY] as ISyncSlice | undefined;
   const sync = mergeSyncFromSources(cloudSync, mirrorSync);
+  const cloudNotes = syncRaw[NOTES_SYNC_KEY] as INotesSyncSlice | undefined;
+  const mirrorNotes = localRaw[NOTES_SYNC_LOCAL_MIRROR_KEY] as INotesSyncSlice | undefined;
   const local = localRaw[LOCAL_KEY] as ILocalSlice | undefined;
-  return mergeSettings(sync, local);
+  return mergeSettings(sync, cloudNotes, mirrorNotes, local);
 }
 
 function isSyncQuotaError(err: unknown): boolean {
@@ -992,25 +1096,34 @@ function isSyncQuotaError(err: unknown): boolean {
 
 export async function saveSettings(s: ISettings): Promise<void> {
   const syncPayload = toSync(s);
+  const notesPayload = toNotesSync(s);
   const writes: Promise<unknown>[] = [
     browser.storage.local.set({
       [LOCAL_KEY]: toLocal(s),
       [SYNC_LOCAL_MIRROR_KEY]: syncPayload,
+      [NOTES_SYNC_LOCAL_MIRROR_KEY]: notesPayload,
     }),
   ];
   if (browser.storage.sync) {
+    if (syncJsonByteLength(notesPayload) > SYNC_NOTES_MAX_BYTES) {
+      throw new Error(
+        "Notes are too large for browser sync (~8 KB limit). Your changes are saved on this device — shorten notes or remove some to sync across devices.",
+      );
+    }
     writes.push(
-      browser.storage.sync.set({ [SYNC_KEY]: syncPayload }).catch((err: unknown) => {
-        if (isSyncQuotaError(err)) {
-          if (import.meta.env.DEV) {
-            console.warn("[Tabocalypse] sync write throttled:", err);
+      browser.storage.sync
+        .set({ [SYNC_KEY]: syncPayload, [NOTES_SYNC_KEY]: notesPayload })
+        .catch((err: unknown) => {
+          if (isSyncQuotaError(err)) {
+            if (import.meta.env.DEV) {
+              console.warn("[Tabocalypse] sync write throttled:", err);
+            }
+            throw new Error(
+              "Settings are changing too fast for browser sync. Your changes are saved locally — they'll sync once things settle down. Wait a moment before making more changes.",
+            );
           }
-          throw new Error(
-            "Settings are changing too fast for browser sync. Your changes are saved locally — they'll sync once things settle down. Wait a moment before making more changes.",
-          );
-        }
-        throw err;
-      }),
+          throw err;
+        }),
     );
   }
   await Promise.all(writes);

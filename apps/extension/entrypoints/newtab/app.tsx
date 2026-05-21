@@ -1646,8 +1646,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     dialog.
                   </p>
                   <p className="settings-welcome-note">
-                    Open settings anytime from the gear button in the header. Your choices stay on
-                    this device unless you use browser sync.
+                    Open settings anytime from the gear button in the header. Most preferences and
+                    notes sync when you use browser sync; API keys, todos, and backgrounds stay on
+                    this device.
                   </p>
                   <button type="button" className="btn primary" onClick={acknowledgeSettingsIntro}>
                     Got it

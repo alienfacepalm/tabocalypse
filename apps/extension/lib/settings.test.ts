@@ -22,6 +22,7 @@ vi.mock("webextension-polyfill", () => ({
 }));
 
 const SYNC_KEY = "tabocalypseSync";
+const NOTES_SYNC_KEY = "tabocalypseNotes";
 const LOCAL_KEY = "tabocalypseLocal";
 
 const {
@@ -323,7 +324,7 @@ describe("loadSettings", () => {
   it("merges empty storage into defaults", async () => {
     const s = await loadSettings();
     expect(s).toEqual(defaultSettings());
-    expect(syncGet).toHaveBeenCalledWith(SYNC_KEY);
+    expect(syncGet).toHaveBeenCalledWith([SYNC_KEY, NOTES_SYNC_KEY]);
     expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   });
 
@@ -535,6 +536,55 @@ describe("loadSettings", () => {
     expect(s.userBackgroundImages[0]!.dataUrl).toBe("data:image/png;base64,QQ==");
     expect(s.userBackgroundImages[0]!.id).toBeTruthy();
   });
+  it("loads notes from storage.sync tabocalypseNotes", async () => {
+    const note = {
+      id: "n1",
+      name: "A",
+      tags: [],
+      text: "hello",
+      locked: false,
+      createdAt: 100,
+      updatedAt: 200,
+    };
+    syncGet.mockResolvedValue({
+      [NOTES_SYNC_KEY]: {
+        version: 1,
+        notes: [note],
+        notePanels: [{ noteId: "n1", position: { xPct: 70, yPct: 2 } }],
+        notePanelsEpoch: 3,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.notes).toEqual([note]);
+    expect(s.notePanels).toEqual([{ noteId: "n1", position: { xPct: 70, yPct: 2 } }]);
+    expect(s.notePanelsEpoch).toBe(3);
+  });
+
+  it("merges newer note from sync over older mirror by updatedAt", async () => {
+    const older = {
+      id: "n1",
+      name: "A",
+      tags: [],
+      text: "old",
+      locked: false,
+      createdAt: 1,
+      updatedAt: 10,
+    };
+    const newer = { ...older, text: "new", updatedAt: 50 };
+    syncGet.mockResolvedValue({
+      [NOTES_SYNC_KEY]: { version: 1, notes: [newer], notePanels: [], notePanelsEpoch: 0 },
+    });
+    localGet.mockResolvedValue({
+      [TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]: {
+        version: 1,
+        notes: [older],
+        notePanels: [],
+        notePanelsEpoch: 0,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.notes[0]?.text).toBe("new");
+  });
 });
 
 describe("saveSettings", () => {
@@ -570,13 +620,21 @@ describe("saveSettings", () => {
       themeMode: "dark",
       themePalette: "glitch",
     });
+    expect(syncArg[NOTES_SYNC_KEY]).toMatchObject({
+      version: 1,
+      notes: s.notes,
+      notePanels: s.notePanels,
+      notePanelsEpoch: s.notePanelsEpoch,
+    });
     expect(localArg[LOCAL_KEY]).toMatchObject({
       version: 1,
       openaiApiKey: "secret",
       importedPacks: s.importedPacks,
     });
     expect(localArg[LOCAL_KEY]).not.toHaveProperty("preset");
+    expect(localArg[LOCAL_KEY]).not.toHaveProperty("notes");
     expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]).toEqual(syncArg[SYNC_KEY]);
+    expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]).toEqual(syncArg[NOTES_SYNC_KEY]);
   });
 
   it("writes local only when storage.sync is unavailable", async () => {
