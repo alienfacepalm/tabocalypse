@@ -2,6 +2,7 @@ import React from "react";
 import browser from "webextension-polyfill";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
 import { faviconUrl } from "../../lib/favicon-url";
+import { HudTip } from "../hud-tip";
 import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
 
 export function TopSitesWidget({ permissionsEpoch }: { permissionsEpoch: number }) {
@@ -90,20 +91,25 @@ export function BookmarksWidget({ permissionsEpoch }: { permissionsEpoch: number
       <HudPanelTitle>Bookmarks</HudPanelTitle>
       <HudPanelBody>
         <ul className="link-grid">
-          {marks.map((b) => (
-            <li key={b.id}>
-              <a href={b.url} target="_blank" rel="noreferrer">
-                <img
-                  src={faviconUrl(b.url ?? "")}
-                  alt=""
-                  width={16}
-                  height={16}
-                  className="favicon"
-                />
-                {coerceAlarmMetaMessage(b.title as unknown) || b.url}
-              </a>
-            </li>
-          ))}
+          {marks.map((b) => {
+            const label = coerceAlarmMetaMessage(b.title as unknown) || b.url || "";
+            return (
+              <li key={b.id}>
+                <HudTip tip={label} wrapClassName="block min-w-0 w-full">
+                  <a href={b.url} target="_blank" rel="noreferrer">
+                    <img
+                      src={faviconUrl(b.url ?? "")}
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="favicon"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{label}</span>
+                  </a>
+                </HudTip>
+              </li>
+            );
+          })}
         </ul>
       </HudPanelBody>
     </section>

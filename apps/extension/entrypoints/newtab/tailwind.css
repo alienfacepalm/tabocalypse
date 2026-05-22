@@ -416,7 +416,7 @@
   }
 
   .link-grid a {
-    @apply flex items-center gap-2 border-b border-transparent text-text no-underline;
+    @apply flex min-w-0 w-full items-center gap-2 border-b border-transparent text-text no-underline;
   }
 
   .favicon {

@@ -37,9 +37,12 @@ export function HudTip({
   children,
   bump,
   bumpDurationMs = 1600,
+  wrapClassName,
 }: {
   tip: string;
   children: ReactElement;
+  /** Extra classes on the hover/focus wrapper (e.g. `min-w-0 flex-1` inside flex rows). */
+  wrapClassName?: string;
   /**
    * Incrementing value that forces the tooltip open briefly.
    * Useful for “you tried something disabled” nudges (e.g. locked drag handles).
@@ -199,7 +202,7 @@ export function HudTip({
     <>
       <div
         ref={wrapRef}
-        className="inline-flex max-w-full align-middle"
+        className={["inline-flex max-w-full align-middle", wrapClassName].filter(Boolean).join(" ")}
         onPointerEnter={showFromPointer}
         onPointerLeave={() => {
           setHovered(false);
