@@ -421,6 +421,8 @@ export interface ISettings {
   searchAssistActive: boolean;
   weatherLat: number;
   weatherLon: number;
+  /** Clears the default-location warning once the user updates Weather coordinates or enables auto geo. */
+  weatherGeoAdjusted: boolean;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
   /** When true, temperature units follow the browser locale; when false, `weatherTemperatureUnit` is fixed. */
   weatherTemperatureUnitAuto: boolean;
@@ -644,6 +646,7 @@ export interface ISyncSlice {
   searchAssistActive: boolean;
   weatherLat: number;
   weatherLon: number;
+  weatherGeoAdjusted: boolean;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
   weatherTemperatureUnitAuto: boolean;
   clockHourFormat: TClockHourFormat;
@@ -736,6 +739,34 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   humorBanner: "Humor banner",
 };
 
+export function resolveWeatherGeoAdjusted(
+  raw: {
+    weatherGeoAdjusted?: unknown;
+    weatherLat?: unknown;
+    weatherLon?: unknown;
+    weatherAutoGeo?: unknown;
+  },
+  defaults: Pick<ISettings, "weatherLat" | "weatherLon"> = defaultSettings(),
+): boolean {
+  if (typeof raw.weatherGeoAdjusted === "boolean") {
+    return raw.weatherGeoAdjusted;
+  }
+  if (raw.weatherAutoGeo === true) {
+    return true;
+  }
+  if (typeof raw.weatherLat === "number" && Number.isFinite(raw.weatherLat)) {
+    if (raw.weatherLat !== defaults.weatherLat) {
+      return true;
+    }
+  }
+  if (typeof raw.weatherLon === "number" && Number.isFinite(raw.weatherLon)) {
+    if (raw.weatherLon !== defaults.weatherLon) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function defaultSettings(): ISettings {
   return {
     version: 1,
@@ -763,6 +794,7 @@ export function defaultSettings(): ISettings {
     searchAssistActive: false,
     weatherLat: 40.7128,
     weatherLon: -74.006,
+    weatherGeoAdjusted: false,
     weatherTemperatureUnit: "celsius",
     weatherTemperatureUnitAuto: true,
     clockHourFormat: "24h",
@@ -771,7 +803,7 @@ export function defaultSettings(): ISettings {
     weatherLakesEmbedEnabled: false,
     cryptoChartDays: 1,
     useOpenWeather: false,
-    backgroundKind: "gradient",
+    backgroundKind: "bing",
     backgroundRotate: true,
     backgroundRotateMinutesBing: DEFAULT_BACKGROUND_ROTATE_MINUTES,
     backgroundRotateMinutesUser: DEFAULT_BACKGROUND_ROTATE_MINUTES,
@@ -826,6 +858,7 @@ function toSync(s: ISettings): ISyncSlice {
     searchAssistActive: s.searchAssistActive,
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
+    weatherGeoAdjusted: s.weatherGeoAdjusted,
     weatherTemperatureUnit: s.weatherTemperatureUnit,
     weatherTemperatureUnitAuto: s.weatherTemperatureUnitAuto,
     clockHourFormat: s.clockHourFormat,
@@ -998,6 +1031,7 @@ function mergeSettings(
         : d.searchAssistActive,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
+    weatherGeoAdjusted: resolveWeatherGeoAdjusted(sync ?? {}, d),
     weatherTemperatureUnit: coerceWeatherTemperatureUnit(
       sync?.weatherTemperatureUnit,
       d.weatherTemperatureUnit,

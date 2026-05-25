@@ -34,6 +34,7 @@ const {
   coercePreset,
   DEFAULT_WIDGETS,
   mergeWidgets,
+  resolveWeatherGeoAdjusted,
   WIDGET_LABELS,
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
   resolveUserBackgroundImage,
@@ -60,6 +61,23 @@ describe("mergeWidgets", () => {
     expect(m.clock).toBe(false);
     expect(m.humorBanner).toBe(true);
     expect(Object.keys(m).sort()).toEqual(Object.keys(DEFAULT_WIDGETS).sort());
+  });
+});
+
+describe("resolveWeatherGeoAdjusted", () => {
+  it("preserves an explicit stored flag", () => {
+    expect(resolveWeatherGeoAdjusted({ weatherGeoAdjusted: false })).toBe(false);
+    expect(resolveWeatherGeoAdjusted({ weatherGeoAdjusted: true })).toBe(true);
+  });
+
+  it("infers true from custom coordinates or auto geo for upgrades", () => {
+    expect(
+      resolveWeatherGeoAdjusted({
+        weatherLat: 34.0522,
+        weatherLon: -118.2437,
+      }),
+    ).toBe(true);
+    expect(resolveWeatherGeoAdjusted({ weatherAutoGeo: true })).toBe(true);
   });
 });
 
@@ -155,11 +173,13 @@ describe("defaultSettings", () => {
     expect(s.openaiBaseUrl).toBe("https://api.openai.com/v1");
     expect(s.clockHourFormat).toBe("24h");
     expect(s.weatherTemperatureUnitAuto).toBe(true);
+    expect(s.weatherGeoAdjusted).toBe(false);
     expect(s.clockHourFormatAuto).toBe(false);
     expect(s.cryptoChartDays).toBe(1);
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);
+    expect(s.backgroundKind).toBe("bing");
     expect(s.hudLayoutChaotic).toBe(true);
     expect(s.humorIntensity).toBe("spicy");
     expect(s.humorBuiltinVoice).toBe("gen_z");
@@ -414,6 +434,41 @@ describe("loadSettings", () => {
     expect(s.themeMode).toBe("light");
     expect(s.themePalette).toBe("ocean");
     expect(s.hasSeenSettingsIntro).toBe(true);
+  });
+
+  it("infers weatherGeoAdjusted for upgraded profiles with custom coordinates", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "glitch",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: [],
+        spicyContentAcknowledged: false,
+        widgets: {},
+        searchEngine: "ddg",
+        weatherLat: 34.0522,
+        weatherLon: -118.2437,
+        weatherTemperatureUnit: "celsius",
+        clockHourFormat: "24h",
+        weatherAutoGeo: false,
+        useOpenWeather: false,
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        backgroundGradientMid: "#1a1a1f",
+        backgroundGradientEnd: "#2a2a33",
+        backgroundGradientShape: "linear",
+        backgroundGradientAngleDeg: 145,
+        backgroundGradientCenterXPct: 50,
+        backgroundGradientCenterYPct: 50,
+        debugPluginSource: false,
+      },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.weatherGeoAdjusted).toBe(true);
   });
 
   it("honors explicit hasSeenSettingsIntro false in sync", async () => {

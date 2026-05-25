@@ -22,6 +22,8 @@ type TWeatherPanelView = "forecast" | "lakes";
 export function WeatherWidget({
   lat,
   lon,
+  showGeoAccuracyHint,
+  onOpenWeatherSettings,
   effectiveTemperatureUnit,
   displayLocale,
   lakesEmbedEnabled,
@@ -29,6 +31,8 @@ export function WeatherWidget({
 }: {
   lat: number;
   lon: number;
+  showGeoAccuracyHint: boolean;
+  onOpenWeatherSettings: () => void;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
   /** When true, adds a Forecast / 2 Lakes switch and optional iframe (Settings → Weather). */
@@ -98,6 +102,23 @@ export function WeatherWidget({
         <p className="muted mt-1 text-xs leading-tight">
           Open-Meteo (no key). Coords: {coordFmt.format(lat)}, {coordFmt.format(lon)}
         </p>
+        {showGeoAccuracyHint ? (
+          <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
+            Default GEO location still active. Open{" "}
+            <HudTip tip="Open Settings and jump to the Weather section">
+              <button
+                type="button"
+                className="linkish p-0 text-xs"
+                onClick={onOpenWeatherSettings}
+                aria-label="Open Settings and jump to the Weather section"
+              >
+                Settings &gt; Weather
+              </button>
+            </HudTip>{" "}
+            from the gear button in the top bar, then update the coordinates so the forecast targets
+            your actual area.
+          </p>
+        ) : null}
         {lakesEmbedEnabled ? (
           <div className="row wrap gap-1 mt-1" role="group" aria-label="Weather panel view">
             <HudTip tip="Show the Open-Meteo forecast for your saved coordinates">

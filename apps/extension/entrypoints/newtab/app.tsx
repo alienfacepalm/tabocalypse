@@ -88,6 +88,7 @@ import {
   mergeNotePanelsForStorageReload,
   mergeWidgets,
   mergeNotesPreferNewerBaseline,
+  resolveWeatherGeoAdjusted,
   resolveUserBackgroundImage,
   saveSettings,
   type THumorIntensity,
@@ -143,6 +144,14 @@ const BG_MAX_LABEL = "1.5 MB";
 const BG_TOTAL_LABEL = "6 MB";
 
 type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
+
+type TSettingsSectionJump =
+  | "weather"
+  | "widgets"
+  | "optionalPermissions"
+  | "topSitesPermission"
+  | "bookmarksPermission"
+  | "tabsPermission";
 
 type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
 
@@ -320,7 +329,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   /** Bumped when optional/extension permissions change so HUD widgets refetch (mount-only effects otherwise stay stale). */
   const [permissionsEpoch, setPermissionsEpoch] = useState(0);
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
+  const [pendingSettingsSectionJump, setPendingSettingsSectionJump] =
+    useState<TSettingsSectionJump | null>(null);
   const weatherManualGeoEpochRef = useRef(0);
+  const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const tabsPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const [alarmWhen, setAlarmWhen] = useState("");
   const [alarmMessage, setAlarmMessage] = useState("");
   const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
@@ -784,6 +801,65 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
   }, [persist]);
 
+  useEffect(() => {
+    if (!openSettings || !pendingSettingsSectionJump) {
+      return;
+    }
+    const section =
+      pendingSettingsSectionJump === "weather"
+        ? weatherSettingsSectionRef.current
+        : pendingSettingsSectionJump === "widgets"
+          ? widgetsSettingsSectionRef.current
+          : optionalPermissionsSettingsSectionRef.current;
+    if (!section) {
+      return;
+    }
+    section.open = true;
+    section.scrollIntoView({ block: "start" });
+    const focusTarget =
+      pendingSettingsSectionJump === "topSitesPermission"
+        ? topSitesPermissionButtonRef.current
+        : pendingSettingsSectionJump === "bookmarksPermission"
+          ? bookmarksPermissionButtonRef.current
+          : pendingSettingsSectionJump === "tabsPermission"
+            ? tabsPermissionButtonRef.current
+            : section.querySelector("summary");
+    if (focusTarget instanceof HTMLElement) {
+      focusTarget.focus();
+    }
+    setPendingSettingsSectionJump(null);
+  }, [openSettings, pendingSettingsSectionJump]);
+
+  const openWeatherSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("weather");
+    setOpenSettings(true);
+  }, []);
+
+  const openWidgetsSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("widgets");
+    setOpenSettings(true);
+  }, []);
+
+  const openOptionalPermissionsSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("optionalPermissions");
+    setOpenSettings(true);
+  }, []);
+
+  const openTopSitesSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("topSitesPermission");
+    setOpenSettings(true);
+  }, []);
+
+  const openBookmarksSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("bookmarksPermission");
+    setOpenSettings(true);
+  }, []);
+
+  const openTabsSettingsSection = useCallback(() => {
+    setPendingSettingsSectionJump("tabsPermission");
+    setOpenSettings(true);
+  }, []);
+
   const fetchWeatherLocationOnce = useCallback(() => {
     if (latestSettingsRef.current.weatherAutoGeo) return;
 
@@ -807,6 +883,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           ...cur,
           weatherLat: outcome.latitude,
           weatherLon: outcome.longitude,
+          weatherGeoAdjusted: true,
         }));
         return;
       }
@@ -833,6 +910,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           ...cur,
           weatherLat: outcome.latitude,
           weatherLon: outcome.longitude,
+          weatherGeoAdjusted: true,
         }));
         return;
       }
@@ -1646,9 +1724,33 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     dialog.
                   </p>
                   <p className="settings-welcome-note">
-                    Open settings anytime from the gear button in the header. Most preferences and
-                    notes sync when you use browser sync; API keys, todos, and backgrounds stay on
-                    this device.
+                    Start with{" "}
+                    <HudTip tip="Jump to the Widgets section">
+                      <button
+                        type="button"
+                        className="linkish p-0"
+                        onClick={openWidgetsSettingsSection}
+                        aria-label="Open Settings and jump to the Widgets section"
+                      >
+                        Settings &gt; Widgets
+                      </button>
+                    </HudTip>{" "}
+                    to turn panels on, then{" "}
+                    <HudTip tip="Jump to Optional permissions">
+                      <button
+                        type="button"
+                        className="linkish p-0"
+                        onClick={openOptionalPermissionsSettingsSection}
+                        aria-label="Open Settings and jump to Optional permissions"
+                      >
+                        Settings &gt; Optional permissions
+                      </button>
+                    </HudTip>{" "}
+                    for Top sites, Bookmarks, and Tab guilt.
+                  </p>
+                  <p className="settings-welcome-note">
+                    Most preferences and notes sync when you use browser sync; API keys, todos, and
+                    backgrounds stay on this device.
                   </p>
                   <button type="button" className="btn primary" onClick={acknowledgeSettingsIntro}>
                     Got it
@@ -1810,7 +1912,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details ref={widgetsSettingsSectionRef} className="acc-item">
                   <summary className="acc-summary">
                     <span className="acc-title">Widgets</span>
                   </summary>
@@ -2465,7 +2567,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details ref={weatherSettingsSectionRef} id="settings-weather" className="acc-item">
                   <summary className="acc-summary">
                     <span className="acc-title">Weather</span>
                   </summary>
@@ -2487,6 +2589,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         does not track your movements in real time.
                       </p>
                     )}
+                    {!s.weatherGeoAdjusted ? (
+                      <p className="mb-3 mt-0 text-xs leading-tight text-[var(--color-accent2)]">
+                        Weather is still using the default GEO location. Update the coordinates or
+                        run a browser location lookup so the forecast matches your area.
+                      </p>
+                    ) : null}
                     <div className="row">
                       <label className="block">
                         Lat
@@ -2497,7 +2605,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           disabled={s.weatherAutoGeo}
                           onChange={(e) => {
                             const v = Number(e.target.value);
-                            void persist((cur) => ({ ...cur, weatherLat: v }));
+                            void persist((cur) => ({
+                              ...cur,
+                              weatherLat: v,
+                              weatherGeoAdjusted: true,
+                            }));
                           }}
                         />
                       </label>
@@ -2510,7 +2622,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           disabled={s.weatherAutoGeo}
                           onChange={(e) => {
                             const v = Number(e.target.value);
-                            void persist((cur) => ({ ...cur, weatherLon: v }));
+                            void persist((cur) => ({
+                              ...cur,
+                              weatherLon: v,
+                              weatherGeoAdjusted: true,
+                            }));
                           }}
                         />
                       </label>
@@ -2621,7 +2737,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details ref={optionalPermissionsSettingsSectionRef} className="acc-item">
                   <summary className="acc-summary">
                     <span className="acc-title">Optional permissions</span>
                   </summary>
@@ -2634,6 +2750,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </p>
                     <div className="row wrap gap-2">
                       <button
+                        ref={topSitesPermissionButtonRef}
                         type="button"
                         className="btn has-icon"
                         aria-label={
@@ -2672,6 +2789,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </span>
                       </button>
                       <button
+                        ref={bookmarksPermissionButtonRef}
                         type="button"
                         className="btn has-icon"
                         aria-label={
@@ -2710,6 +2828,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </span>
                       </button>
                       <button
+                        ref={tabsPermissionButtonRef}
                         type="button"
                         className="btn has-icon"
                         aria-label={
@@ -3212,6 +3331,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     typeof parsed.weatherTemperatureUnitAuto === "boolean"
                                       ? parsed.weatherTemperatureUnitAuto
                                       : d.weatherTemperatureUnitAuto,
+                                  weatherGeoAdjusted: resolveWeatherGeoAdjusted(parsed, d),
                                   weatherLakesEmbedEnabled:
                                     typeof parsed.weatherLakesEmbedEnabled === "boolean"
                                       ? parsed.weatherLakesEmbedEnabled
@@ -3558,7 +3678,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 locked={s.hudLayoutLocked}
                 onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
               >
-                <TabGuilt permissionsEpoch={permissionsEpoch} />
+                <TabGuilt
+                  permissionsEpoch={permissionsEpoch}
+                  onOpenTabsSettings={openTabsSettingsSection}
+                />
               </DraggableHudPanel>
             ) : null}
             {s.widgets.weather ? (
@@ -3574,6 +3697,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 <WeatherWidget
                   lat={s.weatherLat}
                   lon={s.weatherLon}
+                  showGeoAccuracyHint={!s.weatherGeoAdjusted}
+                  onOpenWeatherSettings={openWeatherSettingsSection}
                   effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
                   displayLocale={hudNumberLocale}
                   onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
@@ -3631,7 +3756,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 locked={s.hudLayoutLocked}
                 onCommit={(pos) => commitHudPanel("topSites", pos)}
               >
-                <TopSitesWidget permissionsEpoch={permissionsEpoch} />
+                <TopSitesWidget
+                  permissionsEpoch={permissionsEpoch}
+                  onOpenTopSitesSettings={openTopSitesSettingsSection}
+                />
               </DraggableHudPanel>
             ) : null}
             {s.widgets.bookmarksStrip ? (
@@ -3644,7 +3772,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 locked={s.hudLayoutLocked}
                 onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
               >
-                <BookmarksWidget permissionsEpoch={permissionsEpoch} />
+                <BookmarksWidget
+                  permissionsEpoch={permissionsEpoch}
+                  onOpenBookmarksSettings={openBookmarksSettingsSection}
+                />
               </DraggableHudPanel>
             ) : null}
             {s.importedPlugins.some((p) => p.enabled) ? (
@@ -3871,7 +4002,13 @@ export default App as React.FC<{ initialSettings: ISettings }>;
 /** How often to re-query the current window tab count so the panel stays accurate. */
 const TAB_GUILT_POLL_MS = 2000;
 
-function TabGuilt({ permissionsEpoch }: { permissionsEpoch: number }) {
+function TabGuilt({
+  permissionsEpoch,
+  onOpenTabsSettings,
+}: {
+  permissionsEpoch: number;
+  onOpenTabsSettings: () => void;
+}) {
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
     const tabsApi = browser.tabs;
@@ -3902,7 +4039,20 @@ function TabGuilt({ permissionsEpoch }: { permissionsEpoch: number }) {
       <section className="card">
         <HudPanelTitle>Tab guilt</HudPanelTitle>
         <HudPanelBody>
-          <p className="muted">Grant tabs permission in settings.</p>
+          <p className="muted">
+            Tab guilt needs browser permission. Open{" "}
+            <HudTip tip="Open Settings and jump to Optional permissions">
+              <button
+                type="button"
+                className="linkish p-0"
+                onClick={onOpenTabsSettings}
+                aria-label="Open Settings and jump to Optional permissions to enable Tab guilt"
+              >
+                Settings &gt; Optional permissions
+              </button>
+            </HudTip>{" "}
+            and enable Tab guilt (tabs).
+          </p>
         </HudPanelBody>
       </section>
     );

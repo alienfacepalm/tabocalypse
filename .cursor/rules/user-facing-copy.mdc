@@ -8,3 +8,6 @@ alwaysApply: true
 - **Do not** show raw **TypeScript / storage identifiers** to users (camelCase `TWidgetKey` string literal values, internal enum names, JSON field names) when the UI is meant for non-developers.
 - **Widget toggles** and similar lists: use **`WIDGET_LABELS`** from [`apps/extension/lib/settings.ts`](../../apps/extension/lib/settings.ts) (or the same pattern — a single **`Record<…, string>`** next to the key type) so labels stay in sync when keys are added.
 - When you add a new **`TWidgetKey`** union member, add the matching **`WIDGET_LABELS`** entry and extend **`apps/extension/lib/settings.test.ts`** if the suite asserts coverage.
+- When UI copy tells the user to change something in settings, name the exact path (for example `Settings > Weather` or `Settings > Optional permissions`) instead of vague "in settings" / "from the gear button" wording.
+- **All** user-facing messages that point people to settings, including first-run / welcome prompts, should add a direct control that opens Settings and deep-links to the exact section when practical.
+- When the message is about a specific toggle or permission, deep-link to the containing section and focus the exact control when practical.
