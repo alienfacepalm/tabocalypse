@@ -1,0 +1,19 @@
+---
+description: Automatically recover from Prettier failures during pnpm check, and run pnpm build after checks for meaningful changes.
+alwaysApply: true
+---
+
+# Auto format → check → build
+
+When validating work in this repo:
+
+- **Preferred validation loop**:
+  - Run `pnpm check` from the repo root.
+  - If `pnpm check` fails due to **Prettier** (`pnpm format:check` warns), run `pnpm format`, then re-run `pnpm check`.
+  - Do not call the work “done” until `pnpm check` is green.
+
+- **Packaging validation**:
+  - After a **feature or fix** is complete and `pnpm check` passes, run `pnpm build` from the repo root.
+  - If `pnpm build` fails, fix and re-run `pnpm build` (and re-run `pnpm check` if the fix is non-trivial).
+  - Skip `pnpm build` only if the user explicitly asks to skip it.
+
