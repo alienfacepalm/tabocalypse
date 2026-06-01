@@ -114,9 +114,10 @@ import {
 } from "../../lib/compress-background-image";
 import { extractWallpaperAccentsFromImageUrl } from "../../lib/extract-wallpaper-accents";
 import {
-  fetchBingWallpaperImageUrls,
-  pickDailyBingWallpaperUrl,
-  pickRotatingBingWallpaperUrl,
+  bingWallpaperCaptionFromEntry,
+  fetchBingWallpaperFeed,
+  pickDailyBingWallpaperEntry,
+  pickRotatingBingWallpaperEntry,
 } from "../../lib/fetch-bing-wallpaper";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
@@ -297,6 +298,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [pluginValidateLog, setPluginValidateLog] = useState<string>("");
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
+  const [bingWallpaperCaption, setBingWallpaperCaption] = useState<string | null>(null);
   const [bingPaintUrl, setBingPaintUrl] = useState<string | null>(null);
   const [bingFetchErr, setBingFetchErr] = useState<string | null>(null);
   const [bingImageLoadErr, setBingImageLoadErr] = useState<string | null>(null);
@@ -487,6 +489,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const kind = settings?.backgroundKind;
     if (kind !== "bing") {
       setBingChosenUrl(null);
+      setBingWallpaperCaption(null);
       setBingPaintUrl((prev) => {
         revokeObjectUrlMaybe(prev);
         return null;
@@ -504,6 +507,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     let cancelled = false;
     const listAbort = new AbortController();
     setBingChosenUrl(null);
+    setBingWallpaperCaption(null);
     setBingPaintUrl((prev) => {
       revokeObjectUrlMaybe(prev);
       return null;
@@ -511,18 +515,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setBingFetchErr(null);
     setBingImageLoadErr(null);
     setBingRefreshing(false);
-    void fetchBingWallpaperImageUrls(listAbort.signal)
-      .then((urls) => {
+    void fetchBingWallpaperFeed(listAbort.signal)
+      .then((entries) => {
         if (cancelled) return;
-        if (urls.length === 0) {
+        if (entries.length === 0) {
           setBingFetchErr("No images returned.");
           return;
         }
-        setBingChosenUrl(
-          rotate
-            ? pickRotatingBingWallpaperUrl(urls, Date.now(), bingRotateMs)
-            : pickDailyBingWallpaperUrl(urls),
-        );
+        const chosen = rotate
+          ? pickRotatingBingWallpaperEntry(entries, Date.now(), bingRotateMs)
+          : pickDailyBingWallpaperEntry(entries);
+        setBingChosenUrl(chosen.imageUrl);
+        const caption = bingWallpaperCaptionFromEntry(chosen);
+        setBingWallpaperCaption(caption || null);
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -541,15 +546,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         (latestSettingsRef.current.backgroundRotateMinutesBing ??
           DEFAULT_BACKGROUND_ROTATE_MINUTES) * 60_000,
       );
-      void fetchBingWallpaperImageUrls()
-        .then((urls) => {
+      void fetchBingWallpaperFeed()
+        .then((entries) => {
           if (cancelled) return;
-          if (urls.length === 0) {
+          if (entries.length === 0) {
             setBingFetchErr("No images returned.");
             return;
           }
           setBingFetchErr(null);
-          setBingChosenUrl(pickRotatingBingWallpaperUrl(urls, Date.now(), step));
+          const chosen = pickRotatingBingWallpaperEntry(entries, Date.now(), step);
+          setBingChosenUrl(chosen.imageUrl);
+          const caption = bingWallpaperCaptionFromEntry(chosen);
+          setBingWallpaperCaption(caption || null);
         })
         .catch((e: unknown) => {
           if (cancelled) return;
@@ -3976,6 +3984,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           </HudPlacementProvider>
         </div>
       </main>
+
+      {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
+        <p
+          className="bing-wallpaper-caption pointer-events-none fixed bottom-14 right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
+          aria-live="polite"
+        >
+          {bingWallpaperCaption}
+        </p>
+      ) : null}
 
       <footer className="footer muted sm">
         <div className="row wrap gap-3">

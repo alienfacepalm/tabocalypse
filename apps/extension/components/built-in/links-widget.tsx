@@ -1,9 +1,10 @@
 import React from "react";
 import browser from "webextension-polyfill";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
+import { rankBookmarksBySearchRelevance } from "../../lib/bookmark-search-relevance";
 import { faviconUrl } from "../../lib/favicon-url";
 import { HudTip } from "../hud-tip";
-import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitle, HudPanelTitleInline } from "../hud-panel-drag-context";
 
 export function TopSitesWidget({
   permissionsEpoch,
@@ -85,21 +86,38 @@ export function BookmarksWidget({
   onOpenBookmarksSettings: () => void;
 }) {
   const [marks, setMarks] = React.useState<{ id: string; title?: string; url?: string }[]>([]);
+  const [query, setQuery] = React.useState("");
   const [err, setErr] = React.useState<"permission" | null>(null);
 
   React.useEffect(() => {
+    let cancelled = false;
     setErr(null);
-    setMarks([]);
     const api = browser.bookmarks;
     if (!api?.getRecent) {
       setErr("permission");
+      setMarks([]);
       return;
     }
-    void api
-      .getRecent(16)
-      .then(setMarks)
-      .catch(() => setErr("permission"));
-  }, [permissionsEpoch]);
+    const trimmed = query.trim();
+    const load = trimmed
+      ? api.search(trimmed).then((results) =>
+          rankBookmarksBySearchRelevance(
+            results.filter((b) => b.url),
+            trimmed,
+          ).slice(0, 32),
+        )
+      : api.getRecent(16);
+    void load
+      .then((results) => {
+        if (!cancelled) setMarks(results);
+      })
+      .catch(() => {
+        if (!cancelled) setErr("permission");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [permissionsEpoch, query]);
 
   if (err)
     return (
@@ -126,7 +144,17 @@ export function BookmarksWidget({
 
   return (
     <section className="card">
-      <HudPanelTitle>Bookmarks</HudPanelTitle>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <HudPanelTitleInline>Bookmarks</HudPanelTitleInline>
+        <input
+          type="search"
+          className="w-[8.5rem] max-w-[min(42%,12rem)] shrink-0 rounded-full border border-solid border-accent/30 bg-black/40 px-3 py-1 text-xs text-text normal-case tracking-normal backdrop-blur-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent2/60"
+          placeholder="Search…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search bookmarks"
+        />
+      </div>
       <HudPanelBody>
         <ul className="link-grid">
           {marks.map((b) => {

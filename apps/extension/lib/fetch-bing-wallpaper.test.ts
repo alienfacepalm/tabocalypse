@@ -6,8 +6,13 @@ vi.mock("webextension-polyfill", () => ({
 
 import {
   PEAPIX_BING_FEED_US,
+  bingWallpaperCaptionFromEntry,
+  bingWallpaperEntriesFromPeapixFeedJson,
+  fetchBingWallpaperFeed,
   fetchBingWallpaperImageUrls,
+  pickDailyBingWallpaperEntry,
   pickDailyBingWallpaperUrl,
+  pickRotatingBingWallpaperEntry,
   pickRotatingBingWallpaperUrl,
   wallpaperUrlsFromPeapixFeedJson,
 } from "./fetch-bing-wallpaper";
@@ -66,25 +71,96 @@ describe("fetchBingWallpaperImageUrls", () => {
   });
 });
 
-describe("wallpaperUrlsFromPeapixFeedJson", () => {
+describe("bingWallpaperEntriesFromPeapixFeedJson", () => {
   it("prefers fullUrl then imageUrl and skips non-https", () => {
-    const urls = wallpaperUrlsFromPeapixFeedJson([
-      { fullUrl: "https://img.peapix.com/x_1920.jpg" },
+    const entries = bingWallpaperEntriesFromPeapixFeedJson([
+      {
+        fullUrl: "https://img.peapix.com/x_1920.jpg",
+        title: "Everglades",
+        copyright: "© Example",
+      },
       { imageUrl: "https://img.peapix.com/y.jpg", fullUrl: "" },
       { url: "http://insecure.example/x.jpg" },
       { thumbUrl: "https://img.peapix.com/z_640.jpg" },
     ]);
-    expect(urls).toEqual([
+    expect(entries.map((e) => e.imageUrl)).toEqual([
       "https://img.peapix.com/x_1920.jpg",
       "https://img.peapix.com/y.jpg",
       "https://img.peapix.com/z_640.jpg",
     ]);
+    expect(entries[0]?.title).toBe("Everglades");
+    expect(entries[0]?.copyright).toBe("© Example");
   });
 
   it("handles invalid input", () => {
-    expect(wallpaperUrlsFromPeapixFeedJson(null)).toEqual([]);
-    expect(wallpaperUrlsFromPeapixFeedJson({})).toEqual([]);
-    expect(wallpaperUrlsFromPeapixFeedJson("nope")).toEqual([]);
+    expect(bingWallpaperEntriesFromPeapixFeedJson(null)).toEqual([]);
+    expect(bingWallpaperEntriesFromPeapixFeedJson({})).toEqual([]);
+    expect(bingWallpaperEntriesFromPeapixFeedJson("nope")).toEqual([]);
+  });
+});
+
+describe("wallpaperUrlsFromPeapixFeedJson", () => {
+  it("returns image URLs from entries", () => {
+    const urls = wallpaperUrlsFromPeapixFeedJson([
+      { fullUrl: "https://img.peapix.com/x_1920.jpg" },
+      { imageUrl: "https://img.peapix.com/y.jpg", fullUrl: "" },
+    ]);
+    expect(urls).toEqual(["https://img.peapix.com/x_1920.jpg", "https://img.peapix.com/y.jpg"]);
+  });
+});
+
+describe("bingWallpaperCaptionFromEntry", () => {
+  it("prefers title over copyright", () => {
+    expect(
+      bingWallpaperCaptionFromEntry({
+        imageUrl: "https://img.peapix.com/a.jpg",
+        title: "Mount Everest, Nepal",
+        copyright: "© Photographer",
+      }),
+    ).toBe("Mount Everest, Nepal");
+  });
+
+  it("falls back to copyright when title is empty", () => {
+    expect(
+      bingWallpaperCaptionFromEntry({
+        imageUrl: "https://img.peapix.com/a.jpg",
+        title: "",
+        copyright: "© Photographer",
+      }),
+    ).toBe("© Photographer");
+  });
+});
+
+describe("fetchBingWallpaperFeed", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          {
+            title: "Sea otter, Alaska",
+            fullUrl: "https://img.peapix.com/a_1920.jpg",
+          },
+        ],
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns feed entries with captions", async () => {
+    const entries = await fetchBingWallpaperFeed();
+    expect(entries).toEqual([
+      {
+        imageUrl: "https://img.peapix.com/a_1920.jpg",
+        title: "Sea otter, Alaska",
+        copyright: "",
+      },
+    ]);
   });
 });
 
@@ -121,5 +197,29 @@ describe("pickDailyBingWallpaperUrl", () => {
     expect(pickDailyBingWallpaperUrl(urls, day)).toBe("b");
     expect(pickDailyBingWallpaperUrl(urls, day * 2 - 1)).toBe("b");
     expect(pickDailyBingWallpaperUrl(urls, day * 2)).toBe("a");
+  });
+});
+
+describe("pickRotatingBingWallpaperEntry", () => {
+  it("rotates entries with the same slot logic as URLs", () => {
+    const entries = [
+      { imageUrl: "a", title: "A", copyright: "" },
+      { imageUrl: "b", title: "B", copyright: "" },
+    ];
+    const fifteenMin = 15 * 60 * 1000;
+    expect(pickRotatingBingWallpaperEntry(entries, 0).imageUrl).toBe("a");
+    expect(pickRotatingBingWallpaperEntry(entries, fifteenMin).title).toBe("B");
+  });
+});
+
+describe("pickDailyBingWallpaperEntry", () => {
+  it("is stable within a UTC day and advances daily", () => {
+    const entries = [
+      { imageUrl: "a", title: "A", copyright: "" },
+      { imageUrl: "b", title: "B", copyright: "" },
+    ];
+    const day = 24 * 60 * 60 * 1000;
+    expect(pickDailyBingWallpaperEntry(entries, 0).imageUrl).toBe("a");
+    expect(pickDailyBingWallpaperEntry(entries, day).imageUrl).toBe("b");
   });
 });
