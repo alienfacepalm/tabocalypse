@@ -39,9 +39,60 @@ const {
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
   resolveUserBackgroundImage,
   stableUserBackgroundIdFromDataUrl,
+  isHudAutoRepositionEnabled,
 } = await import("./settings");
 
 const { settingsBackgroundGradientCss } = await import("./background-gradient-css");
+
+describe("isHudAutoRepositionEnabled", () => {
+  it("is priority 1: off disables auto-reposition regardless of other flags", () => {
+    const base = defaultSettings();
+    expect(
+      isHudAutoRepositionEnabled({
+        ...base,
+        hudLayoutAutoReposition: false,
+        hudLayoutLocked: false,
+        hudLayoutAdaptiveWhileLocked: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("allows auto-reposition in chaotic mode when enabled and unlocked", () => {
+    const base = defaultSettings();
+    expect(
+      isHudAutoRepositionEnabled({
+        ...base,
+        hudLayoutAutoReposition: true,
+        hudLayoutLocked: false,
+        hudLayoutAdaptiveWhileLocked: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("allows auto-reposition when locked and adaptive while locked is on", () => {
+    const base = defaultSettings();
+    expect(
+      isHudAutoRepositionEnabled({
+        ...base,
+        hudLayoutAutoReposition: true,
+        hudLayoutLocked: true,
+        hudLayoutAdaptiveWhileLocked: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("blocks auto-reposition when locked without adaptive", () => {
+    const base = defaultSettings();
+    expect(
+      isHudAutoRepositionEnabled({
+        ...base,
+        hudLayoutAutoReposition: true,
+        hudLayoutLocked: true,
+        hudLayoutAdaptiveWhileLocked: false,
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("WIDGET_LABELS", () => {
   it("defines a non-empty user-facing label for every widget key", () => {
@@ -181,6 +232,8 @@ describe("defaultSettings", () => {
     expect(s.backgroundRotate).toBe(true);
     expect(s.backgroundKind).toBe("bing");
     expect(s.hudLayoutChaotic).toBe(true);
+    expect(s.hudLayoutAutoReposition).toBe(true);
+    expect(s.hudLayoutAdaptiveWhileLocked).toBe(true);
     expect(s.humorIntensity).toBe("spicy");
     expect(s.humorBuiltinVoice).toBe("gen_z");
     expect(s.humorIncludeUnsuckClassics).toBe(true);

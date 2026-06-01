@@ -8,6 +8,7 @@ import {
   HUD_PANEL_WIDTH_CLASSES,
   type IHudPanelPosition,
   type THudPanelId,
+  clampHudPanelPositionToFold,
   clampHudPanelSize,
   computeHudDragCanvasRectPx,
   getHudGridDropHighlight,
@@ -120,14 +121,17 @@ export function DraggableHudPanel({
       setZLift(false);
       clearDropHighlight();
       if (next) {
-        onCommit({
-          ...position,
-          xPct: next.xPct,
-          yPct: next.yPct,
-        });
+        const canvas = canvasRef.current;
+        const panel = rootRef.current;
+        const h = panel?.getBoundingClientRect().height ?? position.heightPx ?? 200;
+        const committed =
+          canvas != null
+            ? clampHudPanelPositionToFold(canvas, { ...position, ...next }, h)
+            : { ...position, ...next };
+        onCommit(committed);
       }
     },
-    [clearDropHighlight, computeFromPointer, onCommit, position],
+    [canvasRef, clearDropHighlight, computeFromPointer, onCommit, position],
   );
 
   useEffect(() => {
@@ -164,13 +168,15 @@ export function DraggableHudPanel({
       const clamped = clampHudPanelSize(panelId, rawW, rawH, window.innerWidth, window.innerHeight);
       setLiveSize(null);
       clearDropHighlight();
-      onCommit({
+      const canvas = canvasRef.current;
+      const next = {
         ...position,
         widthPx: clamped.widthPx,
         heightPx: clamped.heightPx,
-      });
+      };
+      onCommit(canvas != null ? clampHudPanelPositionToFold(canvas, next, clamped.heightPx) : next);
     },
-    [clearDropHighlight, onCommit, panelId, position],
+    [canvasRef, clearDropHighlight, onCommit, panelId, position],
   );
 
   useEffect(() => {

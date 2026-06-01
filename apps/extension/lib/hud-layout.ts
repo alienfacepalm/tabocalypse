@@ -55,6 +55,40 @@ export const DEFAULT_HUD_PANEL_POSITIONS: Record<THudPanelId, IHudPanelPosition>
   notes: { xPct: 70, yPct: 2 },
 };
 
+/** Default outer size (px) aligned with {@link HUD_PANEL_WIDTH_CLASSES} (16px rem base). */
+export const HUD_PANEL_DEFAULT_SIZE_PX: Record<THudPanelId, { widthPx: number; heightPx: number }> =
+  {
+    todo: { widthPx: 352, heightPx: 200 },
+    clock: { widthPx: 352, heightPx: 200 },
+    tabGuilt: { widthPx: 352, heightPx: 180 },
+    weather: { widthPx: 576, heightPx: 280 },
+    crypto: { widthPx: 448, heightPx: 240 },
+    speedTest: { widthPx: 352, heightPx: 220 },
+    topSites: { widthPx: 576, heightPx: 240 },
+    bookmarksStrip: { widthPx: 576, heightPx: 240 },
+    pluginDeck: { widthPx: 896, heightPx: 320 },
+    notes: { widthPx: 352, heightPx: 280 },
+  };
+
+/** Baseline canvas used to classify compact vs comfortable auto-layout. */
+export const HUD_LAYOUT_REFERENCE_CANVAS = { widthPx: 1200, heightPx: 800 };
+
+/** Inset from the visible HUD canvas bottom (the fold) when auto-fitting panels. */
+export const HUD_LAYOUT_FOLD_PADDING_PX = 16;
+
+/** Vertical overlap between panels when they cannot fit above the fold without scrolling. */
+export const HUD_LAYOUT_FOLD_OVERLAP_PX = 10;
+
+export type THudLayoutDensity = "compact" | "balanced" | "comfortable";
+
+export interface IHudAutoLayoutItem {
+  /** Stable id (`todo`, `note:<noteId>`, …). */
+  key: string;
+  panelId: THudPanelId;
+  position: IHudPanelPosition;
+  priority: number;
+}
+
 export const HUD_PANEL_WIDTH_CLASSES: Record<THudPanelId, string> = {
   todo: "w-[min(22rem,calc(100vw-2rem))]",
   clock: "w-[min(22rem,calc(100vw-2rem))]",
@@ -140,13 +174,35 @@ export interface IHudGridDropHighlight {
   panelHeightPx: number;
 }
 
-/** Measure the HUD canvas box used for layout math (matches drag `getBoundingClientRect`). */
+/**
+ * Measure the HUD canvas viewport (the fold): visible client area, not scroll-extended content.
+ * Matches what the user sees without scrolling the canvas.
+ */
 export function measureHudCanvasSize(canvas: HTMLElement): { widthPx: number; heightPx: number } {
   const rect = canvas.getBoundingClientRect();
-  return {
-    widthPx: Math.max(1, rect.width),
-    heightPx: Math.max(1, rect.height),
-  };
+  const widthPx = Math.max(1, canvas.clientWidth > 0 ? canvas.clientWidth : rect.width);
+  const heightPx = Math.max(1, canvas.clientHeight > 0 ? canvas.clientHeight : rect.height);
+  return { widthPx, heightPx };
+}
+
+/** Bottom edge (px) of the visible HUD canvas — panels should stay at or above this when possible. */
+export function hudCanvasFoldBottomPx(canvasHeightPx: number): number {
+  return Math.max(1, canvasHeightPx - HUD_LAYOUT_FOLD_PADDING_PX);
+}
+
+/** Pulls a panel up when its bottom would sit below the visible canvas fold. */
+export function clampHudPanelPositionToFold(
+  canvas: HTMLElement,
+  position: IHudPanelPosition,
+  panelHeightPx: number,
+): IHudPanelPosition {
+  const { heightPx: canvasH } = measureHudCanvasSize(canvas);
+  const foldBottom = hudCanvasFoldBottomPx(canvasH);
+  const topPx = (position.yPct / 100) * canvasH;
+  const h = position.heightPx ?? panelHeightPx;
+  if (topPx + h <= foldBottom) return position;
+  const maxTop = Math.max(0, foldBottom - h);
+  return { ...position, yPct: (maxTop / canvasH) * 100 };
 }
 
 /** 12-column grid with square-ish cells filling the canvas height. */
@@ -294,6 +350,37 @@ export function computeHudDragCanvasRectPx(
 
 export function clampHudScalar(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/** Resolved outer size for layout math (user resize or {@link HUD_PANEL_DEFAULT_SIZE_PX}). */
+export function resolveHudPanelSizePx(
+  panelId: THudPanelId,
+  position: IHudPanelPosition,
+  metrics: IHudLayoutMetrics,
+): { widthPx: number; heightPx: number } {
+  const def = HUD_PANEL_DEFAULT_SIZE_PX[panelId];
+  const w = position.widthPx ?? def.widthPx;
+  const h = position.heightPx ?? def.heightPx;
+  return clampHudPanelSize(panelId, w, h, metrics.canvasW, metrics.canvasH);
+}
+
+/** Converts a canvas-space rect to stored percentage position (optional explicit px size). */
+export function hudPositionFromCanvasRect(
+  rect: IHudCanvasRectPx,
+  size: { widthPx?: number; heightPx?: number },
+  metrics: IHudLayoutMetrics,
+): IHudPanelPosition {
+  const pos: IHudPanelPosition = {
+    xPct: (rect.leftPx / metrics.canvasW) * 100,
+    yPct: (rect.topPx / metrics.canvasH) * 100,
+  };
+  if (typeof size.widthPx === "number" && Number.isFinite(size.widthPx) && size.widthPx > 0) {
+    pos.widthPx = size.widthPx;
+  }
+  if (typeof size.heightPx === "number" && Number.isFinite(size.heightPx) && size.heightPx > 0) {
+    pos.heightPx = size.heightPx;
+  }
+  return pos;
 }
 
 /** Default lift added while dragging/resizing so the active panel stacks above other HUD panels. */

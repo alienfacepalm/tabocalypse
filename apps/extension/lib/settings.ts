@@ -486,6 +486,16 @@ export interface ISettings {
   hudLayoutChaotic: boolean;
   /** When true, panel drag handles are disabled until unlocked. */
   hudLayoutLocked: boolean;
+  /**
+   * Priority-1 layout control: when true, visible panels reflow on window resize (grid or chaotic).
+   * When false, positions stay fixed on resize unless changed manually; chaotic/lock apply normally.
+   */
+  hudLayoutAutoReposition: boolean;
+  /**
+   * When layout is locked, still allow {@link hudLayoutAutoReposition} to reflow panels on resize
+   * (manual drag remains disabled).
+   */
+  hudLayoutAdaptiveWhileLocked: boolean;
   /** Percentage positions of draggable HUD panels within the canvas. */
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
   /**
@@ -693,7 +703,25 @@ export interface ILocalSlice {
   todos: ITodoItem[];
   hudLayoutChaotic?: boolean;
   hudLayoutLocked?: boolean;
+  hudLayoutAutoReposition?: boolean;
+  hudLayoutAdaptiveWhileLocked?: boolean;
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
+}
+
+/**
+ * Whether auto-reposition on resize should run.
+ * Priority 1: {@link hudLayoutAutoReposition} — when off, chaotic/lock rules apply and panels are not auto-reflowed.
+ * When on, works in grid and chaotic modes; if layout is locked, {@link hudLayoutAdaptiveWhileLocked} must also be on.
+ */
+export function isHudAutoRepositionEnabled(
+  s: Pick<
+    ISettings,
+    "hudLayoutAutoReposition" | "hudLayoutLocked" | "hudLayoutAdaptiveWhileLocked"
+  >,
+): boolean {
+  if (!s.hudLayoutAutoReposition) return false;
+  if (!s.hudLayoutLocked) return true;
+  return s.hudLayoutAdaptiveWhileLocked;
 }
 
 /** HUD defaults align with three-column positions in `hud-layout`; optional-permission widgets stay off. */
@@ -833,6 +861,8 @@ export function defaultSettings(): ISettings {
     todos: [],
     hudLayoutChaotic: true,
     hudLayoutLocked: false,
+    hudLayoutAutoReposition: true,
+    hudLayoutAdaptiveWhileLocked: true,
     hudPanelPositions: mergeHudPanelPositions(undefined),
     hasSeenSettingsIntro: false,
   };
@@ -910,6 +940,8 @@ function toLocal(s: ISettings): ILocalSlice {
     todos: s.todos,
     hudLayoutChaotic: s.hudLayoutChaotic,
     hudLayoutLocked: s.hudLayoutLocked,
+    hudLayoutAutoReposition: s.hudLayoutAutoReposition,
+    hudLayoutAdaptiveWhileLocked: s.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: s.hudPanelPositions,
   };
 }
@@ -1101,6 +1133,14 @@ function mergeSettings(
     todos: local?.todos ?? d.todos,
     hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,
+    hudLayoutAutoReposition:
+      typeof local?.hudLayoutAutoReposition === "boolean"
+        ? local.hudLayoutAutoReposition
+        : d.hudLayoutAutoReposition,
+    hudLayoutAdaptiveWhileLocked:
+      typeof local?.hudLayoutAdaptiveWhileLocked === "boolean"
+        ? local.hudLayoutAdaptiveWhileLocked
+        : d.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
   };
   return applyChaosPresetHumorHarmony(mergedBase);

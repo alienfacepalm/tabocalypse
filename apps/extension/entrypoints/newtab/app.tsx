@@ -36,6 +36,10 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { testOpenAiCompatible } from "../../lib/ai-test";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { HudCanvasGrid } from "../../components/hud-canvas-grid";
+import {
+  HudAutoRepositionSync,
+  type IHudAutoRepositionResult,
+} from "../../components/hud-auto-reposition-sync";
 import { HudLayoutMetricsSync } from "../../components/hud-layout-metrics-sync";
 import { HudPlacementProvider } from "../../components/hud-placement-context";
 import { BackgroundRotateMinutesInput } from "../../components/background-rotate-minutes-input";
@@ -81,6 +85,7 @@ import {
   defaultSettings,
   type IHudPanelPosition,
   type ISettings,
+  isHudAutoRepositionEnabled,
   isNoteDeleteAllowed,
   isTabocalypseSettingsStorageChange,
   type IUserBackgroundImage,
@@ -939,6 +944,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       void persist((cur) => ({
         ...cur,
         hudPanelPositions: { ...cur.hudPanelPositions, [id]: pos },
+      }));
+    },
+    [persist],
+  );
+
+  const applyAutoHudLayout = useCallback(
+    (result: IHudAutoRepositionResult) => {
+      void persist((cur) => ({
+        ...cur,
+        hudPanelPositions: { ...cur.hudPanelPositions, ...result.hudPanelPositions },
+        notePanels: result.notePanels,
       }));
     },
     [persist],
@@ -1943,6 +1959,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <span className="acc-title">Panel layout</span>
                   </summary>
                   <div className="acc-body">
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={s.hudLayoutAutoReposition}
+                        onChange={(e) => {
+                          const v = e.target.checked;
+                          void persist((cur) => ({ ...cur, hudLayoutAutoReposition: v }));
+                        }}
+                      />
+                      <span>Auto-reposition panels when the window is resized</span>
+                    </label>
+                    <p className="muted sm mb-2">
+                      Priority control: when this is on, panels reflow on resize in both grid and
+                      chaotic modes (overriding lock/chaotic for resize only). When it is off,
+                      positions stay put on resize; chaotic, lock, and manual drag below take over.
+                    </p>
                     <p className="muted sm mb-2">
                       Drag panels by the grip in each header. In grid mode (not chaotic), a
                       12-column dashed overlay fills the HUD while layout is unlocked; drop targets
@@ -1971,6 +2003,29 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       />
                       <span>Lock panel positions</span>
                     </label>
+                    {s.hudLayoutLocked ? (
+                      <>
+                        <label className="check-row ml-4">
+                          <input
+                            type="checkbox"
+                            checked={s.hudLayoutAdaptiveWhileLocked}
+                            disabled={!s.hudLayoutAutoReposition}
+                            onChange={(e) => {
+                              const v = e.target.checked;
+                              void persist((cur) => ({
+                                ...cur,
+                                hudLayoutAdaptiveWhileLocked: v,
+                              }));
+                            }}
+                          />
+                          <span>Locked, but adaptive</span>
+                        </label>
+                        <p className="muted sm mb-2 ml-4">
+                          Panels stay locked for dragging, but still reflow when the window is
+                          resized. Requires auto-reposition above.
+                        </p>
+                      </>
+                    ) : null}
                     <button
                       type="button"
                       className="btn has-icon mt-3"
@@ -3465,7 +3520,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           <HudTip
             tip={
               s.hudLayoutLocked
-                ? "Unlock so you can drag HUD panels to new positions"
+                ? s.hudLayoutAdaptiveWhileLocked && s.hudLayoutAutoReposition
+                  ? "Layout locked: panels reflow on resize but cannot be dragged. Unlock to move by hand"
+                  : "Unlock so you can drag HUD panels to new positions"
                 : "Lock panel positions so they stay put while you work"
             }
           >
@@ -3639,6 +3696,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             <HudLayoutMetricsSync
               canvasRef={hudCanvasRef}
               enabled={!s.hudLayoutChaotic && !s.hudLayoutLocked}
+            />
+            <HudAutoRepositionSync
+              canvasRef={hudCanvasRef}
+              enabled={isHudAutoRepositionEnabled(s)}
+              widgets={s.widgets}
+              hudPanelPositions={s.hudPanelPositions}
+              notePanels={s.notePanels}
+              pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
+              onLayout={applyAutoHudLayout}
             />
             <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
             {s.widgets.todo ? (
