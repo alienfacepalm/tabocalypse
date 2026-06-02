@@ -858,12 +858,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   const onSettingsAccordionToggle = useCallback(
-    (section: TSettingsAccordionSection) => (e: React.SyntheticEvent<HTMLDetailsElement>) => {
-      setSettingsAccordionOpen((prev) => ({
-        ...prev,
-        [section]: e.currentTarget.open,
-      }));
-    },
+    (section: TSettingsAccordionSection, defaultOpen = false) =>
+      (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+        const details =
+          e.currentTarget instanceof HTMLDetailsElement
+            ? e.currentTarget
+            : e.target instanceof HTMLDetailsElement
+              ? e.target
+              : null;
+        if (!details) return;
+        const nextOpen = details.open;
+        setSettingsAccordionOpen((prev) => {
+          const currentOpen = prev[section] ?? defaultOpen;
+          if (currentOpen === nextOpen) return prev;
+          return { ...prev, [section]: nextOpen };
+        });
+      },
     [],
   );
 
@@ -1917,7 +1927,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 <details
                   className="acc-item"
                   open={settingsAccordionIsOpen("presets", true)}
-                  onToggle={onSettingsAccordionToggle("presets")}
+                  onToggle={onSettingsAccordionToggle("presets", true)}
                 >
                   <summary className="acc-summary">
                     <span className="acc-title">Presets</span>
