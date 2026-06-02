@@ -1,6 +1,7 @@
-import type { INotePanel, TWidgetKey } from "./settings";
+import type { TWidgetKey } from "./settings";
 import {
   HUD_PANEL_SIZE_LIMITS,
+  getHudLayoutMetrics,
   type IHudAutoLayoutItem,
   type IHudCanvasRectPx,
   type IHudLayoutMetrics,
@@ -92,8 +93,8 @@ export function resolveHudSpreadColumnCount(canvasW: number, panelCount: number)
 export function buildHudAutoLayoutItems(input: {
   widgets: Record<TWidgetKey, boolean>;
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
-  notePanels: readonly INotePanel[];
   pluginDeckVisible: boolean;
+  notesListPanelVisible?: boolean;
 }): IHudAutoLayoutItem[] {
   const items: IHudAutoLayoutItem[] = [];
   for (const [widgetKey, panelId] of Object.entries(WIDGET_TO_HUD_PANEL) as [
@@ -101,6 +102,7 @@ export function buildHudAutoLayoutItems(input: {
     THudPanelId,
   ][]) {
     if (!input.widgets[widgetKey]) continue;
+    if (widgetKey === "notes" && input.notesListPanelVisible === false) continue;
     items.push({
       key: panelId,
       panelId,
@@ -115,16 +117,6 @@ export function buildHudAutoLayoutItems(input: {
       position: input.hudPanelPositions.pluginDeck,
       priority: HUD_AUTO_LAYOUT_PANEL_PRIORITY.pluginDeck,
     });
-  }
-  if (input.widgets.notes) {
-    for (const np of input.notePanels) {
-      items.push({
-        key: `note:${np.noteId}`,
-        panelId: "notes",
-        position: np.position,
-        priority: HUD_AUTO_LAYOUT_PANEL_PRIORITY.notes + 1,
-      });
-    }
   }
   return items.sort((a, b) => a.priority - b.priority || a.key.localeCompare(b.key));
 }
@@ -385,4 +377,58 @@ export function computeAutoHudPanelLayout(
   }
 
   return out;
+}
+
+/** Keyboard shortcut for manual HUD panel auto-arrange (header button uses the same action). */
+export const HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT = "F10" as const;
+
+export interface IHudAutoLayoutPlanInput {
+  widgets: Record<TWidgetKey, boolean>;
+  hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
+  pluginDeckVisible: boolean;
+  notesListPanelVisible?: boolean;
+}
+
+export function hudPanelPositionsEqual(a: IHudPanelPosition, b: IHudPanelPosition): boolean {
+  return (
+    a.xPct === b.xPct && a.yPct === b.yPct && a.widthPx === b.widthPx && a.heightPx === b.heightPx
+  );
+}
+
+/** True when the event target is a field where F-keys should not trigger HUD shortcuts. */
+export function isHudKeyboardShortcutTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return target.isContentEditable;
+}
+
+/**
+ * Computes panel position updates for auto-arrange (resize reflow or manual trigger).
+ * Set {@link onlyIfChanged} to false for an explicit user arrange so panels always repack.
+ */
+export function computeHudPanelAutoLayoutUpdates(
+  input: IHudAutoLayoutPlanInput,
+  canvasW: number,
+  canvasH: number,
+  options?: { prevCanvasW?: number; prevCanvasH?: number; onlyIfChanged?: boolean },
+): Partial<Record<THudPanelId, IHudPanelPosition>> {
+  const metrics = getHudLayoutMetrics(canvasW, canvasH);
+  const density = resolveHudLayoutDensity(
+    canvasW,
+    canvasH,
+    options?.prevCanvasW,
+    options?.prevCanvasH,
+  );
+  const items = buildHudAutoLayoutItems(input);
+  const placed = computeAutoHudPanelLayout(items, metrics, density);
+  const onlyIfChanged = options?.onlyIfChanged !== false;
+  const hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
+  for (const [key, pos] of placed) {
+    const panelId = key as THudPanelId;
+    const prev = input.hudPanelPositions[panelId];
+    if (onlyIfChanged && prev != null && hudPanelPositionsEqual(prev, pos)) continue;
+    hudUpdates[panelId] = pos;
+  }
+  return hudUpdates;
 }

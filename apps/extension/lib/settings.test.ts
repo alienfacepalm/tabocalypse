@@ -664,7 +664,9 @@ describe("loadSettings", () => {
     });
     const s = await loadSettings();
     expect(s.notes).toEqual([note]);
-    expect(s.notePanels).toEqual([{ noteId: "n1", position: { xPct: 70, yPct: 2 } }]);
+    expect(s.notePanels).toEqual([
+      { noteId: "n1", position: { xPx: 840, yPx: 16, widthPx: 260, heightPx: 220 } },
+    ]);
     expect(s.notePanelsEpoch).toBe(3);
   });
 

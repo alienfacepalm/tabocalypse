@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatSearchFieldPlaceholder,
   pickSearchPlaceholderLeadForHumorRank,
   searchPlaceholderHumorRank,
   searchPlaceholderLeadsForHumorRank,
 } from "./search-placeholder-leads";
+
+describe("formatSearchFieldPlaceholder", () => {
+  it("suffix reflects web search mode and engine label", () => {
+    expect(
+      formatSearchFieldPlaceholder("Summon answers", false, "Google", "Google AI in Search"),
+    ).toBe("Summon answers? (Web search · Google)");
+  });
+
+  it("suffix reflects AI search mode and assist destination label", () => {
+    expect(
+      formatSearchFieldPlaceholder("Summon answers", true, "Google", "Google AI in Search"),
+    ).toBe("Summon answers? (AI search · Google AI in Search)");
+  });
+});
 
 describe("searchPlaceholderHumorRank", () => {
   it("maps disabled humor / off intensity to rank 0", () => {

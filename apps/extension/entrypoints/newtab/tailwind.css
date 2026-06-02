@@ -208,9 +208,103 @@
     @apply flex min-h-0 flex-1 flex-col overflow-hidden;
   }
 
-  /* Notes: when not user-height-resized, hug content instead of flex-filling → no useless gutter scrollbar */
-  .hud-panel-size-host > .card.hud-notes-detached-panel {
-    @apply max-h-[min(92vh,calc(100vh-5.25rem))] min-h-0 flex-none overflow-hidden;
+  .sticky-note-host {
+    @apply max-w-full touch-manipulation;
+  }
+
+  .sticky-note {
+    @apply relative flex h-full min-h-0 cursor-grab flex-col overflow-hidden rounded-sm border border-solid touch-manipulation;
+    border-color: rgb(180 140 40 / 0.45);
+    background: linear-gradient(
+      165deg,
+      rgb(255 244 180) 0%,
+      rgb(255 235 150) 42%,
+      rgb(250 220 120) 100%
+    );
+    box-shadow:
+      2px 3px 8px rgb(0 0 0 / 0.28),
+      4px 4px 0 rgb(0 0 0 / 0.12);
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-dragging {
+    @apply cursor-grabbing;
+  }
+
+  .sticky-note-tack-row {
+    @apply flex items-start px-1 pt-1;
+  }
+
+  .sticky-note-tack.btn {
+    @apply shrink-0;
+    color: rgb(120 85 20);
+  }
+
+  .sticky-note-tack.btn.primary {
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-pinned {
+    @apply cursor-default;
+  }
+
+  .sticky-note-toolbar .btn.ghost:active {
+    background: rgb(0 0 0 / 0.12);
+  }
+
+  .sticky-note-toolbar .btn.primary:hover {
+    background: rgb(255 210 80);
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-toolbar .btn.primary:active {
+    background: rgb(240 180 40);
+  }
+
+  .sticky-note-toolbar .btn {
+    color: rgb(80 55 10);
+    border-color: rgb(120 85 20 / 0.35);
+    box-shadow: 2px 2px 0 rgb(0 0 0 / 0.12);
+  }
+
+  .sticky-note-toolbar .btn.ghost:hover {
+    background: rgb(0 0 0 / 0.08);
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-toolbar .btn.primary {
+    background: rgb(255 200 60);
+    color: rgb(35 28 12);
+    border-color: rgb(120 85 20 / 0.5);
+  }
+
+  .sticky-note-textarea {
+    @apply cursor-text border-0 bg-transparent p-0 text-sm leading-relaxed outline-none;
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-textarea::placeholder {
+    color: rgb(120 100 60 / 0.75);
+  }
+
+  .sticky-note-body {
+    @apply flex min-h-0 flex-1 flex-col;
+  }
+
+  .sticky-note-resize {
+    @apply !min-h-7 !min-w-7 cursor-nwse-resize border-0 !p-0.5 opacity-80 hover:opacity-100;
+    color: rgb(80 55 10);
+    background: rgb(255 235 150 / 0.85);
+    box-shadow: 1px 1px 0 rgb(0 0 0 / 0.15);
+  }
+
+  .sticky-note-resize:hover {
+    background: rgb(255 244 180);
+    color: rgb(35 28 12);
+  }
+
+  .sticky-note-resize:active {
+    background: rgb(250 220 120);
   }
 
   .hud-panel-size-host > .card > h3 {
@@ -440,6 +534,27 @@
 
   .err {
     @apply text-red-300;
+  }
+
+  /* Crypto % + sparklines: pale reds / capped accent greens wash out on light glass. */
+  .crypto-trend-up {
+    @apply text-accent;
+  }
+
+  .crypto-trend-down {
+    @apply text-red-300;
+  }
+
+  .crypto-trend-flat {
+    @apply text-accent2;
+  }
+
+  [data-theme="light"] .crypto-trend-up {
+    @apply text-green-700;
+  }
+
+  [data-theme="light"] .crypto-trend-down {
+    @apply text-danger;
   }
 
   .link-grid {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHudAutoLayoutItems,
   computeAutoHudPanelLayout,
+  computeHudPanelAutoLayoutUpdates,
   fitHudPlacementsToFold,
   resolveHudLandMode,
   resolveHudLayoutDensity,
@@ -57,20 +58,33 @@ describe("resolveHudLayoutDensity", () => {
 });
 
 describe("buildHudAutoLayoutItems", () => {
-  it("includes enabled widgets and pinned note panels", () => {
+  it("includes enabled widgets but not canvas sticky notes", () => {
     const widgets = { ...TEST_WIDGETS };
     const items = buildHudAutoLayoutItems({
       widgets,
       hudPanelPositions: mergeHudPanelPositions(undefined),
-      notePanels: [{ noteId: "n1", position: { xPct: 70, yPct: 2 } }],
       pluginDeckVisible: false,
     });
     const keys = items.map((i) => i.key);
     expect(keys).toContain("todo");
     expect(keys).toContain("weather");
-    expect(keys).toContain("note:n1");
+    expect(keys).toContain("notes");
+    expect(keys).not.toContain("note:n1");
     expect(keys).not.toContain("speedTest");
     expect(keys).not.toContain("pluginDeck");
+  });
+
+  it("omits the notes list panel from auto-layout when hidden", () => {
+    const widgets = { ...TEST_WIDGETS };
+    const items = buildHudAutoLayoutItems({
+      widgets,
+      hudPanelPositions: mergeHudPanelPositions(undefined),
+      pluginDeckVisible: false,
+      notesListPanelVisible: false,
+    });
+    const keys = items.map((i) => i.key);
+    expect(keys).not.toContain("notes");
+    expect(keys).toContain("todo");
   });
 });
 
@@ -101,7 +115,6 @@ describe("computeAutoHudPanelLayout", () => {
     const items = buildHudAutoLayoutItems({
       widgets: { ...TEST_WIDGETS, bookmarksStrip: false },
       hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
-      notePanels: [],
       pluginDeckVisible: false,
     });
     const placed = computeAutoHudPanelLayout(items, metrics, "compact");
@@ -116,7 +129,6 @@ describe("computeAutoHudPanelLayout", () => {
     const items = buildHudAutoLayoutItems({
       widgets: { ...TEST_WIDGETS, speedTest: true, bookmarksStrip: true },
       hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
-      notePanels: [],
       pluginDeckVisible: false,
     });
     const placed = computeAutoHudPanelLayout(items, metrics, "compact");
@@ -132,7 +144,6 @@ describe("computeAutoHudPanelLayout", () => {
     const items = buildHudAutoLayoutItems({
       widgets: { ...TEST_WIDGETS, bookmarksStrip: true, tabGuilt: false },
       hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
-      notePanels: [],
       pluginDeckVisible: false,
     });
     const placed = computeAutoHudPanelLayout(items, metrics, "comfortable");
@@ -146,12 +157,28 @@ describe("computeAutoHudPanelLayout", () => {
     const items = buildHudAutoLayoutItems({
       widgets: { ...TEST_WIDGETS, clock: false, tabGuilt: false },
       hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
-      notePanels: [],
       pluginDeckVisible: false,
     });
     const placed = computeAutoHudPanelLayout(items, metrics, "comfortable");
     const weather = placed.get("weather");
     expect(weather?.widthPx).toBeDefined();
     expect(weather!.widthPx!).toBeGreaterThan(280);
+  });
+});
+
+describe("computeHudPanelAutoLayoutUpdates", () => {
+  it("returns updates for all placed panels when onlyIfChanged is false", () => {
+    const metrics = getHudLayoutMetrics(1200, 800);
+    const input = {
+      widgets: { ...TEST_WIDGETS, bookmarksStrip: false },
+      hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
+      pluginDeckVisible: false,
+    };
+    const items = buildHudAutoLayoutItems(input);
+    const placed = computeAutoHudPanelLayout(items, metrics, "balanced");
+    const updates = computeHudPanelAutoLayoutUpdates(input, metrics.canvasW, metrics.canvasH, {
+      onlyIfChanged: false,
+    });
+    expect(Object.keys(updates).length).toBe(placed.size);
   });
 });

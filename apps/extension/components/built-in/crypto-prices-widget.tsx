@@ -67,9 +67,9 @@ function formatPct(locale: string, pct: number): string {
 }
 
 function rowTone(changePct: number): { pct: string; spark: string } {
-  if (changePct > 0.05) return { pct: "text-accent", spark: "text-accent" };
-  if (changePct < -0.05) return { pct: "text-red-300", spark: "text-red-300" };
-  return { pct: "text-muted", spark: "text-accent2" };
+  if (changePct > 0.05) return { pct: "crypto-trend-up", spark: "crypto-trend-up" };
+  if (changePct < -0.05) return { pct: "crypto-trend-down", spark: "crypto-trend-down" };
+  return { pct: "text-muted", spark: "crypto-trend-flat" };
 }
 
 function AssetRow({ row, locale }: { row: ICryptoMarketRow; locale: string }) {

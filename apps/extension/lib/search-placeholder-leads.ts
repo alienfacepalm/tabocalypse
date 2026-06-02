@@ -21,7 +21,21 @@ export function searchPlaceholderHumorRank(
   }
 }
 
-/** Lead text only; UI adds `? (EngineName)`. */
+/** Lead text only; UI adds `? (mode · destination)` via {@link formatSearchFieldPlaceholder}. */
+
+/** Full HUD search input placeholder: snarky lead plus active web vs AI mode. */
+export function formatSearchFieldPlaceholder(
+  lead: string,
+  assistActive: boolean,
+  webEngineLabel: string,
+  assistDestinationLabel: string,
+): string {
+  if (assistActive) {
+    return `${lead}? (AI search · ${assistDestinationLabel})`;
+  }
+  return `${lead}? (Web search · ${webEngineLabel})`;
+}
+
 const ENTRIES: ReadonlyArray<{ minRank: 0 | 1 | 2 | 3; lead: string }> = [
   // Rank 0 — humor off / intensity off: plain copy
   { minRank: 0, lead: "What are you looking for" },

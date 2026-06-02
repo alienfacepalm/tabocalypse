@@ -2,6 +2,7 @@ import browser from "webextension-polyfill";
 import { Search, Sparkles } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import {
+  formatSearchFieldPlaceholder,
   pickSearchPlaceholderLeadForHumorRank,
   searchPlaceholderHumorRank,
 } from "../../lib/search-placeholder-leads";
@@ -44,7 +45,12 @@ export function SearchWidget({
     () => pickSearchPlaceholderLeadForHumorRank(humorRank),
     [humorRank],
   );
-  const placeholder = `${placeholderLead}? (${SEARCH_ENGINE_LABELS[engine]})`;
+  const placeholder = formatSearchFieldPlaceholder(
+    placeholderLead,
+    assistActive,
+    SEARCH_ENGINE_LABELS[engine],
+    SEARCH_ASSIST_DESTINATION_LABELS[engine],
+  );
   const openInNewTab = (url: string) => {
     if (browser.tabs?.create) {
       void browser.tabs.create({ url });

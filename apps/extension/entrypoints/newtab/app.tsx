@@ -7,11 +7,14 @@ import {
   CheckCircle2,
   CircleX,
   Download,
+  Eye,
+  EyeOff,
   Flame,
   FolderUp,
   Image,
   ImagePlus,
   Images,
+  LayoutDashboard,
   LayoutGrid,
   Layers,
   LocateFixed,
@@ -51,7 +54,8 @@ import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
 import { SpeedTestWidget } from "../../components/built-in/speed-test-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/built-in/links-widget";
-import { NotesWidget } from "../../components/built-in/notes-widget";
+import { NotesMasterList } from "../../components/built-in/notes-master-list";
+import { StickyNoteLayer } from "../../components/built-in/sticky-note-layer";
 import { SearchWidget } from "../../components/built-in/search-widget";
 import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
@@ -72,6 +76,7 @@ import {
   applyChaosPresetHumorHarmony,
   applyNotePersistPatch,
   applyPreset,
+  coerceNotes,
   BACKGROUND_ROTATE_MINUTES_MAX,
   BACKGROUND_ROTATE_MINUTES_MIN,
   coerceBackgroundGradientAngleDeg,
@@ -83,6 +88,8 @@ import {
   coercePreset,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
   defaultSettings,
+  defaultStickyNotePosition,
+  type IStickyNotePosition,
   type IHudPanelPosition,
   type ISettings,
   isHudAutoRepositionEnabled,
@@ -127,7 +134,12 @@ import {
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
-import { clampHudScalar, DEFAULT_HUD_PANEL_POSITIONS } from "../../lib/hud-layout";
+import { DEFAULT_HUD_PANEL_POSITIONS, measureHudCanvasSize } from "../../lib/hud-layout";
+import {
+  computeHudPanelAutoLayoutUpdates,
+  HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT,
+  isHudKeyboardShortcutTypingTarget,
+} from "../../lib/hud-auto-layout";
 import {
   applyDocumentTheme,
   coerceThemeHex,
@@ -158,6 +170,24 @@ type TSettingsSectionJump =
   | "topSitesPermission"
   | "bookmarksPermission"
   | "tabsPermission";
+
+type TSettingsAccordionSection =
+  | "presets"
+  | "appearance"
+  | "widgets"
+  | "panelLayout"
+  | "chaos"
+  | "searchEngine"
+  | "background"
+  | "weather"
+  | "optionalPermissions"
+  | "alarms"
+  | "byoAi"
+  | "importPack"
+  | "importPlugin"
+  | "manageImports"
+  | "debug"
+  | "data";
 
 type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
 
@@ -275,7 +305,7 @@ function mergeHydratedSettingsWithBaseline(
   disk: ISettings,
   preserveMyLinesDraft: boolean,
 ): ISettings {
-  const mergedNotes = mergeNotesPreferNewerBaseline(baseline.notes, disk.notes);
+  const mergedNotes = coerceNotes(mergeNotesPreferNewerBaseline(baseline.notes, disk.notes));
   const validNoteIds = new Set(mergedNotes.map((n) => n.id));
   const bEpoch = baseline.notePanelsEpoch ?? 0;
   const dEpoch = disk.notePanelsEpoch ?? 0;
@@ -338,6 +368,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
   const [pendingSettingsSectionJump, setPendingSettingsSectionJump] =
     useState<TSettingsSectionJump | null>(null);
+  /** Survives closing the settings dialog until the new-tab session ends. */
+  const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
+    Partial<Record<TSettingsAccordionSection, boolean>>
+  >(() => ({ presets: true }));
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -359,9 +393,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const wallpaperAccentGenRef = useRef(0);
   /**
    * Stable identity for the visible Bing spotlight (`bingChosenUrl`) or upload (background row id).
-   * Blob/object URLs churn without the bitmap changing; dedupe accents on this key so `persist` + storage reload cannot oscillate.
+   * Mode-specific contrast is applied at render time in `resolveThemeCssVars`, not in storage.
    */
-  const lastWallpaperAccentLogicalRef = useRef<string | null>(null);
+  const lastWallpaperAccentApplyRef = useRef<{ logicalKey: string } | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const myLinesSaveTimerRef = useRef<number | null>(null);
@@ -704,7 +738,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   useEffect(() => {
     if (!settings.themeAccentsMatchWallpaper) {
-      lastWallpaperAccentLogicalRef.current = null;
+      lastWallpaperAccentApplyRef.current = null;
       return;
     }
     const kind = settings.backgroundKind;
@@ -742,17 +776,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           return;
         }
       }
-      lastWallpaperAccentLogicalRef.current = null;
+      lastWallpaperAccentApplyRef.current = null;
       return;
     }
 
-    if (logicalKey !== "" && lastWallpaperAccentLogicalRef.current === logicalKey) {
-      if (settings.themePalette === "custom") {
-        return;
-      }
+    const applied = lastWallpaperAccentApplyRef.current;
+    if (
+      logicalKey !== "" &&
+      applied?.logicalKey === logicalKey &&
+      settings.themePalette === "custom"
+    ) {
+      return;
     }
     if (logicalKey !== "") {
-      lastWallpaperAccentLogicalRef.current = logicalKey;
+      lastWallpaperAccentApplyRef.current = { logicalKey };
     }
 
     const gen = ++wallpaperAccentGenRef.current;
@@ -814,6 +851,26 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
   }, [persist]);
 
+  const settingsAccordionIsOpen = useCallback(
+    (section: TSettingsAccordionSection, defaultOpen = false): boolean =>
+      settingsAccordionOpen[section] ?? defaultOpen,
+    [settingsAccordionOpen],
+  );
+
+  const onSettingsAccordionToggle = useCallback(
+    (section: TSettingsAccordionSection) => (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+      setSettingsAccordionOpen((prev) => ({
+        ...prev,
+        [section]: e.currentTarget.open,
+      }));
+    },
+    [],
+  );
+
+  const openSettingsAccordionSection = useCallback((section: TSettingsAccordionSection) => {
+    setSettingsAccordionOpen((prev) => ({ ...prev, [section]: true }));
+  }, []);
+
   useEffect(() => {
     if (!openSettings || !pendingSettingsSectionJump) {
       return;
@@ -827,8 +884,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!section) {
       return;
     }
-    section.open = true;
-    section.scrollIntoView({ block: "start" });
     const focusTarget =
       pendingSettingsSectionJump === "topSitesPermission"
         ? topSitesPermissionButtonRef.current
@@ -837,41 +892,50 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           : pendingSettingsSectionJump === "tabsPermission"
             ? tabsPermissionButtonRef.current
             : section.querySelector("summary");
-    if (focusTarget instanceof HTMLElement) {
-      focusTarget.focus();
-    }
+    requestAnimationFrame(() => {
+      section.scrollIntoView({ block: "start" });
+      if (focusTarget instanceof HTMLElement) {
+        focusTarget.focus();
+      }
+    });
     setPendingSettingsSectionJump(null);
   }, [openSettings, pendingSettingsSectionJump]);
 
   const openWeatherSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("weather");
     setPendingSettingsSectionJump("weather");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const openWidgetsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("widgets");
     setPendingSettingsSectionJump("widgets");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const openOptionalPermissionsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("optionalPermissions");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const openTopSitesSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("topSitesPermission");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const openBookmarksSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("bookmarksPermission");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const openTabsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("tabsPermission");
     setOpenSettings(true);
-  }, []);
+  }, [openSettingsAccordionSection]);
 
   const fetchWeatherLocationOnce = useCallback(() => {
     if (latestSettingsRef.current.weatherAutoGeo) return;
@@ -954,20 +1018,88 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       void persist((cur) => ({
         ...cur,
         hudPanelPositions: { ...cur.hudPanelPositions, ...result.hudPanelPositions },
-        notePanels: result.notePanels,
       }));
     },
     [persist],
   );
 
-  const commitNotePanel = useCallback(
-    (noteId: string, pos: IHudPanelPosition) => {
+  const arrangeHudPanelsNow = useCallback(() => {
+    const canvas = hudCanvasRef.current;
+    if (!canvas) return;
+    const snap = latestSettingsRef.current;
+    const { widthPx, heightPx } = measureHudCanvasSize(canvas);
+    const hudUpdates = computeHudPanelAutoLayoutUpdates(
+      {
+        widgets: snap.widgets,
+        hudPanelPositions: snap.hudPanelPositions,
+        pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
+        notesListPanelVisible: snap.notesListPanelVisible,
+      },
+      widthPx,
+      heightPx,
+      { onlyIfChanged: false },
+    );
+    if (Object.keys(hudUpdates).length === 0) return;
+    applyAutoHudLayout({ hudPanelPositions: hudUpdates });
+    canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [applyAutoHudLayout]);
+
+  const arrangeHudPanelsNowRef = useRef(arrangeHudPanelsNow);
+  arrangeHudPanelsNowRef.current = arrangeHudPanelsNow;
+
+  useEffect(() => {
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT) return;
+      if (isHudKeyboardShortcutTypingTarget(ev.target)) return;
+      ev.preventDefault();
+      arrangeHudPanelsNowRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const setNoteActive = useCallback(
+    (noteId: string, active: boolean) => {
+      void persist((cur) => {
+        const onCanvas = cur.notePanels.some((p) => p.noteId === noteId);
+        if (active) {
+          if (onCanvas) return cur;
+          let hudLayoutLockedNext = cur.hudLayoutLocked;
+          if (cur.hudLayoutLocked) {
+            relockPromptNoteIdAfterAutoHudUnlockRef.current = noteId;
+            hudLayoutLockedNext = false;
+          }
+          const position = defaultStickyNotePosition(
+            cur.notePanels.length,
+            cur.hudPanelPositions.notes,
+          );
+          return {
+            ...cur,
+            hudLayoutLocked: hudLayoutLockedNext,
+            notePanels: [...cur.notePanels, { noteId, position }],
+          };
+        }
+        if (!onCanvas) return cur;
+        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+        }
+        return {
+          ...cur,
+          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+        };
+      });
+    },
+    [persist],
+  );
+
+  const commitStickyNotePosition = useCallback(
+    (noteId: string, pos: IStickyNotePosition) => {
       const snapshot = latestSettingsRef.current;
       const prev = snapshot.notePanels.find((p) => p.noteId === noteId)?.position;
       const moved =
         prev != null &&
-        (prev.xPct !== pos.xPct ||
-          prev.yPct !== pos.yPct ||
+        (prev.xPx !== pos.xPx ||
+          prev.yPx !== pos.yPx ||
           prev.widthPx !== pos.widthPx ||
           prev.heightPx !== pos.heightPx);
 
@@ -1782,7 +1914,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 </section>
               ) : null}
               <div className="settings-accordion">
-                <details className="acc-item" open>
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("presets", true)}
+                  onToggle={onSettingsAccordionToggle("presets")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Presets</span>
                   </summary>
@@ -1847,7 +1983,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("appearance")}
+                  onToggle={onSettingsAccordionToggle("appearance")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Appearance</span>
                   </summary>
@@ -1936,7 +2076,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details ref={widgetsSettingsSectionRef} className="acc-item">
+                <details
+                  ref={widgetsSettingsSectionRef}
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("widgets")}
+                  onToggle={onSettingsAccordionToggle("widgets")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Widgets</span>
                   </summary>
@@ -1954,7 +2099,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("panelLayout")}
+                  onToggle={onSettingsAccordionToggle("panelLayout")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Panel layout</span>
                   </summary>
@@ -1975,11 +2124,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       chaotic modes (overriding lock/chaotic for resize only). When it is off,
                       positions stay put on resize; chaotic, lock, and manual drag below take over.
                     </p>
+                    <button
+                      type="button"
+                      className="btn has-icon mb-2"
+                      onClick={() => arrangeHudPanelsNow()}
+                    >
+                      <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
+                      <span>Arrange panels now ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
+                    </button>
+                    <p className="muted sm mb-2">
+                      Same repack as resize auto-reflow. Use the header dashboard icon or press{" "}
+                      {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Sticky notes on the canvas stay put.
+                    </p>
                     <p className="muted sm mb-2">
                       Drag panels by the grip in each header. In grid mode (not chaotic), a
                       12-column dashed overlay fills the HUD while layout is unlocked; drop targets
-                      highlight the cells the panel will snap into. Use the top bar for layout lock
-                      and chaotic mode.
+                      highlight the cells the panel will snap into. Use the top bar for chaotic
+                      mode, arrange panels ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and layout
+                      lock.
                     </p>
                     <label className="check-row">
                       <input
@@ -2042,7 +2204,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("chaos")}
+                  onToggle={onSettingsAccordionToggle("chaos")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Chaos</span>
                   </summary>
@@ -2175,7 +2341,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("searchEngine")}
+                  onToggle={onSettingsAccordionToggle("searchEngine")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Search engine</span>
                   </summary>
@@ -2194,7 +2364,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("background")}
+                  onToggle={onSettingsAccordionToggle("background")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Background</span>
                   </summary>
@@ -2630,7 +2804,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details ref={weatherSettingsSectionRef} id="settings-weather" className="acc-item">
+                <details
+                  ref={weatherSettingsSectionRef}
+                  id="settings-weather"
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("weather")}
+                  onToggle={onSettingsAccordionToggle("weather")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Weather</span>
                   </summary>
@@ -2800,7 +2980,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details ref={optionalPermissionsSettingsSectionRef} className="acc-item">
+                <details
+                  ref={optionalPermissionsSettingsSectionRef}
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("optionalPermissions")}
+                  onToggle={onSettingsAccordionToggle("optionalPermissions")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Optional permissions</span>
                   </summary>
@@ -2972,7 +3157,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("alarms")}
+                  onToggle={onSettingsAccordionToggle("alarms")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Alarms</span>
                   </summary>
@@ -3112,7 +3301,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("byoAi")}
+                  onToggle={onSettingsAccordionToggle("byoAi")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">BYO AI</span>
                   </summary>
@@ -3156,7 +3349,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("importPack")}
+                  onToggle={onSettingsAccordionToggle("importPack")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Import pack</span>
                   </summary>
@@ -3178,7 +3375,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("importPlugin")}
+                  onToggle={onSettingsAccordionToggle("importPlugin")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Import declarative plugin</span>
                   </summary>
@@ -3198,7 +3399,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("manageImports")}
+                  onToggle={onSettingsAccordionToggle("manageImports")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Manage imports</span>
                   </summary>
@@ -3274,7 +3479,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("debug")}
+                  onToggle={onSettingsAccordionToggle("debug")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Debug</span>
                   </summary>
@@ -3293,7 +3502,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </div>
                 </details>
 
-                <details className="acc-item">
+                <details
+                  className="acc-item"
+                  open={settingsAccordionIsOpen("data")}
+                  onToggle={onSettingsAccordionToggle("data")}
+                >
                   <summary className="acc-summary">
                     <span className="acc-title">Data</span>
                   </summary>
@@ -3518,6 +3731,50 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             </button>
           </HudTip>
           <HudTip
+            tip={`Repack visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Sticky notes stay put`}
+          >
+            <button
+              type="button"
+              className="btn ghost icon-only"
+              aria-label={`Arrange HUD panels (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
+              onClick={() => arrangeHudPanelsNow()}
+            >
+              <LayoutDashboard size={20} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
+          {s.widgets.notes ? (
+            <HudTip
+              tip={
+                s.notesListPanelVisible
+                  ? "Hide the notes list panel (active stickies stay on the canvas)"
+                  : "Show the notes list panel"
+              }
+            >
+              <button
+                type="button"
+                className={
+                  s.notesListPanelVisible ? "btn primary icon-only" : "btn ghost icon-only"
+                }
+                aria-pressed={s.notesListPanelVisible}
+                aria-label={
+                  s.notesListPanelVisible ? "Hide notes list panel" : "Show notes list panel"
+                }
+                onClick={() =>
+                  void persist((cur) => ({
+                    ...cur,
+                    notesListPanelVisible: !cur.notesListPanelVisible,
+                  }))
+                }
+              >
+                {s.notesListPanelVisible ? (
+                  <Eye size={20} strokeWidth={2} aria-hidden />
+                ) : (
+                  <EyeOff size={20} strokeWidth={2} aria-hidden />
+                )}
+              </button>
+            </HudTip>
+          ) : null}
+          <HudTip
             tip={
               s.hudLayoutLocked
                 ? s.hudLayoutAdaptiveWhileLocked && s.hudLayoutAutoReposition
@@ -3702,8 +3959,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               enabled={isHudAutoRepositionEnabled(s)}
               widgets={s.widgets}
               hudPanelPositions={s.hudPanelPositions}
-              notePanels={s.notePanels}
               pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
+              notesListPanelVisible={s.notesListPanelVisible}
               onLayout={applyAutoHudLayout}
             />
             <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
@@ -3867,22 +4124,87 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             ) : null}
             {s.widgets.notes ? (
               <>
-                {s.notePanels.map((np) => (
+                <StickyNoteLayer
+                  canvasRef={hudCanvasRef}
+                  notes={s.notes}
+                  notePanels={s.notePanels}
+                  onCommitPosition={(noteId, position) =>
+                    commitStickyNotePosition(noteId, position)
+                  }
+                  onMarkInactive={(noteId) => setNoteActive(noteId, false)}
+                  onTogglePin={(noteId) =>
+                    void persist((cur) => ({
+                      ...cur,
+                      notePanels: cur.notePanels.map((p) =>
+                        p.noteId === noteId ? { ...p, pinned: !p.pinned } : p,
+                      ),
+                    }))
+                  }
+                  onUpdateNote={(noteId, patch) =>
+                    void persist((cur) => {
+                      const now = Date.now();
+                      let changed = false;
+                      const nextNotes = cur.notes.map((n) => {
+                        if (n.id !== noteId) return n;
+                        const merged = applyNotePersistPatch(n, patch, now);
+                        if (!merged) return n;
+                        changed = true;
+                        return merged;
+                      });
+                      if (!changed) return cur;
+                      return { ...cur, notes: nextNotes };
+                    })
+                  }
+                  onDeleteNote={(noteId) =>
+                    void persist((cur) => {
+                      const target = cur.notes.find((n) => n.id === noteId);
+                      if (!target || !isNoteDeleteAllowed(target)) return cur;
+                      if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                        relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                      }
+                      return {
+                        ...cur,
+                        notes: cur.notes.filter((n) => n.id !== noteId),
+                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                      };
+                    })
+                  }
+                />
+                {s.notesListPanelVisible ? (
                   <DraggableHudPanel
-                    key={`notes-open-${np.noteId}`}
+                    key="notes-master"
                     panelId="notes"
                     canvasRef={hudCanvasRef}
-                    position={np.position}
+                    position={s.hudPanelPositions.notes}
                     chaotic={s.hudLayoutChaotic}
                     locked={s.hudLayoutLocked}
-                    zIndexBase={52}
-                    onCommit={(pos) => commitNotePanel(np.noteId, pos)}
+                    zIndexBase={10}
+                    onCommit={(pos) => commitHudPanel("notes", pos)}
                   >
-                    <NotesWidget
-                      variant="panel"
-                      panelElasticHeight={typeof np.position.heightPx !== "number"}
+                    <NotesMasterList
                       notes={s.notes}
-                      panelNoteId={np.noteId}
+                      notePanels={s.notePanels}
+                      onSetNoteActive={setNoteActive}
+                      onCreateNote={({ id, tags }) =>
+                        void persist((cur) => {
+                          const now = Date.now();
+                          return {
+                            ...cur,
+                            notes: [
+                              {
+                                id,
+                                name: "",
+                                tags,
+                                text: "",
+                                locked: false,
+                                createdAt: now,
+                                updatedAt: now,
+                              },
+                              ...cur.notes,
+                            ],
+                          };
+                        })
+                      }
                       onUpdateNote={(noteId, patch) =>
                         void persist((cur) => {
                           const now = Date.now();
@@ -3912,139 +4234,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           };
                         })
                       }
-                      onClosePanel={() =>
-                        void persist((cur) => {
-                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === np.noteId) {
-                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                          }
-                          return {
-                            ...cur,
-                            notePanels: cur.notePanels.filter((p) => p.noteId !== np.noteId),
-                          };
-                        })
+                      onHideListPanel={() =>
+                        void persist((cur) => ({ ...cur, notesListPanelVisible: false }))
                       }
                     />
                   </DraggableHudPanel>
-                ))}
-                <DraggableHudPanel
-                  key="notes-master"
-                  panelId="notes"
-                  canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.notes}
-                  chaotic={s.hudLayoutChaotic}
-                  locked={s.hudLayoutLocked}
-                  zIndexBase={10}
-                  onCommit={(pos) => commitHudPanel("notes", pos)}
-                >
-                  <NotesWidget
-                    variant="switcher"
-                    notes={s.notes}
-                    notePanels={s.notePanels}
-                    onToggleNotePanel={(noteId) =>
-                      void persist((cur) => {
-                        if (cur.notePanels.some((p) => p.noteId === noteId)) {
-                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                          }
-                          return {
-                            ...cur,
-                            notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                          };
-                        }
-                        let hudLayoutLockedNext = cur.hudLayoutLocked;
-                        if (cur.hudLayoutLocked) {
-                          relockPromptNoteIdAfterAutoHudUnlockRef.current = noteId;
-                          hudLayoutLockedNext = false;
-                        }
-                        const anchor = cur.hudPanelPositions.notes;
-                        const stagger = cur.notePanels.length * 5;
-                        const position: IHudPanelPosition = {
-                          xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
-                          yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
-                        };
-                        if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
-                          position.widthPx = anchor.widthPx;
-                        }
-                        if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
-                          position.heightPx = anchor.heightPx;
-                        }
-                        return {
-                          ...cur,
-                          hudLayoutLocked: hudLayoutLockedNext,
-                          notePanels: [...cur.notePanels, { noteId, position }],
-                        };
-                      })
-                    }
-                    onCreateNote={({ id, name, tags }) =>
-                      void persist((cur) => {
-                        const now = Date.now();
-                        let hudLayoutLockedNext = cur.hudLayoutLocked;
-                        if (cur.hudLayoutLocked) {
-                          relockPromptNoteIdAfterAutoHudUnlockRef.current = id;
-                          hudLayoutLockedNext = false;
-                        }
-                        const anchor = cur.hudPanelPositions.notes;
-                        const stagger = cur.notePanels.length * 5;
-                        const position: IHudPanelPosition = {
-                          xPct: clampHudScalar(anchor.xPct + stagger, 0, 86),
-                          yPct: clampHudScalar(anchor.yPct + 18 + stagger, 0, 78),
-                        };
-                        if (typeof anchor.widthPx === "number" && anchor.widthPx > 0) {
-                          position.widthPx = anchor.widthPx;
-                        }
-                        if (typeof anchor.heightPx === "number" && anchor.heightPx > 0) {
-                          position.heightPx = anchor.heightPx;
-                        }
-                        return {
-                          ...cur,
-                          hudLayoutLocked: hudLayoutLockedNext,
-                          notes: [
-                            {
-                              id,
-                              name,
-                              tags,
-                              text: "",
-                              locked: false,
-                              createdAt: now,
-                              updatedAt: now,
-                            },
-                            ...cur.notes,
-                          ],
-                          notePanels: [...cur.notePanels, { noteId: id, position }],
-                        };
-                      })
-                    }
-                    onUpdateNote={(noteId, patch) =>
-                      void persist((cur) => {
-                        const now = Date.now();
-                        let changed = false;
-                        const nextNotes = cur.notes.map((n) => {
-                          if (n.id !== noteId) return n;
-                          const merged = applyNotePersistPatch(n, patch, now);
-                          if (!merged) return n;
-                          changed = true;
-                          return merged;
-                        });
-                        if (!changed) return cur;
-                        return { ...cur, notes: nextNotes };
-                      })
-                    }
-                    onDeleteNote={(noteId) =>
-                      void persist((cur) => {
-                        const target = cur.notes.find((n) => n.id === noteId);
-                        if (!target || !isNoteDeleteAllowed(target)) return cur;
-                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                        }
-                        return {
-                          ...cur,
-                          notes: cur.notes.filter((n) => n.id !== noteId),
-                          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                        };
-                      })
-                    }
-                  />
-                </DraggableHudPanel>
+                ) : null}
               </>
             ) : null}
           </HudPlacementProvider>

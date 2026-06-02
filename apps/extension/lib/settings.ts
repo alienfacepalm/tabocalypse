@@ -1,6 +1,12 @@
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
-import { mergeHudPanelPositions, type IHudPanelPosition, type THudPanelId } from "./hud-layout";
+import {
+  HUD_LAYOUT_REFERENCE_CANVAS,
+  clampHudScalar,
+  mergeHudPanelPositions,
+  type IHudPanelPosition,
+  type THudPanelId,
+} from "./hud-layout";
 import {
   coerceThemeHex,
   coerceThemeMode,
@@ -86,13 +92,48 @@ export interface ITodoItem {
 
 export interface INote {
   id: string;
+  /** Legacy storage field; display titles come from {@link deriveNoteTitle} on {@link text}. */
   name: string;
   tags: string[];
   text: string;
-  /** When true, body and title cannot change and the note cannot be deleted; panels can still be hidden. */
+  /** When true, body cannot change and the note cannot be deleted; panels can still be hidden. */
   locked: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Max words used when building a display title from note body text. */
+export const NOTE_TITLE_MAX_WORDS = 6;
+
+/** Build a short title from the first non-empty line of note text (first few words). */
+export function deriveNoteTitle(
+  text: string | null | undefined,
+  maxWords: number = NOTE_TITLE_MAX_WORDS,
+): string {
+  const body = typeof text === "string" ? text : "";
+  const rawLines = body.split(/\r?\n/);
+  let firstLineIndex = -1;
+  let firstLine = "";
+  for (let i = 0; i < rawLines.length; i++) {
+    const trimmed = rawLines[i]!.trim();
+    if (trimmed.length > 0) {
+      firstLineIndex = i;
+      firstLine = trimmed;
+      break;
+    }
+  }
+  if (!firstLine) return "Empty note";
+
+  const words = firstLine.split(/\s+/).filter(Boolean);
+  const truncatedOnLine = words.length > maxWords;
+  const titleWords = words.slice(0, maxWords);
+  const hasMoreLines = rawLines.slice(firstLineIndex + 1).some((line) => line.trim().length > 0);
+
+  let title = titleWords.join(" ");
+  if (truncatedOnLine || hasMoreLines) {
+    title += "…";
+  }
+  return title;
 }
 
 export type TNotePersistPatch = Partial<Pick<INote, "name" | "tags" | "text" | "locked">>;
@@ -189,10 +230,110 @@ export function mergeNotePanelsForStorageReload(
   return mergeNotePanelsWhenEpochMatches(baseline, incoming, validNoteIds);
 }
 
-/** A pinned note opens as its own draggable panel with an independent HUD position. */
+/** Fixed canvas placement for a sticky note (does not scale with viewport). */
+export interface IStickyNotePosition {
+  xPx: number;
+  yPx: number;
+  widthPx: number;
+  heightPx: number;
+}
+
+export const STICKY_NOTE_DEFAULT_SIZE_PX = { widthPx: 260, heightPx: 220 };
+
+export const STICKY_NOTE_SIZE_LIMITS = {
+  minW: 180,
+  maxW: 640,
+  minH: 140,
+  maxH: 720,
+} as const;
+
+/** Clamp sticky outer size; optionally cap to remaining canvas space from {@link xPx}/{@link yPx}. */
+export function clampStickyNoteSize(
+  widthPx: number,
+  heightPx: number,
+  options?: { canvasW?: number; canvasH?: number; xPx?: number; yPx?: number },
+): { widthPx: number; heightPx: number } {
+  const L = STICKY_NOTE_SIZE_LIMITS;
+  let w = Math.round(clampHudScalar(widthPx, L.minW, L.maxW));
+  let h = Math.round(clampHudScalar(heightPx, L.minH, L.maxH));
+  const canvasW = options?.canvasW;
+  const canvasH = options?.canvasH;
+  const xPx = options?.xPx;
+  const yPx = options?.yPx;
+  if (canvasW != null && xPx != null) {
+    w = Math.min(w, Math.max(L.minW, canvasW - xPx));
+  }
+  if (canvasH != null && yPx != null) {
+    h = Math.min(h, Math.max(L.minH, canvasH - yPx));
+  }
+  return { widthPx: w, heightPx: h };
+}
+
+/** A note placed on the canvas as a sticky (independent fixed pixel position). */
 export interface INotePanel {
   noteId: string;
-  position: IHudPanelPosition;
+  position: IStickyNotePosition;
+  /** When true, the sticky stays at {@link position} and cannot be dragged. */
+  pinned?: boolean;
+}
+
+/** Whether a note is shown as a sticky on the canvas (active). */
+export function isNoteActive(noteId: string, notePanels: readonly INotePanel[]): boolean {
+  return notePanels.some((p) => p.noteId === noteId);
+}
+
+/** Default sticky placement when opening a note on the canvas. */
+export function defaultStickyNotePosition(
+  staggerIndex: number,
+  anchor?: IHudPanelPosition,
+): IStickyNotePosition {
+  const refW = HUD_LAYOUT_REFERENCE_CANVAS.widthPx;
+  const refH = HUD_LAYOUT_REFERENCE_CANVAS.heightPx;
+  const { widthPx, heightPx } = STICKY_NOTE_DEFAULT_SIZE_PX;
+  const baseX = anchor ? (anchor.xPct / 100) * refW : refW * 0.58;
+  const baseY = anchor ? (anchor.yPct / 100) * refH : refH * 0.02;
+  const stagger = staggerIndex * 24;
+  return {
+    xPx: Math.min(Math.max(0, refW - widthPx), Math.round(baseX + stagger)),
+    yPx: Math.min(Math.max(0, refH - heightPx), Math.round(baseY + 48 + stagger)),
+    widthPx,
+    heightPx,
+  };
+}
+
+function coerceStickyNotePosition(raw: unknown): IStickyNotePosition | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const pr = raw as Record<string, unknown>;
+  const { widthPx: defaultW, heightPx: defaultH } = STICKY_NOTE_DEFAULT_SIZE_PX;
+
+  let widthPx = defaultW;
+  if (typeof pr.widthPx === "number" && Number.isFinite(pr.widthPx) && pr.widthPx > 0) {
+    widthPx = Math.round(pr.widthPx);
+  }
+
+  let heightPx = defaultH;
+  if (typeof pr.heightPx === "number" && Number.isFinite(pr.heightPx) && pr.heightPx > 0) {
+    heightPx = Math.round(pr.heightPx);
+  }
+
+  if (
+    typeof pr.xPx === "number" &&
+    Number.isFinite(pr.xPx) &&
+    typeof pr.yPx === "number" &&
+    Number.isFinite(pr.yPx)
+  ) {
+    const xPx = Math.max(0, Math.round(pr.xPx));
+    const yPx = Math.max(0, Math.round(pr.yPx));
+    const sized = clampStickyNoteSize(widthPx, heightPx);
+    return { xPx, yPx, ...sized };
+  }
+
+  const xPct = typeof pr.xPct === "number" && Number.isFinite(pr.xPct) ? pr.xPct : 0;
+  const yPct = typeof pr.yPct === "number" && Number.isFinite(pr.yPct) ? pr.yPct : 0;
+  const xPx = Math.max(0, Math.round((xPct / 100) * HUD_LAYOUT_REFERENCE_CANVAS.widthPx));
+  const yPx = Math.max(0, Math.round((yPct / 100) * HUD_LAYOUT_REFERENCE_CANVAS.heightPx));
+  const sized = clampStickyNoteSize(widthPx, heightPx);
+  return { xPx, yPx, ...sized };
 }
 
 export function newNoteId(): string {
@@ -235,19 +376,10 @@ export function coerceNotePanels(raw: unknown, validNoteIds: ReadonlySet<string>
     const noteId =
       typeof o.noteId === "string" && o.noteId.trim().length > 0 ? o.noteId.trim() : "";
     if (!noteId.length || !validNoteIds.has(noteId)) continue;
-    const p = o.position;
-    if (typeof p !== "object" || p === null) continue;
-    const pr = p as Record<string, unknown>;
-    const xPct = typeof pr.xPct === "number" && Number.isFinite(pr.xPct) ? pr.xPct : 0;
-    const yPct = typeof pr.yPct === "number" && Number.isFinite(pr.yPct) ? pr.yPct : 0;
-    const pos: IHudPanelPosition = { xPct, yPct };
-    if (typeof pr.widthPx === "number" && Number.isFinite(pr.widthPx) && pr.widthPx > 0) {
-      pos.widthPx = pr.widthPx;
-    }
-    if (typeof pr.heightPx === "number" && Number.isFinite(pr.heightPx) && pr.heightPx > 0) {
-      pos.heightPx = pr.heightPx;
-    }
-    out.push({ noteId, position: pos });
+    const position = coerceStickyNotePosition(o.position);
+    if (!position) continue;
+    const pinned = o.pinned === true;
+    out.push({ noteId, position, ...(pinned ? { pinned: true } : {}) });
   }
   return out;
 }
@@ -258,7 +390,7 @@ export function migrateLegacyNotesTextIntoNotes(text: string, now: number): INot
   return [
     {
       id: newNoteId(),
-      name: "Note",
+      name: "",
       tags: [],
       text: trimmed,
       locked: false,
@@ -474,13 +606,15 @@ export interface ISettings {
   /** @deprecated Prefer `notes`; kept for storage/load migration only. */
   notesText: string;
   notes: INote[];
-  /** Pinned-note editor panels shown on the HUD canvas. */
+  /** Active notes shown as stickies on the HUD canvas. */
   notePanels: INotePanel[];
   /**
    * Bump whenever {@link notePanels} is replaced (open/close/drag commit). Used to ignore stale
    * `notePanels` from `storage.onChanged` while saves are reordering (see merge on reload).
    */
   notePanelsEpoch: number;
+  /** When false, the notes list panel is hidden but active stickies stay on the canvas. */
+  notesListPanelVisible: boolean;
   todos: ITodoItem[];
   /** When true, panels are not snapped to the HUD grid on drop. */
   hudLayoutChaotic: boolean;
@@ -531,6 +665,7 @@ export interface INotesSyncSlice {
   notes: INote[];
   notePanels: INotePanel[];
   notePanelsEpoch: number;
+  notesListPanelVisible?: boolean;
 }
 
 function syncJsonByteLength(value: unknown): number {
@@ -575,7 +710,7 @@ function resolveNotesFromStorage(
   mirror: Partial<INotesSyncSlice> | undefined,
   local: Partial<ILocalSlice> | undefined,
   mergeNow: number,
-): Pick<ISettings, "notes" | "notePanels" | "notePanelsEpoch"> {
+): Pick<ISettings, "notes" | "notePanels" | "notePanelsEpoch" | "notesListPanelVisible"> {
   const notesSync = mergeNotesSyncFromSources(cloud, mirror);
   const mirrorNotes = coerceNotes(mirror?.notes);
   const cloudNotes = coerceNotes(cloud?.notes);
@@ -634,7 +769,13 @@ function resolveNotesFromStorage(
     notePanelsEpoch = 1;
   }
 
-  return { notes, notePanels, notePanelsEpoch };
+  const notesSyncMerged = mergeNotesSyncFromSources(cloud, mirror);
+  const notesListPanelVisible =
+    typeof notesSyncMerged?.notesListPanelVisible === "boolean"
+      ? notesSyncMerged.notesListPanelVisible
+      : true;
+
+  return { notes, notePanels, notePanelsEpoch, notesListPanelVisible };
 }
 
 export interface ISyncSlice {
@@ -858,6 +999,7 @@ export function defaultSettings(): ISettings {
     notes: [],
     notePanels: [],
     notePanelsEpoch: 0,
+    notesListPanelVisible: true,
     todos: [],
     hudLayoutChaotic: true,
     hudLayoutLocked: false,
@@ -916,6 +1058,7 @@ function toNotesSync(s: ISettings): INotesSyncSlice {
     notes: s.notes,
     notePanels: s.notePanels,
     notePanelsEpoch: s.notePanelsEpoch,
+    notesListPanelVisible: s.notesListPanelVisible,
   };
 }
 
@@ -1017,6 +1160,7 @@ function mergeSettings(
     notes: mergedNotes,
     notePanels: mergedNotePanels,
     notePanelsEpoch,
+    notesListPanelVisible,
   } = resolveNotesFromStorage(notesCloud, notesMirror, local, mergeNow);
 
   const preset = coercePreset(sync?.preset, d.preset);
@@ -1130,6 +1274,7 @@ function mergeSettings(
     notes: mergedNotes,
     notePanels: mergedNotePanels,
     notePanelsEpoch,
+    notesListPanelVisible,
     todos: local?.todos ?? d.todos,
     hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,

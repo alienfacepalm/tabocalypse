@@ -1,13 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import {
-  buildHudAutoLayoutItems,
-  computeAutoHudPanelLayout,
-  resolveHudLayoutDensity,
-} from "../lib/hud-auto-layout";
+import { computeHudPanelAutoLayoutUpdates } from "../lib/hud-auto-layout";
 import type { IHudPanelPosition, THudPanelId } from "../lib/hud-layout";
-import { getHudLayoutMetrics, measureHudCanvasSize } from "../lib/hud-layout";
-import type { INotePanel, TWidgetKey } from "../lib/settings";
+import { measureHudCanvasSize } from "../lib/hud-layout";
+import type { TWidgetKey } from "../lib/settings";
 import { useHudPlacementOptional } from "./hud-placement-context";
 
 const RESIZE_DEBOUNCE_MS = 200;
@@ -15,7 +11,6 @@ const SIZE_EPSILON_PX = 2;
 
 export interface IHudAutoRepositionResult {
   hudPanelPositions: Partial<Record<THudPanelId, IHudPanelPosition>>;
-  notePanels: INotePanel[];
 }
 
 /** Repositions visible HUD panels when the canvas size changes and auto-reposition is enabled. */
@@ -24,16 +19,16 @@ export function HudAutoRepositionSync({
   enabled,
   widgets,
   hudPanelPositions,
-  notePanels,
   pluginDeckVisible,
+  notesListPanelVisible,
   onLayout,
 }: {
   canvasRef: RefObject<HTMLElement | null>;
   enabled: boolean;
   widgets: Record<TWidgetKey, boolean>;
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
-  notePanels: readonly INotePanel[];
   pluginDeckVisible: boolean;
+  notesListPanelVisible: boolean;
   onLayout: (result: IHudAutoRepositionResult) => void;
 }): null {
   const hudPlacement = useHudPlacementOptional();
@@ -44,10 +39,10 @@ export function HudAutoRepositionSync({
   const layoutInputRef = useRef({
     widgets,
     hudPanelPositions,
-    notePanels,
     pluginDeckVisible,
+    notesListPanelVisible,
   });
-  layoutInputRef.current = { widgets, hudPanelPositions, notePanels, pluginDeckVisible };
+  layoutInputRef.current = { widgets, hudPanelPositions, pluginDeckVisible, notesListPanelVisible };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,34 +60,13 @@ export function HudAutoRepositionSync({
     ): void => {
       if (hudPlacement?.dropHighlight) return;
       const input = layoutInputRef.current;
-      const metrics = getHudLayoutMetrics(widthPx, heightPx);
-      const density = resolveHudLayoutDensity(widthPx, heightPx, prevW, prevH);
-      const items = buildHudAutoLayoutItems(input);
-      const placed = computeAutoHudPanelLayout(items, metrics, density);
-      const hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
-      const noteUpdates: INotePanel[] = input.notePanels.map((np) => ({ ...np }));
-      let noteChanged = false;
-      for (const [key, pos] of placed) {
-        if (key.startsWith("note:")) {
-          const noteId = key.slice(5);
-          const idx = noteUpdates.findIndex((p) => p.noteId === noteId);
-          if (idx >= 0 && !hudPositionsEqual(noteUpdates[idx].position, pos)) {
-            noteUpdates[idx] = { ...noteUpdates[idx], position: pos };
-            noteChanged = true;
-          }
-        } else {
-          const panelId = key as THudPanelId;
-          const prev = input.hudPanelPositions[panelId];
-          if (!hudPositionsEqual(prev, pos)) {
-            hudUpdates[panelId] = pos;
-          }
-        }
-      }
-      if (Object.keys(hudUpdates).length === 0 && !noteChanged) return;
-      onLayoutRef.current({
-        hudPanelPositions: hudUpdates,
-        notePanels: noteChanged ? noteUpdates : [...input.notePanels],
+      const hudUpdates = computeHudPanelAutoLayoutUpdates(input, widthPx, heightPx, {
+        prevCanvasW: prevW,
+        prevCanvasH: prevH,
+        onlyIfChanged: true,
       });
+      if (Object.keys(hudUpdates).length === 0) return;
+      onLayoutRef.current({ hudPanelPositions: hudUpdates });
       canvasEl.scrollTo({ top: 0, left: 0, behavior: "auto" });
     };
 
@@ -131,10 +105,4 @@ export function HudAutoRepositionSync({
   }, [canvasRef, enabled, hudPlacement?.dropHighlight]);
 
   return null;
-}
-
-function hudPositionsEqual(a: IHudPanelPosition, b: IHudPanelPosition): boolean {
-  return (
-    a.xPct === b.xPct && a.yPct === b.yPct && a.widthPx === b.widthPx && a.heightPx === b.heightPx
-  );
 }

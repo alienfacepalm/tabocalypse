@@ -141,6 +141,158 @@ function mixRgb(
   return `#${to(r)}${to(g)}${to(bl)}`;
 }
 
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case rn:
+        h = (gn - bn) / d + (gn < bn ? 6 : 0);
+        break;
+      case gn:
+        h = (bn - rn) / d + 2;
+        break;
+      default:
+        h = (rn - gn) / d + 4;
+    }
+    h /= 6;
+  }
+  return { h, s, l };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    let tt = t;
+    if (tt < 0) tt += 1;
+    if (tt > 1) tt -= 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  let r: number;
+  let g: number;
+  let b: number;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const c = (n: number) =>
+    Math.min(255, Math.max(0, Math.round(n * 255)))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+/** Only the palest accents are capped (light mode); idempotent — safe with storage + resolve. */
+const LIGHT_PALE_L_TRIGGER = 0.82;
+const LIGHT_ACCENT_L_CAP = 0.78;
+
+/** Secondary accent (ghost buttons, borders): needs more contrast on light glass than primary. */
+const LIGHT_ACCENT2_PALE_L_TRIGGER = 0.68;
+const LIGHT_ACCENT2_L_CAP = 0.6;
+
+/** Lift subdued accents for HUD labels / toggles on dark glass; idempotent floor. */
+const DARK_SUBDUED_L_TRIGGER = 0.48;
+const DARK_ACCENT_L_FLOOR = 0.58;
+
+function setAccentLightness(
+  hex: string,
+  targetL: number,
+  fallback = DEFAULT_THEME_CUSTOM_ACCENT,
+): string {
+  const rgb = parseRgb(hex);
+  if (!rgb) return coerceThemeHex(hex, fallback);
+  const { h, s, l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const l2 = Math.min(1, Math.max(0, targetL));
+  if (Math.abs(l2 - l) < 0.004) {
+    return coerceThemeHex(hex, fallback);
+  }
+  return coerceThemeHex(hslToHex(h, s, l2), fallback);
+}
+
+function relativeLuminance(r: number, g: number, b: number): number {
+  const chan = (c: number): number => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+}
+
+/** Text/icons on filled `.btn.primary` — follows accent luminance (Auto HUD dark olives). */
+export function deriveOnAccent(accent: string): string {
+  const rgb = parseRgb(accent);
+  if (!rgb) return "#0a0a0a";
+  return relativeLuminance(rgb.r, rgb.g, rgb.b) > 0.55 ? "#0a0a0a" : "#f2f2ec";
+}
+
+/**
+ * Trim only very washed-out accents on light glass (hue/saturation unchanged). One-shot cap, not
+ * cumulative darkening.
+ */
+export function ensureAccentReadableInLightMode(hex: string): string {
+  const rgb = parseRgb(hex);
+  if (!rgb) return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT);
+  const { l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  if (l <= LIGHT_PALE_L_TRIGGER) {
+    return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT);
+  }
+
+  return setAccentLightness(hex, Math.min(l, LIGHT_ACCENT_L_CAP));
+}
+
+/**
+ * Darkens mid-light secondary accents on light glass (ghost buttons, magenta borders). Stricter than
+ * primary so icon strokes stay legible; idempotent one-shot cap.
+ */
+export function ensureAccent2ReadableInLightMode(hex: string): string {
+  const rgb = parseRgb(hex);
+  if (!rgb) return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT2);
+  const { l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  if (l <= LIGHT_ACCENT2_PALE_L_TRIGGER) {
+    return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT2);
+  }
+
+  return setAccentLightness(hex, Math.min(l, LIGHT_ACCENT2_L_CAP), DEFAULT_THEME_CUSTOM_ACCENT2);
+}
+
+/**
+ * Lift only accents that are too dim for HUD text on dark glass. One-shot floor, same hue.
+ */
+export function ensureAccentReadableInDarkMode(hex: string): string {
+  const rgb = parseRgb(hex);
+  if (!rgb) return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT);
+  const { l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  if (l >= DARK_SUBDUED_L_TRIGGER) {
+    return coerceThemeHex(hex, DEFAULT_THEME_CUSTOM_ACCENT);
+  }
+
+  return setAccentLightness(hex, Math.max(l, DARK_ACCENT_L_FLOOR));
+}
+
+/** Applies light- or dark-mode HUD accent contrast rules (safe to call repeatedly). */
+export function adaptHudAccentForThemeMode(hex: string, mode: TThemeMode): string {
+  return mode === "light"
+    ? ensureAccentReadableInLightMode(hex)
+    : ensureAccentReadableInDarkMode(hex);
+}
+
 /** Light tint for highlights / tertiary accent when the user picks custom primaries. */
 export function deriveCustomAccent3(accent: string, mode: TThemeMode): string {
   const a = parseRgb(accent);
@@ -184,11 +336,23 @@ export function resolveThemeCssVars(
   } else {
     ({ accent, accent2, accent3 } = PALETTE_ACCENTS[palette]);
   }
+
+  if (palette === "custom") {
+    accent = adaptHudAccentForThemeMode(accent, mode);
+    accent2 = adaptHudAccentForThemeMode(accent2, mode);
+    accent3 = deriveCustomAccent3(accent, mode);
+  }
+
+  if (mode === "light") {
+    accent2 = ensureAccent2ReadableInLightMode(accent2);
+  }
+
   return {
     ...base,
     "--color-accent": accent,
     "--color-accent2": accent2,
     "--color-accent3": accent3,
+    "--color-on-accent": deriveOnAccent(accent),
   };
 }
 
