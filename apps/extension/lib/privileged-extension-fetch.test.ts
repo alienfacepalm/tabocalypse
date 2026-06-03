@@ -31,6 +31,9 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
       ),
     ).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://2lakes.app/api/all-buoy-data")).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("  https://2LAKES.APP/api/all-buoy-data  ")).toBe(
+      true,
+    );
   });
 
   it("rejects other hosts and non-HTTPS schemes", () => {
@@ -64,6 +67,14 @@ describe("coercePrivilegedFetchJsonHeaders", () => {
         Authorization: "Bearer secret",
       }),
     ).toBeUndefined();
+  });
+
+  it("allows X-API-Key on 2lakes URLs", () => {
+    expect(
+      coercePrivilegedFetchJsonHeaders("https://2lakes.app/api/all-buoy-data", {
+        "X-API-Key": "2l_key_test",
+      }),
+    ).toEqual({ "X-API-Key": "2l_key_test" });
   });
 });
 

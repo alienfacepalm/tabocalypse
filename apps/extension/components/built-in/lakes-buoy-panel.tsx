@@ -1,7 +1,10 @@
 import { RotateCw } from "lucide-react";
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { HudTip } from "../hud-tip";
-import { isPrivilegedFetchAllowlistError } from "../../lib/privileged-extension-fetch";
+import {
+  isPrivilegedFetchAllowlistError,
+  PRIV_FETCH_RELOAD_EXTENSION_HINT,
+} from "../../lib/privileged-extension-fetch";
 import { TWO_LAKES_API_KEY_SETTING_LABEL } from "../../lib/settings";
 import {
   fetchAllLakesBuoys,
@@ -85,19 +88,22 @@ export function LakesBuoyPanel({
       <div className="flex flex-col gap-2">
         <p className="err">{panelState.message}</p>
         {showAllowlistReload ? (
-          <div className="row wrap gap-2">
-            <HudTip tip="Fetch 2 Lakes buoy readings again from 2lakes.app">
-              <button
-                type="button"
-                className="btn primary sm"
-                onClick={retryBuoyFetch}
-                aria-label="Reload 2 Lakes buoy data"
-              >
-                <RotateCw size={16} strokeWidth={2} aria-hidden />
-                Reload
-              </button>
-            </HudTip>
-          </div>
+          <>
+            <p className="muted text-xs leading-tight">{PRIV_FETCH_RELOAD_EXTENSION_HINT}</p>
+            <div className="row wrap gap-2">
+              <HudTip tip="Fetch 2 Lakes buoy readings again after reloading the extension">
+                <button
+                  type="button"
+                  className="btn primary sm"
+                  onClick={retryBuoyFetch}
+                  aria-label="Reload 2 Lakes buoy data"
+                >
+                  <RotateCw size={16} strokeWidth={2} aria-hidden />
+                  Reload
+                </button>
+              </HudTip>
+            </div>
+          </>
         ) : null}
         {!lakesApiKey.trim() ? (
           <p className="muted text-xs leading-tight">
@@ -116,7 +122,7 @@ export function LakesBuoyPanel({
             </button>{" "}
             under {TWO_LAKES_API_KEY_SETTING_LABEL}.
           </p>
-        ) : panelState.message === LAKES_API_KEY_REQUIRED_MESSAGE ? null : (
+        ) : showAllowlistReload || panelState.message === LAKES_API_KEY_REQUIRED_MESSAGE ? null : (
           <p className="muted text-xs leading-tight">
             Check the key in{" "}
             <button type="button" className="linkish p-0 text-xs" onClick={onOpenWeatherSettings}>

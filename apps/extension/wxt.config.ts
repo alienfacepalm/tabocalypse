@@ -18,8 +18,14 @@ export default defineConfig({
       "https://peapix.com/*",
       "https://img.peapix.com/*",
       "https://2lakes.app/*",
+      "https://www.2lakes.app/*",
     ],
-    optional_host_permissions: ["https://api.openai.com/*"],
+    optional_host_permissions: [
+      "https://api.openai.com/*",
+      "https://*/*",
+      "http://127.0.0.1/*",
+      "http://localhost/*",
+    ],
     action: {},
     browser_specific_settings: {
       gecko: {

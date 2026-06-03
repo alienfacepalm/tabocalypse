@@ -6,70 +6,18 @@ import { coerceCryptoChartDays } from "../lib/crypto/crypto-chart-days";
 import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coingecko-background";
 import { TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW } from "../lib/crypto/crypto-coingecko-message";
 import {
-  arrayBufferToBase64,
   coercePrivilegedFetchJsonHeaders,
-  isPrivilegedExtensionFetchUrlAllowed,
   TABOCALYPSE_PRIV_FETCH_BYTES,
   TABOCALYPSE_PRIV_FETCH_JSON,
-  type TPrivilegedFetchBytesResponse,
-  type TPrivilegedFetchJsonResponse,
 } from "../lib/privileged-extension-fetch";
+import {
+  privilegedFetchBytesInBackground,
+  privilegedFetchJsonInBackground,
+} from "../lib/privileged-extension-fetch-handler";
 
 async function getMeta(): Promise<TAlarmMeta> {
   const r = await browser.storage.local.get(META_KEY);
   return ((r[META_KEY] as TAlarmMeta) ?? {}) as TAlarmMeta;
-}
-
-async function privilegedFetchJsonInBackground(
-  url: string,
-  headers?: Record<string, string>,
-): Promise<TPrivilegedFetchJsonResponse> {
-  if (!isPrivilegedExtensionFetchUrlAllowed(url)) {
-    return { ok: false, error: "URL not allowlisted for privileged fetch." };
-  }
-  try {
-    const res = await fetch(url, {
-      credentials: "omit",
-      cache: "no-store",
-      ...(headers ? { headers } : {}),
-    });
-    if (!res.ok) {
-      let error = `HTTP ${res.status}`;
-      try {
-        const body: unknown = await res.json();
-        if (body != null && typeof body === "object" && !Array.isArray(body)) {
-          const row = body as Record<string, unknown>;
-          if (typeof row.message === "string" && row.message.trim().length > 0) {
-            error = row.message.trim();
-          }
-        }
-      } catch {
-        // keep HTTP status fallback
-      }
-      return { ok: false, error };
-    }
-    const data: unknown = await res.json();
-    return { ok: true, data };
-  } catch (e: unknown) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
-async function privilegedFetchBytesInBackground(
-  url: string,
-): Promise<TPrivilegedFetchBytesResponse> {
-  if (!isPrivilegedExtensionFetchUrlAllowed(url)) {
-    return { ok: false, error: "URL not allowlisted for privileged fetch." };
-  }
-  try {
-    const res = await fetch(url, { credentials: "omit", cache: "no-store" });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    const mime = res.headers.get("content-type") ?? "application/octet-stream";
-    const buf = await res.arrayBuffer();
-    return { ok: true, base64: arrayBufferToBase64(buf), mime };
-  } catch (e: unknown) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
 }
 
 export default defineBackground(() => {

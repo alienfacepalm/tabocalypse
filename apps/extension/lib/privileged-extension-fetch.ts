@@ -83,14 +83,41 @@ export async function extensionRuntimeSendMessage<T>(message: unknown): Promise<
   throw new Error("runtime.sendMessage is unavailable.");
 }
 
-/** Must stay aligned with `host_permissions` in `wxt.config.ts` (HTTPS prefixes only). */
+/**
+ * HTTPS hostnames allowed for background privileged fetch.
+ * Must stay aligned with `host_permissions` in `wxt.config.ts`.
+ */
+export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
+  "peapix.com",
+  "img.peapix.com",
+  "api.open-meteo.com",
+  "api.coingecko.com",
+  "2lakes.app",
+  "www.2lakes.app",
+] as const;
+
+/** Must stay aligned with {@link PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS}. */
 const ALLOWED_URL_PREFIXES = [
   "https://peapix.com/",
   "https://img.peapix.com/",
   "https://api.open-meteo.com/",
   "https://api.coingecko.com/",
   "https://2lakes.app/",
+  "https://www.2lakes.app/",
 ] as const;
+
+export function normalizePrivilegedExtensionFetchUrl(url: string): string {
+  return new URL(url.trim()).href;
+}
+
+export function isTwoLakesPrivilegedFetchUrl(url: string): boolean {
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase();
+    return host === "2lakes.app" || host === "www.2lakes.app";
+  } catch {
+    return false;
+  }
+}
 
 export const TABOCALYPSE_PRIV_FETCH_JSON = "tabocalypse/privilegedFetchJson" as const;
 export const TABOCALYPSE_PRIV_FETCH_BYTES = "tabocalypse/privilegedFetchBytes" as const;
@@ -116,17 +143,27 @@ export type TPrivilegedFetchBytesResponse =
 
 export function isPrivilegedExtensionFetchUrlAllowed(url: string): boolean {
   try {
-    const u = new URL(url);
+    const normalized = normalizePrivilegedExtensionFetchUrl(url);
+    const u = new URL(normalized);
     if (u.protocol !== "https:") return false;
-    return ALLOWED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
+    const host = u.hostname.toLowerCase();
+    if (PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS.some((allowed) => allowed === host)) {
+      return true;
+    }
+    return ALLOWED_URL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
   } catch {
     return false;
   }
 }
 
-const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
+export const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
   "URL is not allowlisted for privileged extension fetch." as const;
-const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND = "URL not allowlisted for privileged fetch." as const;
+export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
+  "URL not allowlisted for privileged fetch." as const;
+
+/** Shown when the background worker is older than the new-tab bundle (common after local dev updates). */
+export const PRIV_FETCH_RELOAD_EXTENSION_HINT =
+  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try 2 Lakes again." as const;
 
 /** Matches foreground throws and background `privilegedFetch*` error strings. */
 export function isPrivilegedFetchAllowlistError(message: string): boolean {
@@ -136,17 +173,27 @@ export function isPrivilegedFetchAllowlistError(message: string): boolean {
   );
 }
 
-/** Only `Authorization: Bearer …` on 2lakes.app — passed through background privileged fetch. */
+/** Only 2lakes auth headers — passed through background privileged fetch. */
 export function coercePrivilegedFetchJsonHeaders(
   url: string,
   headers: Record<string, string> | undefined,
 ): Record<string, string> | undefined {
-  if (!headers || !url.startsWith("https://2lakes.app/")) return undefined;
+  if (!headers || !isTwoLakesPrivilegedFetchUrl(url)) return undefined;
   const auth = headers.Authorization ?? headers.authorization;
-  if (typeof auth !== "string") return undefined;
-  const trimmed = auth.trim();
-  if (!trimmed.startsWith("Bearer ") || trimmed.length > 512) return undefined;
-  return { Authorization: trimmed };
+  if (typeof auth === "string") {
+    const trimmed = auth.trim();
+    if (trimmed.startsWith("Bearer ") && trimmed.length <= 512) {
+      return { Authorization: trimmed };
+    }
+  }
+  const apiKey = headers["X-API-Key"] ?? headers["x-api-key"];
+  if (typeof apiKey === "string") {
+    const trimmed = apiKey.trim();
+    if (trimmed.length > 0 && trimmed.length <= 512) {
+      return { "X-API-Key": trimmed };
+    }
+  }
+  return undefined;
 }
 
 /** Used by the service worker to return binary bodies over `runtime.sendMessage`. */
@@ -192,12 +239,19 @@ export async function privilegedExtensionFetchJson(
   signal?: AbortSignal,
   options?: { headers?: Record<string, string> },
 ): Promise<unknown> {
-  if (!isPrivilegedExtensionFetchUrlAllowed(url)) {
-    throw new Error("URL is not allowlisted for privileged extension fetch.");
+  const normalizedUrl = (() => {
+    try {
+      return normalizePrivilegedExtensionFetchUrl(url);
+    } catch {
+      return url;
+    }
+  })();
+  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
+    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
   }
-  const headers = coercePrivilegedFetchJsonHeaders(url, options?.headers);
+  const headers = coercePrivilegedFetchJsonHeaders(normalizedUrl, options?.headers);
   if (!useBackgroundPrivilegedFetch()) {
-    const res = await fetch(url, {
+    const res = await fetch(normalizedUrl, {
       signal,
       credentials: "omit",
       cache: "no-store",
@@ -208,7 +262,7 @@ export async function privilegedExtensionFetchJson(
   }
   const pending = extensionRuntimeSendMessage<TPrivilegedFetchJsonResponse>({
     type: TABOCALYPSE_PRIV_FETCH_JSON,
-    url,
+    url: normalizedUrl,
     ...(headers ? { headers } : {}),
   } satisfies TPrivilegedFetchJsonRequest);
   const raced = await raceAbort(pending, signal);
@@ -220,11 +274,18 @@ export async function privilegedExtensionFetchBytes(
   url: string,
   signal?: AbortSignal,
 ): Promise<{ mime: string; bytes: ArrayBuffer }> {
-  if (!isPrivilegedExtensionFetchUrlAllowed(url)) {
-    throw new Error("URL is not allowlisted for privileged extension fetch.");
+  const normalizedUrl = (() => {
+    try {
+      return normalizePrivilegedExtensionFetchUrl(url);
+    } catch {
+      return url;
+    }
+  })();
+  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
+    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
   }
   if (!useBackgroundPrivilegedFetch()) {
-    const res = await fetch(url, { signal, credentials: "omit", cache: "no-store" });
+    const res = await fetch(normalizedUrl, { signal, credentials: "omit", cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const mime = res.headers.get("content-type") ?? "application/octet-stream";
     const bytes = await res.arrayBuffer();
@@ -232,7 +293,7 @@ export async function privilegedExtensionFetchBytes(
   }
   const pending = extensionRuntimeSendMessage<TPrivilegedFetchBytesResponse>({
     type: TABOCALYPSE_PRIV_FETCH_BYTES,
-    url,
+    url: normalizedUrl,
   } satisfies TPrivilegedFetchBytesRequest);
   const raced = await raceAbort(pending, signal);
   if (!raced.ok) throw new Error(raced.error);

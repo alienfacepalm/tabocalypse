@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+const { privilegedExtensionFetchJson } = vi.hoisted(() => ({
+  privilegedExtensionFetchJson: vi.fn(),
+}));
+
+vi.mock("../privileged-extension-fetch", () => ({
+  privilegedExtensionFetchJson,
+}));
+
 vi.mock("webextension-polyfill", () => ({
   default: { runtime: {} },
 }));
@@ -65,6 +73,23 @@ describe("fetchAllLakesBuoys key requirement", () => {
     await expect(fetchAllLakesBuoys("fahrenheit", "")).rejects.toThrow(
       LAKES_API_KEY_REQUIRED_MESSAGE,
     );
+  });
+});
+
+describe("fetchAllLakesBuoys privileged fetch integration", () => {
+  it("requests the all-buoy endpoint with a Bearer token", async () => {
+    privilegedExtensionFetchJson.mockReset();
+    privilegedExtensionFetchJson.mockResolvedValue([SAMPLE_BUOY]);
+
+    const rows = await fetchAllLakesBuoys("fahrenheit", "2l_key_test");
+
+    expect(privilegedExtensionFetchJson).toHaveBeenCalledWith(
+      "https://2lakes.app/api/all-buoy-data",
+      undefined,
+      { headers: { Authorization: "Bearer 2l_key_test" } },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.label).toBe("Lake Sammamish");
   });
 });
 
