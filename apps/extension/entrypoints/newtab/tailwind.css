@@ -224,8 +224,22 @@
     @apply cursor-not-allowed;
   }
 
-  .hud-panel-size-host > .card {
-    @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  /* Stack panel chrome and corner grip in one cell so resize stays inside the card rect. */
+  .hud-panel-card-frame {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    @apply relative min-h-0 flex-1 overflow-hidden;
+  }
+
+  .hud-panel-card-frame > .card,
+  .hud-panel-card-frame > .plugin-deck-host {
+    grid-area: 1 / 1;
+    @apply h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden;
+  }
+
+  .hud-panel-card-frame .corner-resize-host {
+    grid-area: 1 / 1;
+    @apply justify-self-end self-end;
   }
 
   .sticky-note-host {
@@ -338,31 +352,124 @@
     border-color: rgb(120 85 20 / 0.25);
   }
 
-  .sticky-note-resize {
-    @apply !min-h-7 !min-w-7 cursor-nwse-resize border-0 !p-0.5 opacity-80 hover:opacity-100;
-    color: rgb(80 55 10);
-    background: rgb(255 235 150 / 0.85);
-    box-shadow: 1px 1px 0 rgb(0 0 0 / 0.15);
+  .sticky-note .corner-resize-host {
+    @apply absolute bottom-0 right-0;
   }
 
-  .sticky-note-resize:hover {
-    background: rgb(255 244 180);
+  /* Corner drag grip — distinct from toolbar/icon chips; themed per panel surface. */
+  .corner-resize-grip {
+    @apply pointer-events-auto relative inline-flex h-7 w-7 shrink-0 cursor-nwse-resize items-end justify-end border-0 bg-transparent p-0 opacity-90 transition-[opacity,transform] duration-100;
+    box-shadow: none;
+  }
+
+  .corner-resize-grip::before {
+    content: "";
+    @apply absolute bottom-0 right-0;
+    width: 1.65rem;
+    height: 1.65rem;
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    pointer-events: none;
+  }
+
+  .corner-resize-grip svg {
+    @apply relative z-[1] mb-0.5 mr-0.5;
+  }
+
+  .corner-resize-grip:hover {
+    @apply opacity-100;
+  }
+
+  .corner-resize-grip:active {
+    @apply translate-x-px translate-y-px opacity-100;
+  }
+
+  .corner-resize-grip:focus-visible {
+    @apply outline-none ring-2 ring-accent2 ring-offset-1 ring-offset-transparent;
+  }
+
+  .sticky-note .corner-resize-grip {
+    color: rgb(80 55 10);
+  }
+
+  .sticky-note .corner-resize-grip::before {
+    background: linear-gradient(
+      135deg,
+      rgb(200 160 50 / 0.15) 0%,
+      rgb(120 85 20 / 0.35) 55%,
+      rgb(80 55 10 / 0.45) 100%
+    );
+    box-shadow: inset -1px -1px 0 rgb(255 255 255 / 0.35);
+  }
+
+  .sticky-note .corner-resize-grip:hover {
     color: rgb(35 28 12);
   }
 
-  .sticky-note-resize:active {
-    background: rgb(250 220 120);
+  .sticky-note .corner-resize-grip:hover::before {
+    background: linear-gradient(
+      135deg,
+      rgb(255 244 180 / 0.55) 0%,
+      rgb(180 140 40 / 0.5) 55%,
+      rgb(120 85 20 / 0.55) 100%
+    );
   }
 
-  .hud-panel-size-host > .card > h3 {
+  .sticky-note .corner-resize-grip:active {
+    color: rgb(28 22 10);
+  }
+
+  .sticky-note .corner-resize-grip:active::before {
+    background: linear-gradient(135deg, rgb(250 220 120 / 0.7) 0%, rgb(160 120 30 / 0.55) 100%);
+  }
+
+  .hud-panel-card-frame .corner-resize-grip {
+    color: var(--color-accent);
+  }
+
+  .hud-panel-card-frame .corner-resize-grip::before {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-accent) 22%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent2) 32%, transparent) 55%,
+      color-mix(in srgb, var(--color-accent) 42%, transparent) 100%
+    );
+    box-shadow: inset -1px -1px 0 rgb(255 255 255 / 0.14);
+  }
+
+  .hud-panel-card-frame .corner-resize-grip:hover {
+    color: var(--color-accent3);
+  }
+
+  .hud-panel-card-frame .corner-resize-grip:hover::before {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-accent) 38%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent2) 48%, transparent) 55%,
+      color-mix(in srgb, var(--color-accent) 52%, transparent) 100%
+    );
+  }
+
+  .hud-panel-card-frame .corner-resize-grip:active {
+    color: var(--color-accent);
+  }
+
+  .hud-panel-card-frame .corner-resize-grip:active::before {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-accent) 52%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent2) 58%, transparent) 100%
+    );
+  }
+
+  .hud-panel-card-frame > .card > h3 {
     @apply shrink-0;
   }
 
-  .hud-panel-size-host > .plugin-deck-host {
+  .hud-panel-card-frame > .plugin-deck-host {
     @apply flex min-h-0 flex-1 flex-col overflow-hidden;
   }
 
-  .hud-panel-size-host .plugin-deck-scroll {
+  .hud-panel-card-frame .plugin-deck-scroll {
     @apply hud-scrollbar min-h-0 flex-1 overflow-y-auto;
   }
 
@@ -875,11 +982,28 @@
   }
 
   .toast {
-    @apply fixed bottom-14 right-4 z-[50] border border-border bg-surface-strong px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)];
+    @apply fixed z-[50] flex max-w-[min(24rem,calc(100vw-2rem))] items-start justify-between gap-3 border border-border bg-surface-strong px-4 py-3 font-mono text-sm shadow-[4px_4px_0_0_var(--color-shadow-hard)];
   }
 
-  .toast.err {
-    @apply border-danger;
+  .toast.err,
+  .toast.toast-error {
+    @apply border-danger text-[var(--color-danger)];
+  }
+
+  .toast.toast-warn {
+    @apply border-[var(--color-accent3)] text-[var(--color-accent3)];
+  }
+
+  .toast.toast-info {
+    @apply border-accent text-accent;
+  }
+
+  .toast.toast-success {
+    @apply border-[var(--color-accent2)] text-[var(--color-accent2)];
+  }
+
+  .toast-dismiss {
+    @apply min-h-0 shrink-0 self-start px-2 py-0 text-lg leading-none;
   }
 
   .ai-out {

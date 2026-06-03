@@ -56,15 +56,12 @@ export function StickyNoteLayer({
             onToggleNotesList={onToggleNotesList}
             notesListPanelVisible={notesListPanelVisible}
           >
-            {({ resizeControl }) => (
-              <StickyNoteEditor
-                note={note}
-                onUpdateNote={onUpdateNote}
-                onDeleteNote={onDeleteNote}
-                onMarkInactive={() => onMarkInactive(np.noteId)}
-                footerEnd={resizeControl}
-              />
-            )}
+            <StickyNoteEditor
+              note={note}
+              onUpdateNote={onUpdateNote}
+              onDeleteNote={onDeleteNote}
+              onMarkInactive={() => onMarkInactive(np.noteId)}
+            />
           </DraggableStickyNote>
         );
       })}

@@ -1,4 +1,3 @@
-import { MoveDiagonal2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HudPanelDragContext,
@@ -6,7 +5,7 @@ import {
   type IHudPanelDragContextValue,
 } from "./hud-panel-drag-context";
 import { useHudPlacementOptional } from "./hud-placement-context";
-import { HudTip } from "./hud-tip";
+import { HudCornerResize } from "./hud-corner-resize";
 import {
   HUD_DRAG_Z_LIFT,
   HUD_PANEL_WIDTH_CLASSES,
@@ -382,9 +381,8 @@ export function DraggableHudPanel({
       <HudPanelDragContext.Provider value={dragContext}>
         <div
           className={[
-            "hud-panel-size-host relative flex min-h-0 flex-1 flex-col overflow-hidden touch-manipulation",
+            "hud-panel-size-host relative flex min-h-0 flex-1 flex-col touch-manipulation",
             zLift ? "hud-panel-dragging" : "",
-            !locked ? "pb-6 pr-6" : "",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -393,24 +391,18 @@ export function DraggableHudPanel({
           onPointerUp={onPanelPointerUp}
           onPointerCancel={onPanelPointerUp}
         >
-          {children}
-          {!locked ? (
-            <div className="pointer-events-none absolute bottom-0 right-0 z-20">
-              <HudTip tip="Drag the corner to resize this panel; body scrolls when space is tight.">
-                <button
-                  type="button"
-                  className="btn ghost icon-only sm pointer-events-auto cursor-nwse-resize border-0 touch-manipulation opacity-80 hover:opacity-100 !min-h-7 !min-w-7 !p-0.5"
-                  aria-label="Resize panel"
-                  onPointerDown={onResizePointerDown}
-                  onPointerMove={onResizePointerMove}
-                  onPointerUp={onResizePointerUp}
-                  onPointerCancel={onResizePointerUp}
-                >
-                  <MoveDiagonal2 size={12} strokeWidth={2} className="text-accent" aria-hidden />
-                </button>
-              </HudTip>
-            </div>
-          ) : null}
+          <div className="hud-panel-card-frame">
+            {children}
+            {!locked ? (
+              <HudCornerResize
+                tip="Drag the corner to resize this panel; body scrolls when space is tight."
+                ariaLabel="Resize panel"
+                onPointerDown={onResizePointerDown}
+                onPointerMove={onResizePointerMove}
+                onPointerUp={onResizePointerUp}
+              />
+            ) : null}
+          </div>
         </div>
       </HudPanelDragContext.Provider>
     </div>

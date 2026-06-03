@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { RATE_OR_QUOTA_LIMIT_MESSAGE } from "./format-api-error";
 import {
+  augmentRateLimitErrorWithAlternateProviders,
   BYO_AI_PROVIDER_LABELS,
   BYO_AI_PROVIDER_ORDER,
   BYO_AI_PROVIDER_PRESETS,
   byoAiApiKeyForPreset,
   matchByoAiProviderPreset,
   normalizeByoAiBaseUrl,
+  otherByoAiPresetsWithApiKey,
 } from "./byo-ai-provider-options";
 import { buildOpenAiChatCompletionsUrl } from "./openai-compatible-chat";
 
@@ -44,5 +47,40 @@ describe("byo ai provider options", () => {
       "sk-gemini",
     );
     expect(byoAiApiKeyForPreset(null, { openai: " sk ", gemini: "" })).toBe("sk");
+  });
+
+  it("lists other presets that have API keys", () => {
+    const keys = { openai: "sk-openai", gemini: "sk-gemini" };
+    expect(otherByoAiPresetsWithApiKey("gemini", keys)).toEqual(["openai"]);
+    expect(otherByoAiPresetsWithApiKey("openai", keys)).toEqual(["gemini"]);
+    expect(otherByoAiPresetsWithApiKey("gemini", { openai: "", gemini: "sk-gemini" })).toEqual([]);
+  });
+
+  it("suggests another provider on rate limits when a second key exists", () => {
+    const msg = augmentRateLimitErrorWithAlternateProviders(RATE_OR_QUOTA_LIMIT_MESSAGE, "gemini", {
+      openai: "sk-openai",
+      gemini: "sk-gemini",
+    });
+    expect(msg).toContain(BYO_AI_PROVIDER_LABELS.openai);
+    expect(msg).toContain("switch provider");
+    expect(msg).toContain("good standing");
+  });
+
+  it("leaves rate-limit text unchanged when no alternate key exists", () => {
+    expect(
+      augmentRateLimitErrorWithAlternateProviders(RATE_OR_QUOTA_LIMIT_MESSAGE, "gemini", {
+        openai: "",
+        gemini: "sk-gemini",
+      }),
+    ).toBe(RATE_OR_QUOTA_LIMIT_MESSAGE);
+  });
+
+  it("does not alter non-rate-limit errors", () => {
+    expect(
+      augmentRateLimitErrorWithAlternateProviders("Network error.", "gemini", {
+        openai: "sk",
+        gemini: "sk",
+      }),
+    ).toBe("Network error.");
   });
 });

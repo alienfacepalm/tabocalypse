@@ -76,7 +76,7 @@ describe("postOpenAiCompatibleChat", () => {
     });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("401");
+    if (!result.ok) expect(result.error).toContain("Authentication failed");
   });
 });
 

@@ -2,9 +2,10 @@
  * Built-in HUD weather panel. Open-Meteo fetch + unit types live under `lib/weather/`.
  * Declarative plugin panels are rendered separately in `components/plugin-views.tsx`.
  */
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
+import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { fetchOpenMeteo, type IWeatherSnapshot } from "../../lib/weather/fetch-weather";
 import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
@@ -43,23 +44,33 @@ export function WeatherWidget({
 }) {
   const [w, setW] = useState<IWeatherSnapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const activePanelView: TWeatherPanelView =
     lakesEmbedEnabled && panelView === "lakes" ? "lakes" : "forecast";
 
-  useEffect(() => {
+  const loadForecast = useCallback(() => {
     let cancelled = false;
     setErr(null);
-    fetchOpenMeteo(lat, lon, effectiveTemperatureUnit)
+    setW(null);
+
+    void fetchOpenMeteo(lat, lon, effectiveTemperatureUnit)
       .then((snap) => {
         if (!cancelled) setW(snap);
       })
       .catch((e) => {
         if (!cancelled) setErr(e instanceof Error ? e.message : "Weather failed");
       });
+
     return () => {
       cancelled = true;
     };
   }, [lat, lon, effectiveTemperatureUnit]);
+
+  useEffect(() => loadForecast(), [loadForecast, reloadToken]);
+
+  const retryForecast = (): void => {
+    setReloadToken((n) => n + 1);
+  };
 
   return (
     <section className="card flex flex-col gap-4">
@@ -140,7 +151,14 @@ export function WeatherWidget({
           />
         ) : (
           <>
-            {err ? <p className="err">{err}</p> : null}
+            {err ? (
+              <PrivilegedFetchErrorPanel
+                message={err}
+                onRetry={retryForecast}
+                retryTip="Try fetching the Open-Meteo forecast again"
+                retryAriaLabel="Retry weather forecast"
+              />
+            ) : null}
             {w ? (
               <div
                 className="weather-forecast-hero"

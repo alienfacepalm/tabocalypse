@@ -2,6 +2,7 @@ import { Bot, Eraser, Send } from "lucide-react";
 import React, { useRef, useState } from "react";
 import { ensureByoAiHostPermission } from "../../lib/byo-ai-host-permission";
 import {
+  augmentRateLimitErrorWithAlternateProviders,
   BYO_AI_PROVIDER_LABELS,
   BYO_AI_PROVIDER_PRESETS,
   byoAiApiKeyForPreset,
@@ -13,6 +14,7 @@ import {
   type IOpenAiChatMessage,
 } from "../../lib/openai-compatible-chat";
 import { ByoAiProviderToggle } from "../byo-ai-provider-toggle";
+import { useHudToast } from "../hud-toast";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 
@@ -36,7 +38,7 @@ export function AiChatPanel({
   const [messages, setMessages] = useState<IOpenAiChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState<TSendPhase>("idle");
-  const [err, setErr] = useState<string | null>(null);
+  const { showToast } = useHudToast();
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const activePreset = matchByoAiProviderPreset(baseUrl, model);
@@ -55,7 +57,6 @@ export function AiChatPanel({
   const selectProvider = (preset: TByoAiProviderPreset) => {
     if (activePreset === preset) return;
     setMessages([]);
-    setErr(null);
     setDraft("");
     onSelectProvider(preset);
   };
@@ -63,7 +64,6 @@ export function AiChatPanel({
   const send = async () => {
     const text = draft.trim();
     if (!text || sending) return;
-    setErr(null);
     if (!hasKey) {
       const keyHint =
         activePreset === "gemini"
@@ -71,12 +71,15 @@ export function AiChatPanel({
           : activePreset === "openai"
             ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
             : "an API key";
-      setErr(`Add ${keyHint} in Settings > BYO AI.`);
+      showToast({
+        message: `Add ${keyHint} in Settings > BYO AI.`,
+        variant: "warn",
+      });
       return;
     }
     const perm = await ensureByoAiHostPermission(baseUrl);
     if (!perm.ok) {
-      setErr(perm.error);
+      showToast({ message: perm.error, variant: "error" });
       return;
     }
 
@@ -95,7 +98,13 @@ export function AiChatPanel({
 
     setPhase("idle");
     if (!result.ok) {
-      setErr(result.error);
+      showToast({
+        message: augmentRateLimitErrorWithAlternateProviders(result.error, activePreset, {
+          openai: openaiApiKey,
+          gemini: geminiApiKey,
+        }),
+        variant: "error",
+      });
       return;
     }
     setMessages((prev) => [...prev, { role: "assistant", content: result.reply }]);
@@ -104,7 +113,6 @@ export function AiChatPanel({
 
   const clearChat = () => {
     setMessages([]);
-    setErr(null);
     setDraft("");
   };
 
@@ -189,8 +197,6 @@ export function AiChatPanel({
             </p>
           ) : null}
         </div>
-
-        {err ? <p className="err m-0 text-xs">{err}</p> : null}
 
         <form
           className="flex shrink-0 gap-2"

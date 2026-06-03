@@ -1,10 +1,5 @@
-import { RotateCw } from "lucide-react";
 import React, { useCallback, useEffect, useId, useState } from "react";
-import { HudTip } from "../hud-tip";
-import {
-  isPrivilegedFetchAllowlistError,
-  PRIV_FETCH_RELOAD_EXTENSION_HINT,
-} from "../../lib/privileged-extension-fetch";
+import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
 import {
   fetchAllLakesBuoys,
   KING_COUNTY_LAKE_BUOY_HOME_URL,
@@ -92,44 +87,13 @@ export function LakesBuoyPanel({
   }
 
   if (panelState.status === "error") {
-    const showAllowlistReload = isPrivilegedFetchAllowlistError(panelState.message);
-
     return (
-      <div className="flex flex-col gap-2">
-        <p className="err">{panelState.message}</p>
-        {showAllowlistReload ? (
-          <>
-            <p className="muted text-xs leading-tight">{PRIV_FETCH_RELOAD_EXTENSION_HINT}</p>
-            <div className="row wrap gap-2">
-              <HudTip tip="Fetch lake buoy readings again after reloading the extension">
-                <button
-                  type="button"
-                  className="btn primary sm"
-                  onClick={retryBuoyFetch}
-                  aria-label="Reload lake buoy data"
-                >
-                  <RotateCw size={16} strokeWidth={2} aria-hidden />
-                  Reload
-                </button>
-              </HudTip>
-            </div>
-          </>
-        ) : (
-          <div className="row wrap gap-2">
-            <HudTip tip="Try fetching King County lake buoy readings again">
-              <button
-                type="button"
-                className="btn primary sm"
-                onClick={retryBuoyFetch}
-                aria-label="Retry lake buoy data"
-              >
-                <RotateCw size={16} strokeWidth={2} aria-hidden />
-                Retry
-              </button>
-            </HudTip>
-          </div>
-        )}
-      </div>
+      <PrivilegedFetchErrorPanel
+        message={panelState.message}
+        onRetry={retryBuoyFetch}
+        retryTip="Try fetching King County lake buoy readings again"
+        retryAriaLabel="Retry lake buoy data"
+      />
     );
   }
 

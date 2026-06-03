@@ -9,15 +9,26 @@ import {
   arrayBufferToBase64,
   isPrivilegedExtensionFetchUrlAllowed,
   isPrivilegedFetchAllowlistError,
+  isPrivilegedFetchBackgroundUnavailableError,
+  PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+  PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND,
+  PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE,
   privilegedExtensionFetchJson,
   privilegedExtensionFetchText,
+  shouldShowPrivilegedFetchReloadHint,
   TABOCALYPSE_PRIV_FETCH_JSON,
   TABOCALYPSE_PRIV_FETCH_TEXT,
 } from "./privileged-extension-fetch";
 import { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./weather/parse-king-county-lake-buoy-map-data";
 
+interface IChromeRuntimeTestShim {
+  id?: string;
+  lastError?: { message?: string };
+  sendMessage?: (message: unknown, responseCallback?: (response: unknown) => void) => unknown;
+}
+
 interface IGlobalWithOptionalChrome {
-  chrome?: { runtime?: { id?: string; sendMessage?: (message: unknown) => unknown } };
+  chrome?: { runtime?: IChromeRuntimeTestShim };
   browser?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
 }
 
@@ -63,6 +74,28 @@ describe("isPrivilegedFetchAllowlistError", () => {
   });
 });
 
+describe("isPrivilegedFetchBackgroundUnavailableError", () => {
+  it("matches runtime messaging failures that usually need an extension reload", () => {
+    expect(
+      isPrivilegedFetchBackgroundUnavailableError(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE),
+    ).toBe(true);
+    expect(isPrivilegedFetchBackgroundUnavailableError(PRIV_FETCH_BACKGROUND_NO_RESPONSE)).toBe(
+      true,
+    );
+    expect(isPrivilegedFetchBackgroundUnavailableError("HTTP 403")).toBe(false);
+  });
+});
+
+describe("shouldShowPrivilegedFetchReloadHint", () => {
+  it("combines allowlist and background-unavailable reload cases", () => {
+    expect(shouldShowPrivilegedFetchReloadHint(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND)).toBe(true);
+    expect(shouldShowPrivilegedFetchReloadHint(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE)).toBe(
+      true,
+    );
+    expect(shouldShowPrivilegedFetchReloadHint("HTTP 503")).toBe(false);
+  });
+});
+
 describe("privilegedExtensionFetchJson", () => {
   afterEach(() => {
     delete (globalThis as IGlobalWithOptionalChrome).chrome;
@@ -82,7 +115,7 @@ describe("privilegedExtensionFetchJson", () => {
     };
     const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
     expect(sendMessage).toHaveBeenCalledOnce();
-    expect(sendMessage).toHaveBeenCalledWith({
+    expect(sendMessage.mock.calls[0]?.[0]).toEqual({
       type: TABOCALYPSE_PRIV_FETCH_JSON,
       url: "https://peapix.com/bing/feed?country=us",
     });
@@ -121,6 +154,68 @@ describe("privilegedExtensionFetchJson", () => {
     });
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/y.jpg" }]);
   });
+
+  it("promisifies native chrome.runtime.sendMessage callback API", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const sendMessage = vi.fn(
+      (message: unknown, callback?: (response: unknown) => void): undefined => {
+        callback?.({
+          ok: true,
+          data: { current: { temperature_2m: 12, weather_code: 0 } },
+        });
+        return undefined;
+      },
+    );
+    (globalThis as IGlobalWithOptionalChrome).chrome = {
+      runtime: { id: "ext", sendMessage },
+    };
+
+    const data = await privilegedExtensionFetchJson(
+      "https://api.open-meteo.com/v1/forecast?latitude=47&longitude=-122",
+    );
+
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(data).toEqual({ current: { temperature_2m: 12, weather_code: 0 } });
+  });
+
+  it("maps Chrome message-port-closed errors to background-no-response", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const runtime: IChromeRuntimeTestShim = {
+      id: "ext",
+      sendMessage: (_message: unknown, callback?: (response: unknown) => void): undefined => {
+        runtime.lastError = {
+          message: "The message port closed before a response was received.",
+        };
+        callback?.(undefined);
+        return undefined;
+      },
+    };
+    (globalThis as IGlobalWithOptionalChrome).chrome = { runtime };
+
+    await expect(privilegedExtensionFetchText(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).rejects.toThrow(
+      PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+    );
+    expect(shouldShowPrivilegedFetchReloadHint(PRIV_FETCH_BACKGROUND_NO_RESPONSE)).toBe(true);
+  });
+
+  it("throws a reload hint when the background worker returns no payload", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const sendMessage = vi.fn(
+      (_message: unknown, callback?: (response: unknown) => void): undefined => {
+        callback?.(undefined);
+        return undefined;
+      },
+    );
+    (globalThis as IGlobalWithOptionalChrome).chrome = {
+      runtime: { id: "ext", sendMessage },
+    };
+
+    await expect(
+      privilegedExtensionFetchJson(
+        "https://api.open-meteo.com/v1/forecast?latitude=47&longitude=-122",
+      ),
+    ).rejects.toThrow(PRIV_FETCH_BACKGROUND_NO_RESPONSE);
+  });
 });
 
 describe("privilegedExtensionFetchText", () => {
@@ -143,7 +238,7 @@ describe("privilegedExtensionFetchText", () => {
 
     const text = await privilegedExtensionFetchText(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL);
 
-    expect(sendMessage).toHaveBeenCalledWith({
+    expect(sendMessage.mock.calls[0]?.[0]).toEqual({
       type: TABOCALYPSE_PRIV_FETCH_TEXT,
       url: KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
     });

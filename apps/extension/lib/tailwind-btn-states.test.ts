@@ -31,6 +31,18 @@ describe("tailwind.css shared button states", () => {
     expect(css).toContain(".linkish:active");
   });
 
+  it("defines :hover and :active for shared corner resize grips", () => {
+    const css = readFileSync(tailwindCssPath, "utf8");
+    for (const needle of [
+      ".corner-resize-grip:hover",
+      ".corner-resize-grip:active",
+      ".sticky-note .corner-resize-grip:hover",
+      ".hud-panel-card-frame .corner-resize-grip:hover",
+    ]) {
+      expect(css, `missing ${needle}`).toContain(needle);
+    }
+  });
+
   it("defines .hud-scrollbar theme + webkit/fallback pieces", () => {
     const css = readFileSync(tailwindCssPath, "utf8");
     for (const needle of [

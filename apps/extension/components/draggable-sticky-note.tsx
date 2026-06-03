@@ -1,7 +1,8 @@
-import { List, MoveDiagonal2, Pin, PinOff } from "lucide-react";
+import { List, Pin, PinOff } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { measureHudCanvasSize } from "../lib/hud-layout";
 import { clampStickyNoteSize, type IStickyNotePosition } from "../lib/settings";
+import { HudCornerResize } from "./hud-corner-resize";
 import { HudTip } from "./hud-tip";
 
 const STICKY_Z_LIFT = 100;
@@ -36,7 +37,7 @@ export function DraggableStickyNote({
   onToggleNotesList: () => void;
   notesListPanelVisible: boolean;
   onFocus?: () => void;
-  children: (slots: { resizeControl: React.ReactNode }) => React.ReactNode;
+  children: React.ReactNode;
 }): React.JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [liveLayout, setLiveLayout] = useState<IStickyNotePosition | null>(null);
@@ -242,19 +243,13 @@ export function DraggableStickyNote({
   );
 
   const resizeControl = (
-    <HudTip tip="Drag to resize this sticky note">
-      <button
-        type="button"
-        className="sticky-note-resize btn ghost icon-only sm touch-manipulation"
-        aria-label="Resize sticky note"
-        onPointerDown={onResizePointerDown}
-        onPointerMove={onResizePointerMove}
-        onPointerUp={onResizePointerUp}
-        onPointerCancel={onResizePointerUp}
-      >
-        <MoveDiagonal2 size={12} strokeWidth={2} aria-hidden />
-      </button>
-    </HudTip>
+    <HudCornerResize
+      tip="Drag the corner to resize this sticky note"
+      ariaLabel="Resize sticky note"
+      onPointerDown={onResizePointerDown}
+      onPointerMove={onResizePointerMove}
+      onPointerUp={onResizePointerUp}
+    />
   );
 
   return (
@@ -329,7 +324,8 @@ export function DraggableStickyNote({
             </button>
           </HudTip>
         </div>
-        <div className="sticky-note-body min-h-0 flex-1">{children({ resizeControl })}</div>
+        <div className="sticky-note-body min-h-0 flex-1">{children}</div>
+        {resizeControl}
       </div>
     </div>
   );

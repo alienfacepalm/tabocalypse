@@ -52,13 +52,11 @@ export function StickyNoteEditor({
   onUpdateNote,
   onDeleteNote,
   onMarkInactive,
-  footerEnd,
 }: {
   note: INote;
   onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
   onMarkInactive: () => void;
-  footerEnd?: React.ReactNode;
 }): React.JSX.Element {
   const noteText = note.text ?? "";
   const [draftText, setDraftText] = useState(noteText);
@@ -102,7 +100,7 @@ export function StickyNoteEditor({
 
   return (
     <div className="sticky-note-editor flex min-h-0 flex-1 flex-col">
-      <div className="sticky-note-content hud-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-1 pt-1">
+      <div className="sticky-note-content hud-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-5 pr-5 pt-1">
         {note.locked ? (
           <div className="whitespace-pre-wrap break-words text-sm">{note.text ?? ""}</div>
         ) : (
@@ -165,7 +163,6 @@ export function StickyNoteEditor({
             </button>
           </HudTip>
         </div>
-        {footerEnd}
       </div>
     </div>
   );

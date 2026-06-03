@@ -1,5 +1,7 @@
 /** BYO OpenAI-compatible chat completions. User pays the provider; no publisher backend. */
 
+import { formatHttpApiError, formatNetworkError } from "./format-api-error";
+
 export type TOpenAiChatRole = "user" | "assistant" | "system";
 
 export interface IOpenAiChatMessage {
@@ -49,12 +51,13 @@ export async function postOpenAiCompatibleChat(opts: {
       }),
     });
     const text = await res.text();
-    if (!res.ok) return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
+    if (!res.ok) return { ok: false, error: formatHttpApiError(res.status, text) };
     const reply = parseOpenAiChatCompletionBody(text);
-    if (!reply) return { ok: false, error: "Empty response" };
+    if (!reply) return { ok: false, error: "The provider returned an empty reply." };
     return { ok: true, reply };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    const raw = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: formatNetworkError(raw) };
   }
 }
 

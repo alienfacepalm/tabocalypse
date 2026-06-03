@@ -3,7 +3,8 @@ import browser from "webextension-polyfill";
 /** Narrow `globalThis.chrome` without referencing an unbound `chrome` identifier (ESLint). */
 interface IChromeRuntimeShim {
   id?: string;
-  sendMessage?: (message: unknown) => unknown;
+  lastError?: { message?: string };
+  sendMessage?: (message: unknown, responseCallback?: (response: unknown) => void) => unknown;
 }
 
 interface IGlobalWithOptionalChrome {
@@ -65,22 +66,103 @@ function hasExtensionSendMessage(): boolean {
   }
 }
 
+export const PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE =
+  "runtime.sendMessage is unavailable." as const;
+
+export const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
+  "URL is not allowlisted for privileged extension fetch." as const;
+export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
+  "URL not allowlisted for privileged fetch." as const;
+
+/** Shown when the background worker is older than the new-tab bundle (common after local dev updates). */
+export const PRIV_FETCH_RELOAD_EXTENSION_HINT =
+  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try again." as const;
+
+/** Foreground throw when messaging succeeded but the service worker returned no payload. */
+export const PRIV_FETCH_BACKGROUND_NO_RESPONSE = "Tabocalypse background did not respond." as const;
+
+/** Chromium `runtime.lastError` when the service worker never answered `sendMessage`. */
+export const CHROME_MESSAGE_PORT_CLOSED_ERROR =
+  "The message port closed before a response was received." as const;
+
+function normalizeRuntimeMessagingError(message: string): Error {
+  if (
+    message === CHROME_MESSAGE_PORT_CLOSED_ERROR ||
+    message.includes("message port closed before a response")
+  ) {
+    return new Error(PRIV_FETCH_BACKGROUND_NO_RESPONSE);
+  }
+  return new Error(message);
+}
+
+/**
+ * Native `chrome.runtime.sendMessage` uses a callback unless called with no callback
+ * on builds that return a Promise. Polyfilled `browser.runtime.sendMessage` is Promise-based.
+ */
+function promisifyRuntimeSendMessage(
+  run: IChromeRuntimeShim,
+  message: unknown,
+  preferChromeCallbackApi: boolean,
+): Promise<unknown> {
+  const sm = run.sendMessage;
+  if (typeof sm !== "function") {
+    return Promise.reject(new Error(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE));
+  }
+
+  if (!preferChromeCallbackApi) {
+    return Promise.resolve(sm.call(run, message));
+  }
+
+  return new Promise<unknown>((resolve, reject) => {
+    let settled = false;
+    const finish = (fn: () => void): void => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+
+    try {
+      const maybePromise = sm.call(run, message, (response: unknown) => {
+        finish(() => {
+          const err = run.lastError;
+          if (err?.message) reject(normalizeRuntimeMessagingError(err.message));
+          else resolve(response);
+        });
+      });
+      if (maybePromise != null && typeof (maybePromise as Promise<unknown>).then === "function") {
+        void (maybePromise as Promise<unknown>).then(
+          (response) => finish(() => resolve(response)),
+          (e: unknown) =>
+            finish(() => {
+              const message = e instanceof Error ? e.message : String(e);
+              reject(normalizeRuntimeMessagingError(message));
+            }),
+        );
+      }
+    } catch (e: unknown) {
+      finish(() => {
+        reject(e instanceof Error ? e : new Error(String(e)));
+      });
+    }
+  });
+}
+
 /** Prefer Chromium `chrome.runtime` first — mirrors {@link privilegedExtensionFetchJson}. */
 export async function extensionRuntimeSendMessage<T>(message: unknown): Promise<T> {
-  const sendVia = (run: IChromeRuntimeShim | undefined): Promise<T> | undefined => {
-    const sm = run?.sendMessage;
-    if (typeof sm !== "function") return undefined;
-    return Promise.resolve(sm.call(run, message) as T);
-  };
-  const viaChrome = await sendVia(getChromeRuntime());
-  if (viaChrome) return viaChrome;
-  if (typeof browser !== "undefined") {
-    const viaImport = await sendVia(browser.runtime as IChromeRuntimeShim);
-    if (viaImport) return viaImport;
+  const chromeRun = getChromeRuntime();
+  if (typeof chromeRun?.sendMessage === "function") {
+    return (await promisifyRuntimeSendMessage(chromeRun, message, true)) as T;
   }
-  const viaGlobalBrowser = await sendVia(getGlobalBrowserExtensionRuntime());
-  if (viaGlobalBrowser) return viaGlobalBrowser;
-  throw new Error("runtime.sendMessage is unavailable.");
+  const polyfillRuntimes = [
+    typeof browser !== "undefined" ? (browser.runtime as IChromeRuntimeShim) : undefined,
+    getGlobalBrowserExtensionRuntime(),
+  ];
+  for (const run of polyfillRuntimes) {
+    if (typeof run?.sendMessage === "function") {
+      return (await promisifyRuntimeSendMessage(run, message, false)) as T;
+    }
+  }
+  throw new Error(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE);
 }
 
 /**
@@ -94,16 +176,6 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "api.coingecko.com",
   "green2.kingcounty.gov",
   "www.unsuck-it.com",
-] as const;
-
-/** Must stay aligned with {@link PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS}. */
-const ALLOWED_URL_PREFIXES = [
-  "https://peapix.com/",
-  "https://img.peapix.com/",
-  "https://api.open-meteo.com/",
-  "https://api.coingecko.com/",
-  "https://green2.kingcounty.gov/",
-  "https://www.unsuck-it.com/",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {
@@ -148,23 +220,11 @@ export function isPrivilegedExtensionFetchUrlAllowed(url: string): boolean {
     const u = new URL(normalized);
     if (u.protocol !== "https:") return false;
     const host = u.hostname.toLowerCase();
-    if (PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS.some((allowed) => allowed === host)) {
-      return true;
-    }
-    return ALLOWED_URL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+    return PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS.some((allowed) => allowed === host);
   } catch {
     return false;
   }
 }
-
-export const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
-  "URL is not allowlisted for privileged extension fetch." as const;
-export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
-  "URL not allowlisted for privileged fetch." as const;
-
-/** Shown when the background worker is older than the new-tab bundle (common after local dev updates). */
-export const PRIV_FETCH_RELOAD_EXTENSION_HINT =
-  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try lake buoys again." as const;
 
 /** Matches foreground throws and background `privilegedFetch*` error strings. */
 export function isPrivilegedFetchAllowlistError(message: string): boolean {
@@ -172,6 +232,27 @@ export function isPrivilegedFetchAllowlistError(message: string): boolean {
     message === PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND ||
     message === PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND
   );
+}
+
+/** Matches stale service worker / runtime messaging failures that a reload usually fixes. */
+export function isPrivilegedFetchBackgroundUnavailableError(message: string): boolean {
+  return (
+    message === PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE ||
+    message === PRIV_FETCH_BACKGROUND_NO_RESPONSE
+  );
+}
+
+/** Whether UI should show the extension reload hint below a privileged-fetch error. */
+export function shouldShowPrivilegedFetchReloadHint(message: string): boolean {
+  return (
+    isPrivilegedFetchAllowlistError(message) || isPrivilegedFetchBackgroundUnavailableError(message)
+  );
+}
+
+function assertPrivilegedFetchResponse(response: unknown): asserts response is { ok: boolean } {
+  if (response == null || typeof response !== "object" || !("ok" in response)) {
+    throw new Error(PRIV_FETCH_BACKGROUND_NO_RESPONSE);
+  }
 }
 
 /** Used by the service worker to return binary bodies over `runtime.sendMessage`. */
@@ -212,20 +293,37 @@ export function useBackgroundPrivilegedFetch(): boolean {
   }
 }
 
+function resolvePrivilegedFetchUrlInput(url: string): string {
+  try {
+    return normalizePrivilegedExtensionFetchUrl(url);
+  } catch {
+    return url;
+  }
+}
+
+function assertAllowlistedPrivilegedFetchUrl(url: string): string {
+  const normalizedUrl = resolvePrivilegedFetchUrlInput(url);
+  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
+    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
+  }
+  return normalizedUrl;
+}
+
+async function finishPrivilegedBackgroundFetch<T extends { ok: boolean; error?: string }>(
+  message: unknown,
+  signal: AbortSignal | undefined,
+): Promise<T & { ok: true }> {
+  const raced = await raceAbort(extensionRuntimeSendMessage<T>(message), signal);
+  assertPrivilegedFetchResponse(raced);
+  if (!raced.ok) throw new Error(raced.error);
+  return raced as T & { ok: true };
+}
+
 export async function privilegedExtensionFetchJson(
   url: string,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  const normalizedUrl = (() => {
-    try {
-      return normalizePrivilegedExtensionFetchUrl(url);
-    } catch {
-      return url;
-    }
-  })();
-  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
-    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
-  }
+  const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
   if (!useBackgroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, {
       signal,
@@ -235,29 +333,21 @@ export async function privilegedExtensionFetchJson(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
   }
-  const pending = extensionRuntimeSendMessage<TPrivilegedFetchJsonResponse>({
-    type: TABOCALYPSE_PRIV_FETCH_JSON,
-    url: normalizedUrl,
-  } satisfies TPrivilegedFetchJsonRequest);
-  const raced = await raceAbort(pending, signal);
-  if (!raced.ok) throw new Error(raced.error);
-  return raced.data;
+  const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchJsonResponse>(
+    {
+      type: TABOCALYPSE_PRIV_FETCH_JSON,
+      url: normalizedUrl,
+    } satisfies TPrivilegedFetchJsonRequest,
+    signal,
+  );
+  return response.data;
 }
 
 export async function privilegedExtensionFetchText(
   url: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  const normalizedUrl = (() => {
-    try {
-      return normalizePrivilegedExtensionFetchUrl(url);
-    } catch {
-      return url;
-    }
-  })();
-  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
-    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
-  }
+  const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
   if (!useBackgroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, {
       signal,
@@ -267,29 +357,21 @@ export async function privilegedExtensionFetchText(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
   }
-  const pending = extensionRuntimeSendMessage<TPrivilegedFetchTextResponse>({
-    type: TABOCALYPSE_PRIV_FETCH_TEXT,
-    url: normalizedUrl,
-  } satisfies TPrivilegedFetchTextRequest);
-  const raced = await raceAbort(pending, signal);
-  if (!raced.ok) throw new Error(raced.error);
-  return raced.text;
+  const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchTextResponse>(
+    {
+      type: TABOCALYPSE_PRIV_FETCH_TEXT,
+      url: normalizedUrl,
+    } satisfies TPrivilegedFetchTextRequest,
+    signal,
+  );
+  return response.text;
 }
 
 export async function privilegedExtensionFetchBytes(
   url: string,
   signal?: AbortSignal,
 ): Promise<{ mime: string; bytes: ArrayBuffer }> {
-  const normalizedUrl = (() => {
-    try {
-      return normalizePrivilegedExtensionFetchUrl(url);
-    } catch {
-      return url;
-    }
-  })();
-  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
-    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
-  }
+  const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
   if (!useBackgroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, { signal, credentials: "omit", cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -297,14 +379,15 @@ export async function privilegedExtensionFetchBytes(
     const bytes = await res.arrayBuffer();
     return { mime, bytes };
   }
-  const pending = extensionRuntimeSendMessage<TPrivilegedFetchBytesResponse>({
-    type: TABOCALYPSE_PRIV_FETCH_BYTES,
-    url: normalizedUrl,
-  } satisfies TPrivilegedFetchBytesRequest);
-  const raced = await raceAbort(pending, signal);
-  if (!raced.ok) throw new Error(raced.error);
-  const bytes = base64ToArrayBuffer(raced.base64);
-  return { mime: raced.mime, bytes };
+  const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchBytesResponse>(
+    {
+      type: TABOCALYPSE_PRIV_FETCH_BYTES,
+      url: normalizedUrl,
+    } satisfies TPrivilegedFetchBytesRequest,
+    signal,
+  );
+  const bytes = base64ToArrayBuffer(response.base64);
+  return { mime: response.mime, bytes };
 }
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {

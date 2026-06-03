@@ -1,5 +1,7 @@
 /** OpenAI-compatible BYO AI provider presets (same chat/completions wire format). */
 
+import { isRateOrQuotaLimitError, RATE_OR_QUOTA_LIMIT_MESSAGE } from "./format-api-error";
+
 export type TByoAiProviderPreset = "openai" | "gemini";
 
 /** Stable order for settings UI. */
@@ -59,4 +61,35 @@ export function byoAiApiKeyForPreset(
 ): string {
   if (preset === "gemini") return keys.gemini.trim();
   return keys.openai.trim();
+}
+
+/** Presets that have an API key saved, excluding the active one when known. */
+export function otherByoAiPresetsWithApiKey(
+  activePreset: TByoAiProviderPreset | null,
+  keys: { openai: string; gemini: string },
+): TByoAiProviderPreset[] {
+  return BYO_AI_PROVIDER_ORDER.filter((id) => {
+    if (activePreset !== null && id === activePreset) return false;
+    return byoAiApiKeyForPreset(id, keys).length > 0;
+  });
+}
+
+function joinProviderLabels(presets: TByoAiProviderPreset[]): string {
+  const labels = presets.map((id) => BYO_AI_PROVIDER_LABELS[id]);
+  if (labels.length <= 1) return labels[0] ?? "";
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
+}
+
+/** When rate-limited, suggest another configured provider until billing resets. */
+export function augmentRateLimitErrorWithAlternateProviders(
+  error: string,
+  activePreset: TByoAiProviderPreset | null,
+  keys: { openai: string; gemini: string },
+): string {
+  if (!isRateOrQuotaLimitError(error)) return error;
+  const alternates = otherByoAiPresetsWithApiKey(activePreset, keys);
+  if (alternates.length === 0) return error;
+  const names = joinProviderLabels(alternates);
+  return `${RATE_OR_QUOTA_LIMIT_MESSAGE} You also have ${names} set up — switch provider above and try again until that account is back in good standing.`;
 }

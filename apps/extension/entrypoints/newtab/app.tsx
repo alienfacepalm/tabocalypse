@@ -40,6 +40,7 @@ import { AiChatPanel } from "../../components/built-in/ai-chat-panel";
 import { ByoAiProviderSettingPicker } from "../../components/byo-ai-provider-setting-picker";
 import { ensureByoAiHostPermission } from "../../lib/byo-ai-host-permission";
 import {
+  augmentRateLimitErrorWithAlternateProviders,
   BYO_AI_PROVIDER_PRESETS,
   byoAiApiKeyForPreset,
   matchByoAiProviderPreset,
@@ -58,6 +59,7 @@ import { UserBackgroundGallery } from "../../components/user-background-gallery"
 import { HudPanelBody, HudPanelTitle } from "../../components/hud-panel-drag-context";
 import { HudColorInput } from "../../components/hud-color-input";
 import { HudTip } from "../../components/hud-tip";
+import { HudToastProvider, type THudToastHandle } from "../../components/hud-toast";
 import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
 import { SpeedTestWidget } from "../../components/built-in/speed-test-widget";
@@ -352,7 +354,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [openSettings, setOpenSettings] = useState(() => !initialSettings.hasSeenSettingsIntro);
   const [warnSpicy, setWarnSpicy] = useState(false);
   const [pendingIntensity, setPendingIntensity] = useState<THumorIntensity | null>(null);
-  const [importErr, setImportErr] = useState<string | null>(null);
+  const hudToastRef = useRef<THudToastHandle | null>(null);
+  const showHudError = useCallback((message: string) => {
+    hudToastRef.current?.showToast({ message, variant: "error" });
+  }, []);
   const [pluginValidateLog, setPluginValidateLog] = useState<string>("");
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [bingChosenUrl, setBingChosenUrl] = useState<string | null>(null);
@@ -755,11 +760,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const cur = latestSettingsRef.current;
     try {
       await saveSettings(cur);
-      setImportErr(null);
     } catch (e: unknown) {
-      setImportErr(e instanceof Error ? e.message : String(e));
+      showHudError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [showHudError]);
 
   const persist = useCallback(
     (next: TSettingsUpdater): Promise<boolean> => {
@@ -775,21 +779,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         setSettings(resolved);
         try {
           await saveSettings(resolved);
-          setImportErr(null);
           return true;
         } catch (e: unknown) {
-          setImportErr(e instanceof Error ? e.message : String(e));
+          showHudError(e instanceof Error ? e.message : String(e));
           return false;
         }
       };
 
       persistChainRef.current = persistChainRef.current.then(run).catch((e: unknown) => {
-        setImportErr(e instanceof Error ? e.message : String(e));
+        showHudError(e instanceof Error ? e.message : String(e));
         return false;
       });
       return persistChainRef.current;
     },
-    [clearMyLinesDebouncedSaveTimer],
+    [clearMyLinesDebouncedSaveTimer, showHudError],
   );
 
   useEffect(() => {
@@ -1319,12 +1322,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             return true;
           })
           .catch((e: unknown) => {
-            setImportErr(e instanceof Error ? e.message : String(e));
+            showHudError(e instanceof Error ? e.message : String(e));
             return false;
           });
       }, 300);
     },
-    [saveLatestToDisk],
+    [saveLatestToDisk, showHudError],
   );
 
   const humorCtx: IHumorContext = useMemo(
@@ -1533,7 +1536,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const onPickBackgrounds = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const picked = [...files];
-    setImportErr(null);
     const dataUrls: string[] = [];
     for (const f of picked) {
       try {
@@ -1543,7 +1545,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         });
         dataUrls.push(url);
       } catch (e: unknown) {
-        setImportErr(e instanceof Error ? e.message : String(e));
+        showHudError(e instanceof Error ? e.message : String(e));
         return;
       }
     }
@@ -1553,7 +1555,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     );
     const newBytes = dataUrls.reduce((n, u) => n + estimateDataUrlBytes(u), 0);
     if (existingBytes + newBytes > BG_TOTAL_MAX) {
-      setImportErr(
+      showHudError(
         `After compressing on this device, images still exceed about ${BG_TOTAL_LABEL} total. Remove one file or pick smaller sources.`,
       );
       return;
@@ -1901,11 +1903,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       baseUrl: s.openaiBaseUrl,
       model: s.openaiModel,
     });
-    setAiResult(r.ok ? r.reply : r.error);
+    setAiResult(
+      r.ok
+        ? r.reply
+        : augmentRateLimitErrorWithAlternateProviders(r.error, byoAiPreset, {
+            openai: s.openaiApiKey,
+            gemini: s.geminiApiKey,
+          }),
+    );
   };
 
   const importPackFile = async (file: File) => {
-    setImportErr(null);
     try {
       let pack;
       if (file.name.endsWith(".zip")) {
@@ -1921,12 +1929,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         return { ...cur, importedPacks: nextPacks };
       });
     } catch (e) {
-      setImportErr(e instanceof Error ? e.message : String(e));
+      showHudError(e instanceof Error ? e.message : String(e));
     }
   };
 
   const importPluginFile = async (file: File) => {
-    setImportErr(null);
     setPluginValidateLog("");
     const text = await file.text();
     const r = validatePluginJsonText(text);
@@ -1953,559 +1960,604 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   };
 
   return (
-    <div className="shell">
-      <div className="glitch-overlay" aria-hidden />
-      {openSettings ? (
-        <div className="dialog-backdrop" role="presentation" onClick={closeSettingsDialog}>
-          <div
-            className="dialog settings-dialog"
-            role="dialog"
-            aria-label="Settings"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="dialog-head">
-              <h2>Settings</h2>
-              <button type="button" className="btn ghost has-icon" onClick={closeSettingsDialog}>
-                <X size={18} strokeWidth={2} aria-hidden />
-                <span>Close</span>
-              </button>
-            </header>
-            <div className="dialog-body">
-              {!s.hasSeenSettingsIntro ? (
-                <section
-                  className="settings-welcome"
-                  role="region"
-                  aria-label="Welcome to Tabocalypse"
-                >
-                  <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
-                  <p className="settings-welcome-lead">
-                    This new tab is a small HUD you control: turn widgets on or off, pick a theme
-                    and background, tune the humor strip, import plugins, and more—all in this
-                    dialog.
-                  </p>
-                  <p className="settings-welcome-note">
-                    Start with{" "}
-                    <HudTip tip="Jump to the Widgets section">
-                      <button
-                        type="button"
-                        className="linkish p-0"
-                        onClick={openWidgetsSettingsSection}
-                        aria-label="Open Settings and jump to the Widgets section"
-                      >
-                        Settings &gt; Widgets
-                      </button>
-                    </HudTip>{" "}
-                    to turn panels on, then{" "}
-                    <HudTip tip="Jump to Optional permissions">
-                      <button
-                        type="button"
-                        className="linkish p-0"
-                        onClick={openOptionalPermissionsSettingsSection}
-                        aria-label="Open Settings and jump to Optional permissions"
-                      >
-                        Settings &gt; Optional permissions
-                      </button>
-                    </HudTip>{" "}
-                    for Top sites, Bookmarks, and Tab guilt.
-                  </p>
-                  <p className="settings-welcome-note">
-                    Most preferences and notes sync when you use browser sync; API keys, todos, and
-                    backgrounds stay on this device.
-                  </p>
-                  <button type="button" className="btn primary" onClick={acknowledgeSettingsIntro}>
-                    Got it
-                  </button>
-                </section>
-              ) : null}
-              <div className="settings-accordion">
-                <details
-                  ref={widgetsSettingsSectionRef}
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("widgets", true)}
-                  onToggle={onSettingsAccordionToggle("widgets", true)}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Widgets</span>
-                  </summary>
-                  <div className="acc-body">
-                    {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
-                      <label key={k} className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={s.widgets[k]}
-                          onChange={(e) => toggleWidget(k, e.target.checked)}
-                        />
-                        <span>{WIDGET_LABELS[k]}</span>
-                      </label>
-                    ))}
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("appearance")}
-                  onToggle={onSettingsAccordionToggle("appearance")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Appearance</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2">Base mode</p>
-                    <div className="row wrap">
-                      {THEME_MODES.map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          className={s.themeMode === mode ? "btn primary has-icon" : "btn has-icon"}
-                          onClick={() => void persist((cur) => ({ ...cur, themeMode: mode }))}
-                        >
-                          {mode === "dark" ? (
-                            <Moon size={18} strokeWidth={2} aria-hidden />
-                          ) : (
-                            <Sun size={18} strokeWidth={2} aria-hidden />
-                          )}
-                          <span>{THEME_MODE_LABELS[mode]}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <p className="muted sm mb-2 mt-4">Accent palette</p>
-                    <div className="row wrap">
-                      {THEME_PRESET_PALETTES.map((palette) => (
-                        <button
-                          key={palette}
-                          type="button"
-                          className={s.themePalette === palette ? "btn primary" : "btn"}
-                          onClick={() => void persist((cur) => ({ ...cur, themePalette: palette }))}
-                        >
-                          {THEME_PALETTE_LABELS[palette]}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="muted sm mb-2 mt-4">Custom accents</p>
-                    <p className="muted sm mb-3">
-                      The swatches match the selected preset. Changing either switches to a custom
-                      palette (synced like other appearance settings).
+    <HudToastProvider ref={hudToastRef} chaotic={s.preset === "chaos"}>
+      <div className="shell">
+        <div className="glitch-overlay" aria-hidden />
+        {openSettings ? (
+          <div className="dialog-backdrop" role="presentation" onClick={closeSettingsDialog}>
+            <div
+              className="dialog settings-dialog"
+              role="dialog"
+              aria-label="Settings"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="dialog-head">
+                <h2>Settings</h2>
+                <button type="button" className="btn ghost has-icon" onClick={closeSettingsDialog}>
+                  <X size={18} strokeWidth={2} aria-hidden />
+                  <span>Close</span>
+                </button>
+              </header>
+              <div className="dialog-body">
+                {!s.hasSeenSettingsIntro ? (
+                  <section
+                    className="settings-welcome"
+                    role="region"
+                    aria-label="Welcome to Tabocalypse"
+                  >
+                    <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
+                    <p className="settings-welcome-lead">
+                      This new tab is a small HUD you control: turn widgets on or off, pick a theme
+                      and background, tune the humor strip, import plugins, and more—all in this
+                      dialog.
                     </p>
-                    <HudTip tip="Sample the wallpaper (lower area → primary accent, upper band → secondary) and save a custom palette when the image changes. Sampled colors are lightened for readability—manual accent picks below are unchanged.">
-                      <label className="check-row mb-3">
-                        <input
-                          type="checkbox"
-                          checked={s.themeAccentsMatchWallpaper}
-                          onChange={(e) => {
-                            const v = e.target.checked;
-                            void persist((cur) => ({ ...cur, themeAccentsMatchWallpaper: v }));
-                          }}
-                        />
-                        <span>Auto HUD</span>
-                      </label>
-                    </HudTip>
-                    <div className="color-accent-row">
-                      <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
-                      <HudTip tip="Main HUD highlight color (buttons, borders)">
-                        <HudColorInput
-                          id="tabocalypse-accent-primary"
-                          aria-label="Primary accent color"
-                          value={
-                            getResolvedAccentPair(s.themePalette, {
-                              accent: s.themeCustomAccent,
-                              accent2: s.themeCustomAccent2,
-                            }).accent
-                          }
-                          onChange={onAccentPrimaryColorChange}
-                        />
-                      </HudTip>
+                    <p className="settings-welcome-note">
+                      Start with{" "}
+                      <HudTip tip="Jump to the Widgets section">
+                        <button
+                          type="button"
+                          className="linkish p-0"
+                          onClick={openWidgetsSettingsSection}
+                          aria-label="Open Settings and jump to the Widgets section"
+                        >
+                          Settings &gt; Widgets
+                        </button>
+                      </HudTip>{" "}
+                      to turn panels on, then{" "}
+                      <HudTip tip="Jump to Optional permissions">
+                        <button
+                          type="button"
+                          className="linkish p-0"
+                          onClick={openOptionalPermissionsSettingsSection}
+                          aria-label="Open Settings and jump to Optional permissions"
+                        >
+                          Settings &gt; Optional permissions
+                        </button>
+                      </HudTip>{" "}
+                      for Top sites, Bookmarks, and Tab guilt.
+                    </p>
+                    <p className="settings-welcome-note">
+                      Most preferences and notes sync when you use browser sync; API keys, todos,
+                      and backgrounds stay on this device.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={acknowledgeSettingsIntro}
+                    >
+                      Got it
+                    </button>
+                  </section>
+                ) : null}
+                <div className="settings-accordion">
+                  <details
+                    ref={widgetsSettingsSectionRef}
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("widgets", true)}
+                    onToggle={onSettingsAccordionToggle("widgets", true)}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Widgets</span>
+                    </summary>
+                    <div className="acc-body">
+                      {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
+                        <label key={k} className="check-row">
+                          <input
+                            type="checkbox"
+                            checked={s.widgets[k]}
+                            onChange={(e) => toggleWidget(k, e.target.checked)}
+                          />
+                          <span>{WIDGET_LABELS[k]}</span>
+                        </label>
+                      ))}
                     </div>
-                    <div className="color-accent-row">
-                      <label htmlFor="tabocalypse-accent-secondary">Secondary accent</label>
-                      <HudTip tip="Second highlight for hovers and contrast accents">
-                        <HudColorInput
-                          id="tabocalypse-accent-secondary"
-                          aria-label="Secondary accent color"
-                          value={
-                            getResolvedAccentPair(s.themePalette, {
-                              accent: s.themeCustomAccent,
-                              accent2: s.themeCustomAccent2,
-                            }).accent2
-                          }
-                          onChange={onAccentSecondaryColorChange}
-                        />
-                      </HudTip>
-                    </div>
-                  </div>
-                </details>
+                  </details>
 
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("background")}
-                  onToggle={onSettingsAccordionToggle("background")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Background</span>
-                  </summary>
-                  <div className="acc-body">
-                    <div className="row wrap">
-                      <button
-                        type="button"
-                        className={
-                          s.backgroundKind === "solid" ? "btn primary has-icon" : "btn has-icon"
-                        }
-                        aria-pressed={s.backgroundKind === "solid"}
-                        onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "solid" }))}
-                      >
-                        <Square size={18} strokeWidth={2} aria-hidden />
-                        <span>Solid</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={
-                          s.backgroundKind === "gradient" ? "btn primary has-icon" : "btn has-icon"
-                        }
-                        aria-pressed={s.backgroundKind === "gradient"}
-                        onClick={() =>
-                          void persist((cur) => ({ ...cur, backgroundKind: "gradient" }))
-                        }
-                      >
-                        <Paintbrush size={18} strokeWidth={2} aria-hidden />
-                        <span>Gradient</span>
-                      </button>
-                      {s.userBackgroundImages.length > 0 ? (
-                        <HudTip tip="Use your saved photo library as the new tab background">
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("appearance")}
+                    onToggle={onSettingsAccordionToggle("appearance")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Appearance</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2">Base mode</p>
+                      <div className="row wrap">
+                        {THEME_MODES.map((mode) => (
                           <button
+                            key={mode}
                             type="button"
                             className={
-                              s.backgroundKind === "image" ? "btn primary has-icon" : "btn has-icon"
+                              s.themeMode === mode ? "btn primary has-icon" : "btn has-icon"
                             }
-                            aria-pressed={s.backgroundKind === "image"}
-                            onClick={() =>
-                              void persist((cur) => {
-                                if (cur.userBackgroundImages.length === 0) return cur;
-                                const primary =
-                                  cur.userBackgroundImages.find(
-                                    (row) => row.id === cur.userBackgroundActiveId,
-                                  ) ?? cur.userBackgroundImages[0];
-                                return {
-                                  ...cur,
-                                  backgroundKind: "image",
-                                  userBackgroundActiveId: primary?.id ?? cur.userBackgroundActiveId,
-                                  userBackgroundDataUrl: primary?.dataUrl ?? null,
-                                  userBackgroundDataUrls: cur.userBackgroundImages.map(
-                                    (row) => row.dataUrl,
-                                  ),
-                                };
-                              })
-                            }
+                            onClick={() => void persist((cur) => ({ ...cur, themeMode: mode }))}
                           >
-                            <Image size={18} strokeWidth={2} aria-hidden />
-                            <span>My photos</span>
+                            {mode === "dark" ? (
+                              <Moon size={18} strokeWidth={2} aria-hidden />
+                            ) : (
+                              <Sun size={18} strokeWidth={2} aria-hidden />
+                            )}
+                            <span>{THEME_MODE_LABELS[mode]}</span>
                           </button>
-                        </HudTip>
-                      ) : (
-                        <HudTip tip="Pick images from your device to use as background">
-                          <label className="btn has-icon">
-                            <ImagePlus size={18} strokeWidth={2} aria-hidden />
-                            <span>Upload first photo</span>
-                            <input
-                              hidden
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={(e) => {
-                                void onPickBackgrounds(e.target.files);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                        </HudTip>
-                      )}
-                      <button
-                        type="button"
-                        className={
-                          s.backgroundKind === "bing" ? "btn primary has-icon" : "btn has-icon"
-                        }
-                        aria-pressed={s.backgroundKind === "bing"}
-                        onClick={() => void persist((cur) => ({ ...cur, backgroundKind: "bing" }))}
-                      >
-                        <Images size={18} strokeWidth={2} aria-hidden />
-                        <span>Bing spotlight</span>
-                      </button>
-                    </div>
-
-                    <label className="check-row mt-3">
-                      <input
-                        type="checkbox"
-                        checked={s.backgroundRotate ?? true}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, backgroundRotate: v }));
-                        }}
-                      />
-                      <span>Rotate background</span>
-                    </label>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <label className="block">
-                        <span className="muted sm">Bing: minutes between images</span>
-                        <BackgroundRotateMinutesInput
-                          className="mt-1 w-full max-w-[8rem]"
-                          value={s.backgroundRotateMinutesBing}
-                          ariaLabel="Minutes between Bing spotlight images when rotation is on"
-                          onCommit={(n) => {
-                            void persist((cur) => ({ ...cur, backgroundRotateMinutesBing: n }));
-                          }}
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="muted sm">Uploads: minutes between photos</span>
-                        <BackgroundRotateMinutesInput
-                          className="mt-1 w-full max-w-[8rem]"
-                          value={s.backgroundRotateMinutesUser}
-                          ariaLabel="Minutes between uploaded photos when rotation is on"
-                          onCommit={(n) => {
-                            void persist((cur) => ({ ...cur, backgroundRotateMinutesUser: n }));
-                          }}
-                        />
-                      </label>
-                    </div>
-                    <p className="muted sm">
-                      Timers run while this tab stays open. Minimum {BACKGROUND_ROTATE_MINUTES_MIN}{" "}
-                      minute; default {DEFAULT_BACKGROUND_ROTATE_MINUTES} minutes; maximum{" "}
-                      {Math.floor(BACKGROUND_ROTATE_MINUTES_MAX / 60)} hours.
-                    </p>
-                    {s.backgroundKind === "bing" ? (
-                      <div className="mt-3 flex flex-col gap-2">
-                        <p className="muted sm m-0">
-                          Bing spotlight region (Peapix feed). Auto follows your browser locale;
-                          turn off to pick a country.
-                        </p>
-                        <div className="row wrap gap-2">
-                          <button
-                            type="button"
-                            className={s.bingWallpaperCountryAuto ? "btn primary sm" : "btn sm"}
-                            onClick={() =>
-                              void persist((cur) => ({ ...cur, bingWallpaperCountryAuto: true }))
-                            }
-                          >
-                            Auto (locale)
-                          </button>
-                          <button
-                            type="button"
-                            className={!s.bingWallpaperCountryAuto ? "btn primary sm" : "btn sm"}
-                            onClick={() =>
-                              void persist((cur) => ({ ...cur, bingWallpaperCountryAuto: false }))
-                            }
-                          >
-                            Fixed country
-                          </button>
-                        </div>
-                        {!s.bingWallpaperCountryAuto ? (
-                          <label className="block">
-                            <span className="muted sm">Country</span>
-                            <select
-                              className="mt-1"
-                              value={s.bingWallpaperCountry}
-                              onChange={(e) => {
-                                const v = e.target
-                                  .value as (typeof PEAPIX_BING_COUNTRY_OPTIONS)[number];
-                                void persist((cur) => ({ ...cur, bingWallpaperCountry: v }));
-                              }}
-                            >
-                              {PEAPIX_BING_COUNTRY_OPTIONS.map((code) => (
-                                <option key={code} value={code}>
-                                  {code.toUpperCase()}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        ) : (
-                          <p className="muted sm m-0" role="status">
-                            Using region: {peapixBingCountry.toUpperCase()}
-                          </p>
-                        )}
+                        ))}
                       </div>
-                    ) : null}
-                    <p className="muted sm">
-                      Local uploads are resized and compressed in your browser before saving (about{" "}
-                      {BG_MAX_LABEL} stored per image, about {BG_TOTAL_LABEL} total per
-                      multi-select). Large originals are shrunk to fit extension storage.
-                    </p>
-                    <p className="muted sm">
-                      Unlock panel layout, then use Reposition background on an uploaded photo
-                      (right click the wallpaper) to drag and preview framing; double-click empty
-                      space on the new tab to re-center the current Bing or uploaded wallpaper. Each
-                      Bing image and each saved photo remembers its own focal point.
-                    </p>
+                      <p className="muted sm mb-2 mt-4">Accent palette</p>
+                      <div className="row wrap">
+                        {THEME_PRESET_PALETTES.map((palette) => (
+                          <button
+                            key={palette}
+                            type="button"
+                            className={s.themePalette === palette ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, themePalette: palette }))
+                            }
+                          >
+                            {THEME_PALETTE_LABELS[palette]}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="muted sm mb-2 mt-4">Custom accents</p>
+                      <p className="muted sm mb-3">
+                        The swatches match the selected preset. Changing either switches to a custom
+                        palette (synced like other appearance settings).
+                      </p>
+                      <HudTip tip="Sample the wallpaper (lower area → primary accent, upper band → secondary) and save a custom palette when the image changes. Sampled colors are lightened for readability—manual accent picks below are unchanged.">
+                        <label className="check-row mb-3">
+                          <input
+                            type="checkbox"
+                            checked={s.themeAccentsMatchWallpaper}
+                            onChange={(e) => {
+                              const v = e.target.checked;
+                              void persist((cur) => ({ ...cur, themeAccentsMatchWallpaper: v }));
+                            }}
+                          />
+                          <span>Auto HUD</span>
+                        </label>
+                      </HudTip>
+                      <div className="color-accent-row">
+                        <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
+                        <HudTip tip="Main HUD highlight color (buttons, borders)">
+                          <HudColorInput
+                            id="tabocalypse-accent-primary"
+                            aria-label="Primary accent color"
+                            value={
+                              getResolvedAccentPair(s.themePalette, {
+                                accent: s.themeCustomAccent,
+                                accent2: s.themeCustomAccent2,
+                              }).accent
+                            }
+                            onChange={onAccentPrimaryColorChange}
+                          />
+                        </HudTip>
+                      </div>
+                      <div className="color-accent-row">
+                        <label htmlFor="tabocalypse-accent-secondary">Secondary accent</label>
+                        <HudTip tip="Second highlight for hovers and contrast accents">
+                          <HudColorInput
+                            id="tabocalypse-accent-secondary"
+                            aria-label="Secondary accent color"
+                            value={
+                              getResolvedAccentPair(s.themePalette, {
+                                accent: s.themeCustomAccent,
+                                accent2: s.themeCustomAccent2,
+                              }).accent2
+                            }
+                            onChange={onAccentSecondaryColorChange}
+                          />
+                        </HudTip>
+                      </div>
+                    </div>
+                  </details>
 
-                    {s.backgroundKind === "image" ? (
-                      <UserBackgroundGallery
-                        images={s.userBackgroundImages}
-                        activeId={s.userBackgroundActiveId}
-                        backgroundRotate={s.backgroundRotate ?? true}
-                        onPickFiles={(files) => void onPickBackgrounds(files)}
-                        onSetActiveId={(id) =>
-                          void persist((cur) => {
-                            const primary =
-                              cur.userBackgroundImages.find((row) => row.id === id) ??
-                              cur.userBackgroundImages[0];
-                            return {
-                              ...cur,
-                              backgroundKind: "image",
-                              userBackgroundActiveId: id,
-                              userBackgroundDataUrl: primary?.dataUrl ?? null,
-                              userBackgroundDataUrls: cur.userBackgroundImages.map(
-                                (row) => row.dataUrl,
-                              ),
-                            };
-                          })
-                        }
-                        onDeleteId={deleteUserBackground}
-                        onMove={moveUserBackground}
-                      />
-                    ) : null}
-
-                    {s.backgroundKind === "solid" || s.backgroundKind === "gradient" ? (
-                      <div
-                        className="mt-4 flex flex-col gap-3 border border-outline/40 p-3"
-                        role="group"
-                        aria-label="Background colors"
-                      >
-                        {s.backgroundKind === "solid" ? (
-                          <div className="color-accent-row">
-                            <label htmlFor="tabocalypse-bg-solid">Background color</label>
-                            <HudTip tip="Solid fill for the new tab behind the HUD">
-                              <HudColorInput
-                                id="tabocalypse-bg-solid"
-                                aria-label="Background color"
-                                value={s.backgroundSolid}
-                                onChange={onBackgroundSolidColorChange}
-                              />
-                            </HudTip>
-                          </div>
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("background")}
+                    onToggle={onSettingsAccordionToggle("background")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Background</span>
+                    </summary>
+                    <div className="acc-body">
+                      <div className="row wrap">
+                        <button
+                          type="button"
+                          className={
+                            s.backgroundKind === "solid" ? "btn primary has-icon" : "btn has-icon"
+                          }
+                          aria-pressed={s.backgroundKind === "solid"}
+                          onClick={() =>
+                            void persist((cur) => ({ ...cur, backgroundKind: "solid" }))
+                          }
+                        >
+                          <Square size={18} strokeWidth={2} aria-hidden />
+                          <span>Solid</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            s.backgroundKind === "gradient"
+                              ? "btn primary has-icon"
+                              : "btn has-icon"
+                          }
+                          aria-pressed={s.backgroundKind === "gradient"}
+                          onClick={() =>
+                            void persist((cur) => ({ ...cur, backgroundKind: "gradient" }))
+                          }
+                        >
+                          <Paintbrush size={18} strokeWidth={2} aria-hidden />
+                          <span>Gradient</span>
+                        </button>
+                        {s.userBackgroundImages.length > 0 ? (
+                          <HudTip tip="Use your saved photo library as the new tab background">
+                            <button
+                              type="button"
+                              className={
+                                s.backgroundKind === "image"
+                                  ? "btn primary has-icon"
+                                  : "btn has-icon"
+                              }
+                              aria-pressed={s.backgroundKind === "image"}
+                              onClick={() =>
+                                void persist((cur) => {
+                                  if (cur.userBackgroundImages.length === 0) return cur;
+                                  const primary =
+                                    cur.userBackgroundImages.find(
+                                      (row) => row.id === cur.userBackgroundActiveId,
+                                    ) ?? cur.userBackgroundImages[0];
+                                  return {
+                                    ...cur,
+                                    backgroundKind: "image",
+                                    userBackgroundActiveId:
+                                      primary?.id ?? cur.userBackgroundActiveId,
+                                    userBackgroundDataUrl: primary?.dataUrl ?? null,
+                                    userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                      (row) => row.dataUrl,
+                                    ),
+                                  };
+                                })
+                              }
+                            >
+                              <Image size={18} strokeWidth={2} aria-hidden />
+                              <span>My photos</span>
+                            </button>
+                          </HudTip>
                         ) : (
-                          <>
+                          <HudTip tip="Pick images from your device to use as background">
+                            <label className="btn has-icon">
+                              <ImagePlus size={18} strokeWidth={2} aria-hidden />
+                              <span>Upload first photo</span>
+                              <input
+                                hidden
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => {
+                                  void onPickBackgrounds(e.target.files);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          </HudTip>
+                        )}
+                        <button
+                          type="button"
+                          className={
+                            s.backgroundKind === "bing" ? "btn primary has-icon" : "btn has-icon"
+                          }
+                          aria-pressed={s.backgroundKind === "bing"}
+                          onClick={() =>
+                            void persist((cur) => ({ ...cur, backgroundKind: "bing" }))
+                          }
+                        >
+                          <Images size={18} strokeWidth={2} aria-hidden />
+                          <span>Bing spotlight</span>
+                        </button>
+                      </div>
+
+                      <label className="check-row mt-3">
+                        <input
+                          type="checkbox"
+                          checked={s.backgroundRotate ?? true}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, backgroundRotate: v }));
+                          }}
+                        />
+                        <span>Rotate background</span>
+                      </label>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="muted sm">Bing: minutes between images</span>
+                          <BackgroundRotateMinutesInput
+                            className="mt-1 w-full max-w-[8rem]"
+                            value={s.backgroundRotateMinutesBing}
+                            ariaLabel="Minutes between Bing spotlight images when rotation is on"
+                            onCommit={(n) => {
+                              void persist((cur) => ({ ...cur, backgroundRotateMinutesBing: n }));
+                            }}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="muted sm">Uploads: minutes between photos</span>
+                          <BackgroundRotateMinutesInput
+                            className="mt-1 w-full max-w-[8rem]"
+                            value={s.backgroundRotateMinutesUser}
+                            ariaLabel="Minutes between uploaded photos when rotation is on"
+                            onCommit={(n) => {
+                              void persist((cur) => ({ ...cur, backgroundRotateMinutesUser: n }));
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <p className="muted sm">
+                        Timers run while this tab stays open. Minimum{" "}
+                        {BACKGROUND_ROTATE_MINUTES_MIN} minute; default{" "}
+                        {DEFAULT_BACKGROUND_ROTATE_MINUTES} minutes; maximum{" "}
+                        {Math.floor(BACKGROUND_ROTATE_MINUTES_MAX / 60)} hours.
+                      </p>
+                      {s.backgroundKind === "bing" ? (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <p className="muted sm m-0">
+                            Bing spotlight region (Peapix feed). Auto follows your browser locale;
+                            turn off to pick a country.
+                          </p>
+                          <div className="row wrap gap-2">
+                            <button
+                              type="button"
+                              className={s.bingWallpaperCountryAuto ? "btn primary sm" : "btn sm"}
+                              onClick={() =>
+                                void persist((cur) => ({ ...cur, bingWallpaperCountryAuto: true }))
+                              }
+                            >
+                              Auto (locale)
+                            </button>
+                            <button
+                              type="button"
+                              className={!s.bingWallpaperCountryAuto ? "btn primary sm" : "btn sm"}
+                              onClick={() =>
+                                void persist((cur) => ({ ...cur, bingWallpaperCountryAuto: false }))
+                              }
+                            >
+                              Fixed country
+                            </button>
+                          </div>
+                          {!s.bingWallpaperCountryAuto ? (
+                            <label className="block">
+                              <span className="muted sm">Country</span>
+                              <select
+                                className="mt-1"
+                                value={s.bingWallpaperCountry}
+                                onChange={(e) => {
+                                  const v = e.target
+                                    .value as (typeof PEAPIX_BING_COUNTRY_OPTIONS)[number];
+                                  void persist((cur) => ({ ...cur, bingWallpaperCountry: v }));
+                                }}
+                              >
+                                {PEAPIX_BING_COUNTRY_OPTIONS.map((code) => (
+                                  <option key={code} value={code}>
+                                    {code.toUpperCase()}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : (
+                            <p className="muted sm m-0" role="status">
+                              Using region: {peapixBingCountry.toUpperCase()}
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+                      <p className="muted sm">
+                        Local uploads are resized and compressed in your browser before saving
+                        (about {BG_MAX_LABEL} stored per image, about {BG_TOTAL_LABEL} total per
+                        multi-select). Large originals are shrunk to fit extension storage.
+                      </p>
+                      <p className="muted sm">
+                        Unlock panel layout, then use Reposition background on an uploaded photo
+                        (right click the wallpaper) to drag and preview framing; double-click empty
+                        space on the new tab to re-center the current Bing or uploaded wallpaper.
+                        Each Bing image and each saved photo remembers its own focal point.
+                      </p>
+
+                      {s.backgroundKind === "image" ? (
+                        <UserBackgroundGallery
+                          images={s.userBackgroundImages}
+                          activeId={s.userBackgroundActiveId}
+                          backgroundRotate={s.backgroundRotate ?? true}
+                          onPickFiles={(files) => void onPickBackgrounds(files)}
+                          onSetActiveId={(id) =>
+                            void persist((cur) => {
+                              const primary =
+                                cur.userBackgroundImages.find((row) => row.id === id) ??
+                                cur.userBackgroundImages[0];
+                              return {
+                                ...cur,
+                                backgroundKind: "image",
+                                userBackgroundActiveId: id,
+                                userBackgroundDataUrl: primary?.dataUrl ?? null,
+                                userBackgroundDataUrls: cur.userBackgroundImages.map(
+                                  (row) => row.dataUrl,
+                                ),
+                              };
+                            })
+                          }
+                          onDeleteId={deleteUserBackground}
+                          onMove={moveUserBackground}
+                        />
+                      ) : null}
+
+                      {s.backgroundKind === "solid" || s.backgroundKind === "gradient" ? (
+                        <div
+                          className="mt-4 flex flex-col gap-3 border border-outline/40 p-3"
+                          role="group"
+                          aria-label="Background colors"
+                        >
+                          {s.backgroundKind === "solid" ? (
                             <div className="color-accent-row">
-                              <label htmlFor="tabocalypse-bg-grad-start">Gradient start</label>
-                              <HudTip tip="First color in the background blend">
+                              <label htmlFor="tabocalypse-bg-solid">Background color</label>
+                              <HudTip tip="Solid fill for the new tab behind the HUD">
                                 <HudColorInput
-                                  id="tabocalypse-bg-grad-start"
-                                  aria-label="Gradient start color"
+                                  id="tabocalypse-bg-solid"
+                                  aria-label="Background color"
                                   value={s.backgroundSolid}
                                   onChange={onBackgroundSolidColorChange}
                                 />
                               </HudTip>
                             </div>
-                            <div className="color-accent-row">
-                              <label htmlFor="tabocalypse-bg-grad-end">Gradient end</label>
-                              <HudTip tip="Second color in the background blend">
-                                <HudColorInput
-                                  id="tabocalypse-bg-grad-end"
-                                  aria-label="Gradient end color"
-                                  value={s.backgroundGradientEnd}
-                                  onChange={onBackgroundGradientEndColorChange}
-                                />
-                              </HudTip>
-                            </div>
-                            <p className="muted sm mb-0 mt-1">Gradient shape</p>
-                            <div className="row wrap" role="group" aria-label="Gradient shape">
-                              <HudTip tip="Blend colors along a line; set angle below">
-                                <button
-                                  type="button"
-                                  className={
-                                    s.backgroundGradientShape === "linear" ? "btn primary" : "btn"
-                                  }
-                                  aria-pressed={s.backgroundGradientShape === "linear"}
-                                  onClick={() =>
-                                    void persist((cur) => ({
-                                      ...cur,
-                                      backgroundGradientShape: "linear",
-                                    }))
-                                  }
-                                >
-                                  Linear
-                                </button>
-                              </HudTip>
-                              <HudTip tip="Circular blend from a focal point; set center below">
-                                <button
-                                  type="button"
-                                  className={
-                                    s.backgroundGradientShape === "radial" ? "btn primary" : "btn"
-                                  }
-                                  aria-pressed={s.backgroundGradientShape === "radial"}
-                                  onClick={() =>
-                                    void persist((cur) => ({
-                                      ...cur,
-                                      backgroundGradientShape: "radial",
-                                    }))
-                                  }
-                                >
-                                  Radial
-                                </button>
-                              </HudTip>
-                            </div>
-                            {s.backgroundGradientShape === "linear" ? (
-                              <div className="block">
-                                <span className="muted sm" id="tabocalypse-bg-grad-angle-label">
-                                  Direction (degrees)
-                                </span>
-                                <div className="mt-1 flex flex-wrap items-center gap-3">
-                                  <HudTip tip="Rotate the gradient direction (0° points up)">
-                                    <input
-                                      type="range"
-                                      className="min-w-[10rem] flex-1"
-                                      min={0}
-                                      max={359}
-                                      aria-labelledby="tabocalypse-bg-grad-angle-label"
-                                      value={s.backgroundGradientAngleDeg}
-                                      onChange={(e) => {
-                                        const n = coerceBackgroundGradientAngleDeg(
-                                          Number(e.target.value),
-                                          s.backgroundGradientAngleDeg,
-                                        );
-                                        void persist((cur) => ({
-                                          ...cur,
-                                          backgroundGradientAngleDeg: n,
-                                        }));
-                                      }}
-                                    />
-                                  </HudTip>
-                                  <label
-                                    className="sr-only"
-                                    htmlFor="tabocalypse-bg-grad-angle-num"
-                                  >
-                                    Direction in degrees
-                                  </label>
-                                  <HudTip tip="Exact angle in degrees (0–359)">
-                                    <input
-                                      id="tabocalypse-bg-grad-angle-num"
-                                      type="number"
-                                      className="w-20"
-                                      min={0}
-                                      max={359}
-                                      aria-labelledby="tabocalypse-bg-grad-angle-label"
-                                      value={s.backgroundGradientAngleDeg}
-                                      onChange={(e) => {
-                                        const n = coerceBackgroundGradientAngleDeg(
-                                          Number(e.target.value),
-                                          s.backgroundGradientAngleDeg,
-                                        );
-                                        void persist((cur) => ({
-                                          ...cur,
-                                          backgroundGradientAngleDeg: n,
-                                        }));
-                                      }}
-                                    />
-                                  </HudTip>
-                                </div>
+                          ) : (
+                            <>
+                              <div className="color-accent-row">
+                                <label htmlFor="tabocalypse-bg-grad-start">Gradient start</label>
+                                <HudTip tip="First color in the background blend">
+                                  <HudColorInput
+                                    id="tabocalypse-bg-grad-start"
+                                    aria-label="Gradient start color"
+                                    value={s.backgroundSolid}
+                                    onChange={onBackgroundSolidColorChange}
+                                  />
+                                </HudTip>
                               </div>
-                            ) : (
-                              <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="color-accent-row">
+                                <label htmlFor="tabocalypse-bg-grad-end">Gradient end</label>
+                                <HudTip tip="Second color in the background blend">
+                                  <HudColorInput
+                                    id="tabocalypse-bg-grad-end"
+                                    aria-label="Gradient end color"
+                                    value={s.backgroundGradientEnd}
+                                    onChange={onBackgroundGradientEndColorChange}
+                                  />
+                                </HudTip>
+                              </div>
+                              <p className="muted sm mb-0 mt-1">Gradient shape</p>
+                              <div className="row wrap" role="group" aria-label="Gradient shape">
+                                <HudTip tip="Blend colors along a line; set angle below">
+                                  <button
+                                    type="button"
+                                    className={
+                                      s.backgroundGradientShape === "linear" ? "btn primary" : "btn"
+                                    }
+                                    aria-pressed={s.backgroundGradientShape === "linear"}
+                                    onClick={() =>
+                                      void persist((cur) => ({
+                                        ...cur,
+                                        backgroundGradientShape: "linear",
+                                      }))
+                                    }
+                                  >
+                                    Linear
+                                  </button>
+                                </HudTip>
+                                <HudTip tip="Circular blend from a focal point; set center below">
+                                  <button
+                                    type="button"
+                                    className={
+                                      s.backgroundGradientShape === "radial" ? "btn primary" : "btn"
+                                    }
+                                    aria-pressed={s.backgroundGradientShape === "radial"}
+                                    onClick={() =>
+                                      void persist((cur) => ({
+                                        ...cur,
+                                        backgroundGradientShape: "radial",
+                                      }))
+                                    }
+                                  >
+                                    Radial
+                                  </button>
+                                </HudTip>
+                              </div>
+                              {s.backgroundGradientShape === "linear" ? (
                                 <div className="block">
-                                  <span className="muted sm" id="tabocalypse-bg-grad-cx-label">
-                                    Center horizontal (%)
+                                  <span className="muted sm" id="tabocalypse-bg-grad-angle-label">
+                                    Direction (degrees)
                                   </span>
                                   <div className="mt-1 flex flex-wrap items-center gap-3">
-                                    <HudTip tip="Move the radial center left or right">
+                                    <HudTip tip="Rotate the gradient direction (0° points up)">
                                       <input
                                         type="range"
-                                        className="min-w-[8rem] flex-1"
+                                        className="min-w-[10rem] flex-1"
+                                        min={0}
+                                        max={359}
+                                        aria-labelledby="tabocalypse-bg-grad-angle-label"
+                                        value={s.backgroundGradientAngleDeg}
+                                        onChange={(e) => {
+                                          const n = coerceBackgroundGradientAngleDeg(
+                                            Number(e.target.value),
+                                            s.backgroundGradientAngleDeg,
+                                          );
+                                          void persist((cur) => ({
+                                            ...cur,
+                                            backgroundGradientAngleDeg: n,
+                                          }));
+                                        }}
+                                      />
+                                    </HudTip>
+                                    <label
+                                      className="sr-only"
+                                      htmlFor="tabocalypse-bg-grad-angle-num"
+                                    >
+                                      Direction in degrees
+                                    </label>
+                                    <HudTip tip="Exact angle in degrees (0–359)">
+                                      <input
+                                        id="tabocalypse-bg-grad-angle-num"
+                                        type="number"
+                                        className="w-20"
+                                        min={0}
+                                        max={359}
+                                        aria-labelledby="tabocalypse-bg-grad-angle-label"
+                                        value={s.backgroundGradientAngleDeg}
+                                        onChange={(e) => {
+                                          const n = coerceBackgroundGradientAngleDeg(
+                                            Number(e.target.value),
+                                            s.backgroundGradientAngleDeg,
+                                          );
+                                          void persist((cur) => ({
+                                            ...cur,
+                                            backgroundGradientAngleDeg: n,
+                                          }));
+                                        }}
+                                      />
+                                    </HudTip>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="block">
+                                    <span className="muted sm" id="tabocalypse-bg-grad-cx-label">
+                                      Center horizontal (%)
+                                    </span>
+                                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                                      <HudTip tip="Move the radial center left or right">
+                                        <input
+                                          type="range"
+                                          className="min-w-[8rem] flex-1"
+                                          min={0}
+                                          max={100}
+                                          aria-labelledby="tabocalypse-bg-grad-cx-label"
+                                          value={s.backgroundGradientCenterXPct}
+                                          onChange={(e) => {
+                                            const n = coerceBackgroundGradientCenterPct(
+                                              Number(e.target.value),
+                                              s.backgroundGradientCenterXPct,
+                                            );
+                                            void persist((cur) => ({
+                                              ...cur,
+                                              backgroundGradientCenterXPct: n,
+                                            }));
+                                          }}
+                                        />
+                                      </HudTip>
+                                      <label
+                                        className="sr-only"
+                                        htmlFor="tabocalypse-bg-grad-cx-num"
+                                      >
+                                        Center horizontal percent
+                                      </label>
+                                      <input
+                                        id="tabocalypse-bg-grad-cx-num"
+                                        type="number"
+                                        className="w-20"
                                         min={0}
                                         max={100}
                                         aria-labelledby="tabocalypse-bg-grad-cx-label"
@@ -2521,40 +2573,43 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                           }));
                                         }}
                                       />
-                                    </HudTip>
-                                    <label className="sr-only" htmlFor="tabocalypse-bg-grad-cx-num">
-                                      Center horizontal percent
-                                    </label>
-                                    <input
-                                      id="tabocalypse-bg-grad-cx-num"
-                                      type="number"
-                                      className="w-20"
-                                      min={0}
-                                      max={100}
-                                      aria-labelledby="tabocalypse-bg-grad-cx-label"
-                                      value={s.backgroundGradientCenterXPct}
-                                      onChange={(e) => {
-                                        const n = coerceBackgroundGradientCenterPct(
-                                          Number(e.target.value),
-                                          s.backgroundGradientCenterXPct,
-                                        );
-                                        void persist((cur) => ({
-                                          ...cur,
-                                          backgroundGradientCenterXPct: n,
-                                        }));
-                                      }}
-                                    />
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="block">
-                                  <span className="muted sm" id="tabocalypse-bg-grad-cy-label">
-                                    Center vertical (%)
-                                  </span>
-                                  <div className="mt-1 flex flex-wrap items-center gap-3">
-                                    <HudTip tip="Move the radial center up or down">
+                                  <div className="block">
+                                    <span className="muted sm" id="tabocalypse-bg-grad-cy-label">
+                                      Center vertical (%)
+                                    </span>
+                                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                                      <HudTip tip="Move the radial center up or down">
+                                        <input
+                                          type="range"
+                                          className="min-w-[8rem] flex-1"
+                                          min={0}
+                                          max={100}
+                                          aria-labelledby="tabocalypse-bg-grad-cy-label"
+                                          value={s.backgroundGradientCenterYPct}
+                                          onChange={(e) => {
+                                            const n = coerceBackgroundGradientCenterPct(
+                                              Number(e.target.value),
+                                              s.backgroundGradientCenterYPct,
+                                            );
+                                            void persist((cur) => ({
+                                              ...cur,
+                                              backgroundGradientCenterYPct: n,
+                                            }));
+                                          }}
+                                        />
+                                      </HudTip>
+                                      <label
+                                        className="sr-only"
+                                        htmlFor="tabocalypse-bg-grad-cy-num"
+                                      >
+                                        Center vertical percent
+                                      </label>
                                       <input
-                                        type="range"
-                                        className="min-w-[8rem] flex-1"
+                                        id="tabocalypse-bg-grad-cy-num"
+                                        type="number"
+                                        className="w-20"
                                         min={0}
                                         max={100}
                                         aria-labelledby="tabocalypse-bg-grad-cy-label"
@@ -2570,1980 +2625,1978 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                           }));
                                         }}
                                       />
-                                    </HudTip>
-                                    <label className="sr-only" htmlFor="tabocalypse-bg-grad-cy-num">
-                                      Center vertical percent
-                                    </label>
-                                    <input
-                                      id="tabocalypse-bg-grad-cy-num"
-                                      type="number"
-                                      className="w-20"
-                                      min={0}
-                                      max={100}
-                                      aria-labelledby="tabocalypse-bg-grad-cy-label"
-                                      value={s.backgroundGradientCenterYPct}
-                                      onChange={(e) => {
-                                        const n = coerceBackgroundGradientCenterPct(
-                                          Number(e.target.value),
-                                          s.backgroundGradientCenterYPct,
-                                        );
-                                        void persist((cur) => ({
-                                          ...cur,
-                                          backgroundGradientCenterYPct: n,
-                                        }));
-                                      }}
-                                    />
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ) : null}
-
-                    {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
-                      <p className="muted sm" role="status">
-                        {bingChosenUrl
-                          ? bingPaintUrl
-                            ? bingRefreshing
-                              ? "Refreshing Bing spotlight…"
-                              : "Bing spotlight loaded."
-                            : "Preparing Bing image…"
-                          : "Loading Bing spotlight…"}
-                      </p>
-                    ) : null}
-                    {s.backgroundKind === "bing" && bingFetchErr ? (
-                      <p className="muted sm" role="status">
-                        Bing list: {bingFetchErr}
-                      </p>
-                    ) : null}
-                    {s.backgroundKind === "bing" && bingImageLoadErr ? (
-                      <p className="muted sm" role="status">
-                        Bing image: {bingImageLoadErr}
-                      </p>
-                    ) : null}
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("searchEngine")}
-                  onToggle={onSettingsAccordionToggle("searchEngine")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Search engine</span>
-                  </summary>
-                  <div className="acc-body">
-                    <SearchEngineSettingPicker
-                      value={s.searchEngine}
-                      onChange={(engine) =>
-                        void persist((cur) => ({ ...cur, searchEngine: engine }))
-                      }
-                    />
-                  </div>
-                </details>
-
-                <details
-                  ref={weatherSettingsSectionRef}
-                  id="settings-weather"
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("weather")}
-                  onToggle={onSettingsAccordionToggle("weather")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Weather</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2 mt-0">
-                      Location and units for the Weather widget. Turn Weather on under Widgets if
-                      you use it.
-                    </p>
-                    {s.weatherAutoGeo ? (
-                      <p className="muted sm mb-2">
-                        Automatic location updates your saved latitude and longitude with a single
-                        browser lookup each time you open a new Tabocalypse tab—then it stops—not
-                        continuous GPS tracking. Turn automatic location off under Optional
-                        permissions below to edit coordinates manually.
-                      </p>
-                    ) : (
-                      <p className="muted sm mb-2">
-                        Manual latitude and longitude stay put until you change them. Tabocalypse
-                        does not track your movements in real time.
-                      </p>
-                    )}
-                    {!s.weatherGeoAdjusted ? (
-                      <p className="mb-3 mt-0 text-xs leading-tight text-[var(--color-accent2)]">
-                        Weather is still using the default GEO location. Update the coordinates or
-                        run a browser location lookup so the forecast matches your area.
-                      </p>
-                    ) : null}
-                    <div className="row">
-                      <label className="block">
-                        Lat
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={s.weatherLat}
-                          disabled={s.weatherAutoGeo}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
-                            void persist((cur) => ({
-                              ...cur,
-                              weatherLat: v,
-                              weatherGeoAdjusted: true,
-                            }));
-                          }}
-                        />
-                      </label>
-                      <label className="block">
-                        Lon
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={s.weatherLon}
-                          disabled={s.weatherAutoGeo}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
-                            void persist((cur) => ({
-                              ...cur,
-                              weatherLon: v,
-                              weatherGeoAdjusted: true,
-                            }));
-                          }}
-                        />
-                      </label>
-                    </div>
-                    {!s.weatherAutoGeo ? (
-                      <>
-                        <div className="row wrap gap-2 mt-3 mb-2">
-                          <HudTip tip="Fills latitude and longitude once from the browser. Does not enable automatic lookups on future tabs or continuous tracking.">
-                            <button
-                              type="button"
-                              className="btn primary has-icon"
-                              disabled={geoStatus === "detecting"}
-                              aria-label="Use my location once to set latitude and longitude for weather"
-                              onClick={() => {
-                                fetchWeatherLocationOnce();
-                              }}
-                            >
-                              <LocateFixed size={18} strokeWidth={2} aria-hidden />
-                              <span>
-                                {geoStatus === "detecting"
-                                  ? "Getting location once…"
-                                  : "Use my location once"}
-                              </span>
-                            </button>
-                          </HudTip>
+                              )}
+                            </>
+                          )}
                         </div>
-                        {geoStatus === "denied" ? (
-                          <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
-                            Location permission denied. Allow location in your browser settings and
-                            try again, or enter coordinates manually above.
-                          </p>
-                        ) : null}
-                        {geoStatus === "unavailable" ? (
-                          <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
-                            Location is not available in this browser.
-                          </p>
-                        ) : null}
-                      </>
-                    ) : null}
-                    <p className="muted sm mb-2 mt-4">Temperature units</p>
-                    <p className="muted text-xs mb-2 mt-0">
-                      Automatic picks Celsius or Fahrenheit from your browser locale (for example
-                      United States regions use °F).
-                    </p>
-                    <div className="row wrap" role="group" aria-label="Temperature units">
-                      <HudTip tip="Use Celsius or Fahrenheit based on your browser locale">
-                        <button
-                          type="button"
-                          className={s.weatherTemperatureUnitAuto ? "btn primary" : "btn"}
-                          onClick={() =>
-                            void persist((cur) => ({ ...cur, weatherTemperatureUnitAuto: true }))
-                          }
-                        >
-                          {WEATHER_TEMPERATURE_UNIT_AUTO_LABEL}
-                        </button>
-                      </HudTip>
-                      {WEATHER_TEMPERATURE_UNITS.map((u) => (
-                        <HudTip
-                          key={u}
-                          tip={
-                            u === "celsius"
-                              ? "Always show readings in Celsius"
-                              : "Always show readings in Fahrenheit"
-                          }
-                        >
+                      ) : null}
+
+                      {s.backgroundKind === "bing" && !bingFetchErr && !bingImageLoadErr ? (
+                        <p className="muted sm" role="status">
+                          {bingChosenUrl
+                            ? bingPaintUrl
+                              ? bingRefreshing
+                                ? "Refreshing Bing spotlight…"
+                                : "Bing spotlight loaded."
+                              : "Preparing Bing image…"
+                            : "Loading Bing spotlight…"}
+                        </p>
+                      ) : null}
+                      {s.backgroundKind === "bing" && bingFetchErr ? (
+                        <p className="muted sm" role="status">
+                          Bing list: {bingFetchErr}
+                        </p>
+                      ) : null}
+                      {s.backgroundKind === "bing" && bingImageLoadErr ? (
+                        <p className="muted sm" role="status">
+                          Bing image: {bingImageLoadErr}
+                        </p>
+                      ) : null}
+                    </div>
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("searchEngine")}
+                    onToggle={onSettingsAccordionToggle("searchEngine")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Search engine</span>
+                    </summary>
+                    <div className="acc-body">
+                      <SearchEngineSettingPicker
+                        value={s.searchEngine}
+                        onChange={(engine) =>
+                          void persist((cur) => ({ ...cur, searchEngine: engine }))
+                        }
+                      />
+                    </div>
+                  </details>
+
+                  <details
+                    ref={weatherSettingsSectionRef}
+                    id="settings-weather"
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("weather")}
+                    onToggle={onSettingsAccordionToggle("weather")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Weather</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">
+                        Location and units for the Weather widget. Turn Weather on under Widgets if
+                        you use it.
+                      </p>
+                      {s.weatherAutoGeo ? (
+                        <p className="muted sm mb-2">
+                          Automatic location updates your saved latitude and longitude with a single
+                          browser lookup each time you open a new Tabocalypse tab—then it stops—not
+                          continuous GPS tracking. Turn automatic location off under Optional
+                          permissions below to edit coordinates manually.
+                        </p>
+                      ) : (
+                        <p className="muted sm mb-2">
+                          Manual latitude and longitude stay put until you change them. Tabocalypse
+                          does not track your movements in real time.
+                        </p>
+                      )}
+                      {!s.weatherGeoAdjusted ? (
+                        <p className="mb-3 mt-0 text-xs leading-tight text-[var(--color-accent2)]">
+                          Weather is still using the default GEO location. Update the coordinates or
+                          run a browser location lookup so the forecast matches your area.
+                        </p>
+                      ) : null}
+                      <div className="row">
+                        <label className="block">
+                          Lat
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={s.weatherLat}
+                            disabled={s.weatherAutoGeo}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              void persist((cur) => ({
+                                ...cur,
+                                weatherLat: v,
+                                weatherGeoAdjusted: true,
+                              }));
+                            }}
+                          />
+                        </label>
+                        <label className="block">
+                          Lon
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={s.weatherLon}
+                            disabled={s.weatherAutoGeo}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              void persist((cur) => ({
+                                ...cur,
+                                weatherLon: v,
+                                weatherGeoAdjusted: true,
+                              }));
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {!s.weatherAutoGeo ? (
+                        <>
+                          <div className="row wrap gap-2 mt-3 mb-2">
+                            <HudTip tip="Fills latitude and longitude once from the browser. Does not enable automatic lookups on future tabs or continuous tracking.">
+                              <button
+                                type="button"
+                                className="btn primary has-icon"
+                                disabled={geoStatus === "detecting"}
+                                aria-label="Use my location once to set latitude and longitude for weather"
+                                onClick={() => {
+                                  fetchWeatherLocationOnce();
+                                }}
+                              >
+                                <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                                <span>
+                                  {geoStatus === "detecting"
+                                    ? "Getting location once…"
+                                    : "Use my location once"}
+                                </span>
+                              </button>
+                            </HudTip>
+                          </div>
+                          {geoStatus === "denied" ? (
+                            <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
+                              Location permission denied. Allow location in your browser settings
+                              and try again, or enter coordinates manually above.
+                            </p>
+                          ) : null}
+                          {geoStatus === "unavailable" ? (
+                            <p className="muted sm mb-2" style={{ color: "var(--color-danger)" }}>
+                              Location is not available in this browser.
+                            </p>
+                          ) : null}
+                        </>
+                      ) : null}
+                      <p className="muted sm mb-2 mt-4">Temperature units</p>
+                      <p className="muted text-xs mb-2 mt-0">
+                        Automatic picks Celsius or Fahrenheit from your browser locale (for example
+                        United States regions use °F).
+                      </p>
+                      <div className="row wrap" role="group" aria-label="Temperature units">
+                        <HudTip tip="Use Celsius or Fahrenheit based on your browser locale">
                           <button
                             type="button"
-                            className={
-                              !s.weatherTemperatureUnitAuto && s.weatherTemperatureUnit === u
-                                ? "btn primary"
-                                : "btn"
+                            className={s.weatherTemperatureUnitAuto ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, weatherTemperatureUnitAuto: true }))
                             }
+                          >
+                            {WEATHER_TEMPERATURE_UNIT_AUTO_LABEL}
+                          </button>
+                        </HudTip>
+                        {WEATHER_TEMPERATURE_UNITS.map((u) => (
+                          <HudTip
+                            key={u}
+                            tip={
+                              u === "celsius"
+                                ? "Always show readings in Celsius"
+                                : "Always show readings in Fahrenheit"
+                            }
+                          >
+                            <button
+                              type="button"
+                              className={
+                                !s.weatherTemperatureUnitAuto && s.weatherTemperatureUnit === u
+                                  ? "btn primary"
+                                  : "btn"
+                              }
+                              onClick={() =>
+                                void persist((cur) => ({
+                                  ...cur,
+                                  weatherTemperatureUnitAuto: false,
+                                  weatherTemperatureUnit: u,
+                                }))
+                              }
+                            >
+                              {WEATHER_UNIT_LABELS[u]}
+                            </button>
+                          </HudTip>
+                        ))}
+                      </div>
+                      <p className="muted sm mb-2 mt-4">2 Lakes</p>
+                      <p className="muted text-xs mb-2 mt-0">
+                        Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget with
+                        provisional buoy readings from King County (Lake Washington and Lake
+                        Sammamish).
+                      </p>
+                      <div className="row wrap gap-2">
+                        <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">
+                          <button
+                            type="button"
+                            className={s.weatherLakesEmbedEnabled ? "btn primary" : "btn"}
                             onClick={() =>
                               void persist((cur) => ({
                                 ...cur,
-                                weatherTemperatureUnitAuto: false,
-                                weatherTemperatureUnit: u,
+                                weatherLakesEmbedEnabled: !cur.weatherLakesEmbedEnabled,
                               }))
                             }
                           >
-                            {WEATHER_UNIT_LABELS[u]}
+                            {s.weatherLakesEmbedEnabled ? "2 Lakes view on" : "2 Lakes view off"}
                           </button>
                         </HudTip>
-                      ))}
-                    </div>
-                    <p className="muted sm mb-2 mt-4">2 Lakes</p>
-                    <p className="muted text-xs mb-2 mt-0">
-                      Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget with
-                      provisional buoy readings from King County (Lake Washington and Lake
-                      Sammamish).
-                    </p>
-                    <div className="row wrap gap-2">
-                      <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">
-                        <button
-                          type="button"
-                          className={s.weatherLakesEmbedEnabled ? "btn primary" : "btn"}
-                          onClick={() =>
-                            void persist((cur) => ({
-                              ...cur,
-                              weatherLakesEmbedEnabled: !cur.weatherLakesEmbedEnabled,
-                            }))
-                          }
-                        >
-                          {s.weatherLakesEmbedEnabled ? "2 Lakes view on" : "2 Lakes view off"}
-                        </button>
-                      </HudTip>
-                    </div>
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("chaos")}
-                  onToggle={onSettingsAccordionToggle("chaos")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Chaos</span>
-                  </summary>
-                  <div className="acc-body">
-                    <label className="check-row">
-                      <input
-                        type="checkbox"
-                        checked={s.humorEnabled}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, humorEnabled: v }));
-                        }}
-                      />
-                      <span>Humor on</span>
-                    </label>
-                    <fieldset className="m-0 min-w-0 border-0 p-0">
-                      <legend className="text-sm font-medium">Built-in voice</legend>
-                      <p className="muted sm mb-2 mt-1">
-                        Pick one specialty voice, or default to mix the built-in packs you toggle
-                        below. Your lines and imported packs still mix in. Use “Include Classic
-                        jargon” to blend glossary-style lines with Gen-Z or your pack mix.
-                      </p>
-                      <div className="flex flex-col gap-1">
-                        <label className="check-row">
-                          <input
-                            type="radio"
-                            name="humor-builtin-voice"
-                            checked={s.humorBuiltinVoice === "default"}
-                            onChange={() =>
-                              void persist((cur) => ({ ...cur, humorBuiltinVoice: "default" }))
-                            }
-                          />
-                          <span>Default (pack toggles)</span>
-                        </label>
-                        <label className="check-row">
-                          <input
-                            type="radio"
-                            name="humor-builtin-voice"
-                            checked={s.humorBuiltinVoice === "gen_z"}
-                            onChange={() =>
-                              void persist((cur) => ({ ...cur, humorBuiltinVoice: "gen_z" }))
-                            }
-                          />
-                          <span>Gen-Z</span>
-                        </label>
-                        <label className="check-row">
-                          <input
-                            type="radio"
-                            name="humor-builtin-voice"
-                            checked={s.humorBuiltinVoice === "unsuck_classics"}
-                            onChange={() =>
-                              void persist((cur) => ({
-                                ...cur,
-                                humorBuiltinVoice: "unsuck_classics",
-                              }))
-                            }
-                          />
-                          <span>Classic jargon</span>
-                        </label>
                       </div>
-                    </fieldset>
-                    {s.humorBuiltinVoice !== "unsuck_classics" ? (
-                      <label className="check-row mt-2">
+                    </div>
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("chaos")}
+                    onToggle={onSettingsAccordionToggle("chaos")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Chaos</span>
+                    </summary>
+                    <div className="acc-body">
+                      <label className="check-row">
                         <input
                           type="checkbox"
-                          checked={s.humorIncludeUnsuckClassics}
-                          disabled={!s.humorEnabled}
+                          checked={s.humorEnabled}
                           onChange={(e) => {
                             const v = e.target.checked;
-                            void persist((cur) => ({ ...cur, humorIncludeUnsuckClassics: v }));
+                            void persist((cur) => ({ ...cur, humorEnabled: v }));
                           }}
                         />
-                        <span>Include Classic jargon</span>
+                        <span>Humor on</span>
                       </label>
-                    ) : null}
-                    <p className="muted sm -mt-1 mb-2">
-                      Classic jargon uses satirical business-term definitions (the same spirit as{" "}
-                      <HudTip tip="Open Unsuck It Classics in a new browser tab">
-                        <button
-                          type="button"
-                          className="linkish p-0"
-                          onClick={() => openExternal("https://www.unsuck-it.com/classics")}
-                        >
-                          Unsuck It — Classics
-                        </button>
-                      </HudTip>
-                      ). Specialty voices ignore the built-in pack toggles below.
-                    </p>
-                    <label className="block">
-                      Intensity
-                      <select
-                        value={s.humorIntensity}
-                        onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
-                      >
-                        <option value="off">off</option>
-                        <option value="mild">mild</option>
-                        <option value="spicy">spicy</option>
-                        <option value="unhinged">unhinged</option>
-                      </select>
-                    </label>
-                    <div className="mt-3 flex flex-col gap-2">
-                      <p className="muted sm m-0">
-                        Built-in humor lines refresh from the web about once a week (Classic jargon
-                        from Unsuck It; optional pack JSON when configured at build time). Bundled
-                        copy is used if a refresh fails.
-                      </p>
-                      {humorRefreshStatus ? (
-                        <p className="muted sm m-0" role="status">
-                          {humorRefreshStatus}
+                      <fieldset className="m-0 min-w-0 border-0 p-0">
+                        <legend className="text-sm font-medium">Built-in voice</legend>
+                        <p className="muted sm mb-2 mt-1">
+                          Pick one specialty voice, or default to mix the built-in packs you toggle
+                          below. Your lines and imported packs still mix in. Use “Include Classic
+                          jargon” to blend glossary-style lines with Gen-Z or your pack mix.
                         </p>
+                        <div className="flex flex-col gap-1">
+                          <label className="check-row">
+                            <input
+                              type="radio"
+                              name="humor-builtin-voice"
+                              checked={s.humorBuiltinVoice === "default"}
+                              onChange={() =>
+                                void persist((cur) => ({ ...cur, humorBuiltinVoice: "default" }))
+                              }
+                            />
+                            <span>Default (pack toggles)</span>
+                          </label>
+                          <label className="check-row">
+                            <input
+                              type="radio"
+                              name="humor-builtin-voice"
+                              checked={s.humorBuiltinVoice === "gen_z"}
+                              onChange={() =>
+                                void persist((cur) => ({ ...cur, humorBuiltinVoice: "gen_z" }))
+                              }
+                            />
+                            <span>Gen-Z</span>
+                          </label>
+                          <label className="check-row">
+                            <input
+                              type="radio"
+                              name="humor-builtin-voice"
+                              checked={s.humorBuiltinVoice === "unsuck_classics"}
+                              onChange={() =>
+                                void persist((cur) => ({
+                                  ...cur,
+                                  humorBuiltinVoice: "unsuck_classics",
+                                }))
+                              }
+                            />
+                            <span>Classic jargon</span>
+                          </label>
+                        </div>
+                      </fieldset>
+                      {s.humorBuiltinVoice !== "unsuck_classics" ? (
+                        <label className="check-row mt-2">
+                          <input
+                            type="checkbox"
+                            checked={s.humorIncludeUnsuckClassics}
+                            disabled={!s.humorEnabled}
+                            onChange={(e) => {
+                              const v = e.target.checked;
+                              void persist((cur) => ({ ...cur, humorIncludeUnsuckClassics: v }));
+                            }}
+                          />
+                          <span>Include Classic jargon</span>
+                        </label>
                       ) : null}
-                      {(() => {
-                        const lastAt = humorContentLastRefreshedAt(getHumorContentCacheSnapshot());
-                        return lastAt ? (
+                      <p className="muted sm -mt-1 mb-2">
+                        Classic jargon uses satirical business-term definitions (the same spirit as{" "}
+                        <HudTip tip="Open Unsuck It Classics in a new browser tab">
+                          <button
+                            type="button"
+                            className="linkish p-0"
+                            onClick={() => openExternal("https://www.unsuck-it.com/classics")}
+                          >
+                            Unsuck It — Classics
+                          </button>
+                        </HudTip>
+                        ). Specialty voices ignore the built-in pack toggles below.
+                      </p>
+                      <label className="block">
+                        Intensity
+                        <select
+                          value={s.humorIntensity}
+                          onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
+                        >
+                          <option value="off">off</option>
+                          <option value="mild">mild</option>
+                          <option value="spicy">spicy</option>
+                          <option value="unhinged">unhinged</option>
+                        </select>
+                      </label>
+                      <div className="mt-3 flex flex-col gap-2">
+                        <p className="muted sm m-0">
+                          Built-in humor lines refresh from the web about once a week (Classic
+                          jargon from Unsuck It; optional pack JSON when configured at build time).
+                          Bundled copy is used if a refresh fails.
+                        </p>
+                        {humorRefreshStatus ? (
                           <p className="muted sm m-0" role="status">
-                            Last refreshed:{" "}
-                            {new Date(lastAt).toLocaleString(hudNumberLocale, {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
+                            {humorRefreshStatus}
                           </p>
-                        ) : null;
-                      })()}
-                      <HudTip tip="Fetch the latest built-in humor lines from the web now">
-                        <button
-                          type="button"
-                          className="btn sm"
-                          disabled={humorRefreshBusy}
-                          onClick={() => {
-                            setHumorRefreshBusy(true);
-                            setHumorRefreshStatus(null);
-                            void refreshHumorContentIfStale({ force: true })
-                              .then((result) => {
-                                if (result.updated) {
-                                  setHumorContentRevision((n) => n + 1);
-                                  setHumorRefreshStatus("Humor lines updated.");
-                                } else if (result.error) {
+                        ) : null}
+                        {(() => {
+                          const lastAt = humorContentLastRefreshedAt(
+                            getHumorContentCacheSnapshot(),
+                          );
+                          return lastAt ? (
+                            <p className="muted sm m-0" role="status">
+                              Last refreshed:{" "}
+                              {new Date(lastAt).toLocaleString(hudNumberLocale, {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </p>
+                          ) : null;
+                        })()}
+                        <HudTip tip="Fetch the latest built-in humor lines from the web now">
+                          <button
+                            type="button"
+                            className="btn sm"
+                            disabled={humorRefreshBusy}
+                            onClick={() => {
+                              setHumorRefreshBusy(true);
+                              setHumorRefreshStatus(null);
+                              void refreshHumorContentIfStale({ force: true })
+                                .then((result) => {
+                                  if (result.updated) {
+                                    setHumorContentRevision((n) => n + 1);
+                                    setHumorRefreshStatus("Humor lines updated.");
+                                  } else if (result.error) {
+                                    setHumorRefreshStatus(
+                                      "Refresh failed — still using bundled or cached lines.",
+                                    );
+                                  } else {
+                                    setHumorRefreshStatus("Already up to date.");
+                                  }
+                                })
+                                .catch(() => {
                                   setHumorRefreshStatus(
                                     "Refresh failed — still using bundled or cached lines.",
                                   );
-                                } else {
-                                  setHumorRefreshStatus("Already up to date.");
-                                }
-                              })
-                              .catch(() => {
-                                setHumorRefreshStatus(
-                                  "Refresh failed — still using bundled or cached lines.",
-                                );
-                              })
-                              .finally(() => setHumorRefreshBusy(false));
-                          }}
-                        >
-                          {humorRefreshBusy ? "Refreshing…" : "Refresh built-in humor now"}
-                        </button>
-                      </HudTip>
-                    </div>
-                    <p className="muted sm">Builtin packs (filtered for built-in lines only):</p>
-                    {BUILTIN_PACKS.map((p) => (
-                      <label key={p.id} className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={s.humorBuiltinPackIds.includes(p.id)}
-                          disabled={s.humorBuiltinVoice !== "default"}
-                          onChange={(e) => togglePack(p.id, e.target.checked)}
-                        />
-                        <span>
-                          {p.name} <span className="muted sm">({p.maxIntensity})</span>
-                        </span>
-                      </label>
-                    ))}
-                    <p className="muted sm mt-3">
-                      Your own lines (one per line) are mixed with the packs you enable — same pool
-                      as the banner and the clock roast. Saved locally as you type.
-                    </p>
-                    <label htmlFor="tabocalypse-my-lines" className="block mt-2">
-                      <span className="muted sm">Your lines</span>
-                      <textarea
-                        id="tabocalypse-my-lines"
-                        rows={6}
-                        className="mt-1 w-full"
-                        placeholder="e.g. Another standup? Bold. Another reorg? Bolder."
-                        value={s.myLines.join("\n")}
-                        onChange={(e) => scheduleMyLinesPersist(e.target.value.split("\n"))}
-                      />
-                    </label>
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("presets")}
-                  onToggle={onSettingsAccordionToggle("presets")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Presets</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2">
-                      Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
-                      Panel snap vs chaotic layout stays under Panel layout and the header shuffle
-                      button. New installs default to Chaos. Theme, background, and the rest of
-                      Appearance are unchanged.
-                    </p>
-                    <div className="row wrap">
-                      <button
-                        type="button"
-                        className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
-                        aria-pressed={s.preset === "chaos"}
-                        onClick={() => void persist((cur) => applyPreset("chaos", cur))}
-                      >
-                        <Flame size={18} strokeWidth={2} aria-hidden />
-                        <span>Chaos</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={
-                          s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
-                        }
-                        aria-pressed={s.preset === "balanced"}
-                        onClick={() => void persist((cur) => applyPreset("balanced", cur))}
-                      >
-                        <Scale size={18} strokeWidth={2} aria-hidden />
-                        <span>Balanced</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
-                        aria-pressed={s.preset === "focus"}
-                        onClick={() => void persist((cur) => applyPreset("focus", cur))}
-                      >
-                        <Target size={18} strokeWidth={2} aria-hidden />
-                        <span>Focus</span>
-                      </button>
-                    </div>
-                    <div className="muted sm mt-3 flex flex-col gap-1.5">
-                      <p className="m-0">
-                        <span className="text-text">Chaos</span>
-                        {" — "}
-                        Default personality for Tabocalypse: spicier jokes and the humor strip on;
-                        other widgets stay as they are. Snap vs chaotic HUD is independent—use Panel
-                        layout or the header shuffle control.
-                      </p>
-                      <p className="m-0">
-                        <span className="text-text">Balanced</span>
-                        {" — "}
-                        Mild jokes and the humor strip on. Widget toggles merge defaults with yours.
-                      </p>
-                      <p className="m-0">
-                        <span className="text-text">Focus</span>
-                        {" — "}
-                        Turns jokes off, hides the humor strip, and switches Search and Clock on.
-                        Other widgets keep their current toggles.
-                      </p>
-                    </div>
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("panelLayout")}
-                  onToggle={onSettingsAccordionToggle("panelLayout")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Panel layout</span>
-                  </summary>
-                  <div className="acc-body">
-                    <label className="check-row">
-                      <input
-                        type="checkbox"
-                        checked={s.hudLayoutAutoReposition}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, hudLayoutAutoReposition: v }));
-                        }}
-                      />
-                      <span>Auto-reposition panels when the window is resized</span>
-                    </label>
-                    <p className="muted sm mb-2">
-                      Priority control: when this is on, panels reflow on resize in both grid and
-                      chaotic modes (overriding lock/chaotic for resize only). When it is off,
-                      positions stay put on resize; chaotic, lock, and manual drag below take over.
-                    </p>
-                    <button
-                      type="button"
-                      className="btn has-icon mb-2"
-                      onClick={() => arrangeHudPanelsNow()}
-                    >
-                      <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
-                      <span>Arrange panels now ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
-                    </button>
-                    <p className="muted sm mb-2">
-                      Same repack as resize auto-reflow. Use the header dashboard icon or press{" "}
-                      {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put; unpinned
-                      stickies reflow when the window resizes.
-                    </p>
-                    <p className="muted sm mb-2">
-                      Drag panels by the grip in each header. In grid mode (not chaotic), a
-                      12-column dashed overlay fills the HUD while layout is unlocked; drop targets
-                      highlight the cells the panel will snap into. Use the top bar for chaotic
-                      mode, arrange panels ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and layout
-                      lock.
-                    </p>
-                    <label className="check-row">
-                      <input
-                        type="checkbox"
-                        checked={s.hudLayoutChaotic}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, hudLayoutChaotic: v }));
-                        }}
-                      />
-                      <span>Chaotic layout (no snap to grid)</span>
-                    </label>
-                    <label className="check-row">
-                      <input
-                        type="checkbox"
-                        checked={s.hudLayoutLocked}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, hudLayoutLocked: v }));
-                        }}
-                      />
-                      <span>Lock panel positions</span>
-                    </label>
-                    {s.hudLayoutLocked ? (
-                      <>
-                        <label className="check-row ml-4">
+                                })
+                                .finally(() => setHumorRefreshBusy(false));
+                            }}
+                          >
+                            {humorRefreshBusy ? "Refreshing…" : "Refresh built-in humor now"}
+                          </button>
+                        </HudTip>
+                      </div>
+                      <p className="muted sm">Builtin packs (filtered for built-in lines only):</p>
+                      {BUILTIN_PACKS.map((p) => (
+                        <label key={p.id} className="check-row">
                           <input
                             type="checkbox"
-                            checked={s.hudLayoutAdaptiveWhileLocked}
-                            disabled={!s.hudLayoutAutoReposition}
-                            onChange={(e) => {
-                              const v = e.target.checked;
-                              void persist((cur) => ({
-                                ...cur,
-                                hudLayoutAdaptiveWhileLocked: v,
-                              }));
-                            }}
+                            checked={s.humorBuiltinPackIds.includes(p.id)}
+                            disabled={s.humorBuiltinVoice !== "default"}
+                            onChange={(e) => togglePack(p.id, e.target.checked)}
                           />
-                          <span>Locked, but adaptive</span>
+                          <span>
+                            {p.name} <span className="muted sm">({p.maxIntensity})</span>
+                          </span>
                         </label>
-                        <p className="muted sm mb-2 ml-4">
-                          Panels stay locked for dragging, but still reflow when the window is
-                          resized. Requires auto-reposition above.
-                        </p>
-                      </>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="btn has-icon mt-3"
-                      onClick={() =>
-                        void persist((cur) => ({
-                          ...cur,
-                          hudPanelPositions: { ...DEFAULT_HUD_PANEL_POSITIONS },
-                        }))
-                      }
-                    >
-                      <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                      <span>Reset panel positions</span>
-                    </button>
-                  </div>
-                </details>
+                      ))}
+                      <p className="muted sm mt-3">
+                        Your own lines (one per line) are mixed with the packs you enable — same
+                        pool as the banner and the clock roast. Saved locally as you type.
+                      </p>
+                      <label htmlFor="tabocalypse-my-lines" className="block mt-2">
+                        <span className="muted sm">Your lines</span>
+                        <textarea
+                          id="tabocalypse-my-lines"
+                          rows={6}
+                          className="mt-1 w-full"
+                          placeholder="e.g. Another standup? Bold. Another reorg? Bolder."
+                          value={s.myLines.join("\n")}
+                          onChange={(e) => scheduleMyLinesPersist(e.target.value.split("\n"))}
+                        />
+                      </label>
+                    </div>
+                  </details>
 
-                <details
-                  ref={optionalPermissionsSettingsSectionRef}
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("optionalPermissions")}
-                  onToggle={onSettingsAccordionToggle("optionalPermissions")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Optional permissions</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2 mt-0">
-                      Request browser access where HUD widgets need it—Top sites, bookmarks strip,
-                      Tab guilt—or turn on automatic weather location lookups on each Tabocalypse
-                      tab (still a single finite request per tab load, not live tracking—see Weather
-                      for a one-time lookup while manually editing coordinates).
-                    </p>
-                    <div className="row wrap gap-2">
-                      <button
-                        ref={topSitesPermissionButtonRef}
-                        type="button"
-                        className="btn has-icon"
-                        aria-label={
-                          optionalApiPerms.topSites
-                            ? "Disable Top sites permission"
-                            : "Enable Top sites permission"
-                        }
-                        onClick={async () => {
-                          if (optionalApiPerms.topSites) {
-                            const ok = await browser.permissions.remove({
-                              permissions: ["topSites"],
-                            });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, topSites: false },
-                              }));
-                            }
-                          } else {
-                            const ok = await browser.permissions.request({
-                              permissions: ["topSites"],
-                            });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, topSites: true },
-                              }));
-                            }
-                          }
-                          void refreshOptionalApiPerms();
-                        }}
-                      >
-                        <LayoutGrid size={18} strokeWidth={2} aria-hidden />
-                        <span>
-                          {optionalApiPerms.topSites ? "Disable Top sites" : "Enable Top sites"}
-                        </span>
-                      </button>
-                      <button
-                        ref={bookmarksPermissionButtonRef}
-                        type="button"
-                        className="btn has-icon"
-                        aria-label={
-                          optionalApiPerms.bookmarks
-                            ? "Disable Bookmarks permission"
-                            : "Enable Bookmarks permission"
-                        }
-                        onClick={async () => {
-                          if (optionalApiPerms.bookmarks) {
-                            const ok = await browser.permissions.remove({
-                              permissions: ["bookmarks"],
-                            });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, bookmarksStrip: false },
-                              }));
-                            }
-                          } else {
-                            const ok = await browser.permissions.request({
-                              permissions: ["bookmarks"],
-                            });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, bookmarksStrip: true },
-                              }));
-                            }
-                          }
-                          void refreshOptionalApiPerms();
-                        }}
-                      >
-                        <Bookmark size={18} strokeWidth={2} aria-hidden />
-                        <span>
-                          {optionalApiPerms.bookmarks ? "Disable Bookmarks" : "Enable Bookmarks"}
-                        </span>
-                      </button>
-                      <button
-                        ref={tabsPermissionButtonRef}
-                        type="button"
-                        className="btn has-icon"
-                        aria-label={
-                          optionalApiPerms.tabs
-                            ? "Disable Tab guilt (tabs) permission"
-                            : "Enable Tab guilt (tabs) permission"
-                        }
-                        onClick={async () => {
-                          if (optionalApiPerms.tabs) {
-                            const ok = await browser.permissions.remove({ permissions: ["tabs"] });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, tabGuilt: false },
-                              }));
-                            }
-                          } else {
-                            const ok = await browser.permissions.request({ permissions: ["tabs"] });
-                            if (ok) {
-                              await persist((cur) => ({
-                                ...cur,
-                                widgets: { ...cur.widgets, tabGuilt: true },
-                              }));
-                            }
-                          }
-                          void refreshOptionalApiPerms();
-                        }}
-                      >
-                        <Layers size={18} strokeWidth={2} aria-hidden />
-                        <span>
-                          {optionalApiPerms.tabs
-                            ? "Disable Tab guilt (tabs)"
-                            : "Enable Tab guilt (tabs)"}
-                        </span>
-                      </button>
-                      <HudTip tip="When on, saves latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("presets")}
+                    onToggle={onSettingsAccordionToggle("presets")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Presets</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2">
+                        Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
+                        Panel snap vs chaotic layout stays under Panel layout and the header shuffle
+                        button. New installs default to Chaos. Theme, background, and the rest of
+                        Appearance are unchanged.
+                      </p>
+                      <div className="row wrap">
                         <button
                           type="button"
-                          className="btn has-icon"
-                          disabled={geoStatus === "detecting"}
-                          aria-label={
-                            s.weatherAutoGeo
-                              ? "Turn off automatic weather location on each tab"
-                              : "Turn on automatic weather location each new Tabocalypse tab"
+                          className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
+                          aria-pressed={s.preset === "chaos"}
+                          onClick={() => void persist((cur) => applyPreset("chaos", cur))}
+                        >
+                          <Flame size={18} strokeWidth={2} aria-hidden />
+                          <span>Chaos</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
                           }
-                          onClick={() => {
-                            if (s.weatherAutoGeo) {
-                              weatherManualGeoEpochRef.current += 1;
-                              void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
-                              setGeoStatus(null);
+                          aria-pressed={s.preset === "balanced"}
+                          onClick={() => void persist((cur) => applyPreset("balanced", cur))}
+                        >
+                          <Scale size={18} strokeWidth={2} aria-hidden />
+                          <span>Balanced</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
+                          aria-pressed={s.preset === "focus"}
+                          onClick={() => void persist((cur) => applyPreset("focus", cur))}
+                        >
+                          <Target size={18} strokeWidth={2} aria-hidden />
+                          <span>Focus</span>
+                        </button>
+                      </div>
+                      <div className="muted sm mt-3 flex flex-col gap-1.5">
+                        <p className="m-0">
+                          <span className="text-text">Chaos</span>
+                          {" — "}
+                          Default personality for Tabocalypse: spicier jokes and the humor strip on;
+                          other widgets stay as they are. Snap vs chaotic HUD is independent—use
+                          Panel layout or the header shuffle control.
+                        </p>
+                        <p className="m-0">
+                          <span className="text-text">Balanced</span>
+                          {" — "}
+                          Mild jokes and the humor strip on. Widget toggles merge defaults with
+                          yours.
+                        </p>
+                        <p className="m-0">
+                          <span className="text-text">Focus</span>
+                          {" — "}
+                          Turns jokes off, hides the humor strip, and switches Search and Clock on.
+                          Other widgets keep their current toggles.
+                        </p>
+                      </div>
+                    </div>
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("panelLayout")}
+                    onToggle={onSettingsAccordionToggle("panelLayout")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Panel layout</span>
+                    </summary>
+                    <div className="acc-body">
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.hudLayoutAutoReposition}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, hudLayoutAutoReposition: v }));
+                          }}
+                        />
+                        <span>Auto-reposition panels when the window is resized</span>
+                      </label>
+                      <p className="muted sm mb-2">
+                        Priority control: when this is on, panels reflow on resize in both grid and
+                        chaotic modes (overriding lock/chaotic for resize only). When it is off,
+                        positions stay put on resize; chaotic, lock, and manual drag below take
+                        over.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn has-icon mb-2"
+                        onClick={() => arrangeHudPanelsNow()}
+                      >
+                        <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
+                        <span>Arrange panels now ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
+                      </button>
+                      <p className="muted sm mb-2">
+                        Same repack as resize auto-reflow. Use the header dashboard icon or press{" "}
+                        {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
+                        unpinned stickies reflow when the window resizes.
+                      </p>
+                      <p className="muted sm mb-2">
+                        Drag panels by the grip in each header. In grid mode (not chaotic), a
+                        12-column dashed overlay fills the HUD while layout is unlocked; drop
+                        targets highlight the cells the panel will snap into. Use the top bar for
+                        chaotic mode, arrange panels ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and
+                        layout lock.
+                      </p>
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.hudLayoutChaotic}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, hudLayoutChaotic: v }));
+                          }}
+                        />
+                        <span>Chaotic layout (no snap to grid)</span>
+                      </label>
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.hudLayoutLocked}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, hudLayoutLocked: v }));
+                          }}
+                        />
+                        <span>Lock panel positions</span>
+                      </label>
+                      {s.hudLayoutLocked ? (
+                        <>
+                          <label className="check-row ml-4">
+                            <input
+                              type="checkbox"
+                              checked={s.hudLayoutAdaptiveWhileLocked}
+                              disabled={!s.hudLayoutAutoReposition}
+                              onChange={(e) => {
+                                const v = e.target.checked;
+                                void persist((cur) => ({
+                                  ...cur,
+                                  hudLayoutAdaptiveWhileLocked: v,
+                                }));
+                              }}
+                            />
+                            <span>Locked, but adaptive</span>
+                          </label>
+                          <p className="muted sm mb-2 ml-4">
+                            Panels stay locked for dragging, but still reflow when the window is
+                            resized. Requires auto-reposition above.
+                          </p>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn has-icon mt-3"
+                        onClick={() =>
+                          void persist((cur) => ({
+                            ...cur,
+                            hudPanelPositions: { ...DEFAULT_HUD_PANEL_POSITIONS },
+                          }))
+                        }
+                      >
+                        <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                        <span>Reset panel positions</span>
+                      </button>
+                    </div>
+                  </details>
+
+                  <details
+                    ref={optionalPermissionsSettingsSectionRef}
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("optionalPermissions")}
+                    onToggle={onSettingsAccordionToggle("optionalPermissions")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Optional permissions</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">
+                        Request browser access where HUD widgets need it—Top sites, bookmarks strip,
+                        Tab guilt—or turn on automatic weather location lookups on each Tabocalypse
+                        tab (still a single finite request per tab load, not live tracking—see
+                        Weather for a one-time lookup while manually editing coordinates).
+                      </p>
+                      <div className="row wrap gap-2">
+                        <button
+                          ref={topSitesPermissionButtonRef}
+                          type="button"
+                          className="btn has-icon"
+                          aria-label={
+                            optionalApiPerms.topSites
+                              ? "Disable Top sites permission"
+                              : "Enable Top sites permission"
+                          }
+                          onClick={async () => {
+                            if (optionalApiPerms.topSites) {
+                              const ok = await browser.permissions.remove({
+                                permissions: ["topSites"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, topSites: false },
+                                }));
+                              }
                             } else {
-                              void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                              const ok = await browser.permissions.request({
+                                permissions: ["topSites"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, topSites: true },
+                                }));
+                              }
                             }
+                            void refreshOptionalApiPerms();
                           }}
                         >
-                          <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                          <LayoutGrid size={18} strokeWidth={2} aria-hidden />
                           <span>
-                            {geoStatus === "detecting"
-                              ? "Updating location…"
-                              : s.weatherAutoGeo
-                                ? "Turn off automatic weather location"
-                                : "Turn on automatic weather location"}
+                            {optionalApiPerms.topSites ? "Disable Top sites" : "Enable Top sites"}
                           </span>
                         </button>
-                      </HudTip>
+                        <button
+                          ref={bookmarksPermissionButtonRef}
+                          type="button"
+                          className="btn has-icon"
+                          aria-label={
+                            optionalApiPerms.bookmarks
+                              ? "Disable Bookmarks permission"
+                              : "Enable Bookmarks permission"
+                          }
+                          onClick={async () => {
+                            if (optionalApiPerms.bookmarks) {
+                              const ok = await browser.permissions.remove({
+                                permissions: ["bookmarks"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, bookmarksStrip: false },
+                                }));
+                              }
+                            } else {
+                              const ok = await browser.permissions.request({
+                                permissions: ["bookmarks"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, bookmarksStrip: true },
+                                }));
+                              }
+                            }
+                            void refreshOptionalApiPerms();
+                          }}
+                        >
+                          <Bookmark size={18} strokeWidth={2} aria-hidden />
+                          <span>
+                            {optionalApiPerms.bookmarks ? "Disable Bookmarks" : "Enable Bookmarks"}
+                          </span>
+                        </button>
+                        <button
+                          ref={tabsPermissionButtonRef}
+                          type="button"
+                          className="btn has-icon"
+                          aria-label={
+                            optionalApiPerms.tabs
+                              ? "Disable Tab guilt (tabs) permission"
+                              : "Enable Tab guilt (tabs) permission"
+                          }
+                          onClick={async () => {
+                            if (optionalApiPerms.tabs) {
+                              const ok = await browser.permissions.remove({
+                                permissions: ["tabs"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, tabGuilt: false },
+                                }));
+                              }
+                            } else {
+                              const ok = await browser.permissions.request({
+                                permissions: ["tabs"],
+                              });
+                              if (ok) {
+                                await persist((cur) => ({
+                                  ...cur,
+                                  widgets: { ...cur.widgets, tabGuilt: true },
+                                }));
+                              }
+                            }
+                            void refreshOptionalApiPerms();
+                          }}
+                        >
+                          <Layers size={18} strokeWidth={2} aria-hidden />
+                          <span>
+                            {optionalApiPerms.tabs
+                              ? "Disable Tab guilt (tabs)"
+                              : "Enable Tab guilt (tabs)"}
+                          </span>
+                        </button>
+                        <HudTip tip="When on, saves latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
+                          <button
+                            type="button"
+                            className="btn has-icon"
+                            disabled={geoStatus === "detecting"}
+                            aria-label={
+                              s.weatherAutoGeo
+                                ? "Turn off automatic weather location on each tab"
+                                : "Turn on automatic weather location each new Tabocalypse tab"
+                            }
+                            onClick={() => {
+                              if (s.weatherAutoGeo) {
+                                weatherManualGeoEpochRef.current += 1;
+                                void persist((cur) => ({ ...cur, weatherAutoGeo: false }));
+                                setGeoStatus(null);
+                              } else {
+                                void persist((cur) => ({ ...cur, weatherAutoGeo: true }));
+                              }
+                            }}
+                          >
+                            <LocateFixed size={18} strokeWidth={2} aria-hidden />
+                            <span>
+                              {geoStatus === "detecting"
+                                ? "Updating location…"
+                                : s.weatherAutoGeo
+                                  ? "Turn off automatic weather location"
+                                  : "Turn on automatic weather location"}
+                            </span>
+                          </button>
+                        </HudTip>
+                      </div>
+                      {geoStatus === "denied" ? (
+                        <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                          Location permission denied. Allow location access in your browser and try
+                          again, or enter coordinates manually under Weather.
+                        </p>
+                      ) : null}
+                      {geoStatus === "unavailable" ? (
+                        <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
+                          Geolocation is not available in this browser.
+                        </p>
+                      ) : null}
                     </div>
-                    {geoStatus === "denied" ? (
-                      <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                        Location permission denied. Allow location access in your browser and try
-                        again, or enter coordinates manually under Weather.
-                      </p>
-                    ) : null}
-                    {geoStatus === "unavailable" ? (
-                      <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
-                        Geolocation is not available in this browser.
-                      </p>
-                    ) : null}
-                  </div>
-                </details>
+                  </details>
 
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("alarms")}
-                  onToggle={onSettingsAccordionToggle("alarms")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Alarms</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-3 mt-0">
-                      One-time reminders as browser notifications (when the extension alarm API is
-                      available).
-                    </p>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void scheduleAlarm();
-                      }}
-                      className="grid gap-3"
-                    >
-                      <label className="block">
-                        <span className="muted sm">Date and time</span>
-                        <div className="mt-1 flex max-w-md gap-2">
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("alarms")}
+                    onToggle={onSettingsAccordionToggle("alarms")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Alarms</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-3 mt-0">
+                        One-time reminders as browser notifications (when the extension alarm API is
+                        available).
+                      </p>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void scheduleAlarm();
+                        }}
+                        className="grid gap-3"
+                      >
+                        <label className="block">
+                          <span className="muted sm">Date and time</span>
+                          <div className="mt-1 flex max-w-md gap-2">
+                            <input
+                              ref={alarmWhenInputRef}
+                              id="tabocalypse-alarm-when"
+                              type="datetime-local"
+                              step={60}
+                              min={alarmDatetimeMin}
+                              className="min-w-0 flex-1"
+                              value={alarmWhen}
+                              onChange={(e) => {
+                                setAlarmWhen(e.target.value);
+                                setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
+                              }}
+                              aria-label="Alarm date and time"
+                            />
+                            <HudTip tip="Open the date and time picker">
+                              <button
+                                type="button"
+                                className="btn ghost sm icon-only shrink-0"
+                                aria-label="Open date and time picker"
+                                onClick={() => openAlarmWhenPicker()}
+                              >
+                                <Calendar size={18} strokeWidth={2} aria-hidden />
+                              </button>
+                            </HudTip>
+                          </div>
+                        </label>
+                        <label className="block">
+                          <span className="muted sm">Message (optional)</span>
                           <input
-                            ref={alarmWhenInputRef}
-                            id="tabocalypse-alarm-when"
-                            type="datetime-local"
-                            step={60}
-                            min={alarmDatetimeMin}
-                            className="min-w-0 flex-1"
-                            value={alarmWhen}
+                            id="tabocalypse-alarm-msg"
+                            type="text"
+                            placeholder="What the notification should say"
+                            className="mt-1 w-full"
+                            value={alarmMessage}
                             onChange={(e) => {
-                              setAlarmWhen(e.target.value);
+                              setAlarmMessage(e.target.value);
                               setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
                             }}
-                            aria-label="Alarm date and time"
+                            aria-label="Alarm notification message"
                           />
-                          <HudTip tip="Open the date and time picker">
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <HudTip
+                            tip={
+                              editingAlarmName
+                                ? "Save changes to this alarm"
+                                : "Save this one-time reminder using the time and message above"
+                            }
+                          >
+                            <button type="submit" className="btn primary has-icon">
+                              <CalendarClock size={20} strokeWidth={2} aria-hidden />
+                              <span>{editingAlarmName ? "Update" : "Schedule"}</span>
+                            </button>
+                          </HudTip>
+                          {editingAlarmName ? (
+                            <button type="button" className="btn ghost" onClick={cancelEdit}>
+                              Cancel
+                            </button>
+                          ) : null}
+                        </div>
+                        {alarmScheduleBanner ? (
+                          <p
+                            role="status"
+                            className={
+                              alarmScheduleBanner.kind === "err"
+                                ? "err sm m-0"
+                                : "m-0 text-sm text-accent"
+                            }
+                          >
+                            {alarmScheduleBanner.message}
+                          </p>
+                        ) : null}
+                      </form>
+                      {pendingAlarms.length > 0 ? (
+                        <>
+                          <h4 className="mt-6 mb-2">Scheduled alarms</h4>
+                          <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
+                            {pendingAlarms.map((alarm) => {
+                              const reminderLine = formatAlarmReminderForList(alarm.message);
+                              return (
+                                <li
+                                  key={alarm.name}
+                                  className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <span className="font-mono text-xs opacity-70">
+                                      {new Date(alarm.scheduledTime).toLocaleString()}
+                                    </span>
+                                    {reminderLine ? (
+                                      <span className="ml-2">{reminderLine}</span>
+                                    ) : null}
+                                  </div>
+                                  <HudTip tip="Edit this alarm">
+                                    <button
+                                      type="button"
+                                      className="btn ghost sm icon-only"
+                                      aria-label="Edit alarm"
+                                      onClick={() => startEditAlarm(alarm)}
+                                    >
+                                      <Pencil size={16} strokeWidth={2} aria-hidden />
+                                    </button>
+                                  </HudTip>
+                                  <HudTip tip="Delete this alarm">
+                                    <button
+                                      type="button"
+                                      className="btn ghost sm icon-only"
+                                      aria-label="Delete alarm"
+                                      onClick={() => void deleteAlarm(alarm.name)}
+                                    >
+                                      <Trash2 size={16} strokeWidth={2} aria-hidden />
+                                    </button>
+                                  </HudTip>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </>
+                      ) : null}
+                    </div>
+                  </details>
+
+                  <details
+                    ref={byoAiSettingsSectionRef}
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("byoAi")}
+                    onToggle={onSettingsAccordionToggle("byoAi")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">BYO AI</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mt-0 mb-2">
+                        OpenAI-compatible endpoints: you pay your provider. Enable the AI chat
+                        widget under Settings &gt; Widgets. Nothing is sent without your key.
+                      </p>
+                      <ByoAiProviderSettingPicker
+                        baseUrl={s.openaiBaseUrl}
+                        model={s.openaiModel}
+                        onSelectPreset={(preset) => {
+                          const next = BYO_AI_PROVIDER_PRESETS[preset];
+                          void persist((cur) => ({
+                            ...cur,
+                            openaiBaseUrl: next.baseUrl,
+                            openaiModel: next.model,
+                          }));
+                        }}
+                      />
+                      <form
+                        className="mt-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void runByoAiTest();
+                        }}
+                      >
+                        <div className="flex gap-2">
+                          <input
+                            placeholder={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? BYO_AI_PROVIDER_PRESETS.gemini.apiKeyHint
+                                : matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
+                                    "openai"
+                                  ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
+                                  : "API key"
+                            }
+                            type={byoAiApiKeyVisible ? "text" : "password"}
+                            autoComplete="off"
+                            value={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? s.geminiApiKey
+                                : s.openaiApiKey
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (
+                                matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
+                                "gemini"
+                              ) {
+                                void persist((cur) => ({ ...cur, geminiApiKey: v }));
+                              } else {
+                                void persist((cur) => ({ ...cur, openaiApiKey: v }));
+                              }
+                            }}
+                            className="min-w-0 flex-1"
+                          />
+                          <HudTip
+                            tip={byoAiApiKeyVisible ? "Hide the API key" : "Show the API key"}
+                          >
                             <button
                               type="button"
-                              className="btn ghost sm icon-only shrink-0"
-                              aria-label="Open date and time picker"
-                              onClick={() => openAlarmWhenPicker()}
+                              className="btn ghost icon-only sm shrink-0"
+                              aria-pressed={byoAiApiKeyVisible}
+                              aria-label={byoAiApiKeyVisible ? "Hide API key" : "Show API key"}
+                              onClick={() => setByoAiApiKeyVisible((visible) => !visible)}
                             >
-                              <Calendar size={18} strokeWidth={2} aria-hidden />
+                              {byoAiApiKeyVisible ? (
+                                <EyeOff size={18} strokeWidth={2} aria-hidden />
+                              ) : (
+                                <Eye size={18} strokeWidth={2} aria-hidden />
+                              )}
                             </button>
                           </HudTip>
                         </div>
-                      </label>
-                      <label className="block">
-                        <span className="muted sm">Message (optional)</span>
                         <input
-                          id="tabocalypse-alarm-msg"
-                          type="text"
-                          placeholder="What the notification should say"
-                          className="mt-1 w-full"
-                          value={alarmMessage}
-                          onChange={(e) => {
-                            setAlarmMessage(e.target.value);
-                            setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
-                          }}
-                          aria-label="Alarm notification message"
-                        />
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <HudTip
-                          tip={
-                            editingAlarmName
-                              ? "Save changes to this alarm"
-                              : "Save this one-time reminder using the time and message above"
-                          }
-                        >
-                          <button type="submit" className="btn primary has-icon">
-                            <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                            <span>{editingAlarmName ? "Update" : "Schedule"}</span>
-                          </button>
-                        </HudTip>
-                        {editingAlarmName ? (
-                          <button type="button" className="btn ghost" onClick={cancelEdit}>
-                            Cancel
-                          </button>
-                        ) : null}
-                      </div>
-                      {alarmScheduleBanner ? (
-                        <p
-                          role="status"
-                          className={
-                            alarmScheduleBanner.kind === "err"
-                              ? "err sm m-0"
-                              : "m-0 text-sm text-accent"
-                          }
-                        >
-                          {alarmScheduleBanner.message}
-                        </p>
-                      ) : null}
-                    </form>
-                    {pendingAlarms.length > 0 ? (
-                      <>
-                        <h4 className="mt-6 mb-2">Scheduled alarms</h4>
-                        <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
-                          {pendingAlarms.map((alarm) => {
-                            const reminderLine = formatAlarmReminderForList(alarm.message);
-                            return (
-                              <li
-                                key={alarm.name}
-                                className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <span className="font-mono text-xs opacity-70">
-                                    {new Date(alarm.scheduledTime).toLocaleString()}
-                                  </span>
-                                  {reminderLine ? (
-                                    <span className="ml-2">{reminderLine}</span>
-                                  ) : null}
-                                </div>
-                                <HudTip tip="Edit this alarm">
-                                  <button
-                                    type="button"
-                                    className="btn ghost sm icon-only"
-                                    aria-label="Edit alarm"
-                                    onClick={() => startEditAlarm(alarm)}
-                                  >
-                                    <Pencil size={16} strokeWidth={2} aria-hidden />
-                                  </button>
-                                </HudTip>
-                                <HudTip tip="Delete this alarm">
-                                  <button
-                                    type="button"
-                                    className="btn ghost sm icon-only"
-                                    aria-label="Delete alarm"
-                                    onClick={() => void deleteAlarm(alarm.name)}
-                                  >
-                                    <Trash2 size={16} strokeWidth={2} aria-hidden />
-                                  </button>
-                                </HudTip>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </>
-                    ) : null}
-                  </div>
-                </details>
-
-                <details
-                  ref={byoAiSettingsSectionRef}
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("byoAi")}
-                  onToggle={onSettingsAccordionToggle("byoAi")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">BYO AI</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mt-0 mb-2">
-                      OpenAI-compatible endpoints: you pay your provider. Enable the AI chat widget
-                      under Settings &gt; Widgets. Nothing is sent without your key.
-                    </p>
-                    <ByoAiProviderSettingPicker
-                      baseUrl={s.openaiBaseUrl}
-                      model={s.openaiModel}
-                      onSelectPreset={(preset) => {
-                        const next = BYO_AI_PROVIDER_PRESETS[preset];
-                        void persist((cur) => ({
-                          ...cur,
-                          openaiBaseUrl: next.baseUrl,
-                          openaiModel: next.model,
-                        }));
-                      }}
-                    />
-                    <form
-                      className="mt-2"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void runByoAiTest();
-                      }}
-                    >
-                      <div className="flex gap-2">
-                        <input
-                          placeholder={
-                            matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
-                              ? BYO_AI_PROVIDER_PRESETS.gemini.apiKeyHint
-                              : matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
-                                  "openai"
-                                ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
-                                : "API key"
-                          }
-                          type={byoAiApiKeyVisible ? "text" : "password"}
-                          autoComplete="off"
-                          value={
-                            matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
-                              ? s.geminiApiKey
-                              : s.openaiApiKey
-                          }
+                          placeholder="Base URL"
+                          value={s.openaiBaseUrl}
                           onChange={(e) => {
                             const v = e.target.value;
-                            if (
-                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
-                            ) {
-                              void persist((cur) => ({ ...cur, geminiApiKey: v }));
-                            } else {
-                              void persist((cur) => ({ ...cur, openaiApiKey: v }));
-                            }
+                            void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
                           }}
-                          className="min-w-0 flex-1"
+                          className="mt-2 w-full"
                         />
-                        <HudTip tip={byoAiApiKeyVisible ? "Hide the API key" : "Show the API key"}>
-                          <button
-                            type="button"
-                            className="btn ghost icon-only sm shrink-0"
-                            aria-pressed={byoAiApiKeyVisible}
-                            aria-label={byoAiApiKeyVisible ? "Hide API key" : "Show API key"}
-                            onClick={() => setByoAiApiKeyVisible((visible) => !visible)}
-                          >
-                            {byoAiApiKeyVisible ? (
-                              <EyeOff size={18} strokeWidth={2} aria-hidden />
-                            ) : (
-                              <Eye size={18} strokeWidth={2} aria-hidden />
-                            )}
-                          </button>
-                        </HudTip>
-                      </div>
-                      <input
-                        placeholder="Base URL"
-                        value={s.openaiBaseUrl}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
-                        }}
-                        className="mt-2 w-full"
-                      />
-                      <input
-                        placeholder="Model"
-                        value={s.openaiModel}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          void persist((cur) => ({ ...cur, openaiModel: v }));
-                        }}
-                        className="mt-2 w-full"
-                        autoComplete="off"
-                      />
-                      <button type="submit" className="btn has-icon mt-2">
-                        <Sparkles size={18} strokeWidth={2} aria-hidden />
-                        <span>Test chat completion</span>
-                      </button>
-                    </form>
-                    {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("importPack")}
-                  onToggle={onSettingsAccordionToggle("importPack")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Import pack</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2 mt-0">
-                      Accepts .zip with pack.json, or standalone .json.
-                    </p>
-                    <label className="btn has-icon">
-                      <FolderUp size={18} strokeWidth={2} aria-hidden />
-                      <span>Choose file</span>
-                      <input
-                        hidden
-                        type="file"
-                        accept=".zip,.json,application/json"
-                        onChange={(e) => void importPackFile(e.target.files![0]!)}
-                      />
-                    </label>
-                    <p className="muted sm">You are responsible for imported content.</p>
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("importPlugin")}
-                  onToggle={onSettingsAccordionToggle("importPlugin")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Import declarative plugin</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2 mt-0">Manifest tabocalypse-plugin.json.</p>
-                    <label className="btn has-icon">
-                      <Braces size={18} strokeWidth={2} aria-hidden />
-                      <span>Choose JSON</span>
-                      <input
-                        hidden
-                        type="file"
-                        accept=".json,application/json"
-                        onChange={(e) => void importPluginFile(e.target.files![0]!)}
-                      />
-                    </label>
-                    <textarea readOnly rows={3} className="mt-2 w-full" value={pluginValidateLog} />
-                  </div>
-                </details>
-
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("manageImports")}
-                  onToggle={onSettingsAccordionToggle("manageImports")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Manage imports</span>
-                  </summary>
-                  <div className="acc-body">
-                    <p className="muted sm mb-2 mt-0">Packs</p>
-                    {s.importedPacks.map((p) => (
-                      <div key={p.id} className="row manage-row">
-                        <label className="check-row">
-                          <input
-                            type="checkbox"
-                            checked={p.enabled}
-                            onChange={(e) => {
-                              const v = e.target.checked;
-                              void persist((cur) => ({
-                                ...cur,
-                                importedPacks: cur.importedPacks.map((x) =>
-                                  x.id === p.id ? { ...x, enabled: v } : x,
-                                ),
-                              }));
-                            }}
-                          />
-                          <span>{p.name}</span>
-                        </label>
-                        <button
-                          type="button"
-                          className="btn ghost sm has-icon"
-                          onClick={() =>
-                            void persist((cur) => ({
-                              ...cur,
-                              importedPacks: cur.importedPacks.filter((x) => x.id !== p.id),
-                            }))
-                          }
-                        >
-                          <Trash2 size={18} strokeWidth={2} aria-hidden />
-                          <span>Remove</span>
+                        <input
+                          placeholder="Model"
+                          value={s.openaiModel}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            void persist((cur) => ({ ...cur, openaiModel: v }));
+                          }}
+                          className="mt-2 w-full"
+                          autoComplete="off"
+                        />
+                        <button type="submit" className="btn has-icon mt-2">
+                          <Sparkles size={18} strokeWidth={2} aria-hidden />
+                          <span>Test chat completion</span>
                         </button>
-                      </div>
-                    ))}
-                    <p className="muted sm mb-2 mt-4">Plugins</p>
-                    {s.importedPlugins.map((p) => (
-                      <div key={p.id} className="row manage-row">
-                        <label className="check-row">
-                          <input
-                            type="checkbox"
-                            checked={p.enabled}
-                            onChange={(e) => {
-                              const v = e.target.checked;
-                              void persist((cur) => ({
-                                ...cur,
-                                importedPlugins: cur.importedPlugins.map((x) =>
-                                  x.id === p.id ? { ...x, enabled: v } : x,
-                                ),
-                              }));
-                            }}
-                          />
-                          <span>{p.name}</span>
-                        </label>
-                        <button
-                          type="button"
-                          className="btn ghost sm has-icon"
-                          onClick={() =>
-                            void persist((cur) => ({
-                              ...cur,
-                              importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
-                            }))
-                          }
-                        >
-                          <Trash2 size={18} strokeWidth={2} aria-hidden />
-                          <span>Remove</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                      </form>
+                      {aiResult ? <pre className="ai-out">{aiResult}</pre> : null}
+                    </div>
+                  </details>
 
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("data")}
-                  onToggle={onSettingsAccordionToggle("data")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Data</span>
-                  </summary>
-                  <div className="acc-body">
-                    <div className="row wrap gap-2">
-                      <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
-                        <Download size={18} strokeWidth={2} aria-hidden />
-                        <span>Export settings JSON</span>
-                      </button>
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("importPack")}
+                    onToggle={onSettingsAccordionToggle("importPack")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Import pack</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">
+                        Accepts .zip with pack.json, or standalone .json.
+                      </p>
                       <label className="btn has-icon">
-                        <Upload size={18} strokeWidth={2} aria-hidden />
-                        <span>Import settings JSON</span>
+                        <FolderUp size={18} strokeWidth={2} aria-hidden />
+                        <span>Choose file</span>
                         <input
                           hidden
                           type="file"
-                          accept="application/json"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (!f) return;
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              try {
-                                const parsed = JSON.parse(
-                                  String(reader.result),
-                                ) as Partial<ISettings>;
-                                const d = defaultSettings();
-                                const importThemeMode = coerceThemeMode(
-                                  parsed.themeMode,
-                                  d.themeMode,
-                                );
-                                const importGradFallback = themeGradientStops(importThemeMode);
-                                const merged: ISettings = {
-                                  ...d,
-                                  ...parsed,
-                                  version: 1,
-                                  preset: coercePreset(parsed.preset, d.preset),
-                                  widgets: mergeWidgets(
-                                    parsed.widgets as Partial<Record<string, unknown>> | undefined,
-                                  ),
-                                  themeMode: importThemeMode,
-                                  themePalette: coerceThemePalette(
-                                    parsed.themePalette,
-                                    d.themePalette,
-                                  ),
-                                  themeCustomAccent: coerceThemeHex(
-                                    parsed.themeCustomAccent,
-                                    d.themeCustomAccent,
-                                  ),
-                                  themeCustomAccent2: coerceThemeHex(
-                                    parsed.themeCustomAccent2,
-                                    d.themeCustomAccent2,
-                                  ),
-                                  themeAccentsMatchWallpaper:
-                                    typeof parsed.themeAccentsMatchWallpaper === "boolean"
-                                      ? parsed.themeAccentsMatchWallpaper
-                                      : d.themeAccentsMatchWallpaper,
-                                  backgroundSolid: coerceThemeHex(
-                                    parsed.backgroundSolid,
-                                    d.backgroundSolid,
-                                  ),
-                                  backgroundGradientMid: coerceThemeHex(
-                                    parsed.backgroundGradientMid,
-                                    importGradFallback.mid,
-                                  ),
-                                  backgroundGradientEnd: coerceThemeHex(
-                                    parsed.backgroundGradientEnd,
-                                    importGradFallback.end,
-                                  ),
-                                  backgroundGradientShape: coerceBackgroundGradientShape(
-                                    parsed.backgroundGradientShape,
-                                    d.backgroundGradientShape,
-                                  ),
-                                  backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
-                                    parsed.backgroundGradientAngleDeg,
-                                    d.backgroundGradientAngleDeg,
-                                  ),
-                                  backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
-                                    parsed.backgroundGradientCenterXPct,
-                                    d.backgroundGradientCenterXPct,
-                                  ),
-                                  backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
-                                    parsed.backgroundGradientCenterYPct,
-                                    d.backgroundGradientCenterYPct,
-                                  ),
-                                  clockHourFormat: coerceClockHourFormat(
-                                    parsed.clockHourFormat,
-                                    d.clockHourFormat,
-                                  ),
-                                  clockHourFormatAuto:
-                                    typeof parsed.clockHourFormatAuto === "boolean"
-                                      ? parsed.clockHourFormatAuto
-                                      : d.clockHourFormatAuto,
-                                  weatherTemperatureUnit: coerceWeatherTemperatureUnit(
-                                    parsed.weatherTemperatureUnit,
-                                    d.weatherTemperatureUnit,
-                                  ),
-                                  weatherTemperatureUnitAuto:
-                                    typeof parsed.weatherTemperatureUnitAuto === "boolean"
-                                      ? parsed.weatherTemperatureUnitAuto
-                                      : d.weatherTemperatureUnitAuto,
-                                  weatherGeoAdjusted: resolveWeatherGeoAdjusted(parsed, d),
-                                  weatherLakesEmbedEnabled:
-                                    typeof parsed.weatherLakesEmbedEnabled === "boolean"
-                                      ? parsed.weatherLakesEmbedEnabled
-                                      : d.weatherLakesEmbedEnabled,
-                                  weatherPanelView: coerceWeatherPanelView(
-                                    parsed.weatherPanelView,
-                                    d.weatherPanelView,
-                                  ),
-                                  cryptoChartDays: coerceCryptoChartDays(
-                                    parsed.cryptoChartDays,
-                                    d.cryptoChartDays,
-                                  ),
-                                  humorBuiltinVoice: coerceHumorBuiltinVoice(
-                                    parsed as {
-                                      humorBuiltinVoice?: unknown;
-                                      humorGenZMode?: unknown;
-                                    },
-                                  ),
-                                  humorIncludeUnsuckClassics:
-                                    typeof parsed.humorIncludeUnsuckClassics === "boolean"
-                                      ? parsed.humorIncludeUnsuckClassics
-                                      : d.humorIncludeUnsuckClassics,
-                                  backgroundRotate:
-                                    typeof parsed.backgroundRotate === "boolean"
-                                      ? parsed.backgroundRotate
-                                      : d.backgroundRotate,
-                                  hasSeenSettingsIntro:
-                                    typeof parsed.hasSeenSettingsIntro === "boolean"
-                                      ? parsed.hasSeenSettingsIntro
-                                      : true,
-                                };
-                                void persist(applyChaosPresetHumorHarmony(merged));
-                              } catch {
-                                setImportErr("Invalid settings JSON");
-                              }
-                            };
-                            reader.readAsText(f);
-                          }}
+                          accept=".zip,.json,application/json"
+                          onChange={(e) => void importPackFile(e.target.files![0]!)}
                         />
                       </label>
+                      <p className="muted sm">You are responsible for imported content.</p>
                     </div>
-                  </div>
-                </details>
-                <details
-                  className="acc-item"
-                  open={settingsAccordionIsOpen("debug")}
-                  onToggle={onSettingsAccordionToggle("debug")}
-                >
-                  <summary className="acc-summary">
-                    <span className="acc-title">Debug</span>
-                  </summary>
-                  <div className="acc-body">
-                    <label className="check-row mt-0">
-                      <input
-                        type="checkbox"
-                        checked={s.debugPluginSource}
-                        onChange={(e) => {
-                          const v = e.target.checked;
-                          void persist((cur) => ({ ...cur, debugPluginSource: v }));
-                        }}
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("importPlugin")}
+                    onToggle={onSettingsAccordionToggle("importPlugin")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Import declarative plugin</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">Manifest tabocalypse-plugin.json.</p>
+                      <label className="btn has-icon">
+                        <Braces size={18} strokeWidth={2} aria-hidden />
+                        <span>Choose JSON</span>
+                        <input
+                          hidden
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={(e) => void importPluginFile(e.target.files![0]!)}
+                        />
+                      </label>
+                      <textarea
+                        readOnly
+                        rows={3}
+                        className="mt-2 w-full"
+                        value={pluginValidateLog}
                       />
-                      <span>Show plugin widget types</span>
-                    </label>
-                  </div>
-                </details>
+                    </div>
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("manageImports")}
+                    onToggle={onSettingsAccordionToggle("manageImports")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Manage imports</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">Packs</p>
+                      {s.importedPacks.map((p) => (
+                        <div key={p.id} className="row manage-row">
+                          <label className="check-row">
+                            <input
+                              type="checkbox"
+                              checked={p.enabled}
+                              onChange={(e) => {
+                                const v = e.target.checked;
+                                void persist((cur) => ({
+                                  ...cur,
+                                  importedPacks: cur.importedPacks.map((x) =>
+                                    x.id === p.id ? { ...x, enabled: v } : x,
+                                  ),
+                                }));
+                              }}
+                            />
+                            <span>{p.name}</span>
+                          </label>
+                          <button
+                            type="button"
+                            className="btn ghost sm has-icon"
+                            onClick={() =>
+                              void persist((cur) => ({
+                                ...cur,
+                                importedPacks: cur.importedPacks.filter((x) => x.id !== p.id),
+                              }))
+                            }
+                          >
+                            <Trash2 size={18} strokeWidth={2} aria-hidden />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      ))}
+                      <p className="muted sm mb-2 mt-4">Plugins</p>
+                      {s.importedPlugins.map((p) => (
+                        <div key={p.id} className="row manage-row">
+                          <label className="check-row">
+                            <input
+                              type="checkbox"
+                              checked={p.enabled}
+                              onChange={(e) => {
+                                const v = e.target.checked;
+                                void persist((cur) => ({
+                                  ...cur,
+                                  importedPlugins: cur.importedPlugins.map((x) =>
+                                    x.id === p.id ? { ...x, enabled: v } : x,
+                                  ),
+                                }));
+                              }}
+                            />
+                            <span>{p.name}</span>
+                          </label>
+                          <button
+                            type="button"
+                            className="btn ghost sm has-icon"
+                            onClick={() =>
+                              void persist((cur) => ({
+                                ...cur,
+                                importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
+                              }))
+                            }
+                          >
+                            <Trash2 size={18} strokeWidth={2} aria-hidden />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("data")}
+                    onToggle={onSettingsAccordionToggle("data")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Data</span>
+                    </summary>
+                    <div className="acc-body">
+                      <div className="row wrap gap-2">
+                        <button type="button" className="btn has-icon" onClick={exportSettingsJson}>
+                          <Download size={18} strokeWidth={2} aria-hidden />
+                          <span>Export settings JSON</span>
+                        </button>
+                        <label className="btn has-icon">
+                          <Upload size={18} strokeWidth={2} aria-hidden />
+                          <span>Import settings JSON</span>
+                          <input
+                            hidden
+                            type="file"
+                            accept="application/json"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                try {
+                                  const parsed = JSON.parse(
+                                    String(reader.result),
+                                  ) as Partial<ISettings>;
+                                  const d = defaultSettings();
+                                  const importThemeMode = coerceThemeMode(
+                                    parsed.themeMode,
+                                    d.themeMode,
+                                  );
+                                  const importGradFallback = themeGradientStops(importThemeMode);
+                                  const merged: ISettings = {
+                                    ...d,
+                                    ...parsed,
+                                    version: 1,
+                                    preset: coercePreset(parsed.preset, d.preset),
+                                    widgets: mergeWidgets(
+                                      parsed.widgets as
+                                        | Partial<Record<string, unknown>>
+                                        | undefined,
+                                    ),
+                                    themeMode: importThemeMode,
+                                    themePalette: coerceThemePalette(
+                                      parsed.themePalette,
+                                      d.themePalette,
+                                    ),
+                                    themeCustomAccent: coerceThemeHex(
+                                      parsed.themeCustomAccent,
+                                      d.themeCustomAccent,
+                                    ),
+                                    themeCustomAccent2: coerceThemeHex(
+                                      parsed.themeCustomAccent2,
+                                      d.themeCustomAccent2,
+                                    ),
+                                    themeAccentsMatchWallpaper:
+                                      typeof parsed.themeAccentsMatchWallpaper === "boolean"
+                                        ? parsed.themeAccentsMatchWallpaper
+                                        : d.themeAccentsMatchWallpaper,
+                                    backgroundSolid: coerceThemeHex(
+                                      parsed.backgroundSolid,
+                                      d.backgroundSolid,
+                                    ),
+                                    backgroundGradientMid: coerceThemeHex(
+                                      parsed.backgroundGradientMid,
+                                      importGradFallback.mid,
+                                    ),
+                                    backgroundGradientEnd: coerceThemeHex(
+                                      parsed.backgroundGradientEnd,
+                                      importGradFallback.end,
+                                    ),
+                                    backgroundGradientShape: coerceBackgroundGradientShape(
+                                      parsed.backgroundGradientShape,
+                                      d.backgroundGradientShape,
+                                    ),
+                                    backgroundGradientAngleDeg: coerceBackgroundGradientAngleDeg(
+                                      parsed.backgroundGradientAngleDeg,
+                                      d.backgroundGradientAngleDeg,
+                                    ),
+                                    backgroundGradientCenterXPct: coerceBackgroundGradientCenterPct(
+                                      parsed.backgroundGradientCenterXPct,
+                                      d.backgroundGradientCenterXPct,
+                                    ),
+                                    backgroundGradientCenterYPct: coerceBackgroundGradientCenterPct(
+                                      parsed.backgroundGradientCenterYPct,
+                                      d.backgroundGradientCenterYPct,
+                                    ),
+                                    clockHourFormat: coerceClockHourFormat(
+                                      parsed.clockHourFormat,
+                                      d.clockHourFormat,
+                                    ),
+                                    clockHourFormatAuto:
+                                      typeof parsed.clockHourFormatAuto === "boolean"
+                                        ? parsed.clockHourFormatAuto
+                                        : d.clockHourFormatAuto,
+                                    weatherTemperatureUnit: coerceWeatherTemperatureUnit(
+                                      parsed.weatherTemperatureUnit,
+                                      d.weatherTemperatureUnit,
+                                    ),
+                                    weatherTemperatureUnitAuto:
+                                      typeof parsed.weatherTemperatureUnitAuto === "boolean"
+                                        ? parsed.weatherTemperatureUnitAuto
+                                        : d.weatherTemperatureUnitAuto,
+                                    weatherGeoAdjusted: resolveWeatherGeoAdjusted(parsed, d),
+                                    weatherLakesEmbedEnabled:
+                                      typeof parsed.weatherLakesEmbedEnabled === "boolean"
+                                        ? parsed.weatherLakesEmbedEnabled
+                                        : d.weatherLakesEmbedEnabled,
+                                    weatherPanelView: coerceWeatherPanelView(
+                                      parsed.weatherPanelView,
+                                      d.weatherPanelView,
+                                    ),
+                                    cryptoChartDays: coerceCryptoChartDays(
+                                      parsed.cryptoChartDays,
+                                      d.cryptoChartDays,
+                                    ),
+                                    humorBuiltinVoice: coerceHumorBuiltinVoice(
+                                      parsed as {
+                                        humorBuiltinVoice?: unknown;
+                                        humorGenZMode?: unknown;
+                                      },
+                                    ),
+                                    humorIncludeUnsuckClassics:
+                                      typeof parsed.humorIncludeUnsuckClassics === "boolean"
+                                        ? parsed.humorIncludeUnsuckClassics
+                                        : d.humorIncludeUnsuckClassics,
+                                    backgroundRotate:
+                                      typeof parsed.backgroundRotate === "boolean"
+                                        ? parsed.backgroundRotate
+                                        : d.backgroundRotate,
+                                    hasSeenSettingsIntro:
+                                      typeof parsed.hasSeenSettingsIntro === "boolean"
+                                        ? parsed.hasSeenSettingsIntro
+                                        : true,
+                                  };
+                                  void persist(applyChaosPresetHumorHarmony(merged));
+                                } catch {
+                                  showHudError("Invalid settings JSON");
+                                }
+                              };
+                              reader.readAsText(f);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </details>
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("debug")}
+                    onToggle={onSettingsAccordionToggle("debug")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Debug</span>
+                    </summary>
+                    <div className="acc-body">
+                      <label className="check-row mt-0">
+                        <input
+                          type="checkbox"
+                          checked={s.debugPluginSource}
+                          onChange={(e) => {
+                            const v = e.target.checked;
+                            void persist((cur) => ({ ...cur, debugPluginSource: v }));
+                          }}
+                        />
+                        <span>Show plugin widget types</span>
+                      </label>
+                    </div>
+                  </details>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {warnSpicy ? (
-        <div className="dialog-backdrop" role="presentation">
-          <div
-            className="dialog small flex flex-col gap-4 p-6"
-            role="dialog"
-            aria-label="Content notice"
-          >
-            <h2>Turn it up?</h2>
-            <p>
-              Spicy and unhinged modes may include swearing or abrasive humor in curated packs. You
-              are responsible for imported content.
-            </p>
-            <div className="row justify-end gap-2">
-              <button
-                type="button"
-                className="btn ghost has-icon"
-                onClick={() => setWarnSpicy(false)}
-              >
-                <CircleX size={18} strokeWidth={2} aria-hidden />
-                <span>Cancel</span>
-              </button>
-              <button type="button" className="btn primary has-icon" onClick={() => confirmSpicy()}>
-                <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
-                <span>I understand</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <header className="top-bar">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="title">Tabocalypse</h1>
-            <p className="tagline">SYSTEM_STABLE: FALSE</p>
-          </div>
-        </div>
-        {s.widgets.search ? (
-          <SearchWidget
-            engine={s.searchEngine}
-            assistActive={s.searchAssistActive}
-            onAssistActiveChange={(active) => {
-              void persist((cur) => ({ ...cur, searchAssistActive: active }));
-            }}
-            humorEnabled={s.humorEnabled}
-            humorIntensity={s.humorIntensity}
-            variant="header"
-          />
         ) : null}
-        <div className="flex shrink-0 items-center gap-2">
-          <HudTip
-            tip={
-              s.hudLayoutChaotic
-                ? "Turn on grid snap so panels align to the layout grid and show the dashed overlay"
-                : "Turn on Chaotic layout so panels ignore the snap grid and hide the overlay"
-            }
-          >
-            <button
-              type="button"
-              className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
-              aria-pressed={s.hudLayoutChaotic}
-              aria-label={
-                s.hudLayoutChaotic
-                  ? "Chaotic layout on; press to snap panels to a grid"
-                  : "Snap to grid on; press for Chaotic layout"
-              }
-              onClick={() =>
-                void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
-              }
-            >
-              {s.hudLayoutChaotic ? (
-                <Shuffle size={20} strokeWidth={2} aria-hidden />
-              ) : (
-                <LayoutGrid size={20} strokeWidth={2} aria-hidden />
-              )}
-            </button>
-          </HudTip>
-          <HudTip
-            tip={`Arrange visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
-          >
-            <button
-              type="button"
-              className="btn ghost icon-only"
-              aria-label={`Arrange HUD panels (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
-              onClick={() => arrangeHudPanelsNow()}
-            >
-              <LayoutDashboard size={20} strokeWidth={2} aria-hidden />
-            </button>
-          </HudTip>
-          <HudTip
-            tip={
-              s.hudLayoutLocked
-                ? s.hudLayoutAdaptiveWhileLocked && s.hudLayoutAutoReposition
-                  ? "Layout locked: panels reflow on resize but cannot be dragged. Unlock to move by hand"
-                  : "Unlock so you can drag HUD panels to new positions"
-                : "Lock panel positions so they stay put while you work"
-            }
-          >
-            <button
-              type="button"
-              className={s.hudLayoutLocked ? "btn primary icon-only" : "btn ghost icon-only"}
-              aria-pressed={s.hudLayoutLocked}
-              aria-label={s.hudLayoutLocked ? "Unlock panel layout" : "Lock panel layout"}
-              onClick={() =>
-                void persist((cur) => ({ ...cur, hudLayoutLocked: !cur.hudLayoutLocked }))
-              }
-            >
-              {s.hudLayoutLocked ? (
-                <LucideLock size={20} strokeWidth={2} aria-hidden />
-              ) : (
-                <Unlock size={20} strokeWidth={2} aria-hidden />
-              )}
-            </button>
-          </HudTip>
-          <HudTip tip="Open the Settings dialog">
-            <button
-              type="button"
-              className={openSettings ? "btn primary icon-only" : "btn ghost icon-only"}
-              aria-expanded={openSettings}
-              aria-label="Settings"
-              onClick={() => setOpenSettings(true)}
-            >
-              <SettingsIcon size={20} strokeWidth={2} aria-hidden />
-            </button>
-          </HudTip>
-        </div>
-      </header>
 
-      {importErr ? <div className="toast err">{importErr}</div> : null}
-
-      {userBgContextMenu ? (
-        <div
-          ref={userBgContextMenuRef}
-          role="menu"
-          aria-label="Background photo"
-          className="fixed z-[100] flex min-w-[13rem] flex-col border-2 border-accent bg-elevated py-1 shadow-[4px_4px_0_0_var(--color-shadow-hard)]"
-          style={{ left: userBgContextMenu.clientX, top: userBgContextMenu.clientY }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          {!userBgRepositionMode ? (
-            <div className="w-full border-b border-border last:border-b-0 [&>div]:flex [&>div]:w-full">
-              <HudTip tip="Hold the mouse button and drag to preview; release to see the saved framing until you choose Set position">
+        {warnSpicy ? (
+          <div className="dialog-backdrop" role="presentation">
+            <div
+              className="dialog small flex flex-col gap-4 p-6"
+              role="dialog"
+              aria-label="Content notice"
+            >
+              <h2>Turn it up?</h2>
+              <p>
+                Spicy and unhinged modes may include swearing or abrasive humor in curated packs.
+                You are responsible for imported content.
+              </p>
+              <div className="row justify-end gap-2">
                 <button
                   type="button"
-                  role="menuitem"
-                  className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-text transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                  className="btn ghost has-icon"
+                  onClick={() => setWarnSpicy(false)}
+                >
+                  <CircleX size={18} strokeWidth={2} aria-hidden />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn primary has-icon"
+                  onClick={() => confirmSpicy()}
+                >
+                  <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                  <span>I understand</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <header className="top-bar">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="title">Tabocalypse</h1>
+              <p className="tagline">SYSTEM_STABLE: FALSE</p>
+            </div>
+          </div>
+          {s.widgets.search ? (
+            <SearchWidget
+              engine={s.searchEngine}
+              assistActive={s.searchAssistActive}
+              onAssistActiveChange={(active) => {
+                void persist((cur) => ({ ...cur, searchAssistActive: active }));
+              }}
+              humorEnabled={s.humorEnabled}
+              humorIntensity={s.humorIntensity}
+              variant="header"
+            />
+          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            <HudTip
+              tip={
+                s.hudLayoutChaotic
+                  ? "Turn on grid snap so panels align to the layout grid and show the dashed overlay"
+                  : "Turn on Chaotic layout so panels ignore the snap grid and hide the overlay"
+              }
+            >
+              <button
+                type="button"
+                className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
+                aria-pressed={s.hudLayoutChaotic}
+                aria-label={
+                  s.hudLayoutChaotic
+                    ? "Chaotic layout on; press to snap panels to a grid"
+                    : "Snap to grid on; press for Chaotic layout"
+                }
+                onClick={() =>
+                  void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
+                }
+              >
+                {s.hudLayoutChaotic ? (
+                  <Shuffle size={20} strokeWidth={2} aria-hidden />
+                ) : (
+                  <LayoutGrid size={20} strokeWidth={2} aria-hidden />
+                )}
+              </button>
+            </HudTip>
+            <HudTip
+              tip={`Arrange visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
+            >
+              <button
+                type="button"
+                className="btn ghost icon-only"
+                aria-label={`Arrange HUD panels (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
+                onClick={() => arrangeHudPanelsNow()}
+              >
+                <LayoutDashboard size={20} strokeWidth={2} aria-hidden />
+              </button>
+            </HudTip>
+            <HudTip
+              tip={
+                s.hudLayoutLocked
+                  ? s.hudLayoutAdaptiveWhileLocked && s.hudLayoutAutoReposition
+                    ? "Layout locked: panels reflow on resize but cannot be dragged. Unlock to move by hand"
+                    : "Unlock so you can drag HUD panels to new positions"
+                  : "Lock panel positions so they stay put while you work"
+              }
+            >
+              <button
+                type="button"
+                className={s.hudLayoutLocked ? "btn primary icon-only" : "btn ghost icon-only"}
+                aria-pressed={s.hudLayoutLocked}
+                aria-label={s.hudLayoutLocked ? "Unlock panel layout" : "Lock panel layout"}
+                onClick={() =>
+                  void persist((cur) => ({ ...cur, hudLayoutLocked: !cur.hudLayoutLocked }))
+                }
+              >
+                {s.hudLayoutLocked ? (
+                  <LucideLock size={20} strokeWidth={2} aria-hidden />
+                ) : (
+                  <Unlock size={20} strokeWidth={2} aria-hidden />
+                )}
+              </button>
+            </HudTip>
+            <HudTip tip="Open the Settings dialog">
+              <button
+                type="button"
+                className={openSettings ? "btn primary icon-only" : "btn ghost icon-only"}
+                aria-expanded={openSettings}
+                aria-label="Settings"
+                onClick={() => setOpenSettings(true)}
+              >
+                <SettingsIcon size={20} strokeWidth={2} aria-hidden />
+              </button>
+            </HudTip>
+          </div>
+        </header>
+
+        {userBgContextMenu ? (
+          <div
+            ref={userBgContextMenuRef}
+            role="menu"
+            aria-label="Background photo"
+            className="fixed z-[100] flex min-w-[13rem] flex-col border-2 border-accent bg-elevated py-1 shadow-[4px_4px_0_0_var(--color-shadow-hard)]"
+            style={{ left: userBgContextMenu.clientX, top: userBgContextMenu.clientY }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {!userBgRepositionMode ? (
+              <div className="w-full border-b border-border last:border-b-0 [&>div]:flex [&>div]:w-full">
+                <HudTip tip="Hold the mouse button and drag to preview; release to see the saved framing until you choose Set position">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-text transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                    onClick={() => {
+                      setUserBgRepositionMode(true);
+                      setUserBgRepositionDraft(null);
+                      setUserBgContextMenu(null);
+                    }}
+                  >
+                    <Move size={18} strokeWidth={2} aria-hidden />
+                    <span>Reposition background</span>
+                  </button>
+                </HudTip>
+              </div>
+            ) : (
+              <>
+                <div className="w-full border-b border-border [&>div]:flex [&>div]:w-full">
+                  <HudTip tip="Save this framing to your background settings">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-accent transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                      onClick={() => {
+                        commitUserBackgroundReposition();
+                        setUserBgContextMenu(null);
+                      }}
+                    >
+                      <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                      <span>Set position</span>
+                    </button>
+                  </HudTip>
+                </div>
+                <div className="w-full [&>div]:flex [&>div]:w-full">
+                  <HudTip tip="Exit without saving changes to the saved framing">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-muted transition-colors duration-100 hover:bg-surface-strong hover:text-text active:bg-surface2 active:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
+                      onClick={() => {
+                        cancelUserBackgroundReposition();
+                        setUserBgContextMenu(null);
+                      }}
+                    >
+                      <CircleX size={18} strokeWidth={2} aria-hidden />
+                      <span>Cancel repositioning</span>
+                    </button>
+                  </HudTip>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {userBgRepositionMode && s.backgroundKind === "image" && visibleUserBackground.dataUrl ? (
+          <div
+            className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-elevated px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="m-0 text-center font-display text-xs font-bold uppercase leading-snug tracking-widest text-accent sm:text-left">
+              Repositioning background — hold the mouse button and drag to preview framing; release
+              returns to the saved view until you set it. Double-click centers the next preview.
+              Press Escape to cancel.
+            </p>
+            <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:justify-end">
+              <HudTip tip="Save this framing to your background settings">
+                <button
+                  type="button"
+                  className="btn primary sm has-icon"
                   onClick={() => {
-                    setUserBgRepositionMode(true);
-                    setUserBgRepositionDraft(null);
-                    setUserBgContextMenu(null);
+                    commitUserBackgroundReposition();
                   }}
                 >
-                  <Move size={18} strokeWidth={2} aria-hidden />
-                  <span>Reposition background</span>
+                  <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
+                  <span>Set position</span>
+                </button>
+              </HudTip>
+              <HudTip tip="Exit without saving changes to the saved framing">
+                <button
+                  type="button"
+                  className="btn ghost sm has-icon"
+                  onClick={() => {
+                    cancelUserBackgroundReposition();
+                  }}
+                >
+                  <CircleX size={18} strokeWidth={2} aria-hidden />
+                  <span>Cancel</span>
                 </button>
               </HudTip>
             </div>
-          ) : (
-            <>
-              <div className="w-full border-b border-border [&>div]:flex [&>div]:w-full">
-                <HudTip tip="Save this framing to your background settings">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-accent transition-colors duration-100 hover:bg-surface-strong active:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
-                    onClick={() => {
-                      commitUserBackgroundReposition();
-                      setUserBgContextMenu(null);
-                    }}
-                  >
-                    <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
-                    <span>Set position</span>
-                  </button>
-                </HudTip>
-              </div>
-              <div className="w-full [&>div]:flex [&>div]:w-full">
-                <HudTip tip="Exit without saving changes to the saved framing">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left font-display text-xs font-bold uppercase tracking-widest text-muted transition-colors duration-100 hover:bg-surface-strong hover:text-text active:bg-surface2 active:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent2 focus-visible:ring-inset"
-                    onClick={() => {
-                      cancelUserBackgroundReposition();
-                      setUserBgContextMenu(null);
-                    }}
-                  >
-                    <CircleX size={18} strokeWidth={2} aria-hidden />
-                    <span>Cancel repositioning</span>
-                  </button>
-                </HudTip>
-              </div>
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {userBgRepositionMode && s.backgroundKind === "image" && visibleUserBackground.dataUrl ? (
-        <div
-          className="pointer-events-auto fixed bottom-6 left-1/2 z-[99] flex max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-stretch gap-3 border-2 border-accent bg-elevated px-4 py-3 shadow-[4px_4px_0_0_var(--color-shadow-hard)] sm:flex-row sm:items-center"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="m-0 text-center font-display text-xs font-bold uppercase leading-snug tracking-widest text-accent sm:text-left">
-            Repositioning background — hold the mouse button and drag to preview framing; release
-            returns to the saved view until you set it. Double-click centers the next preview. Press
-            Escape to cancel.
-          </p>
-          <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:justify-end">
-            <HudTip tip="Save this framing to your background settings">
-              <button
-                type="button"
-                className="btn primary sm has-icon"
-                onClick={() => {
-                  commitUserBackgroundReposition();
-                }}
-              >
-                <CheckCircle2 size={18} strokeWidth={2} aria-hidden />
-                <span>Set position</span>
-              </button>
-            </HudTip>
-            <HudTip tip="Exit without saving changes to the saved framing">
-              <button
-                type="button"
-                className="btn ghost sm has-icon"
-                onClick={() => {
-                  cancelUserBackgroundReposition();
-                }}
-              >
-                <CircleX size={18} strokeWidth={2} aria-hidden />
-                <span>Cancel</span>
-              </button>
-            </HudTip>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {s.widgets.humorBanner && bannerLine ? (
-        <div className="humor-banner">
-          <span>{bannerLine}</span>
-        </div>
-      ) : null}
+        {s.widgets.humorBanner && bannerLine ? (
+          <div className="humor-banner">
+            <span>{bannerLine}</span>
+          </div>
+        ) : null}
 
-      <main className="hud-main">
-        <div ref={hudCanvasRef} className="hud-canvas">
-          <HudPlacementProvider>
-            <div
-              role="presentation"
-              className={[
-                "absolute inset-0 z-[1]",
-                !s.hudLayoutLocked &&
-                ((s.backgroundKind === "image" && visibleUserBackground.dataUrl) ||
-                  (s.backgroundKind === "bing" && bingPaintUrl))
-                  ? "pointer-events-auto touch-none"
-                  : "pointer-events-none",
-                userBackgroundWallpaperPanDraggable ? "cursor-move" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onPointerDown={onBackgroundPanPointerDown}
-              onPointerMove={onBackgroundPanPointerMove}
-              onPointerUp={finishBackgroundPan}
-              onPointerCancel={finishBackgroundPan}
-              onDoubleClick={onBackgroundPanDoubleClick}
-              onContextMenu={onUserBackgroundContextMenu}
-            />
-            <HudLayoutMetricsSync
-              canvasRef={hudCanvasRef}
-              enabled={!s.hudLayoutChaotic && !s.hudLayoutLocked}
-            />
-            <HudAutoRepositionSync
-              canvasRef={hudCanvasRef}
-              hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
-              widgets={s.widgets}
-              hudPanelPositions={s.hudPanelPositions}
-              notePanels={s.notePanels}
-              pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
-              notesListPanelVisible={notesListPanelEffectiveVisible}
-              onLayout={applyAutoHudLayout}
-            />
-            <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
-            {s.widgets.todo ? (
-              <DraggableHudPanel
-                key="todo"
-                panelId="todo"
+        <main className="hud-main">
+          <div ref={hudCanvasRef} className="hud-canvas">
+            <HudPlacementProvider>
+              <div
+                role="presentation"
+                className={[
+                  "absolute inset-0 z-[1]",
+                  !s.hudLayoutLocked &&
+                  ((s.backgroundKind === "image" && visibleUserBackground.dataUrl) ||
+                    (s.backgroundKind === "bing" && bingPaintUrl))
+                    ? "pointer-events-auto touch-none"
+                    : "pointer-events-none",
+                  userBackgroundWallpaperPanDraggable ? "cursor-move" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onPointerDown={onBackgroundPanPointerDown}
+                onPointerMove={onBackgroundPanPointerMove}
+                onPointerUp={finishBackgroundPan}
+                onPointerCancel={finishBackgroundPan}
+                onDoubleClick={onBackgroundPanDoubleClick}
+                onContextMenu={onUserBackgroundContextMenu}
+              />
+              <HudLayoutMetricsSync
                 canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.todo}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("todo", pos)}
-              >
-                <TodoWidget
-                  items={s.todos}
-                  onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.clock ? (
-              <DraggableHudPanel
-                key="clock"
-                panelId="clock"
+                enabled={!s.hudLayoutChaotic && !s.hudLayoutLocked}
+              />
+              <HudAutoRepositionSync
                 canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.clock}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("clock", pos)}
-              >
-                <ClockWidget
-                  locale={hudNumberLocale}
-                  hourFormat={s.clockHourFormat}
-                  onSelectHourFormat={(clockHourFormat) =>
-                    void persist((cur) => ({ ...cur, clockHourFormat }))
-                  }
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.tabGuilt ? (
-              <DraggableHudPanel
-                key="tabGuilt"
-                panelId="tabGuilt"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.tabGuilt}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
-              >
-                <TabGuilt
-                  permissionsEpoch={permissionsEpoch}
-                  onOpenTabsSettings={openTabsSettingsSection}
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.weather ? (
-              <DraggableHudPanel
-                key="weather"
-                panelId="weather"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.weather}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("weather", pos)}
-              >
-                <WeatherWidget
-                  lat={s.weatherLat}
-                  lon={s.weatherLon}
-                  showGeoAccuracyHint={!s.weatherGeoAdjusted}
-                  onOpenWeatherSettings={openWeatherSettingsSection}
-                  effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
-                  displayLocale={hudNumberLocale}
-                  onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
-                    void persist((cur) => ({
-                      ...cur,
-                      weatherTemperatureUnitAuto: false,
-                      weatherTemperatureUnit,
-                    }))
-                  }
-                  lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
-                  panelView={s.weatherPanelView}
-                  onSelectPanelView={(weatherPanelView) =>
-                    void persist((cur) => ({ ...cur, weatherPanelView }))
-                  }
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.crypto ? (
-              <DraggableHudPanel
-                key="crypto"
-                panelId="crypto"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.crypto}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("crypto", pos)}
-              >
-                <CryptoPricesWidget
-                  chartDays={s.cryptoChartDays}
-                  humorEnabled={s.humorEnabled}
-                  humorIntensity={s.humorIntensity}
-                  displayLocale={hudNumberLocale}
-                  onSelectChartDays={(cryptoChartDays) =>
-                    void persist((cur) => ({ ...cur, cryptoChartDays }))
-                  }
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.speedTest ? (
-              <DraggableHudPanel
-                key="speedTest"
-                panelId="speedTest"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.speedTest}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("speedTest", pos)}
-              >
-                <SpeedTestWidget displayLocale={hudNumberLocale} />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.aiChat ? (
-              <DraggableHudPanel
-                key="aiChat"
-                panelId="aiChat"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.aiChat}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("aiChat", pos)}
-              >
-                <AiChatPanel
-                  baseUrl={s.openaiBaseUrl}
-                  model={s.openaiModel}
-                  openaiApiKey={s.openaiApiKey}
-                  geminiApiKey={s.geminiApiKey}
-                  onSelectProvider={(preset) => {
-                    const next = BYO_AI_PROVIDER_PRESETS[preset];
-                    void persist((cur) => ({
-                      ...cur,
-                      openaiBaseUrl: next.baseUrl,
-                      openaiModel: next.model,
-                    }));
-                  }}
-                  onOpenByoAiSettings={openByoAiSettingsSection}
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.topSites ? (
-              <DraggableHudPanel
-                key="topSites"
-                panelId="topSites"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.topSites}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("topSites", pos)}
-              >
-                <TopSitesWidget
-                  permissionsEpoch={permissionsEpoch}
-                  onOpenTopSitesSettings={openTopSitesSettingsSection}
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.bookmarksStrip ? (
-              <DraggableHudPanel
-                key="bookmarksStrip"
-                panelId="bookmarksStrip"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.bookmarksStrip}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
-              >
-                <BookmarksWidget
-                  permissionsEpoch={permissionsEpoch}
-                  onOpenBookmarksSettings={openBookmarksSettingsSection}
-                />
-              </DraggableHudPanel>
-            ) : null}
-            {s.importedPlugins.some((p) => p.enabled) ? (
-              <DraggableHudPanel
-                key="pluginDeck"
-                panelId="pluginDeck"
-                canvasRef={hudCanvasRef}
-                position={s.hudPanelPositions.pluginDeck}
-                chaotic={s.hudLayoutChaotic}
-                locked={s.hudLayoutLocked}
-                onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
-              >
-                <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
-              </DraggableHudPanel>
-            ) : null}
-            {s.widgets.notes ? (
-              <>
-                <StickyNoteLayer
+                hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
+                widgets={s.widgets}
+                hudPanelPositions={s.hudPanelPositions}
+                notePanels={s.notePanels}
+                pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
+                notesListPanelVisible={notesListPanelEffectiveVisible}
+                onLayout={applyAutoHudLayout}
+              />
+              <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
+              {s.widgets.todo ? (
+                <DraggableHudPanel
+                  key="todo"
+                  panelId="todo"
                   canvasRef={hudCanvasRef}
-                  notes={s.notes}
-                  notePanels={s.notePanels}
-                  onCommitPosition={(noteId, position) =>
-                    commitStickyNotePosition(noteId, position)
-                  }
-                  onMarkInactive={(noteId) => setNoteActive(noteId, false)}
-                  onTogglePin={(noteId) =>
-                    void persist((cur) => ({
-                      ...cur,
-                      notePanels: cur.notePanels.map((p) =>
-                        p.noteId === noteId ? { ...p, pinned: !p.pinned } : p,
-                      ),
-                    }))
-                  }
-                  onToggleNotesList={toggleNotesListPanel}
-                  notesListPanelVisible={notesListPanelEffectiveVisible}
-                  onUpdateNote={(noteId, patch) =>
-                    void persist((cur) => {
-                      const now = Date.now();
-                      let changed = false;
-                      const nextNotes = cur.notes.map((n) => {
-                        if (n.id !== noteId) return n;
-                        const merged = applyNotePersistPatch(n, patch, now);
-                        if (!merged) return n;
-                        changed = true;
-                        return merged;
-                      });
-                      if (!changed) return cur;
-                      return { ...cur, notes: nextNotes };
-                    })
-                  }
-                  onDeleteNote={(noteId) =>
-                    void persist((cur) => {
-                      const target = cur.notes.find((n) => n.id === noteId);
-                      if (!target || !isNoteDeleteAllowed(target)) return cur;
-                      if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                        relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                      }
-                      return {
+                  position={s.hudPanelPositions.todo}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("todo", pos)}
+                >
+                  <TodoWidget
+                    items={s.todos}
+                    onChange={(todos) => void persist((cur) => ({ ...cur, todos }))}
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.clock ? (
+                <DraggableHudPanel
+                  key="clock"
+                  panelId="clock"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.clock}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("clock", pos)}
+                >
+                  <ClockWidget
+                    locale={hudNumberLocale}
+                    hourFormat={s.clockHourFormat}
+                    onSelectHourFormat={(clockHourFormat) =>
+                      void persist((cur) => ({ ...cur, clockHourFormat }))
+                    }
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.tabGuilt ? (
+                <DraggableHudPanel
+                  key="tabGuilt"
+                  panelId="tabGuilt"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.tabGuilt}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
+                >
+                  <TabGuilt
+                    permissionsEpoch={permissionsEpoch}
+                    onOpenTabsSettings={openTabsSettingsSection}
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.weather ? (
+                <DraggableHudPanel
+                  key="weather"
+                  panelId="weather"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.weather}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("weather", pos)}
+                >
+                  <WeatherWidget
+                    lat={s.weatherLat}
+                    lon={s.weatherLon}
+                    showGeoAccuracyHint={!s.weatherGeoAdjusted}
+                    onOpenWeatherSettings={openWeatherSettingsSection}
+                    effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
+                    displayLocale={hudNumberLocale}
+                    onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
+                      void persist((cur) => ({
                         ...cur,
-                        notes: cur.notes.filter((n) => n.id !== noteId),
-                        notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                      };
-                    })
-                  }
-                />
-                {notesListPanelEffectiveVisible ? (
-                  <DraggableHudPanel
-                    key="notes-master"
-                    panelId="notes"
+                        weatherTemperatureUnitAuto: false,
+                        weatherTemperatureUnit,
+                      }))
+                    }
+                    lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
+                    panelView={s.weatherPanelView}
+                    onSelectPanelView={(weatherPanelView) =>
+                      void persist((cur) => ({ ...cur, weatherPanelView }))
+                    }
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.crypto ? (
+                <DraggableHudPanel
+                  key="crypto"
+                  panelId="crypto"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.crypto}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("crypto", pos)}
+                >
+                  <CryptoPricesWidget
+                    chartDays={s.cryptoChartDays}
+                    humorEnabled={s.humorEnabled}
+                    humorIntensity={s.humorIntensity}
+                    displayLocale={hudNumberLocale}
+                    onSelectChartDays={(cryptoChartDays) =>
+                      void persist((cur) => ({ ...cur, cryptoChartDays }))
+                    }
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.speedTest ? (
+                <DraggableHudPanel
+                  key="speedTest"
+                  panelId="speedTest"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.speedTest}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("speedTest", pos)}
+                >
+                  <SpeedTestWidget displayLocale={hudNumberLocale} />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.aiChat ? (
+                <DraggableHudPanel
+                  key="aiChat"
+                  panelId="aiChat"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.aiChat}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("aiChat", pos)}
+                >
+                  <AiChatPanel
+                    baseUrl={s.openaiBaseUrl}
+                    model={s.openaiModel}
+                    openaiApiKey={s.openaiApiKey}
+                    geminiApiKey={s.geminiApiKey}
+                    onSelectProvider={(preset) => {
+                      const next = BYO_AI_PROVIDER_PRESETS[preset];
+                      void persist((cur) => ({
+                        ...cur,
+                        openaiBaseUrl: next.baseUrl,
+                        openaiModel: next.model,
+                      }));
+                    }}
+                    onOpenByoAiSettings={openByoAiSettingsSection}
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.topSites ? (
+                <DraggableHudPanel
+                  key="topSites"
+                  panelId="topSites"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.topSites}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("topSites", pos)}
+                >
+                  <TopSitesWidget
+                    permissionsEpoch={permissionsEpoch}
+                    onOpenTopSitesSettings={openTopSitesSettingsSection}
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.bookmarksStrip ? (
+                <DraggableHudPanel
+                  key="bookmarksStrip"
+                  panelId="bookmarksStrip"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.bookmarksStrip}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
+                >
+                  <BookmarksWidget
+                    permissionsEpoch={permissionsEpoch}
+                    onOpenBookmarksSettings={openBookmarksSettingsSection}
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.importedPlugins.some((p) => p.enabled) ? (
+                <DraggableHudPanel
+                  key="pluginDeck"
+                  panelId="pluginDeck"
+                  canvasRef={hudCanvasRef}
+                  position={s.hudPanelPositions.pluginDeck}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
+                >
+                  <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.notes ? (
+                <>
+                  <StickyNoteLayer
                     canvasRef={hudCanvasRef}
-                    position={s.hudPanelPositions.notes}
-                    chaotic={s.hudLayoutChaotic}
-                    locked={s.hudLayoutLocked}
-                    zIndexBase={10}
-                    onCommit={(pos) => commitHudPanel("notes", pos)}
-                  >
-                    <NotesMasterList
-                      notes={s.notes}
-                      notePanels={s.notePanels}
-                      onSetNoteActive={setNoteActive}
-                      onCreateNote={({ id, tags }) =>
-                        void persist((cur) => {
-                          const now = Date.now();
-                          return {
-                            ...cur,
-                            notes: [
-                              {
-                                id,
-                                name: "",
-                                tags,
-                                text: "",
-                                locked: false,
-                                createdAt: now,
-                                updatedAt: now,
-                              },
-                              ...cur.notes,
-                            ],
-                          };
-                        })
-                      }
-                      onUpdateNote={(noteId, patch) =>
-                        void persist((cur) => {
-                          const now = Date.now();
-                          let changed = false;
-                          const nextNotes = cur.notes.map((n) => {
-                            if (n.id !== noteId) return n;
-                            const merged = applyNotePersistPatch(n, patch, now);
-                            if (!merged) return n;
-                            changed = true;
-                            return merged;
-                          });
-                          if (!changed) return cur;
-                          return { ...cur, notes: nextNotes };
-                        })
-                      }
-                      onDeleteNote={(noteId) =>
-                        void persist((cur) => {
-                          const target = cur.notes.find((n) => n.id === noteId);
-                          if (!target || !isNoteDeleteAllowed(target)) return cur;
-                          if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
-                            relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
-                          }
-                          return {
-                            ...cur,
-                            notes: cur.notes.filter((n) => n.id !== noteId),
-                            notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
-                          };
-                        })
-                      }
-                      onHideListPanel={() =>
-                        void persist((cur) => ({ ...cur, notesListPanelVisible: false }))
-                      }
-                      canHideListPanel={hasVisibleStickyNotes}
-                    />
-                  </DraggableHudPanel>
-                ) : null}
-              </>
-            ) : null}
-          </HudPlacementProvider>
-        </div>
-      </main>
+                    notes={s.notes}
+                    notePanels={s.notePanels}
+                    onCommitPosition={(noteId, position) =>
+                      commitStickyNotePosition(noteId, position)
+                    }
+                    onMarkInactive={(noteId) => setNoteActive(noteId, false)}
+                    onTogglePin={(noteId) =>
+                      void persist((cur) => ({
+                        ...cur,
+                        notePanels: cur.notePanels.map((p) =>
+                          p.noteId === noteId ? { ...p, pinned: !p.pinned } : p,
+                        ),
+                      }))
+                    }
+                    onToggleNotesList={toggleNotesListPanel}
+                    notesListPanelVisible={notesListPanelEffectiveVisible}
+                    onUpdateNote={(noteId, patch) =>
+                      void persist((cur) => {
+                        const now = Date.now();
+                        let changed = false;
+                        const nextNotes = cur.notes.map((n) => {
+                          if (n.id !== noteId) return n;
+                          const merged = applyNotePersistPatch(n, patch, now);
+                          if (!merged) return n;
+                          changed = true;
+                          return merged;
+                        });
+                        if (!changed) return cur;
+                        return { ...cur, notes: nextNotes };
+                      })
+                    }
+                    onDeleteNote={(noteId) =>
+                      void persist((cur) => {
+                        const target = cur.notes.find((n) => n.id === noteId);
+                        if (!target || !isNoteDeleteAllowed(target)) return cur;
+                        if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                          relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                        }
+                        return {
+                          ...cur,
+                          notes: cur.notes.filter((n) => n.id !== noteId),
+                          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                        };
+                      })
+                    }
+                  />
+                  {notesListPanelEffectiveVisible ? (
+                    <DraggableHudPanel
+                      key="notes-master"
+                      panelId="notes"
+                      canvasRef={hudCanvasRef}
+                      position={s.hudPanelPositions.notes}
+                      chaotic={s.hudLayoutChaotic}
+                      locked={s.hudLayoutLocked}
+                      zIndexBase={10}
+                      onCommit={(pos) => commitHudPanel("notes", pos)}
+                    >
+                      <NotesMasterList
+                        notes={s.notes}
+                        notePanels={s.notePanels}
+                        onSetNoteActive={setNoteActive}
+                        onCreateNote={({ id, tags }) =>
+                          void persist((cur) => {
+                            const now = Date.now();
+                            return {
+                              ...cur,
+                              notes: [
+                                {
+                                  id,
+                                  name: "",
+                                  tags,
+                                  text: "",
+                                  locked: false,
+                                  createdAt: now,
+                                  updatedAt: now,
+                                },
+                                ...cur.notes,
+                              ],
+                            };
+                          })
+                        }
+                        onUpdateNote={(noteId, patch) =>
+                          void persist((cur) => {
+                            const now = Date.now();
+                            let changed = false;
+                            const nextNotes = cur.notes.map((n) => {
+                              if (n.id !== noteId) return n;
+                              const merged = applyNotePersistPatch(n, patch, now);
+                              if (!merged) return n;
+                              changed = true;
+                              return merged;
+                            });
+                            if (!changed) return cur;
+                            return { ...cur, notes: nextNotes };
+                          })
+                        }
+                        onDeleteNote={(noteId) =>
+                          void persist((cur) => {
+                            const target = cur.notes.find((n) => n.id === noteId);
+                            if (!target || !isNoteDeleteAllowed(target)) return cur;
+                            if (relockPromptNoteIdAfterAutoHudUnlockRef.current === noteId) {
+                              relockPromptNoteIdAfterAutoHudUnlockRef.current = null;
+                            }
+                            return {
+                              ...cur,
+                              notes: cur.notes.filter((n) => n.id !== noteId),
+                              notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                            };
+                          })
+                        }
+                        onHideListPanel={() =>
+                          void persist((cur) => ({ ...cur, notesListPanelVisible: false }))
+                        }
+                        canHideListPanel={hasVisibleStickyNotes}
+                      />
+                    </DraggableHudPanel>
+                  ) : null}
+                </>
+              ) : null}
+            </HudPlacementProvider>
+          </div>
+        </main>
 
-      {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
-        <p
-          className="bing-wallpaper-caption pointer-events-none fixed bottom-14 right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
-          aria-live="polite"
-        >
-          {bingWallpaperCaption}
-        </p>
-      ) : null}
+        {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
+          <p
+            className="bing-wallpaper-caption pointer-events-none fixed bottom-14 right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
+            aria-live="polite"
+          >
+            {bingWallpaperCaption}
+          </p>
+        ) : null}
 
-      <footer className="footer muted sm">
-        <div className="row wrap gap-3">
-          {supportActions.map((action) => (
-            <button
-              key={`${action.url}-${action.label}`}
-              type="button"
-              className="linkish"
-              onClick={() => openExternal(action.url)}
-              aria-label={`Open ${action.label} in a new tab`}
-            >
-              {action.label}
-            </button>
-          ))}
-          <span aria-label={`Tabocalypse version ${extensionVersion}`}>v{extensionVersion}</span>
-        </div>
-      </footer>
-    </div>
+        <footer className="footer muted sm">
+          <div className="row wrap gap-3">
+            {supportActions.map((action) => (
+              <button
+                key={`${action.url}-${action.label}`}
+                type="button"
+                className="linkish"
+                onClick={() => openExternal(action.url)}
+                aria-label={`Open ${action.label} in a new tab`}
+              >
+                {action.label}
+              </button>
+            ))}
+            <span aria-label={`Tabocalypse version ${extensionVersion}`}>v{extensionVersion}</span>
+          </div>
+        </footer>
+      </div>
+    </HudToastProvider>
   );
 }
 
