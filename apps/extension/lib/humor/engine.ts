@@ -1,6 +1,7 @@
 import type { THumorBuiltinVoice, THumorIntensity } from "../settings";
 import type { IImportedUserPack } from "../settings";
-import { BUILTIN_PACKS, GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
+import { GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
+import { getResolvedBuiltinPacks } from "./resolved-builtin-packs";
 import { passesBuiltinHardFilter } from "./filter";
 
 const RANK: Record<THumorIntensity, number> = {
@@ -74,7 +75,7 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
   const candidates: string[] = [];
 
   const packIds = activeBuiltinPackIds(ctx);
-  for (const pack of BUILTIN_PACKS) {
+  for (const pack of getResolvedBuiltinPacks()) {
     if (!packIds.has(pack.id)) continue;
     if (!builtinPackAllowed(ctx.humorIntensity, pack.maxIntensity)) continue;
     for (const line of pack.lines) {

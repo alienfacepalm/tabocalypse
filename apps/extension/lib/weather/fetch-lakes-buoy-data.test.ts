@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-const { privilegedExtensionFetchJson } = vi.hoisted(() => ({
-  privilegedExtensionFetchJson: vi.fn(),
+const { privilegedExtensionFetchText } = vi.hoisted(() => ({
+  privilegedExtensionFetchText: vi.fn(),
 }));
 
 vi.mock("../privileged-extension-fetch", () => ({
-  privilegedExtensionFetchJson,
+  privilegedExtensionFetchText,
 }));
 
 vi.mock("webextension-polyfill", () => ({
@@ -14,142 +17,89 @@ vi.mock("webextension-polyfill", () => ({
 
 import {
   fetchAllLakesBuoys,
-  lakesAllBuoyDataApiUrl,
-  lakesBearerAuthorizationHeader,
+  KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
   lakesBuoyDisplayLabel,
   lakesBuoyIdFromLocation,
-  LAKES_API_KEY_REQUIRED_MESSAGE,
-  parseAllLakesBuoysPayload,
-  parseLakesBuoyPayload,
+  mapKingCountyRowsToBuoyEntries,
   type ILakesBuoySnapshot,
 } from "./fetch-lakes-buoy-data";
+import { parseKingCountyLakeBuoyMapData } from "./parse-king-county-lake-buoy-map-data";
 
-const SAMPLE_BUOY = {
-  location: "Lake Sammamish Buoy",
-  tempC: 19.45,
-  tempF: 67,
-  airTempC: 25,
-  airTempF: 77,
-  windSpeed: 2.8,
-  humidity: 28,
-  condition: "Moderate",
-  status: "ACTIVE",
-  timestamp: "6/2/2026 2:02:00 PM",
-} as const;
+const FIXTURE_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "fixtures",
+  "king-county-map-data.fixture.txt",
+);
 
-const SAMPLE_WASHINGTON = {
-  location: "Lake Washington Buoy",
-  tempC: 17.73,
-  tempF: 64,
-  airTempC: 24.4,
-  airTempF: 76,
-  windSpeed: 0.7,
-  humidity: 28,
-  condition: "Overcast",
-  status: "ACTIVE",
-  timestamp: "6/2/2026 1:02:00 PM",
-} as const;
+describe("mapKingCountyRowsToBuoyEntries", () => {
+  it("maps active lakes to accordion rows with converted units", () => {
+    const text = readFileSync(FIXTURE_PATH, "utf8");
+    const rows = mapKingCountyRowsToBuoyEntries(parseKingCountyLakeBuoyMapData(text), "fahrenheit");
 
-describe("lakesAllBuoyDataApiUrl", () => {
-  it("returns the all-buoy-data endpoint", () => {
-    expect(lakesAllBuoyDataApiUrl()).toBe("https://2lakes.app/api/all-buoy-data");
-  });
-});
-
-describe("lakesBearerAuthorizationHeader", () => {
-  it("builds Authorization Bearer headers", () => {
-    expect(lakesBearerAuthorizationHeader("abc123")).toEqual({
-      Authorization: "Bearer abc123",
-    });
-    expect(lakesBearerAuthorizationHeader("Bearer abc123")).toEqual({
-      Authorization: "Bearer abc123",
-    });
-    expect(lakesBearerAuthorizationHeader("  ")).toEqual({});
-  });
-});
-
-describe("fetchAllLakesBuoys key requirement", () => {
-  it("requires a stored API key before fetching", async () => {
-    await expect(fetchAllLakesBuoys("fahrenheit", "")).rejects.toThrow(
-      LAKES_API_KEY_REQUIRED_MESSAGE,
-    );
-  });
-});
-
-describe("fetchAllLakesBuoys privileged fetch integration", () => {
-  it("requests the all-buoy endpoint with a Bearer token", async () => {
-    privilegedExtensionFetchJson.mockReset();
-    privilegedExtensionFetchJson.mockResolvedValue([SAMPLE_BUOY]);
-
-    const rows = await fetchAllLakesBuoys("fahrenheit", "2l_key_test");
-
-    expect(privilegedExtensionFetchJson).toHaveBeenCalledWith(
-      "https://2lakes.app/api/all-buoy-data",
-      undefined,
-      { headers: { Authorization: "Bearer 2l_key_test" } },
-    );
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.label).toBe("Lake Sammamish");
-  });
-});
-
-describe("parseLakesBuoyPayload", () => {
-  it("reads Fahrenheit fields when requested", () => {
-    const snap = parseLakesBuoyPayload(SAMPLE_BUOY, "fahrenheit");
-    expect(snap).toEqual({
-      location: "Lake Sammamish Buoy",
-      waterTemp: 67,
-      airTemp: 77,
-      windSpeed: 2.8,
-      humidity: 28,
-      condition: "Moderate",
-      status: "ACTIVE",
-      timestamp: "6/2/2026 2:02:00 PM",
-      temperatureUnit: "fahrenheit",
-    } satisfies ILakesBuoySnapshot);
-  });
-
-  it("reads Celsius fields when requested", () => {
-    const snap = parseLakesBuoyPayload(SAMPLE_BUOY, "celsius");
-    expect(snap.waterTemp).toBe(19.45);
-    expect(snap.airTemp).toBe(25);
-    expect(snap.temperatureUnit).toBe("celsius");
-  });
-
-  it("rejects incomplete payloads", () => {
-    expect(() => parseLakesBuoyPayload({ tempF: 67 }, "fahrenheit")).toThrow(/Bad buoy/);
-    expect(() => parseLakesBuoyPayload(null, "fahrenheit")).toThrow(/Bad buoy/);
-  });
-});
-
-describe("parseAllLakesBuoysPayload", () => {
-  it("maps an array of buoy objects into accordion rows", () => {
-    const rows = parseAllLakesBuoysPayload([SAMPLE_BUOY, SAMPLE_WASHINGTON], "fahrenheit");
     expect(rows).toHaveLength(2);
-    expect(rows[0]?.id).toBe("lake-sammamish-buoy");
     expect(rows[0]?.label).toBe("Lake Sammamish");
-    expect(rows[1]?.label).toBe("Lake Washington");
-  });
-
-  it("accepts a wrapped buoys array", () => {
-    const rows = parseAllLakesBuoysPayload({ buoys: [SAMPLE_BUOY] }, "fahrenheit");
-    expect(rows).toHaveLength(1);
     expect(rows[0]?.data.waterTemp).toBe(67);
+    expect(rows[0]?.data.airTemp).toBe(80);
+    expect(rows[0]?.data.windSpeed).toBe(5);
+    expect(rows[0]?.data.humidity).toBeNull();
+    expect(rows[0]?.data.condition).toContain("from E");
+    expect(rows[0]?.detailComplete).toBe(true);
   });
 
-  it("surfaces API error payloads", () => {
+  it("maps Celsius when requested", () => {
+    const text = readFileSync(FIXTURE_PATH, "utf8");
+    const rows = mapKingCountyRowsToBuoyEntries(parseKingCountyLakeBuoyMapData(text), "celsius");
+    const snap = rows.find((row) => row.label === "Lake Washington")?.data;
+    expect(snap?.waterTemp).toBe(17.73);
+    expect(snap?.temperatureUnit).toBe("celsius");
+  });
+
+  it("throws when no active lakes have water temperature", () => {
     expect(() =>
-      parseAllLakesBuoysPayload(
-        { error: "Unauthorized", message: "External access requires an API Key." },
+      mapKingCountyRowsToBuoyEntries(
+        [
+          {
+            name: "RUSS",
+            active: false,
+            collectDate: null,
+            airTempC: null,
+            windSpeedMps: null,
+            windDirection: null,
+            waterTempC: null,
+            profileDate: null,
+            latitude: null,
+            longitude: null,
+          },
+        ],
         "fahrenheit",
       ),
-    ).toThrow(/API Key/);
+    ).toThrow(/No active buoy/);
+  });
+});
+
+describe("fetchAllLakesBuoys", () => {
+  it("requests King County map data as plain text", async () => {
+    const fixture = readFileSync(FIXTURE_PATH, "utf8");
+    privilegedExtensionFetchText.mockReset();
+    privilegedExtensionFetchText.mockResolvedValue(fixture);
+
+    const rows = await fetchAllLakesBuoys("fahrenheit");
+
+    expect(privilegedExtensionFetchText).toHaveBeenCalledWith(
+      KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
+      undefined,
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.data).toMatchObject({
+      temperatureUnit: "fahrenheit",
+      status: "ACTIVE",
+    } satisfies Partial<ILakesBuoySnapshot>);
   });
 });
 
 describe("lakes buoy labels", () => {
   it("derives stable ids and display labels", () => {
-    expect(lakesBuoyIdFromLocation("Lake Sammamish Buoy")).toBe("lake-sammamish-buoy");
-    expect(lakesBuoyDisplayLabel("Lake Sammamish Buoy")).toBe("Lake Sammamish");
+    expect(lakesBuoyIdFromLocation("Lake Sammamish")).toBe("lake-sammamish");
+    expect(lakesBuoyDisplayLabel("Lake Sammamish")).toBe("Lake Sammamish");
   });
 });

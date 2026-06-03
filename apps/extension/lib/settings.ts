@@ -17,6 +17,7 @@ import {
   type TThemeMode,
   type TThemePalette,
 } from "./theme";
+import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
@@ -27,9 +28,6 @@ import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-ch
 
 export type { TCryptoChartDays };
 export { coerceCryptoChartDays };
-
-/** Settings → Weather field label for the user-supplied 2lakes.app Bearer token. */
-export const TWO_LAKES_API_KEY_SETTING_LABEL = "2LAKES_API_KEY";
 
 export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
 
@@ -286,6 +284,18 @@ export interface INotePanel {
 /** Whether a note is shown as a sticky on the canvas (active). */
 export function isNoteActive(noteId: string, notePanels: readonly INotePanel[]): boolean {
   return notePanels.some((p) => p.noteId === noteId);
+}
+
+/**
+ * Whether the notes master list HUD panel should render.
+ * With no active stickies the list is always shown; otherwise {@link notesListPanelVisible} applies.
+ */
+export function resolveNotesListPanelVisible(
+  notePanels: readonly INotePanel[],
+  notesListPanelVisible: boolean,
+): boolean {
+  if (notePanels.length === 0) return true;
+  return notesListPanelVisible;
 }
 
 /** Default sticky placement when opening a note on the canvas. */
@@ -569,15 +579,16 @@ export interface ISettings {
   /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
-  /** User-supplied 2lakes.app Bearer token (Settings → Weather, labeled 2LAKES_API_KEY). */
-  twoLakesApiKey: string;
   /** When true, the Weather HUD panel can switch to 2 Lakes buoy readings (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
   /** Last Forecast / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
-  useOpenWeather: boolean;
+  /** When true, Bing spotlight country follows browser locale; when false, {@link bingWallpaperCountry} is used. */
+  bingWallpaperCountryAuto: boolean;
+  /** Peapix `country` code when {@link bingWallpaperCountryAuto} is false. */
+  bingWallpaperCountry: TPeapixBingCountry;
   backgroundKind: "solid" | "gradient" | "image" | "bing";
   /** If true and the chosen background kind supports it, the background rotates over time. */
   backgroundRotate: boolean;
@@ -606,8 +617,9 @@ export interface ISettings {
   userBackgroundActiveId: string | null;
   /** Per–Bing-URL focal points (extension keys are HTTPS image URLs). */
   bingWallpaperFramings: TBingWallpaperFramings;
-  openWeatherApiKey: string;
   openaiApiKey: string;
+  /** Gemini API key when the Gemini preset is active (Google AI Studio). */
+  geminiApiKey: string;
   openaiBaseUrl: string;
   /** OpenAI-compatible model id for BYO AI chat and tests. */
   openaiModel: string;
@@ -625,7 +637,7 @@ export interface ISettings {
    * `notePanels` from `storage.onChanged` while saves are reordering (see merge on reload).
    */
   notePanelsEpoch: number;
-  /** When false, the notes list panel is hidden but active stickies stay on the canvas. */
+  /** When false and at least one sticky is on the canvas, the notes list panel is hidden. */
   notesListPanelVisible: boolean;
   todos: ITodoItem[];
   /** When true, panels are not snapped to the HUD grid on drop. */
@@ -818,7 +830,8 @@ export interface ISyncSlice {
   weatherLakesEmbedEnabled: boolean;
   weatherPanelView: TWeatherPanelView;
   cryptoChartDays: TCryptoChartDays;
-  useOpenWeather: boolean;
+  bingWallpaperCountryAuto: boolean;
+  bingWallpaperCountry: ISettings["bingWallpaperCountry"];
   backgroundKind: ISettings["backgroundKind"];
   backgroundSolid: string;
   backgroundGradientMid: string;
@@ -841,11 +854,9 @@ export interface ILocalSlice {
   backgroundRotate: boolean;
   backgroundRotateMinutesBing?: number;
   backgroundRotateMinutesUser?: number;
-  openWeatherApiKey: string;
-  twoLakesApiKey?: string;
-  /** @deprecated Migrated to `twoLakesApiKey`. */
-  weatherLakesApiKey?: string;
   openaiApiKey: string;
+  /** Gemini API key when the Gemini preset is active (Google AI Studio). */
+  geminiApiKey: string;
   openaiBaseUrl: string;
   /** OpenAI-compatible model id for BYO AI chat and tests. */
   openaiModel: string;
@@ -992,7 +1003,8 @@ export function defaultSettings(): ISettings {
     weatherLakesEmbedEnabled: false,
     weatherPanelView: "forecast",
     cryptoChartDays: 1,
-    useOpenWeather: false,
+    bingWallpaperCountryAuto: true,
+    bingWallpaperCountry: "us",
     backgroundKind: "bing",
     backgroundRotate: true,
     backgroundRotateMinutesBing: DEFAULT_BACKGROUND_ROTATE_MINUTES,
@@ -1009,9 +1021,8 @@ export function defaultSettings(): ISettings {
     userBackgroundImages: [],
     userBackgroundActiveId: null,
     bingWallpaperFramings: {},
-    openWeatherApiKey: "",
-    twoLakesApiKey: "",
     openaiApiKey: "",
+    geminiApiKey: "",
     openaiBaseUrl: "https://api.openai.com/v1",
     openaiModel: "gpt-4o-mini",
     myLines: [],
@@ -1062,7 +1073,8 @@ function toSync(s: ISettings): ISyncSlice {
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
     weatherPanelView: s.weatherPanelView,
     cryptoChartDays: s.cryptoChartDays,
-    useOpenWeather: s.useOpenWeather,
+    bingWallpaperCountryAuto: s.bingWallpaperCountryAuto,
+    bingWallpaperCountry: s.bingWallpaperCountry,
     backgroundKind: s.backgroundKind,
     backgroundSolid: s.backgroundSolid,
     backgroundGradientMid: s.backgroundGradientMid,
@@ -1097,9 +1109,8 @@ function toLocal(s: ISettings): ILocalSlice {
     backgroundRotate: s.backgroundRotate,
     backgroundRotateMinutesBing: s.backgroundRotateMinutesBing,
     backgroundRotateMinutesUser: s.backgroundRotateMinutesUser,
-    openWeatherApiKey: s.openWeatherApiKey,
-    twoLakesApiKey: s.twoLakesApiKey,
     openaiApiKey: s.openaiApiKey,
+    geminiApiKey: s.geminiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
     openaiModel: s.openaiModel,
     myLines: s.myLines,
@@ -1260,7 +1271,16 @@ function mergeSettings(
           : false,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
-    useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
+    bingWallpaperCountryAuto:
+      typeof sync?.bingWallpaperCountryAuto === "boolean"
+        ? sync.bingWallpaperCountryAuto
+        : sync === undefined
+          ? d.bingWallpaperCountryAuto
+          : true,
+    bingWallpaperCountry: coercePeapixBingCountry(
+      sync?.bingWallpaperCountry,
+      d.bingWallpaperCountry,
+    ),
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
     backgroundRotate:
       typeof local?.backgroundRotate === "boolean" ? local.backgroundRotate : d.backgroundRotate,
@@ -1291,9 +1311,8 @@ function mergeSettings(
     userBackgroundImages,
     userBackgroundActiveId,
     bingWallpaperFramings: coerceBingWallpaperFramings(local?.bingWallpaperFramings),
-    openWeatherApiKey: local?.openWeatherApiKey ?? d.openWeatherApiKey,
-    twoLakesApiKey: local?.twoLakesApiKey ?? local?.weatherLakesApiKey ?? d.twoLakesApiKey,
     openaiApiKey: local?.openaiApiKey ?? d.openaiApiKey,
+    geminiApiKey: local?.geminiApiKey ?? d.geminiApiKey,
     openaiBaseUrl: local?.openaiBaseUrl ?? d.openaiBaseUrl,
     openaiModel:
       typeof local?.openaiModel === "string" && local.openaiModel.trim().length > 0

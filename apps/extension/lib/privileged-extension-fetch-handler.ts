@@ -5,6 +5,7 @@ import {
   PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND,
   type TPrivilegedFetchBytesResponse,
   type TPrivilegedFetchJsonResponse,
+  type TPrivilegedFetchTextResponse,
 } from "./privileged-extension-fetch";
 
 function resolvePrivilegedFetchUrl(url: string): string | null {
@@ -47,6 +48,23 @@ export async function privilegedFetchJsonInBackground(
     }
     const data: unknown = await res.json();
     return { ok: true, data };
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function privilegedFetchTextInBackground(
+  url: string,
+): Promise<TPrivilegedFetchTextResponse> {
+  const normalizedUrl = resolvePrivilegedFetchUrl(url);
+  if (!normalizedUrl) {
+    return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
+  }
+  try {
+    const res = await fetch(normalizedUrl, { credentials: "omit", cache: "no-store" });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const text = await res.text();
+    return { ok: true, text };
   } catch (e: unknown) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }

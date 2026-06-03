@@ -92,8 +92,8 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "img.peapix.com",
   "api.open-meteo.com",
   "api.coingecko.com",
-  "2lakes.app",
-  "www.2lakes.app",
+  "green2.kingcounty.gov",
+  "www.unsuck-it.com",
 ] as const;
 
 /** Must stay aligned with {@link PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS}. */
@@ -102,25 +102,17 @@ const ALLOWED_URL_PREFIXES = [
   "https://img.peapix.com/",
   "https://api.open-meteo.com/",
   "https://api.coingecko.com/",
-  "https://2lakes.app/",
-  "https://www.2lakes.app/",
+  "https://green2.kingcounty.gov/",
+  "https://www.unsuck-it.com/",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {
   return new URL(url.trim()).href;
 }
 
-export function isTwoLakesPrivilegedFetchUrl(url: string): boolean {
-  try {
-    const host = new URL(url.trim()).hostname.toLowerCase();
-    return host === "2lakes.app" || host === "www.2lakes.app";
-  } catch {
-    return false;
-  }
-}
-
 export const TABOCALYPSE_PRIV_FETCH_JSON = "tabocalypse/privilegedFetchJson" as const;
 export const TABOCALYPSE_PRIV_FETCH_BYTES = "tabocalypse/privilegedFetchBytes" as const;
+export const TABOCALYPSE_PRIV_FETCH_TEXT = "tabocalypse/privilegedFetchText" as const;
 
 export type TPrivilegedFetchJsonRequest = {
   type: typeof TABOCALYPSE_PRIV_FETCH_JSON;
@@ -133,12 +125,21 @@ export type TPrivilegedFetchBytesRequest = {
   url: string;
 };
 
+export type TPrivilegedFetchTextRequest = {
+  type: typeof TABOCALYPSE_PRIV_FETCH_TEXT;
+  url: string;
+};
+
 export type TPrivilegedFetchJsonResponse =
   | { ok: true; data: unknown }
   | { ok: false; error: string };
 
 export type TPrivilegedFetchBytesResponse =
   | { ok: true; base64: string; mime: string }
+  | { ok: false; error: string };
+
+export type TPrivilegedFetchTextResponse =
+  | { ok: true; text: string }
   | { ok: false; error: string };
 
 export function isPrivilegedExtensionFetchUrlAllowed(url: string): boolean {
@@ -163,7 +164,7 @@ export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
 
 /** Shown when the background worker is older than the new-tab bundle (common after local dev updates). */
 export const PRIV_FETCH_RELOAD_EXTENSION_HINT =
-  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try 2 Lakes again." as const;
+  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try lake buoys again." as const;
 
 /** Matches foreground throws and background `privilegedFetch*` error strings. */
 export function isPrivilegedFetchAllowlistError(message: string): boolean {
@@ -171,29 +172,6 @@ export function isPrivilegedFetchAllowlistError(message: string): boolean {
     message === PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND ||
     message === PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND
   );
-}
-
-/** Only 2lakes auth headers — passed through background privileged fetch. */
-export function coercePrivilegedFetchJsonHeaders(
-  url: string,
-  headers: Record<string, string> | undefined,
-): Record<string, string> | undefined {
-  if (!headers || !isTwoLakesPrivilegedFetchUrl(url)) return undefined;
-  const auth = headers.Authorization ?? headers.authorization;
-  if (typeof auth === "string") {
-    const trimmed = auth.trim();
-    if (trimmed.startsWith("Bearer ") && trimmed.length <= 512) {
-      return { Authorization: trimmed };
-    }
-  }
-  const apiKey = headers["X-API-Key"] ?? headers["x-api-key"];
-  if (typeof apiKey === "string") {
-    const trimmed = apiKey.trim();
-    if (trimmed.length > 0 && trimmed.length <= 512) {
-      return { "X-API-Key": trimmed };
-    }
-  }
-  return undefined;
 }
 
 /** Used by the service worker to return binary bodies over `runtime.sendMessage`. */
@@ -237,7 +215,6 @@ export function useBackgroundPrivilegedFetch(): boolean {
 export async function privilegedExtensionFetchJson(
   url: string,
   signal?: AbortSignal,
-  options?: { headers?: Record<string, string> },
 ): Promise<unknown> {
   const normalizedUrl = (() => {
     try {
@@ -249,13 +226,11 @@ export async function privilegedExtensionFetchJson(
   if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
     throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
   }
-  const headers = coercePrivilegedFetchJsonHeaders(normalizedUrl, options?.headers);
   if (!useBackgroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, {
       signal,
       credentials: "omit",
       cache: "no-store",
-      headers,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
@@ -263,11 +238,42 @@ export async function privilegedExtensionFetchJson(
   const pending = extensionRuntimeSendMessage<TPrivilegedFetchJsonResponse>({
     type: TABOCALYPSE_PRIV_FETCH_JSON,
     url: normalizedUrl,
-    ...(headers ? { headers } : {}),
   } satisfies TPrivilegedFetchJsonRequest);
   const raced = await raceAbort(pending, signal);
   if (!raced.ok) throw new Error(raced.error);
   return raced.data;
+}
+
+export async function privilegedExtensionFetchText(
+  url: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const normalizedUrl = (() => {
+    try {
+      return normalizePrivilegedExtensionFetchUrl(url);
+    } catch {
+      return url;
+    }
+  })();
+  if (!isPrivilegedExtensionFetchUrlAllowed(normalizedUrl)) {
+    throw new Error(PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND);
+  }
+  if (!useBackgroundPrivilegedFetch()) {
+    const res = await fetch(normalizedUrl, {
+      signal,
+      credentials: "omit",
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  }
+  const pending = extensionRuntimeSendMessage<TPrivilegedFetchTextResponse>({
+    type: TABOCALYPSE_PRIV_FETCH_TEXT,
+    url: normalizedUrl,
+  } satisfies TPrivilegedFetchTextRequest);
+  const raced = await raceAbort(pending, signal);
+  if (!raced.ok) throw new Error(raced.error);
+  return raced.text;
 }
 
 export async function privilegedExtensionFetchBytes(

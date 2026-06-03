@@ -23,7 +23,7 @@ pnpm package:stores  # build + store zips + DELIVERABLES.md (recommended before 
 pnpm zip             # WXT zip for one browser (see package:stores for full matrix)
 ```
 
-For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome_edge-mv3`. For store uploads, run **`pnpm package:stores`** from the repo root — it builds all targets and writes zips plus a checklist under **`apps/extension/output/store-deliverables/`**. See [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md).
+For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome_edge-mv3`. For store uploads, run **`pnpm package:stores`** from the repo root — it builds all targets and writes zips plus a checklist under **`apps/extension/output/store-deliverables/`**. Published **GitHub Releases** can run the same packaging via Actions ([GITHUB-ACTIONS.md](GITHUB-ACTIONS.md)). See [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md).
 
 ## Chrome Web Store
 

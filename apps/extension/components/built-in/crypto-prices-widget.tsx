@@ -105,6 +105,7 @@ export function CryptoPricesWidget({
 }) {
   const [btc, setBtc] = useState<ICryptoMarketRow | null>(null);
   const [eth, setEth] = useState<ICryptoMarketRow | null>(null);
+  const [pricesStale, setPricesStale] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,6 +113,7 @@ export function CryptoPricesWidget({
     setErr(null);
     setBtc(null);
     setEth(null);
+    setPricesStale(false);
     void Promise.all([
       fetchCoinGeckoMarketRow("bitcoin", "BTC", chartDays),
       fetchCoinGeckoMarketRow("ethereum", "ETH", chartDays),
@@ -120,6 +122,7 @@ export function CryptoPricesWidget({
         if (!cancelled) {
           setBtc(b.row);
           setEth(e.row);
+          setPricesStale(b.stale || e.stale);
         }
       })
       .catch((error: unknown) => {
@@ -166,6 +169,11 @@ export function CryptoPricesWidget({
         {err ? <p className="err">{err}</p> : null}
         {!err && btc && eth ? (
           <>
+            {pricesStale ? (
+              <p className="muted text-xs leading-tight" role="status">
+                Cached prices — live CoinGecko data is temporarily unavailable.
+              </p>
+            ) : null}
             <AssetRow row={btc} locale={displayLocale} />
             <AssetRow row={eth} locale={displayLocale} />
             {snark ? (

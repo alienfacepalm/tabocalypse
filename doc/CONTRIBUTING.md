@@ -14,7 +14,7 @@ Shipped Tabocalypse—the new tab people use every day—only gets better when s
    pnpm build
    ```
 
-   There is no GitHub Actions workflow yet; those commands match what CI would run once added.
+   GitHub Actions **CI** runs the same `pnpm check` on pull requests ([GITHUB-ACTIONS.md](GITHUB-ACTIONS.md)).
 
 5. **Pre-commit** — Staged files run through **lint-staged** (ESLint + Prettier). Fix reported issues or run `pnpm format` and `pnpm lint` locally.
 

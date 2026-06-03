@@ -73,7 +73,7 @@ Copy from [`wxt.config.ts`](../apps/extension/wxt.config.ts) and [PRIVACY.md](..
 
 - **Required:** `storage`, `alarms`, `notifications`
 - **Optional (user enables widgets):** `bookmarks`, `topSites`, `tabs`
-- **Host permissions:** Open-Meteo, CoinGecko, Cloudflare speed test, Peapix/Bing imagery, 2lakes embed
+- **Host permissions:** Open-Meteo, CoinGecko, Cloudflare speed test, Peapix/Bing imagery, King County lake buoys
 - **Optional host:** user-configured OpenAI-compatible API (BYO key test only)
 - **No** remote code execution; declarative plugins are **JSON only**
 
@@ -205,16 +205,17 @@ flowchart LR
 
 After `pnpm package:stores`:
 
-| Deliverable                 | Path                                                           | Used for                                      |
-| --------------------------- | -------------------------------------------------------------- | --------------------------------------------- |
-| Chromium store zip (Chrome) | `store-deliverables/tabocalypse-{version}-chrome.zip`          | Chrome Web Store                              |
-| Chromium store zip (Edge)   | `store-deliverables/tabocalypse-{version}-edge.zip`            | Microsoft Edge Add-ons (same build as Chrome) |
-| Firefox build zip           | `store-deliverables/tabocalypse-{version}-firefox.zip`         | AMO upload                                    |
-| Firefox sources zip         | `store-deliverables/tabocalypse-{version}-firefox-sources.zip` | AMO source review                             |
-| Safari MV3 folder           | `output/safari-mv3/`                                           | `safari-web-extension-converter` (Mac)        |
-| Deliverables checklist      | `store-deliverables/DELIVERABLES.md`                           | Maintainer sign-off                           |
-| Privacy policy              | **Hosted HTTPS URL**                                           | All store forms                               |
-| Screenshots                 | Your capture folder (not generated)                            | All listings                                  |
+| Deliverable                 | Path                                                           | Used for                                        |
+| --------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| Chromium store zip (Chrome) | `store-deliverables/tabocalypse-{version}-chrome.zip`          | Chrome Web Store                                |
+| Chromium store zip (Edge)   | `store-deliverables/tabocalypse-{version}-edge.zip`            | Microsoft Edge Add-ons (same build as Chrome)   |
+| Firefox build zip           | `store-deliverables/tabocalypse-{version}-firefox.zip`         | AMO upload                                      |
+| Firefox sources zip         | `store-deliverables/tabocalypse-{version}-firefox-sources.zip` | AMO source review                               |
+| Safari MV3 zip              | `store-deliverables/tabocalypse-{version}-safari-mv3.zip`      | Unzip on Mac → `safari-web-extension-converter` |
+| Safari MV3 folder (local)   | `output/safari-mv3/`                                           | Same build as the Safari zip                    |
+| Deliverables checklist      | `store-deliverables/DELIVERABLES.md`                           | Maintainer sign-off                             |
+| Privacy policy              | **Hosted HTTPS URL**                                           | All store forms                                 |
+| Screenshots                 | Your capture folder (not generated)                            | All listings                                    |
 
 ---
 

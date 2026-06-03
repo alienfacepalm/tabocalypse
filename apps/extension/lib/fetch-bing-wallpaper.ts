@@ -1,7 +1,9 @@
+import type { TPeapixBingCountry } from "./bing-wallpaper-country";
+import { peapixBingFeedUrl } from "./bing-wallpaper-country";
 import { privilegedExtensionFetchJson } from "./privileged-extension-fetch";
 
-/** Peapix exposes a public JSON feed that mirrors Bing’s daily images (same approach as Fluent New Tab). */
-export const PEAPIX_BING_FEED_US = "https://peapix.com/bing/feed?country=us";
+/** @deprecated Use {@link peapixBingFeedUrl} with a resolved country. */
+export const PEAPIX_BING_FEED_US = peapixBingFeedUrl("us");
 
 /** One Bing spotlight row from the Peapix feed (title is the usual location/description line). */
 export interface IBingWallpaperFeedEntry {
@@ -51,17 +53,21 @@ export function bingWallpaperCaptionFromEntry(entry: IBingWallpaperFeedEntry): s
  * HPImageArchive endpoint, which does not send CORS headers).
  */
 export async function fetchBingWallpaperFeed(
+  country: TPeapixBingCountry,
   signal?: AbortSignal,
 ): Promise<IBingWallpaperFeedEntry[]> {
-  const data: unknown = await privilegedExtensionFetchJson(PEAPIX_BING_FEED_US, signal);
+  const data: unknown = await privilegedExtensionFetchJson(peapixBingFeedUrl(country), signal);
   return bingWallpaperEntriesFromPeapixFeedJson(data);
 }
 
 /**
  * Fetches Bing spotlight image URLs only (same feed as {@link fetchBingWallpaperFeed}).
  */
-export async function fetchBingWallpaperImageUrls(signal?: AbortSignal): Promise<string[]> {
-  const entries = await fetchBingWallpaperFeed(signal);
+export async function fetchBingWallpaperImageUrls(
+  country: TPeapixBingCountry,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const entries = await fetchBingWallpaperFeed(country, signal);
   return entries.map((e) => e.imageUrl);
 }
 

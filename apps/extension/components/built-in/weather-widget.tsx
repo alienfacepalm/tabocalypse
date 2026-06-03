@@ -25,7 +25,6 @@ export function WeatherWidget({
   effectiveTemperatureUnit,
   displayLocale,
   lakesEmbedEnabled,
-  lakesApiKey,
   panelView,
   onSelectPanelView,
   onSelectExplicitTemperatureUnit,
@@ -36,10 +35,8 @@ export function WeatherWidget({
   onOpenWeatherSettings: () => void;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
-  /** When true, adds a Forecast / 2 Lakes switch with buoy API data (Settings → Weather). */
+  /** When true, adds a Forecast / 2 Lakes switch with King County buoy data (Settings → Weather). */
   lakesEmbedEnabled: boolean;
-  /** User-supplied 2lakes.app Bearer API key (Settings → Weather). */
-  lakesApiKey: string;
   panelView: TWeatherPanelView;
   onSelectPanelView: (next: TWeatherPanelView) => void;
   onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
@@ -140,8 +137,6 @@ export function WeatherWidget({
           <LakesBuoyPanel
             temperatureUnit={effectiveTemperatureUnit}
             displayLocale={displayLocale}
-            lakesApiKey={lakesApiKey}
-            onOpenWeatherSettings={onOpenWeatherSettings}
           />
         ) : (
           <>

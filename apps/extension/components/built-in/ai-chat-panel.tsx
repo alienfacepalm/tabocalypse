@@ -2,23 +2,35 @@ import { Bot, Eraser, Send } from "lucide-react";
 import React, { useRef, useState } from "react";
 import { ensureByoAiHostPermission } from "../../lib/byo-ai-host-permission";
 import {
+  BYO_AI_PROVIDER_LABELS,
+  BYO_AI_PROVIDER_PRESETS,
+  byoAiApiKeyForPreset,
+  matchByoAiProviderPreset,
+  type TByoAiProviderPreset,
+} from "../../lib/byo-ai-provider-options";
+import {
   postOpenAiCompatibleChat,
   type IOpenAiChatMessage,
 } from "../../lib/openai-compatible-chat";
+import { ByoAiProviderToggle } from "../byo-ai-provider-toggle";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 
 type TSendPhase = "idle" | "sending";
 
 export function AiChatPanel({
-  apiKey,
   baseUrl,
   model,
+  openaiApiKey,
+  geminiApiKey,
+  onSelectProvider,
   onOpenByoAiSettings,
 }: {
-  apiKey: string;
   baseUrl: string;
   model: string;
+  openaiApiKey: string;
+  geminiApiKey: string;
+  onSelectProvider: (preset: TByoAiProviderPreset) => void;
   onOpenByoAiSettings: () => void;
 }) {
   const [messages, setMessages] = useState<IOpenAiChatMessage[]>([]);
@@ -27,8 +39,12 @@ export function AiChatPanel({
   const [err, setErr] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const hasKey = apiKey.trim().length > 0;
+  const activePreset = matchByoAiProviderPreset(baseUrl, model);
+  const apiKey = byoAiApiKeyForPreset(activePreset, { openai: openaiApiKey, gemini: geminiApiKey });
+  const hasKey = apiKey.length > 0;
   const sending = phase === "sending";
+  const providerLabel =
+    activePreset !== null ? BYO_AI_PROVIDER_LABELS[activePreset] : "your configured endpoint";
 
   const scrollToBottom = () => {
     const el = listRef.current;
@@ -36,12 +52,26 @@ export function AiChatPanel({
     el.scrollTop = el.scrollHeight;
   };
 
+  const selectProvider = (preset: TByoAiProviderPreset) => {
+    if (activePreset === preset) return;
+    setMessages([]);
+    setErr(null);
+    setDraft("");
+    onSelectProvider(preset);
+  };
+
   const send = async () => {
     const text = draft.trim();
     if (!text || sending) return;
     setErr(null);
     if (!hasKey) {
-      setErr("Add an API key in Settings > BYO AI.");
+      const keyHint =
+        activePreset === "gemini"
+          ? BYO_AI_PROVIDER_PRESETS.gemini.apiKeyHint
+          : activePreset === "openai"
+            ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
+            : "an API key";
+      setErr(`Add ${keyHint} in Settings > BYO AI.`);
       return;
     }
     const perm = await ensureByoAiHostPermission(baseUrl);
@@ -100,11 +130,19 @@ export function AiChatPanel({
             </HudTip>
           ) : null}
         </div>
+        <div className="mt-2">
+          <ByoAiProviderToggle
+            baseUrl={baseUrl}
+            model={model}
+            compact
+            onSelectPreset={selectProvider}
+          />
+        </div>
       </div>
       <HudPanelBody className="flex min-h-0 flex-1 flex-col gap-2">
         {!hasKey ? (
           <p className="muted text-xs leading-relaxed">
-            Add your API key and base URL in{" "}
+            Add your {providerLabel} API key in{" "}
             <button type="button" className="linkish p-0 text-xs" onClick={onOpenByoAiSettings}>
               Settings &gt; BYO AI
             </button>
@@ -112,8 +150,8 @@ export function AiChatPanel({
           </p>
         ) : (
           <p className="muted text-xs leading-tight">
-            Messages go to your configured endpoint when you send. This session clears when you
-            reload the tab.
+            Messages go to {providerLabel} when you send. This session clears when you reload the
+            tab or switch provider.
           </p>
         )}
 
@@ -169,7 +207,7 @@ export function AiChatPanel({
             onChange={(e) => setDraft(e.target.value)}
             autoComplete="off"
           />
-          <HudTip tip="Send message to your AI endpoint">
+          <HudTip tip={`Send message to ${providerLabel}`}>
             <button
               type="submit"
               className="btn primary icon-only shrink-0"

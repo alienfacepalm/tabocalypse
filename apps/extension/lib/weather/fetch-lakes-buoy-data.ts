@@ -1,18 +1,26 @@
-import { privilegedExtensionFetchJson } from "../privileged-extension-fetch";
-import { TWO_LAKES_API_KEY_SETTING_LABEL } from "../settings";
+import { privilegedExtensionFetchText } from "../privileged-extension-fetch";
 import type { TWeatherTemperatureUnit } from "./weather-units";
+import {
+  KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
+  kingCountyCelsiusToFahrenheit,
+  kingCountyLakeBuoyLocationName,
+  kingCountyWindMetersPerSecToMph,
+  parseKingCountyLakeBuoyMapData,
+  type IKingCountyLakeBuoyRow,
+} from "./parse-king-county-lake-buoy-map-data";
 
-/** Public site for full 2 Lakes experience (opened in a new tab from the Weather widget). */
-export const LAKES_APP_URL = "https://2lakes.app/";
-
-export const LAKES_ALL_BUOY_DATA_URL = "https://2lakes.app/api/all-buoy-data";
+export {
+  KING_COUNTY_LAKE_BUOY_HOME_URL,
+  KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
+  KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL,
+} from "./parse-king-county-lake-buoy-map-data";
 
 export interface ILakesBuoySnapshot {
   location: string;
   waterTemp: number;
-  airTemp: number;
-  windSpeed: number;
-  humidity: number;
+  airTemp: number | null;
+  windSpeed: number | null;
+  humidity: number | null;
   condition: string;
   status: string;
   timestamp: string;
@@ -23,72 +31,45 @@ export interface ILakesBuoyEntry {
   id: string;
   label: string;
   data: ILakesBuoySnapshot;
+  /** Always true for King County map data (single feed includes weather + profile timestamps). */
+  detailComplete: boolean;
 }
 
-export function lakesAllBuoyDataApiUrl(): string {
-  return LAKES_ALL_BUOY_DATA_URL;
+function formatBuoyCondition(row: IKingCountyLakeBuoyRow): string {
+  const parts: string[] = [];
+  if (row.windDirection) parts.push(row.windDirection);
+  if (row.windSpeedMps != null) {
+    parts.push(`${kingCountyWindMetersPerSecToMph(row.windSpeedMps)} mph`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "Unknown";
 }
 
-/** Bearer token for 2lakes.app `/api/all-buoy-data` (Authorization header). */
-export function lakesBearerAuthorizationHeader(apiKey: string): Record<string, string> {
-  const trimmed = apiKey.trim();
-  if (!trimmed) return {};
-  const token = trimmed.startsWith("Bearer ") ? trimmed.slice("Bearer ".length).trim() : trimmed;
-  return { Authorization: `Bearer ${token}` };
+function temperatureFromCelsius(celsius: number, temperatureUnit: TWeatherTemperatureUnit): number {
+  return temperatureUnit === "celsius" ? celsius : kingCountyCelsiusToFahrenheit(celsius);
 }
 
-export const LAKES_API_KEY_REQUIRED_MESSAGE =
-  `Add your ${TWO_LAKES_API_KEY_SETTING_LABEL} in Settings > Weather.` as const;
-
-function readFiniteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function readNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-/** Maps one 2lakes.app buoy JSON object into a compact HUD snapshot. */
-export function parseLakesBuoyPayload(
-  data: unknown,
+function snapshotFromKingCountyRow(
+  row: IKingCountyLakeBuoyRow,
   temperatureUnit: TWeatherTemperatureUnit,
-): ILakesBuoySnapshot {
-  if (data == null || typeof data !== "object") {
-    throw new Error("Bad buoy payload");
-  }
-  const row = data as Record<string, unknown>;
-  const waterTemp =
-    temperatureUnit === "celsius" ? readFiniteNumber(row.tempC) : readFiniteNumber(row.tempF);
-  const airTemp =
-    temperatureUnit === "celsius" ? readFiniteNumber(row.airTempC) : readFiniteNumber(row.airTempF);
-  const windSpeed = readFiniteNumber(row.windSpeed);
-  const humidity = readFiniteNumber(row.humidity);
-  const location = readNonEmptyString(row.location);
-  const condition = readNonEmptyString(row.condition);
-  const status = readNonEmptyString(row.status);
-  const timestamp = readNonEmptyString(row.timestamp);
+): ILakesBuoySnapshot | null {
+  if (!row.active || row.waterTempC == null) return null;
 
-  if (
-    waterTemp == null ||
-    airTemp == null ||
-    windSpeed == null ||
-    humidity == null ||
-    !location ||
-    !condition ||
-    !status ||
-    !timestamp
-  ) {
-    throw new Error("Bad buoy payload");
-  }
+  const location = kingCountyLakeBuoyLocationName(row.name, row.active);
+  const waterTemp = temperatureFromCelsius(row.waterTempC, temperatureUnit);
+  const airTemp =
+    row.airTempC == null ? null : temperatureFromCelsius(row.airTempC, temperatureUnit);
+  const windSpeed =
+    row.windSpeedMps == null ? null : kingCountyWindMetersPerSecToMph(row.windSpeedMps);
+  const timestamp = row.collectDate ?? row.profileDate ?? "—";
 
   return {
     location,
     waterTemp,
     airTemp,
     windSpeed,
-    humidity,
-    condition,
-    status,
+    humidity: null,
+    condition: formatBuoyCondition(row),
+    status: "ACTIVE",
     timestamp,
     temperatureUnit,
   };
@@ -107,59 +88,33 @@ export function lakesBuoyDisplayLabel(location: string): string {
   return trimmed.length > 0 ? trimmed : location;
 }
 
-function parseApiErrorPayload(data: unknown): string | null {
-  if (data == null || typeof data !== "object" || Array.isArray(data)) {
-    return null;
-  }
-  const row = data as Record<string, unknown>;
-  const message = readNonEmptyString(row.message);
-  if (message) return message;
-  const error = readNonEmptyString(row.error);
-  return error;
-}
-
-function extractBuoyRows(data: unknown): unknown[] {
-  if (Array.isArray(data)) {
-    return data;
-  }
-  if (data != null && typeof data === "object") {
-    const row = data as Record<string, unknown>;
-    if (Array.isArray(row.buoys)) return row.buoys;
-    if (Array.isArray(row.data)) return row.data;
-  }
-  return [];
-}
-
-/** Maps 2lakes.app `/api/all-buoy-data` JSON into accordion rows. */
-export function parseAllLakesBuoysPayload(
-  data: unknown,
+export function mapKingCountyRowsToBuoyEntries(
+  rows: IKingCountyLakeBuoyRow[],
   temperatureUnit: TWeatherTemperatureUnit,
 ): ILakesBuoyEntry[] {
-  const apiError = parseApiErrorPayload(data);
-  if (apiError) {
-    throw new Error(apiError);
-  }
-
-  const rows = extractBuoyRows(data);
-  if (rows.length === 0) {
-    throw new Error("No buoy data returned");
-  }
-
   const seenIds = new Set<string>();
   const buoys: ILakesBuoyEntry[] = [];
 
   for (const row of rows) {
-    const snapshot = parseLakesBuoyPayload(row, temperatureUnit);
+    const snapshot = snapshotFromKingCountyRow(row, temperatureUnit);
+    if (!snapshot) continue;
+
     let id = lakesBuoyIdFromLocation(snapshot.location);
     if (seenIds.has(id)) {
       id = `${id}-${buoys.length + 1}`;
     }
     seenIds.add(id);
+
     buoys.push({
       id,
       label: lakesBuoyDisplayLabel(snapshot.location),
       data: snapshot,
+      detailComplete: true,
     });
+  }
+
+  if (buoys.length === 0) {
+    throw new Error("No active buoy data returned");
   }
 
   return buoys;
@@ -167,15 +122,9 @@ export function parseAllLakesBuoysPayload(
 
 export async function fetchAllLakesBuoys(
   temperatureUnit: TWeatherTemperatureUnit,
-  apiKey?: string,
   signal?: AbortSignal,
 ): Promise<ILakesBuoyEntry[]> {
-  const trimmed = apiKey?.trim();
-  if (!trimmed) {
-    throw new Error(LAKES_API_KEY_REQUIRED_MESSAGE);
-  }
-  const data = await privilegedExtensionFetchJson(lakesAllBuoyDataApiUrl(), signal, {
-    headers: lakesBearerAuthorizationHeader(trimmed),
-  });
-  return parseAllLakesBuoysPayload(data, temperatureUnit);
+  const text = await privilegedExtensionFetchText(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL, signal);
+  const rows = parseKingCountyLakeBuoyMapData(text);
+  return mapKingCountyRowsToBuoyEntries(rows, temperatureUnit);
 }

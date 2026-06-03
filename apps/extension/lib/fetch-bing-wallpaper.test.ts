@@ -39,7 +39,7 @@ describe("fetchBingWallpaperImageUrls", () => {
   });
 
   it("fetches Peapix Bing feed and returns absolute image URLs", async () => {
-    const urls = await fetchBingWallpaperImageUrls();
+    const urls = await fetchBingWallpaperImageUrls("us");
     expect(urls).toEqual(["https://img.peapix.com/a_1920.jpg"]);
     expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
       signal: undefined,
@@ -50,7 +50,7 @@ describe("fetchBingWallpaperImageUrls", () => {
 
   it("passes AbortSignal to fetch", async () => {
     const ac = new AbortController();
-    await fetchBingWallpaperImageUrls(ac.signal);
+    await fetchBingWallpaperImageUrls("us", ac.signal);
     expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
       signal: ac.signal,
       credentials: "omit",
@@ -67,7 +67,7 @@ describe("fetchBingWallpaperImageUrls", () => {
         json: async () => [],
       }),
     );
-    await expect(fetchBingWallpaperImageUrls()).rejects.toThrow("HTTP 503");
+    await expect(fetchBingWallpaperImageUrls("us")).rejects.toThrow("HTTP 503");
   });
 });
 
@@ -153,7 +153,12 @@ describe("fetchBingWallpaperFeed", () => {
   });
 
   it("returns feed entries with captions", async () => {
-    const entries = await fetchBingWallpaperFeed();
+    const entries = await fetchBingWallpaperFeed("de");
+    expect(fetch).toHaveBeenCalledWith("https://peapix.com/bing/feed?country=de", {
+      signal: undefined,
+      credentials: "omit",
+      cache: "no-store",
+    });
     expect(entries).toEqual([
       {
         imageUrl: "https://img.peapix.com/a_1920.jpg",

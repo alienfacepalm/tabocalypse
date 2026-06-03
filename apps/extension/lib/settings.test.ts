@@ -38,6 +38,7 @@ const {
   WIDGET_LABELS,
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
   resolveUserBackgroundImage,
+  resolveNotesListPanelVisible,
   stableUserBackgroundIdFromDataUrl,
   isHudAutoRepositionEnabled,
 } = await import("./settings");
@@ -244,6 +245,19 @@ describe("defaultSettings", () => {
   });
 });
 
+describe("resolveNotesListPanelVisible", () => {
+  it("always shows the list when no stickies are on the canvas", () => {
+    expect(resolveNotesListPanelVisible([], true)).toBe(true);
+    expect(resolveNotesListPanelVisible([], false)).toBe(true);
+  });
+
+  it("follows notesListPanelVisible when stickies are on the canvas", () => {
+    const panels = [{ noteId: "n1", position: { xPx: 0, yPx: 0, widthPx: 260, heightPx: 220 } }];
+    expect(resolveNotesListPanelVisible(panels, true)).toBe(true);
+    expect(resolveNotesListPanelVisible(panels, false)).toBe(false);
+  });
+});
+
 describe("resolveUserBackgroundImage", () => {
   const images = [
     { id: "a", dataUrl: "data:image/png;base64,QQ==", positionXPct: 50, positionYPct: 50 },
@@ -342,7 +356,8 @@ describe("loadSettings", () => {
         weatherTemperatureUnit: "celsius",
         clockHourFormat: "24h",
         weatherAutoGeo: false,
-        useOpenWeather: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         backgroundGradientMid: "#1a1a1f",
@@ -408,7 +423,6 @@ describe("loadSettings", () => {
         userBackgroundDataUrl: null,
         userBackgroundDataUrls: [],
         backgroundRotate: "junk" as unknown as boolean,
-        openWeatherApiKey: "",
         openaiApiKey: "",
         openaiBaseUrl: "https://api.openai.com/v1",
         myLines: [],
@@ -448,7 +462,8 @@ describe("loadSettings", () => {
         weatherLat: 1,
         weatherLon: 2,
         weatherAutoGeo: true,
-        useOpenWeather: true,
+        bingWallpaperCountryAuto: false,
+        bingWallpaperCountry: "de",
         backgroundKind: "solid",
         backgroundSolid: "#fff",
         debugPluginSource: true,
@@ -462,7 +477,6 @@ describe("loadSettings", () => {
         userBackgroundDataUrl: null,
         userBackgroundDataUrls: [],
         backgroundRotate: false,
-        openWeatherApiKey: "k",
         openaiApiKey: "sk",
         openaiBaseUrl: "https://example.com/v1",
         myLines: ["line"],
@@ -507,7 +521,8 @@ describe("loadSettings", () => {
         weatherTemperatureUnit: "celsius",
         clockHourFormat: "24h",
         weatherAutoGeo: false,
-        useOpenWeather: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         backgroundGradientMid: "#1a1a1f",
@@ -542,7 +557,8 @@ describe("loadSettings", () => {
         weatherTemperatureUnit: "celsius",
         clockHourFormat: "24h",
         weatherAutoGeo: false,
-        useOpenWeather: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         backgroundGradientMid: "#1a1a1f",
@@ -576,7 +592,8 @@ describe("loadSettings", () => {
         weatherLat: 0,
         weatherLon: 0,
         weatherAutoGeo: false,
-        useOpenWeather: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         debugPluginSource: false,
@@ -588,7 +605,6 @@ describe("loadSettings", () => {
         userBackgroundDataUrl: null,
         userBackgroundDataUrls: [],
         backgroundRotate: false,
-        openWeatherApiKey: "",
         openaiApiKey: "",
         openaiBaseUrl: "https://api.openai.com/v1",
         myLines: [],
@@ -611,7 +627,8 @@ describe("loadSettings", () => {
         weatherLat: 0,
         weatherLon: 0,
         weatherAutoGeo: false,
-        useOpenWeather: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         debugPluginSource: false,
@@ -629,7 +646,6 @@ describe("loadSettings", () => {
         userBackgroundDataUrl: null,
         userBackgroundDataUrls: ["data:image/png;base64,QQ==", "data:image/png;base64,Qg=="],
         backgroundRotate: false,
-        openWeatherApiKey: "",
         openaiApiKey: "",
         openaiBaseUrl: "https://api.openai.com/v1",
         myLines: [],

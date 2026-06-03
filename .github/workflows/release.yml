@@ -1,0 +1,94 @@
+# Build store-ready browser packages and attach them to a GitHub Release.
+# Chrome and Edge share the same MV3 build but get separate zip filenames.
+#
+# Before the first release: set repository secret WXT_TABOCALYPSE_FIREFOX_GECKO_ID
+# (production Firefox add-on ID). See doc/GITHUB-ACTIONS.md.
+
+name: Release packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require Firefox Gecko ID for published releases
+        if: github.event_name == 'release'
+        env:
+          GECKO_ID: ${{ secrets.WXT_TABOCALYPSE_FIREFOX_GECKO_ID }}
+        run: |
+          if [ -z "$GECKO_ID" ]; then
+            echo "::error::Repository secret WXT_TABOCALYPSE_FIREFOX_GECKO_ID is not set. Add it before publishing a GitHub Release (see doc/GITHUB-ACTIONS.md)."
+            exit 1
+          fi
+
+      - name: Match release tag to extension version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node --input-type=module -e "
+          import { readFileSync } from 'node:fs';
+          const tag = process.env.RELEASE_TAG?.replace(/^v/i, '') ?? '';
+          const { version } = JSON.parse(readFileSync('apps/extension/package.json', 'utf8'));
+          if (!tag || tag !== version) {
+            console.error(\`::error::Release tag must match apps/extension/package.json version (expected v\${version}, got \${process.env.RELEASE_TAG})\`);
+            process.exit(1);
+          }
+          "
+
+      - name: Quality gate
+        run: pnpm check
+
+      - name: Build store deliverables
+        env:
+          WXT_TABOCALYPSE_FIREFOX_GECKO_ID: ${{ secrets.WXT_TABOCALYPSE_FIREFOX_GECKO_ID }}
+        run: pnpm package:stores --skip-check
+
+      - name: Upload packages to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/extension/output/store-deliverables/tabocalypse-*-chrome.zip
+            apps/extension/output/store-deliverables/tabocalypse-*-edge.zip
+            apps/extension/output/store-deliverables/tabocalypse-*-firefox.zip
+            apps/extension/output/store-deliverables/tabocalypse-*-firefox-sources.zip
+            apps/extension/output/store-deliverables/tabocalypse-*-safari-mv3.zip
+            apps/extension/output/store-deliverables/DELIVERABLES.md
+          fail_on_unmatched_files: true
+
+      - name: Upload packages as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tabocalypse-store-deliverables
+          path: apps/extension/output/store-deliverables/
+          if-no-files-found: error

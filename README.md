@@ -21,6 +21,7 @@ Guides live under **`doc/`**. Start at [doc/README.md](doc/README.md); every mar
 - [doc/ALPHA-SETUP.md](doc/ALPHA-SETUP.md) — clone, build, and install in developer mode
 - [doc/AGENT-INSTRUCTIONS.md](doc/AGENT-INSTRUCTIONS.md) — agent-agnostic rules and sync targets
 - [doc/CHANGELOG.md](doc/CHANGELOG.md) — curated summary of user-facing and shipped changes (parallel to Git history)
+- [doc/GITHUB-ACTIONS.md](doc/GITHUB-ACTIONS.md) — CI and automated release packaging for Chrome, Edge, Firefox, and Safari
 
 ## Product notes
 
@@ -70,7 +71,7 @@ pnpm test          # Vitest
 pnpm check         # format:check + lint + test + tsc (SDK + extension)
 ```
 
-GitHub Actions CI is **not** wired up in this repo yet—run **`pnpm check`** and (for packaging-sensitive changes) **`pnpm build`** locally before merging.
+**GitHub Actions** runs **`pnpm check`** on pull requests and attaches store-ready browser zips when you **publish** a GitHub Release ([doc/GITHUB-ACTIONS.md](doc/GITHUB-ACTIONS.md)). Run **`pnpm check`** and (for packaging-sensitive changes) **`pnpm build`** locally before merging.
 
 **pnpm-only:** `.npmrc` sets `package-manager-strict=true`. Use a **git** clone so `pnpm install` can install the **Husky** pre-commit hook (`lint-staged`: ESLint + Prettier on staged files).
 

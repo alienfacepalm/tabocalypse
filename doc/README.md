@@ -10,6 +10,7 @@ Start here for **development**, **local testing** (including non-developers), an
 | [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md) | Phased rollout, deliverables, and blueprint corrections for Tabocalypse |
 | [Architecture overview](ARCHITECTURE.md)                          | High-level map of packages and extension surfaces                       |
 | [Contributing](CONTRIBUTING.md)                                   | PR expectations and checks                                              |
+| [GitHub Actions](GITHUB-ACTIONS.md)                               | CI and automated release packages per browser                           |
 | [Troubleshooting](TROUBLESHOOTING.md)                             | Common load / build / pnpm issues                                       |
 | [Alpha setup](ALPHA-SETUP.md)                                     | Clone, build, and install in developer mode (alpha testers / devs)      |
 | [Agent instructions](AGENT-INSTRUCTIONS.md)                       | Agent-agnostic rules and sync targets                                   |

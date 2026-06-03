@@ -11,6 +11,8 @@ export function StickyNoteLayer({
   notePanels,
   onCommitPosition,
   onTogglePin,
+  onToggleNotesList,
+  notesListPanelVisible,
   onMarkInactive,
   onUpdateNote,
   onDeleteNote,
@@ -20,6 +22,8 @@ export function StickyNoteLayer({
   notePanels: readonly INotePanel[];
   onCommitPosition: (noteId: string, position: IStickyNotePosition) => void;
   onTogglePin: (noteId: string) => void;
+  onToggleNotesList: () => void;
+  notesListPanelVisible: boolean;
   onMarkInactive: (noteId: string) => void;
   onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
@@ -49,6 +53,8 @@ export function StickyNoteLayer({
             onFocus={() => bringToFront(np.noteId)}
             onCommit={(pos) => onCommitPosition(np.noteId, pos)}
             onTogglePin={() => onTogglePin(np.noteId)}
+            onToggleNotesList={onToggleNotesList}
+            notesListPanelVisible={notesListPanelVisible}
           >
             {({ resizeControl }) => (
               <StickyNoteEditor

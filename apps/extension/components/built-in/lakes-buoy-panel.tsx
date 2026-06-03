@@ -5,10 +5,10 @@ import {
   isPrivilegedFetchAllowlistError,
   PRIV_FETCH_RELOAD_EXTENSION_HINT,
 } from "../../lib/privileged-extension-fetch";
-import { TWO_LAKES_API_KEY_SETTING_LABEL } from "../../lib/settings";
 import {
   fetchAllLakesBuoys,
-  LAKES_API_KEY_REQUIRED_MESSAGE,
+  KING_COUNTY_LAKE_BUOY_HOME_URL,
+  KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL,
   type ILakesBuoyEntry,
   type ILakesBuoySnapshot,
 } from "../../lib/weather/fetch-lakes-buoy-data";
@@ -25,16 +25,26 @@ function lakeHeroAriaLabel(label: string, data: ILakesBuoySnapshot, displayLocal
   return `${label}, water ${formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}, ${data.condition}`;
 }
 
+function formatOptionalTemperatureValue(
+  temperature: number | null,
+  unit: TWeatherTemperatureUnit,
+  displayLocale: string,
+): string {
+  if (temperature == null) return "—";
+  return formatTemperatureValue(temperature, unit, displayLocale);
+}
+
+function formatOptionalNumber(value: number | null, suffix = ""): string {
+  if (value == null) return "—";
+  return `${value}${suffix}`;
+}
+
 export function LakesBuoyPanel({
   temperatureUnit,
   displayLocale,
-  lakesApiKey,
-  onOpenWeatherSettings,
 }: {
   temperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
-  lakesApiKey: string;
-  onOpenWeatherSettings: () => void;
 }) {
   const panelIdPrefix = useId();
   const [openLakeId, setOpenLakeId] = useState<string | null>(null);
@@ -45,7 +55,7 @@ export function LakesBuoyPanel({
     let cancelled = false;
     setPanelState({ status: "loading" });
 
-    void fetchAllLakesBuoys(temperatureUnit, lakesApiKey)
+    void fetchAllLakesBuoys(temperatureUnit)
       .then((buoys) => {
         if (cancelled) return;
         setPanelState({ status: "ready", buoys });
@@ -65,7 +75,7 @@ export function LakesBuoyPanel({
     return () => {
       cancelled = true;
     };
-  }, [temperatureUnit, lakesApiKey]);
+  }, [temperatureUnit]);
 
   useEffect(() => loadBuoys(), [loadBuoys, reloadToken]);
 
@@ -91,12 +101,12 @@ export function LakesBuoyPanel({
           <>
             <p className="muted text-xs leading-tight">{PRIV_FETCH_RELOAD_EXTENSION_HINT}</p>
             <div className="row wrap gap-2">
-              <HudTip tip="Fetch 2 Lakes buoy readings again after reloading the extension">
+              <HudTip tip="Fetch lake buoy readings again after reloading the extension">
                 <button
                   type="button"
                   className="btn primary sm"
                   onClick={retryBuoyFetch}
-                  aria-label="Reload 2 Lakes buoy data"
+                  aria-label="Reload lake buoy data"
                 >
                   <RotateCw size={16} strokeWidth={2} aria-hidden />
                   Reload
@@ -104,41 +114,20 @@ export function LakesBuoyPanel({
               </HudTip>
             </div>
           </>
-        ) : null}
-        {!lakesApiKey.trim() ? (
-          <p className="muted text-xs leading-tight">
-            Open{" "}
-            <a
-              className="linkish"
-              href="https://2lakes.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              2lakes.app
-            </a>
-            , go to Settings, generate an API key, then paste it in{" "}
-            <button type="button" className="linkish p-0 text-xs" onClick={onOpenWeatherSettings}>
-              Settings &gt; Weather
-            </button>{" "}
-            under {TWO_LAKES_API_KEY_SETTING_LABEL}.
-          </p>
-        ) : showAllowlistReload || panelState.message === LAKES_API_KEY_REQUIRED_MESSAGE ? null : (
-          <p className="muted text-xs leading-tight">
-            Check the key in{" "}
-            <button type="button" className="linkish p-0 text-xs" onClick={onOpenWeatherSettings}>
-              Settings &gt; Weather
-            </button>
-            . Generate a new one from Settings on{" "}
-            <a
-              className="linkish"
-              href="https://2lakes.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              2lakes.app
-            </a>{" "}
-            if needed.
-          </p>
+        ) : (
+          <div className="row wrap gap-2">
+            <HudTip tip="Try fetching King County lake buoy readings again">
+              <button
+                type="button"
+                className="btn primary sm"
+                onClick={retryBuoyFetch}
+                aria-label="Retry lake buoy data"
+              >
+                <RotateCw size={16} strokeWidth={2} aria-hidden />
+                Retry
+              </button>
+            </HudTip>
+          </div>
         )}
       </div>
     );
@@ -151,62 +140,93 @@ export function LakesBuoyPanel({
   }
 
   return (
-    <div className="weather-lakes-stack" role="region" aria-label="2 Lakes buoy readings">
-      {buoys.map((buoy) => {
-        const { data } = buoy;
-        const isOpen = openLakeId === buoy.id;
-        const bodyId = `${panelIdPrefix}-${buoy.id}-body`;
+    <div className="flex flex-col gap-2">
+      <div
+        className="weather-lakes-stack"
+        role="region"
+        aria-label="Lake Washington and Lake Sammamish buoy readings"
+      >
+        {buoys.map((buoy) => {
+          const { data } = buoy;
+          const isOpen = openLakeId === buoy.id;
+          const bodyId = `${panelIdPrefix}-${buoy.id}-body`;
 
-        return (
-          <div key={buoy.id} className="weather-lakes-item" data-open={isOpen ? "" : undefined}>
-            <button
-              type="button"
-              className="weather-lakes-summary"
-              aria-expanded={isOpen}
-              aria-controls={bodyId}
-              onClick={() => toggleLake(buoy.id)}
-            >
-              <BuoyConditionIcon condition={data.condition} />
-              <div
-                className="min-w-0 flex-1"
-                aria-label={lakeHeroAriaLabel(buoy.label, data, displayLocale)}
+          return (
+            <div key={buoy.id} className="weather-lakes-item" data-open={isOpen ? "" : undefined}>
+              <button
+                type="button"
+                className="weather-lakes-summary"
+                aria-expanded={isOpen}
+                aria-controls={bodyId}
+                onClick={() => toggleLake(buoy.id)}
               >
-                <p className="weather-condition-label mt-0">{buoy.label}</p>
-                <p className="weather-temp">
-                  {formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}
-                </p>
-                <p className="weather-condition-label">
-                  <span>{data.condition}</span>
-                  <span className="normal-case tracking-normal opacity-80">· {data.status}</span>
-                </p>
-              </div>
-              <span className="weather-lakes-summary-status text-muted normal-case tracking-normal">
-                {data.condition}
-              </span>
-            </button>
-            {isOpen ? (
-              <div id={bodyId} className="weather-lakes-body">
-                <dl className="weather-lakes-stat-grid">
-                  <dt className="weather-lakes-stat-label">Water</dt>
-                  <dd>
+                <BuoyConditionIcon condition={data.condition} />
+                <div
+                  className="min-w-0 flex-1"
+                  aria-label={lakeHeroAriaLabel(buoy.label, data, displayLocale)}
+                >
+                  <p className="weather-condition-label mt-0">{buoy.label}</p>
+                  <p className="weather-temp">
                     {formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}
-                  </dd>
-                  <dt className="weather-lakes-stat-label">Air</dt>
-                  <dd>
-                    {formatTemperatureValue(data.airTemp, data.temperatureUnit, displayLocale)}
-                  </dd>
-                  <dt className="weather-lakes-stat-label">Wind</dt>
-                  <dd>{data.windSpeed} mph</dd>
-                  <dt className="weather-lakes-stat-label">Humidity</dt>
-                  <dd>{data.humidity}%</dd>
-                  <dt className="weather-lakes-stat-label">Updated</dt>
-                  <dd className="text-xs">{data.timestamp}</dd>
-                </dl>
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
+                  </p>
+                  <p className="weather-condition-label">
+                    <span>{data.condition}</span>
+                    <span className="normal-case tracking-normal opacity-80">· {data.status}</span>
+                  </p>
+                </div>
+                <span className="weather-lakes-summary-status text-muted normal-case tracking-normal">
+                  {data.condition}
+                </span>
+              </button>
+              {isOpen ? (
+                <div id={bodyId} className="weather-lakes-body">
+                  <dl className="weather-lakes-stat-grid">
+                    <dt className="weather-lakes-stat-label">Water</dt>
+                    <dd>
+                      {formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}
+                    </dd>
+                    <dt className="weather-lakes-stat-label">Air</dt>
+                    <dd>
+                      {formatOptionalTemperatureValue(
+                        data.airTemp,
+                        data.temperatureUnit,
+                        displayLocale,
+                      )}
+                    </dd>
+                    <dt className="weather-lakes-stat-label">Wind</dt>
+                    <dd>{formatOptionalNumber(data.windSpeed, " mph")}</dd>
+                    <dt className="weather-lakes-stat-label">Humidity</dt>
+                    <dd>{formatOptionalNumber(data.humidity, "%")}</dd>
+                    <dt className="weather-lakes-stat-label">Updated</dt>
+                    <dd className="text-xs">{data.timestamp}</dd>
+                  </dl>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <p className="muted text-xs leading-tight mb-0">
+        Provisional data from{" "}
+        <a
+          className="linkish"
+          href={KING_COUNTY_LAKE_BUOY_HOME_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          King County lake buoys
+        </a>
+        .{" "}
+        <a
+          className="linkish"
+          href={KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Subject to revision
+        </a>
+        .
+      </p>
     </div>
   );
 }

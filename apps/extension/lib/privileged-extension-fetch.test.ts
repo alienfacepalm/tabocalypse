@@ -7,12 +7,14 @@ vi.mock("webextension-polyfill", () => ({
 import browser from "webextension-polyfill";
 import {
   arrayBufferToBase64,
-  coercePrivilegedFetchJsonHeaders,
   isPrivilegedExtensionFetchUrlAllowed,
   isPrivilegedFetchAllowlistError,
   privilegedExtensionFetchJson,
+  privilegedExtensionFetchText,
   TABOCALYPSE_PRIV_FETCH_JSON,
+  TABOCALYPSE_PRIV_FETCH_TEXT,
 } from "./privileged-extension-fetch";
+import { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./weather/parse-king-county-lake-buoy-map-data";
 
 interface IGlobalWithOptionalChrome {
   chrome?: { runtime?: { id?: string; sendMessage?: (message: unknown) => unknown } };
@@ -20,7 +22,7 @@ interface IGlobalWithOptionalChrome {
 }
 
 describe("isPrivilegedExtensionFetchUrlAllowed", () => {
-  it("allows Peapix and Open-Meteo HTTPS URLs", () => {
+  it("allows Peapix, Open-Meteo, CoinGecko, King County, and Unsuck hosts", () => {
     expect(isPrivilegedExtensionFetchUrlAllowed("https://peapix.com/bing/feed?country=us")).toBe(
       true,
     );
@@ -30,16 +32,22 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
         "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1",
       ),
     ).toBe(true);
-    expect(isPrivilegedExtensionFetchUrlAllowed("https://2lakes.app/api/all-buoy-data")).toBe(true);
-    expect(isPrivilegedExtensionFetchUrlAllowed("  https://2LAKES.APP/api/all-buoy-data  ")).toBe(
-      true,
-    );
+    expect(isPrivilegedExtensionFetchUrlAllowed(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://www.unsuck-it.com/classics")).toBe(true);
+    expect(
+      isPrivilegedExtensionFetchUrlAllowed(
+        `  ${KING_COUNTY_LAKE_BUOY_MAP_DATA_URL.toUpperCase()}  `,
+      ),
+    ).toBe(true);
   });
 
   it("rejects other hosts and non-HTTPS schemes", () => {
     expect(
       isPrivilegedExtensionFetchUrlAllowed("https://www.bing.com/HPImageArchive.aspx?format=js"),
     ).toBe(false);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://2lakes.app/api/all-buoy-data")).toBe(
+      false,
+    );
     expect(isPrivilegedExtensionFetchUrlAllowed("http://peapix.com/x")).toBe(false);
     expect(isPrivilegedExtensionFetchUrlAllowed("not a url")).toBe(false);
   });
@@ -52,29 +60,6 @@ describe("isPrivilegedFetchAllowlistError", () => {
     ).toBe(true);
     expect(isPrivilegedFetchAllowlistError("URL not allowlisted for privileged fetch.")).toBe(true);
     expect(isPrivilegedFetchAllowlistError("HTTP 403")).toBe(false);
-  });
-});
-
-describe("coercePrivilegedFetchJsonHeaders", () => {
-  it("allows Authorization Bearer on 2lakes URLs only", () => {
-    expect(
-      coercePrivilegedFetchJsonHeaders("https://2lakes.app/api/all-buoy-data", {
-        Authorization: "Bearer secret",
-      }),
-    ).toEqual({ Authorization: "Bearer secret" });
-    expect(
-      coercePrivilegedFetchJsonHeaders("https://peapix.com/x", {
-        Authorization: "Bearer secret",
-      }),
-    ).toBeUndefined();
-  });
-
-  it("allows X-API-Key on 2lakes URLs", () => {
-    expect(
-      coercePrivilegedFetchJsonHeaders("https://2lakes.app/api/all-buoy-data", {
-        "X-API-Key": "2l_key_test",
-      }),
-    ).toEqual({ "X-API-Key": "2l_key_test" });
   });
 });
 
@@ -136,24 +121,33 @@ describe("privilegedExtensionFetchJson", () => {
     });
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/y.jpg" }]);
   });
+});
 
-  it("forwards Authorization headers for 2lakes requests", async () => {
+describe("privilegedExtensionFetchText", () => {
+  afterEach(() => {
+    delete (globalThis as IGlobalWithOptionalChrome).chrome;
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(browser.runtime, "sendMessage");
+    vi.restoreAllMocks();
+  });
+
+  it("requests text through the background worker on extension pages", async () => {
     vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
     const sendMessage = vi.fn().mockResolvedValue({
       ok: true,
-      data: [{ location: "Lake Sammamish Buoy" }],
+      text: "Sammamish|1|2",
     });
     (globalThis as IGlobalWithOptionalChrome).chrome = {
       runtime: { id: "ext", sendMessage },
     };
-    await privilegedExtensionFetchJson("https://2lakes.app/api/all-buoy-data", undefined, {
-      headers: { Authorization: "Bearer test-key" },
-    });
+
+    const text = await privilegedExtensionFetchText(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL);
+
     expect(sendMessage).toHaveBeenCalledWith({
-      type: TABOCALYPSE_PRIV_FETCH_JSON,
-      url: "https://2lakes.app/api/all-buoy-data",
-      headers: { Authorization: "Bearer test-key" },
+      type: TABOCALYPSE_PRIV_FETCH_TEXT,
+      url: KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
     });
+    expect(text).toBe("Sammamish|1|2");
   });
 });
 

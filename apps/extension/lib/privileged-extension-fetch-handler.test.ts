@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("webextension-polyfill", () => ({
@@ -7,61 +10,137 @@ vi.mock("webextension-polyfill", () => ({
 import {
   privilegedFetchBytesInBackground,
   privilegedFetchJsonInBackground,
+  privilegedFetchTextInBackground,
 } from "./privileged-extension-fetch-handler";
 import {
   PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND,
   PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND,
 } from "./privileged-extension-fetch";
+import { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./weather/parse-king-county-lake-buoy-map-data";
+import {
+  fetchAllLakesBuoys,
+  mapKingCountyRowsToBuoyEntries,
+} from "./weather/fetch-lakes-buoy-data";
+import { parseKingCountyLakeBuoyMapData } from "./weather/parse-king-county-lake-buoy-map-data";
 
-const LAKES_ALL_BUOY_DATA_URL = "https://2lakes.app/api/all-buoy-data";
+const FIXTURE_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "weather",
+  "fixtures",
+  "king-county-map-data.fixture.txt",
+);
 
-describe("privilegedFetchJsonInBackground (2 Lakes e2e)", () => {
+describe("privilegedFetchTextInBackground (King County e2e)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("allows the all-buoy-data URL and forwards Authorization", async () => {
+  it("allows the GenerateMapData URL and returns text", async () => {
+    const fixture = readFileSync(FIXTURE_PATH, "utf8");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => [{ location: "Lake Sammamish Buoy", tempF: 67 }],
+      text: async () => fixture,
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await privilegedFetchJsonInBackground(LAKES_ALL_BUOY_DATA_URL, {
-      Authorization: "Bearer test-key",
-    });
+    const result = await privilegedFetchTextInBackground(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL);
 
-    expect(result).toEqual({
-      ok: true,
-      data: [{ location: "Lake Sammamish Buoy", tempF: 67 }],
-    });
-    expect(fetchMock).toHaveBeenCalledWith(LAKES_ALL_BUOY_DATA_URL, {
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(fetchMock).toHaveBeenCalledWith(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL, {
       credentials: "omit",
       cache: "no-store",
-      headers: { Authorization: "Bearer test-key" },
     });
+    const buoys = mapKingCountyRowsToBuoyEntries(
+      parseKingCountyLakeBuoyMapData(result.text),
+      "fahrenheit",
+    );
+    expect(buoys.map((row) => row.label).sort()).toEqual(["Lake Sammamish", "Lake Washington"]);
   });
 
   it("normalizes host casing before fetch", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => [],
+      text: async () => "",
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const url = "  https://2LAKES.APP/api/all-buoy-data  ";
-    const result = await privilegedFetchJsonInBackground(url, {
-      Authorization: "Bearer test-key",
-    });
+    const url = `  ${KING_COUNTY_LAKE_BUOY_MAP_DATA_URL}  `;
+    const result = await privilegedFetchTextInBackground(url);
 
     expect(result.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://2lakes.app/api/all-buoy-data",
-      expect.objectContaining({
-        headers: { Authorization: "Bearer test-key" },
+    expect(fetchMock).toHaveBeenCalledWith(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL, {
+      credentials: "omit",
+      cache: "no-store",
+    });
+  });
+
+  it("rejects hosts outside the privileged allowlist", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await privilegedFetchTextInBackground("https://evil.example/data");
+
+    expect(result).toEqual({ ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches live King County map data over the network", async () => {
+    const result = await privilegedFetchTextInBackground(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const buoys = mapKingCountyRowsToBuoyEntries(
+      parseKingCountyLakeBuoyMapData(result.text),
+      "fahrenheit",
+    );
+    expect(buoys.length).toBeGreaterThanOrEqual(2);
+    expect(buoys.every((row) => row.data.waterTemp > 32)).toBe(true);
+  }, 20_000);
+});
+
+describe("fetchAllLakesBuoys (King County e2e)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("loads buoy rows from a live privileged background fetch", async () => {
+    const fixture = readFileSync(FIXTURE_PATH, "utf8");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => fixture,
       }),
     );
+
+    const rows = await fetchAllLakesBuoys("fahrenheit");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.data.status).toBe("ACTIVE");
+  });
+});
+
+describe("privilegedFetchJsonInBackground", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("allows Peapix JSON URLs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ fullUrl: "https://img.peapix.com/x.jpg" }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await privilegedFetchJsonInBackground("https://peapix.com/bing/feed?country=us");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [{ fullUrl: "https://img.peapix.com/x.jpg" }],
+    });
   });
 
   it("rejects hosts outside the privileged allowlist", async () => {
@@ -72,26 +151,6 @@ describe("privilegedFetchJsonInBackground (2 Lakes e2e)", () => {
 
     expect(result).toEqual({ ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND });
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("surfaces API auth errors instead of allowlist errors", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        json: async () => ({
-          error: "Unauthorized",
-          message: "External access requires an API Key.",
-        }),
-      }),
-    );
-
-    const result = await privilegedFetchJsonInBackground(LAKES_ALL_BUOY_DATA_URL, {
-      Authorization: "Bearer bad",
-    });
-
-    expect(result).toEqual({ ok: false, error: "External access requires an API Key." });
   });
 });
 

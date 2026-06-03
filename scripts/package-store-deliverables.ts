@@ -6,8 +6,15 @@
  * Flags: --skip-check, --skip-build
  */
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
@@ -58,6 +65,17 @@ function copyDeliverable(sourcePath: string, destName: string): string {
   return destPath;
 }
 
+/** Zip directory contents so manifest.json is at the archive root (tar -a is cross-platform). */
+function zipDirectoryContents(sourceDir: string, destZip: string): void {
+  if (!existsSync(sourceDir)) {
+    throw new Error(`Expected build output folder: ${sourceDir}`);
+  }
+  const destDir = dirname(destZip);
+  const destName = basename(destZip);
+  mkdirSync(destDir, { recursive: true });
+  run("tar", ["-a", "-cf", destName, "-C", sourceDir, "."], destDir);
+}
+
 function writeDeliverablesManifest(version: string, files: string[]): void {
   const geckoId =
     process.env.WXT_TABOCALYPSE_FIREFOX_GECKO_ID?.trim() ??
@@ -86,7 +104,7 @@ function writeDeliverablesManifest(version: string, files: string[]): void {
     `| Chrome | \`tabocalypse-${version}-chrome.zip\` |`,
     `| Edge | \`tabocalypse-${version}-edge.zip\` (same MV3 build as Chrome) |`,
     `| Firefox (AMO) | \`tabocalypse-${version}-firefox.zip\` + \`tabocalypse-${version}-firefox-sources.zip\` |`,
-    `| Safari | Use folder \`../safari-mv3/\` with \`safari-web-extension-converter\` on macOS (not zipped here) |`,
+    `| Safari | \`tabocalypse-${version}-safari-mv3.zip\` (unzip, then \`safari-web-extension-converter\` on macOS) |`,
     "",
   ];
   writeFileSync(join(deliverablesDir, "DELIVERABLES.md"), lines.join("\n"));
@@ -123,11 +141,15 @@ function main(): void {
     `tabocalypse-${version}-firefox-sources.zip`,
   );
 
+  const safariZipPath = join(deliverablesDir, `tabocalypse-${version}-safari-mv3.zip`);
+  zipDirectoryContents(join(outputDir, "safari-mv3"), safariZipPath);
+
   writeDeliverablesManifest(version, [
     `tabocalypse-${version}-chrome.zip`,
     `tabocalypse-${version}-edge.zip`,
     `tabocalypse-${version}-firefox.zip`,
     `tabocalypse-${version}-firefox-sources.zip`,
+    `tabocalypse-${version}-safari-mv3.zip`,
   ]);
 
   console.log("\nStore deliverables ready:");
@@ -135,8 +157,9 @@ function main(): void {
   console.log(`  ${edgeZip}`);
   console.log(`  ${firefoxZip}`);
   console.log(`  ${firefoxSourcesZip}`);
+  console.log(`  ${safariZipPath}`);
   console.log(`  ${join(deliverablesDir, "DELIVERABLES.md")}`);
-  console.log(`  Safari input folder: ${join(outputDir, "safari-mv3")}`);
+  console.log(`  Safari source folder: ${join(outputDir, "safari-mv3")}`);
 }
 
 main();

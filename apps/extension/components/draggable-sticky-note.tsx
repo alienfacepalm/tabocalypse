@@ -1,4 +1,4 @@
-import { MoveDiagonal2, Pin, PinOff } from "lucide-react";
+import { List, MoveDiagonal2, Pin, PinOff } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { measureHudCanvasSize } from "../lib/hud-layout";
 import { clampStickyNoteSize, type IStickyNotePosition } from "../lib/settings";
@@ -22,6 +22,8 @@ export function DraggableStickyNote({
   zIndexBase,
   onCommit,
   onTogglePin,
+  onToggleNotesList,
+  notesListPanelVisible,
   onFocus,
   children,
 }: {
@@ -31,6 +33,8 @@ export function DraggableStickyNote({
   zIndexBase: number;
   onCommit: (next: IStickyNotePosition) => void;
   onTogglePin: () => void;
+  onToggleNotesList: () => void;
+  notesListPanelVisible: boolean;
   onFocus?: () => void;
   children: (slots: { resizeControl: React.ReactNode }) => React.ReactNode;
 }): React.JSX.Element {
@@ -301,6 +305,27 @@ export function DraggableStickyNote({
               ) : (
                 <Pin size={16} strokeWidth={2.25} className="rotate-45" aria-hidden />
               )}
+            </button>
+          </HudTip>
+          <HudTip
+            tip={notesListPanelVisible ? "Hide the notes list panel" : "Show the notes list panel"}
+          >
+            <button
+              type="button"
+              className={[
+                "sticky-note-list btn",
+                notesListPanelVisible ? "primary" : "ghost",
+                "icon-only",
+                "sm",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-pressed={notesListPanelVisible}
+              aria-label={notesListPanelVisible ? "Hide notes list panel" : "Show notes list panel"}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onToggleNotesList}
+            >
+              <List size={16} strokeWidth={2} aria-hidden />
             </button>
           </HudTip>
         </div>

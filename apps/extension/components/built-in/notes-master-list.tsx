@@ -23,6 +23,7 @@ export function NotesMasterList({
   onUpdateNote,
   onDeleteNote,
   onHideListPanel,
+  canHideListPanel,
 }: {
   notes: INote[];
   notePanels: INotePanel[];
@@ -31,6 +32,7 @@ export function NotesMasterList({
   onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
   onHideListPanel: () => void;
+  canHideListPanel: boolean;
 }): React.JSX.Element {
   const sortedNotes = useMemo(() => [...notes].sort((a, b) => b.updatedAt - a.updatedAt), [notes]);
 
@@ -63,16 +65,18 @@ export function NotesMasterList({
               <Plus size={16} strokeWidth={2} aria-hidden />
             </button>
           </HudTip>
-          <HudTip tip="Hide the notes list (active stickies stay on the canvas)">
-            <button
-              type="button"
-              className="btn ghost icon-only sm"
-              aria-label="Hide notes list"
-              onClick={onHideListPanel}
-            >
-              <EyeOff size={16} strokeWidth={2} aria-hidden />
-            </button>
-          </HudTip>
+          {canHideListPanel ? (
+            <HudTip tip="Hide the notes list (active stickies stay on the canvas)">
+              <button
+                type="button"
+                className="btn ghost icon-only sm"
+                aria-label="Hide notes list"
+                onClick={onHideListPanel}
+              >
+                <EyeOff size={16} strokeWidth={2} aria-hidden />
+              </button>
+            </HudTip>
+          ) : null}
         </span>
       </div>
       <HudPanelBody bodyOverflow={false} className="flex min-h-0 flex-col">

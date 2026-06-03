@@ -7,22 +7,13 @@ import {
   searchPlaceholderHumorRank,
 } from "../../lib/search-placeholder-leads";
 import { buildSearchAssistUrl, buildWebSearchUrl } from "../../lib/search-assist-urls";
+import {
+  SEARCH_ASSIST_DESTINATION_LABELS,
+  SEARCH_ENGINE_LABELS,
+} from "../../lib/search-engine-options";
 import type { ISettings, THumorIntensity } from "../../lib/settings";
 import { HudPanelTitle } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
-
-const SEARCH_ENGINE_LABELS: Record<ISettings["searchEngine"], string> = {
-  ddg: "DuckDuckGo",
-  google: "Google",
-  bing: "Bing",
-};
-
-/** User-facing names for the assist destination (not raw URL paths). */
-const SEARCH_ASSIST_DESTINATION_LABELS: Record<ISettings["searchEngine"], string> = {
-  ddg: "Duck.ai",
-  google: "Google AI in Search",
-  bing: "Bing Copilot Search",
-};
 
 export function SearchWidget({
   engine,

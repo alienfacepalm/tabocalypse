@@ -6,13 +6,14 @@ import { coerceCryptoChartDays } from "../lib/crypto/crypto-chart-days";
 import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coingecko-background";
 import { TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW } from "../lib/crypto/crypto-coingecko-message";
 import {
-  coercePrivilegedFetchJsonHeaders,
   TABOCALYPSE_PRIV_FETCH_BYTES,
   TABOCALYPSE_PRIV_FETCH_JSON,
+  TABOCALYPSE_PRIV_FETCH_TEXT,
 } from "../lib/privileged-extension-fetch";
 import {
   privilegedFetchBytesInBackground,
   privilegedFetchJsonInBackground,
+  privilegedFetchTextInBackground,
 } from "../lib/privileged-extension-fetch-handler";
 
 async function getMeta(): Promise<TAlarmMeta> {
@@ -48,12 +49,10 @@ export default defineBackground(() => {
       }
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_JSON && typeof m.url === "string") {
-      const rawHeaders =
-        m.headers != null && typeof m.headers === "object" && !Array.isArray(m.headers)
-          ? (m.headers as Record<string, string>)
-          : undefined;
-      const headers = coercePrivilegedFetchJsonHeaders(m.url, rawHeaders);
-      return privilegedFetchJsonInBackground(m.url, headers);
+      return privilegedFetchJsonInBackground(m.url);
+    }
+    if (m.type === TABOCALYPSE_PRIV_FETCH_TEXT && typeof m.url === "string") {
+      return privilegedFetchTextInBackground(m.url);
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_BYTES && typeof m.url === "string") {
       return privilegedFetchBytesInBackground(m.url);

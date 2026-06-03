@@ -113,7 +113,7 @@ export function WeatherConditionIcon({
   );
 }
 
-/** Map 2lakes.app buoy `condition` text to a Lucide icon for the lakes panel. */
+/** Map lake buoy condition / wind summary text to a Lucide icon for the lakes panel. */
 export function pickBuoyConditionIcon(condition: string): LucideIcon {
   const c = condition.toLowerCase();
   if (c.includes("thunder")) return CloudLightning;

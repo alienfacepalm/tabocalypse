@@ -252,28 +252,32 @@
   }
 
   .sticky-note-tack-row {
-    @apply flex items-start px-1 pt-1;
+    @apply flex items-start justify-between px-1 pt-1;
   }
 
-  .sticky-note-tack.btn {
+  .sticky-note-tack.btn,
+  .sticky-note-list.btn {
     @apply shrink-0;
     color: rgb(120 85 20);
   }
 
-  .sticky-note-tack.btn.primary {
+  .sticky-note-tack.btn.primary,
+  .sticky-note-list.btn.primary {
     @apply border-0;
     background: rgb(28 24 14);
     color: rgb(255 255 255);
     box-shadow: 2px 2px 0 rgb(0 0 0 / 0.28);
   }
 
-  .sticky-note-tack.btn.primary:hover {
+  .sticky-note-tack.btn.primary:hover,
+  .sticky-note-list.btn.primary:hover {
     background: rgb(45 38 22);
     color: rgb(255 255 255);
     filter: none;
   }
 
-  .sticky-note-tack.btn.primary:active {
+  .sticky-note-tack.btn.primary:active,
+  .sticky-note-list.btn.primary:active {
     background: rgb(22 18 10);
     color: rgb(255 255 255);
     filter: none;
@@ -675,9 +679,9 @@
     @apply text-red-300;
   }
 
-  /* Crypto % + sparklines: pale reds / capped accent greens wash out on light glass. */
+  /* Crypto % + sparklines: semantic green/red so gains read consistently across palettes. */
   .crypto-trend-up {
-    @apply text-accent;
+    @apply text-green-400;
   }
 
   .crypto-trend-down {
