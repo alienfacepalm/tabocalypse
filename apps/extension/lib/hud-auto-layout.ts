@@ -37,6 +37,7 @@ export const HUD_AUTO_LAYOUT_PANEL_PRIORITY: Record<THudPanelId, number> = {
   pluginDeck: 12,
   crypto: 20,
   speedTest: 21,
+  aiChat: 22,
 };
 
 const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
@@ -46,6 +47,7 @@ const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
   weather: "weather",
   crypto: "crypto",
   speedTest: "speedTest",
+  aiChat: "aiChat",
   topSites: "topSites",
   bookmarksStrip: "bookmarksStrip",
   notes: "notes",

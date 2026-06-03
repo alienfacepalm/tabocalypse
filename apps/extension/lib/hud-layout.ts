@@ -6,6 +6,7 @@ export type THudPanelId =
   | "weather"
   | "crypto"
   | "speedTest"
+  | "aiChat"
   | "topSites"
   | "bookmarksStrip"
   | "notes"
@@ -35,6 +36,7 @@ export const HUD_PANEL_IDS: THudPanelId[] = [
   "weather",
   "crypto",
   "speedTest",
+  "aiChat",
   "topSites",
   "bookmarksStrip",
   "notes",
@@ -49,6 +51,7 @@ export const DEFAULT_HUD_PANEL_POSITIONS: Record<THudPanelId, IHudPanelPosition>
   weather: { xPct: 34, yPct: 2 },
   crypto: { xPct: 70, yPct: 32 },
   speedTest: { xPct: 70, yPct: 58 },
+  aiChat: { xPct: 70, yPct: 78 },
   topSites: { xPct: 34, yPct: 22 },
   bookmarksStrip: { xPct: 34, yPct: 40 },
   pluginDeck: { xPct: 34, yPct: 58 },
@@ -64,6 +67,7 @@ export const HUD_PANEL_DEFAULT_SIZE_PX: Record<THudPanelId, { widthPx: number; h
     weather: { widthPx: 576, heightPx: 280 },
     crypto: { widthPx: 448, heightPx: 240 },
     speedTest: { widthPx: 352, heightPx: 220 },
+    aiChat: { widthPx: 384, heightPx: 320 },
     topSites: { widthPx: 576, heightPx: 240 },
     bookmarksStrip: { widthPx: 576, heightPx: 240 },
     pluginDeck: { widthPx: 896, heightPx: 320 },
@@ -96,6 +100,7 @@ export const HUD_PANEL_WIDTH_CLASSES: Record<THudPanelId, string> = {
   weather: "w-[min(36rem,calc(100vw-2rem))]",
   crypto: "w-[min(28rem,calc(100vw-2rem))]",
   speedTest: "w-[min(22rem,calc(100vw-2rem))]",
+  aiChat: "w-[min(24rem,calc(100vw-2rem))]",
   topSites: "w-[min(36rem,calc(100vw-2rem))]",
   bookmarksStrip: "w-[min(36rem,calc(100vw-2rem))]",
   pluginDeck: "w-[min(56rem,calc(100vw-2rem))]",
@@ -113,6 +118,7 @@ export const HUD_PANEL_SIZE_LIMITS: Record<
   weather: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   crypto: { minW: 280, maxW: 1200, minH: 160, maxH: 1600 },
   speedTest: { minW: 260, maxW: 1200, minH: 160, maxH: 1600 },
+  aiChat: { minW: 280, maxW: 1200, minH: 220, maxH: 1600 },
   topSites: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   bookmarksStrip: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   pluginDeck: { minW: 320, maxW: 1600, minH: 160, maxH: 2000 },

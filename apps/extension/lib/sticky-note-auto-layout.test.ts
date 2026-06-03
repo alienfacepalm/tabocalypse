@@ -18,6 +18,7 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
   weather: true,
   crypto: false,
   speedTest: false,
+  aiChat: false,
   topSites: false,
   bookmarksStrip: false,
   tabGuilt: false,

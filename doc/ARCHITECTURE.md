@@ -4,7 +4,7 @@
 
 Tabocalypse is a **browser extension** that overrides the **new tab page** with a React UI: widgets (search, clock, weather, crypto prices, notes, todos, links, plugins, humor), settings persisted in **`browser.storage`**, and a **service worker** background script for alarms/notifications.
 
-There is **no publisher-operated backend** for core features; optional network use is **user-directed** (weather, links, BYO AI base URL). See [project conventions](../.cursor/rules/project-conventions.mdc).
+There is **no publisher-operated backend** for core features; optional network use is **user-directed** (weather, links, BYO AI base URL for settings tests and the optional AI chat widget). See [project conventions](../.cursor/rules/project-conventions.mdc).
 
 ## Packages
 

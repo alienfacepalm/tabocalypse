@@ -36,7 +36,9 @@ import {
   X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { testOpenAiCompatible } from "../../lib/ai-test";
+import { AiChatPanel } from "../../components/built-in/ai-chat-panel";
+import { ensureByoAiHostPermission } from "../../lib/byo-ai-host-permission";
+import { testOpenAiCompatible } from "../../lib/openai-compatible-chat";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { HudCanvasGrid } from "../../components/hud-canvas-grid";
 import {
@@ -169,6 +171,7 @@ type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 type TSettingsSectionJump =
   | "weather"
   | "widgets"
+  | "byoAi"
   | "optionalPermissions"
   | "topSitesPermission"
   | "bookmarksPermission"
@@ -380,6 +383,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -895,7 +899,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         ? weatherSettingsSectionRef.current
         : pendingSettingsSectionJump === "widgets"
           ? widgetsSettingsSectionRef.current
-          : optionalPermissionsSettingsSectionRef.current;
+          : pendingSettingsSectionJump === "byoAi"
+            ? byoAiSettingsSectionRef.current
+            : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -925,6 +931,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const openWidgetsSettingsSection = useCallback(() => {
     openSettingsAccordionSection("widgets");
     setPendingSettingsSectionJump("widgets");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openByoAiSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("byoAi");
+    setPendingSettingsSectionJump("byoAi");
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
@@ -1810,23 +1822,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       setAiResult("Add an API key first.");
       return;
     }
-    if (s.openaiBaseUrl.includes("api.openai.com")) {
-      const granted = await browser.permissions.contains({
-        origins: ["https://api.openai.com/*"],
-      });
-      if (!granted) {
-        const ok = await browser.permissions.request({
-          origins: ["https://api.openai.com/*"],
-        });
-        if (!ok) {
-          setAiResult("Host permission denied for api.openai.com");
-          return;
-        }
-      }
+    const perm = await ensureByoAiHostPermission(s.openaiBaseUrl);
+    if (!perm.ok) {
+      setAiResult(perm.error);
+      return;
     }
     const r = await testOpenAiCompatible({
       apiKey: s.openaiApiKey,
       baseUrl: s.openaiBaseUrl,
+      model: s.openaiModel,
     });
     setAiResult(r.ok ? r.reply : r.error);
   };
@@ -3391,6 +3395,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 </details>
 
                 <details
+                  ref={byoAiSettingsSectionRef}
                   className="acc-item"
                   open={settingsAccordionIsOpen("byoAi")}
                   onToggle={onSettingsAccordionToggle("byoAi")}
@@ -3400,8 +3405,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </summary>
                   <div className="acc-body">
                     <p className="muted sm mt-0 mb-2">
-                      OpenAI-compatible endpoints: you pay your provider. Nothing is sent without
-                      your key.
+                      OpenAI-compatible endpoints: you pay your provider. Enable the AI chat widget
+                      under Settings &gt; Widgets. Nothing is sent without your key.
                     </p>
                     <form
                       onSubmit={(e) => {
@@ -3445,6 +3450,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           void persist((cur) => ({ ...cur, openaiBaseUrl: v }));
                         }}
                         className="mt-2 w-full"
+                      />
+                      <input
+                        placeholder="Model"
+                        value={s.openaiModel}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          void persist((cur) => ({ ...cur, openaiModel: v }));
+                        }}
+                        className="mt-2 w-full"
+                        autoComplete="off"
                       />
                       <button type="submit" className="btn has-icon mt-2">
                         <Sparkles size={18} strokeWidth={2} aria-hidden />
@@ -4191,6 +4206,24 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 onCommit={(pos) => commitHudPanel("speedTest", pos)}
               >
                 <SpeedTestWidget displayLocale={hudNumberLocale} />
+              </DraggableHudPanel>
+            ) : null}
+            {s.widgets.aiChat ? (
+              <DraggableHudPanel
+                key="aiChat"
+                panelId="aiChat"
+                canvasRef={hudCanvasRef}
+                position={s.hudPanelPositions.aiChat}
+                chaotic={s.hudLayoutChaotic}
+                locked={s.hudLayoutLocked}
+                onCommit={(pos) => commitHudPanel("aiChat", pos)}
+              >
+                <AiChatPanel
+                  apiKey={s.openaiApiKey}
+                  baseUrl={s.openaiBaseUrl}
+                  model={s.openaiModel}
+                  onOpenByoAiSettings={openByoAiSettingsSection}
+                />
               </DraggableHudPanel>
             ) : null}
             {s.widgets.topSites ? (

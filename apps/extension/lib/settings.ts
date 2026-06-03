@@ -78,7 +78,8 @@ export type TWidgetKey =
   | "topSites"
   | "bookmarksStrip"
   | "tabGuilt"
-  | "humorBanner";
+  | "humorBanner"
+  | "aiChat";
 
 export interface IImportedUserPack {
   id: string;
@@ -608,6 +609,8 @@ export interface ISettings {
   openWeatherApiKey: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
+  /** OpenAI-compatible model id for BYO AI chat and tests. */
+  openaiModel: string;
   myLines: string[];
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
@@ -844,6 +847,8 @@ export interface ILocalSlice {
   weatherLakesApiKey?: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
+  /** OpenAI-compatible model id for BYO AI chat and tests. */
+  openaiModel: string;
   myLines: string[];
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
@@ -887,6 +892,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   weather: true,
   crypto: true,
   speedTest: false,
+  aiChat: false,
   topSites: false,
   bookmarksStrip: false,
   tabGuilt: false,
@@ -915,6 +921,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   weather: "Weather",
   crypto: "Crypto prices",
   speedTest: "Speed test",
+  aiChat: "AI chat",
   topSites: "Top sites",
   bookmarksStrip: "Bookmarks strip",
   tabGuilt: "Tab guilt",
@@ -1006,6 +1013,7 @@ export function defaultSettings(): ISettings {
     twoLakesApiKey: "",
     openaiApiKey: "",
     openaiBaseUrl: "https://api.openai.com/v1",
+    openaiModel: "gpt-4o-mini",
     myLines: [],
     importedPacks: [],
     importedPlugins: [],
@@ -1093,6 +1101,7 @@ function toLocal(s: ISettings): ILocalSlice {
     twoLakesApiKey: s.twoLakesApiKey,
     openaiApiKey: s.openaiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
+    openaiModel: s.openaiModel,
     myLines: s.myLines,
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
@@ -1286,6 +1295,10 @@ function mergeSettings(
     twoLakesApiKey: local?.twoLakesApiKey ?? local?.weatherLakesApiKey ?? d.twoLakesApiKey,
     openaiApiKey: local?.openaiApiKey ?? d.openaiApiKey,
     openaiBaseUrl: local?.openaiBaseUrl ?? d.openaiBaseUrl,
+    openaiModel:
+      typeof local?.openaiModel === "string" && local.openaiModel.trim().length > 0
+        ? local.openaiModel.trim()
+        : d.openaiModel,
     myLines: local?.myLines ?? d.myLines,
     importedPacks: local?.importedPacks ?? d.importedPacks,
     importedPlugins: local?.importedPlugins ?? d.importedPlugins,

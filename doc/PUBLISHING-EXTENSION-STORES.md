@@ -65,7 +65,7 @@ Official: [Safari Web Extensions](https://developer.apple.com/safari/extensions/
 
 - **Remote code** — Tabocalypse does not load remote code for core UI; declarative plugins are **JSON** interpreted by the app. Say that clearly if reviewers ask.
 - **“User data”** — Imported packs/plugins stay on device; no AlienFacepalm backend (see product rules in [project conventions](../.cursor/rules/project-conventions.mdc)).
-- **OpenAI / BYO AI** — Disclose that **optional** test sends a request to a **user-configured** host with a **user-supplied** key.
+- **OpenAI / BYO AI** — Disclose that **optional** settings tests and the **AI chat** widget send requests to a **user-configured** host with a **user-supplied** key (host permission requested per origin).
 
 ## After release
 
