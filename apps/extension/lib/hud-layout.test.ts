@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_HUD_PANEL_POSITIONS,
   HUD_LAYOUT_COLUMNS,
-  HUD_SNAP_GRID_PX,
   clampHudPanelSize,
   clampHudScalar,
   computeHudDragCanvasRectPx,
@@ -78,7 +77,6 @@ describe("clampHudPanelSize", () => {
 describe("HUD layout grid", () => {
   it("uses 12 columns", () => {
     expect(HUD_LAYOUT_COLUMNS).toBe(12);
-    expect(HUD_SNAP_GRID_PX).toBeGreaterThan(0);
   });
 
   it("fills canvas with square-ish cells", () => {

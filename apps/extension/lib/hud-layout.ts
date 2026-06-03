@@ -23,9 +23,6 @@ export interface IHudPanelPosition {
   heightPx?: number;
 }
 
-/** @deprecated Fine pixel step; grid mode uses {@link HUD_LAYOUT_COLUMNS} layout cells instead. */
-export const HUD_SNAP_GRID_PX = 24;
-
 /** Dashboard column count (see DESIGN.md fixed grid). */
 export const HUD_LAYOUT_COLUMNS = 12;
 

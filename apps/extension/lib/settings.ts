@@ -35,7 +35,6 @@ export type { TThemeMode, TThemePalette } from "./theme";
 export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 export type { TWeatherPanelView } from "./weather/weather-panel-view";
 export type { TWeatherTemperatureUnit } from "./weather/weather-units";
-export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
 

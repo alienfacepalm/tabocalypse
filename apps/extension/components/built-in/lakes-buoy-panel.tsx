@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useId, useState } from "react";
 import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
 import {
   fetchAllLakesBuoys,
-  KING_COUNTY_LAKE_BUOY_HOME_URL,
-  KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL,
   type ILakesBuoyEntry,
   type ILakesBuoySnapshot,
 } from "../../lib/weather/fetch-lakes-buoy-data";
@@ -170,27 +168,6 @@ export function LakesBuoyPanel({
           );
         })}
       </div>
-      <p className="muted text-xs leading-tight mb-0">
-        Provisional data from{" "}
-        <a
-          className="linkish"
-          href={KING_COUNTY_LAKE_BUOY_HOME_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          King County lake buoys
-        </a>
-        .{" "}
-        <a
-          className="linkish"
-          href={KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Subject to revision
-        </a>
-        .
-      </p>
     </div>
   );
 }

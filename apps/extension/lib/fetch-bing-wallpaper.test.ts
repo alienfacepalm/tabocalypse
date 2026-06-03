@@ -4,72 +4,14 @@ vi.mock("webextension-polyfill", () => ({
   default: { runtime: {} },
 }));
 
+import { peapixBingFeedUrl } from "./bing-wallpaper-country";
 import {
-  PEAPIX_BING_FEED_US,
   bingWallpaperCaptionFromEntry,
   bingWallpaperEntriesFromPeapixFeedJson,
   fetchBingWallpaperFeed,
-  fetchBingWallpaperImageUrls,
   pickDailyBingWallpaperEntry,
-  pickDailyBingWallpaperUrl,
   pickRotatingBingWallpaperEntry,
-  pickRotatingBingWallpaperUrl,
-  wallpaperUrlsFromPeapixFeedJson,
 } from "./fetch-bing-wallpaper";
-
-describe("fetchBingWallpaperImageUrls", () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => [
-          {
-            fullUrl: "https://img.peapix.com/a_1920.jpg",
-            thumbUrl: "https://img.peapix.com/a_640.jpg",
-          },
-        ],
-      }),
-    );
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-    vi.unstubAllGlobals();
-  });
-
-  it("fetches Peapix Bing feed and returns absolute image URLs", async () => {
-    const urls = await fetchBingWallpaperImageUrls("us");
-    expect(urls).toEqual(["https://img.peapix.com/a_1920.jpg"]);
-    expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
-      signal: undefined,
-      credentials: "omit",
-      cache: "no-store",
-    });
-  });
-
-  it("passes AbortSignal to fetch", async () => {
-    const ac = new AbortController();
-    await fetchBingWallpaperImageUrls("us", ac.signal);
-    expect(fetch).toHaveBeenCalledWith(PEAPIX_BING_FEED_US, {
-      signal: ac.signal,
-      credentials: "omit",
-      cache: "no-store",
-    });
-  });
-
-  it("throws on non-OK HTTP", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 503,
-        json: async () => [],
-      }),
-    );
-    await expect(fetchBingWallpaperImageUrls("us")).rejects.toThrow("HTTP 503");
-  });
-});
 
 describe("bingWallpaperEntriesFromPeapixFeedJson", () => {
   it("prefers fullUrl then imageUrl and skips non-https", () => {
@@ -96,16 +38,6 @@ describe("bingWallpaperEntriesFromPeapixFeedJson", () => {
     expect(bingWallpaperEntriesFromPeapixFeedJson(null)).toEqual([]);
     expect(bingWallpaperEntriesFromPeapixFeedJson({})).toEqual([]);
     expect(bingWallpaperEntriesFromPeapixFeedJson("nope")).toEqual([]);
-  });
-});
-
-describe("wallpaperUrlsFromPeapixFeedJson", () => {
-  it("returns image URLs from entries", () => {
-    const urls = wallpaperUrlsFromPeapixFeedJson([
-      { fullUrl: "https://img.peapix.com/x_1920.jpg" },
-      { imageUrl: "https://img.peapix.com/y.jpg", fullUrl: "" },
-    ]);
-    expect(urls).toEqual(["https://img.peapix.com/x_1920.jpg", "https://img.peapix.com/y.jpg"]);
   });
 });
 
@@ -167,53 +99,66 @@ describe("fetchBingWallpaperFeed", () => {
       },
     ]);
   });
-});
 
-describe("pickRotatingBingWallpaperUrl", () => {
-  it("rotates within the list based on time slot", () => {
-    const urls = ["a", "b", "c"];
-    expect(pickRotatingBingWallpaperUrl(urls, 0)).toBe("a");
-    const fifteenMin = 15 * 60 * 1000;
-    expect(pickRotatingBingWallpaperUrl(urls, fifteenMin)).toBe("b");
-    expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 2)).toBe("c");
-    expect(pickRotatingBingWallpaperUrl(urls, fifteenMin * 3)).toBe("a");
+  it("fetches Peapix Bing feed for the requested country", async () => {
+    const entries = await fetchBingWallpaperFeed("us");
+    expect(entries.map((e) => e.imageUrl)).toEqual(["https://img.peapix.com/a_1920.jpg"]);
+    expect(fetch).toHaveBeenCalledWith(peapixBingFeedUrl("us"), {
+      signal: undefined,
+      credentials: "omit",
+      cache: "no-store",
+    });
   });
 
-  it("honors a custom rotation interval in milliseconds", () => {
-    const urls = ["a", "b"];
-    const thirtyMin = 30 * 60 * 1000;
-    expect(pickRotatingBingWallpaperUrl(urls, thirtyMin - 1, thirtyMin)).toBe("a");
-    expect(pickRotatingBingWallpaperUrl(urls, thirtyMin, thirtyMin)).toBe("b");
+  it("passes AbortSignal to fetch", async () => {
+    const ac = new AbortController();
+    await fetchBingWallpaperFeed("us", ac.signal);
+    expect(fetch).toHaveBeenCalledWith(peapixBingFeedUrl("us"), {
+      signal: ac.signal,
+      credentials: "omit",
+      cache: "no-store",
+    });
   });
 
-  it("clamps the rotation step to at least one minute", () => {
-    const urls = ["a", "b"];
-    expect(pickRotatingBingWallpaperUrl(urls, 59_000, 30_000)).toBe("a");
-    expect(pickRotatingBingWallpaperUrl(urls, 60_000, 30_000)).toBe("b");
-  });
-});
-
-describe("pickDailyBingWallpaperUrl", () => {
-  it("is stable within a UTC day and advances daily", () => {
-    const urls = ["a", "b"];
-    const day = 24 * 60 * 60 * 1000;
-    expect(pickDailyBingWallpaperUrl(urls, 0)).toBe("a");
-    expect(pickDailyBingWallpaperUrl(urls, day - 1)).toBe("a");
-    expect(pickDailyBingWallpaperUrl(urls, day)).toBe("b");
-    expect(pickDailyBingWallpaperUrl(urls, day * 2 - 1)).toBe("b");
-    expect(pickDailyBingWallpaperUrl(urls, day * 2)).toBe("a");
+  it("throws on non-OK HTTP", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => [],
+      }),
+    );
+    await expect(fetchBingWallpaperFeed("us")).rejects.toThrow("HTTP 503");
   });
 });
 
 describe("pickRotatingBingWallpaperEntry", () => {
-  it("rotates entries with the same slot logic as URLs", () => {
-    const entries = [
-      { imageUrl: "a", title: "A", copyright: "" },
-      { imageUrl: "b", title: "B", copyright: "" },
-    ];
-    const fifteenMin = 15 * 60 * 1000;
+  const entries = [
+    { imageUrl: "a", title: "A", copyright: "" },
+    { imageUrl: "b", title: "B", copyright: "" },
+    { imageUrl: "c", title: "C", copyright: "" },
+  ];
+
+  it("rotates within the list based on time slot", () => {
     expect(pickRotatingBingWallpaperEntry(entries, 0).imageUrl).toBe("a");
-    expect(pickRotatingBingWallpaperEntry(entries, fifteenMin).title).toBe("B");
+    const fifteenMin = 15 * 60 * 1000;
+    expect(pickRotatingBingWallpaperEntry(entries, fifteenMin).imageUrl).toBe("b");
+    expect(pickRotatingBingWallpaperEntry(entries, fifteenMin * 2).imageUrl).toBe("c");
+    expect(pickRotatingBingWallpaperEntry(entries, fifteenMin * 3).imageUrl).toBe("a");
+  });
+
+  it("honors a custom rotation interval in milliseconds", () => {
+    const pair = entries.slice(0, 2);
+    const thirtyMin = 30 * 60 * 1000;
+    expect(pickRotatingBingWallpaperEntry(pair, thirtyMin - 1, thirtyMin).imageUrl).toBe("a");
+    expect(pickRotatingBingWallpaperEntry(pair, thirtyMin, thirtyMin).imageUrl).toBe("b");
+  });
+
+  it("clamps the rotation step to at least one minute", () => {
+    const pair = entries.slice(0, 2);
+    expect(pickRotatingBingWallpaperEntry(pair, 59_000, 30_000).imageUrl).toBe("a");
+    expect(pickRotatingBingWallpaperEntry(pair, 60_000, 30_000).imageUrl).toBe("b");
   });
 });
 
@@ -225,6 +170,9 @@ describe("pickDailyBingWallpaperEntry", () => {
     ];
     const day = 24 * 60 * 60 * 1000;
     expect(pickDailyBingWallpaperEntry(entries, 0).imageUrl).toBe("a");
+    expect(pickDailyBingWallpaperEntry(entries, day - 1).imageUrl).toBe("a");
     expect(pickDailyBingWallpaperEntry(entries, day).imageUrl).toBe("b");
+    expect(pickDailyBingWallpaperEntry(entries, day * 2 - 1).imageUrl).toBe("b");
+    expect(pickDailyBingWallpaperEntry(entries, day * 2).imageUrl).toBe("a");
   });
 });

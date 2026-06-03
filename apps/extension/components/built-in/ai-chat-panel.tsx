@@ -79,7 +79,7 @@ export function AiChatPanel({
     }
     const perm = await ensureByoAiHostPermission(baseUrl);
     if (!perm.ok) {
-      showToast({ message: perm.error, variant: "error" });
+      showToast({ message: perm.error, variant: "error", persist: true });
       return;
     }
 
@@ -104,6 +104,7 @@ export function AiChatPanel({
           gemini: geminiApiKey,
         }),
         variant: "error",
+        persist: true,
       });
       return;
     }

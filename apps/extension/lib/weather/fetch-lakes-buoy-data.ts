@@ -9,11 +9,7 @@ import {
   type IKingCountyLakeBuoyRow,
 } from "./parse-king-county-lake-buoy-map-data";
 
-export {
-  KING_COUNTY_LAKE_BUOY_HOME_URL,
-  KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
-  KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL,
-} from "./parse-king-county-lake-buoy-map-data";
+export { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./parse-king-county-lake-buoy-map-data";
 
 export interface ILakesBuoySnapshot {
   location: string;

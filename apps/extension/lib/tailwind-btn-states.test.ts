@@ -31,6 +31,17 @@ describe("tailwind.css shared button states", () => {
     expect(css).toContain(".linkish:active");
   });
 
+  it("defines light-mode toast surfaces aligned with HUD glass panels", () => {
+    const css = readFileSync(tailwindCssPath, "utf8");
+    for (const needle of [
+      '[data-theme="light"] .toast',
+      '[data-theme="light"] .toast.toast-error',
+      '[data-theme="light"] .toast.toast-warn',
+    ]) {
+      expect(css, `missing ${needle}`).toContain(needle);
+    }
+  });
+
   it("defines :hover and :active for shared corner resize grips", () => {
     const css = readFileSync(tailwindCssPath, "utf8");
     for (const needle of [

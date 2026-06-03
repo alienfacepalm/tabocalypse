@@ -13,8 +13,10 @@ import { resolveHudToastPresentation, type THudToastVariant } from "../lib/hud-t
 export type THudToastShowOptions = {
   message: string;
   variant?: THudToastVariant;
-  /** Override auto-dismiss (ms). */
+  /** Override auto-dismiss (ms). Ignored when `persist` is true. */
   durationMs?: number;
+  /** Stay visible until the user clicks dismiss. */
+  persist?: boolean;
 };
 
 export type THudToastHandle = {
@@ -68,8 +70,9 @@ export const HudToastProvider = React.forwardRef<
     (opts: THudToastShowOptions) => {
       const id = newToastId();
       const variant = opts.variant ?? "error";
-      const durationMs = opts.durationMs ?? DEFAULT_DURATION_MS[variant];
       setToasts((prev) => [...prev, { id, message: opts.message, variant }]);
+      if (opts.persist) return;
+      const durationMs = opts.durationMs ?? DEFAULT_DURATION_MS[variant];
       const timer = setTimeout(() => dismiss(id), durationMs);
       timersRef.current.set(id, timer);
     },
@@ -134,7 +137,7 @@ function HudToastViewport({
             className={`pointer-events-auto ${presentation.className}`}
             style={presentation.style}
           >
-            <p className="m-0 max-w-[min(22rem,calc(100vw-2rem))] text-sm leading-snug">
+            <p className="m-0 max-w-[min(22rem,calc(100vw-2rem))] text-sm leading-snug text-inherit">
               {toast.message}
             </p>
             <button

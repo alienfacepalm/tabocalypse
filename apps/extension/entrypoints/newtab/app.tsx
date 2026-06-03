@@ -2830,8 +2830,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <p className="muted sm mb-2 mt-4">2 Lakes</p>
                       <p className="muted text-xs mb-2 mt-0">
                         Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget with
-                        provisional buoy readings from King County (Lake Washington and Lake
-                        Sammamish).
+                        buoy readings from King County (Lake Washington and Lake Sammamish).
                       </p>
                       <div className="row wrap gap-2">
                         <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">

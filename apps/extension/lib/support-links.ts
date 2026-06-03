@@ -1,9 +1,6 @@
 import browser from "webextension-polyfill";
 import { parseConfiguredSupportLinks, type ISupportAction } from "./parse-configured-support-links";
 
-export type { ISupportAction, TSupportLinkKind } from "./parse-configured-support-links";
-export { parseConfiguredSupportLinks } from "./parse-configured-support-links";
-
 /**
  * Build-time URLs — set in `.env` (see [.env.example](.env.example)).
  * WXT exposes env vars prefixed with `WXT_` to the client.

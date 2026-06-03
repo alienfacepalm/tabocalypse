@@ -1,8 +1,6 @@
 import browser from "webextension-polyfill";
 import { byoAiHostOriginPattern, byoAiHostPermissionHostname } from "./byo-ai-base-url";
 
-export { byoAiHostOriginPattern, byoAiHostPermissionHostname } from "./byo-ai-base-url";
-
 /**
  * Ensures the extension may fetch the user-configured BYO host.
  * Requires matching `optional_host_permissions` in `wxt.config.ts`.

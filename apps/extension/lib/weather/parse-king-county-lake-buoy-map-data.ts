@@ -2,12 +2,6 @@
 export const KING_COUNTY_LAKE_BUOY_MAP_DATA_URL =
   "https://green2.kingcounty.gov/lake-buoy/GenerateMapData.aspx";
 
-export const KING_COUNTY_LAKE_BUOY_HOME_URL =
-  "https://green2.kingcounty.gov/lake-buoy/default.aspx";
-
-export const KING_COUNTY_LAKE_BUOY_PROVISIONAL_URL =
-  "https://www.kingcounty.gov/services/environment/water-and-land/lakes/lake-buoy-data/provisional.aspx";
-
 export interface IKingCountyLakeBuoyRow {
   name: string;
   collectDate: string | null;
