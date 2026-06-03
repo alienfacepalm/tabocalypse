@@ -5,12 +5,18 @@ import { HudTip } from "./hud-tip";
 export interface IHudPanelDragContextValue {
   locked: boolean;
   lockedDragAttemptBump: number;
-  onTitlePointerDown: (e: React.PointerEvent<HTMLElement>) => void;
-  onTitlePointerMove: (e: React.PointerEvent<HTMLElement>) => void;
-  onTitlePointerUp: (e: React.PointerEvent<HTMLElement>) => void;
 }
 
 export const HudPanelDragContext = createContext<IHudPanelDragContextValue | null>(null);
+
+/** Elements that should not start a HUD panel drag (matches sticky-note exclusions). */
+export function isHudPanelDragExcluded(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return true;
+  return (
+    target.closest("button, textarea, input, select, a, iframe, [data-hud-no-drag], label.btn") !=
+    null
+  );
+}
 
 export function useHudPanelDrag(): IHudPanelDragContextValue | null {
   return useContext(HudPanelDragContext);
@@ -63,65 +69,40 @@ export function HudPanelTitle({ children }: { children: React.ReactNode }) {
   if (!ctx) {
     return <h3>{children}</h3>;
   }
-  const {
-    locked,
-    lockedDragAttemptBump,
-    onTitlePointerDown,
-    onTitlePointerMove,
-    onTitlePointerUp,
-  } = ctx;
+  const { locked, lockedDragAttemptBump } = ctx;
   return (
     <HudTip
       tip={
         locked
           ? "Unlock layout in the header to move this panel"
-          : "Drag the title bar to move this panel on the canvas"
+          : "Drag an open area of this panel to move it on the canvas"
       }
       bump={locked ? lockedDragAttemptBump : undefined}
     >
-      <TitleHeading
-        locked={locked}
-        onTitlePointerDown={onTitlePointerDown}
-        onTitlePointerMove={onTitlePointerMove}
-        onTitlePointerUp={onTitlePointerUp}
-      >
-        {children}
-      </TitleHeading>
+      <TitleHeading locked={locked}>{children}</TitleHeading>
     </HudTip>
   );
 }
 
 /**
- * Inline title (e.g. weather): drag handle on the word only, not adjacent toolbar controls.
+ * Inline title row (e.g. weather): heading only; drag the panel from any open area.
  */
 export function HudPanelTitleInline({ children }: { children: React.ReactNode }) {
   const ctx = useHudPanelDrag();
   if (!ctx) {
     return <h3 className="m-0">{children}</h3>;
   }
-  const {
-    locked,
-    lockedDragAttemptBump,
-    onTitlePointerDown,
-    onTitlePointerMove,
-    onTitlePointerUp,
-  } = ctx;
+  const { locked, lockedDragAttemptBump } = ctx;
   return (
     <HudTip
       tip={
         locked
           ? "Unlock layout in the header to move this panel"
-          : "Drag the title bar to move this panel on the canvas"
+          : "Drag an open area of this panel to move it on the canvas"
       }
       bump={locked ? lockedDragAttemptBump : undefined}
     >
-      <TitleHeading
-        locked={locked}
-        className="m-0"
-        onTitlePointerDown={onTitlePointerDown}
-        onTitlePointerMove={onTitlePointerMove}
-        onTitlePointerUp={onTitlePointerUp}
-      >
+      <TitleHeading locked={locked} className="m-0">
         {children}
       </TitleHeading>
     </HudTip>
@@ -132,29 +113,13 @@ function TitleHeading({
   children,
   locked,
   className,
-  onTitlePointerDown,
-  onTitlePointerMove,
-  onTitlePointerUp,
 }: {
   children: React.ReactNode;
   locked: boolean;
   className?: string;
-  onTitlePointerDown: (e: React.PointerEvent<HTMLElement>) => void;
-  onTitlePointerMove: (e: React.PointerEvent<HTMLElement>) => void;
-  onTitlePointerUp: (e: React.PointerEvent<HTMLElement>) => void;
 }): ReactElement {
-  const cursor = locked
-    ? "cursor-not-allowed select-none touch-manipulation opacity-60"
-    : "cursor-grab select-none touch-manipulation active:cursor-grabbing";
   return (
-    <h3
-      className={[className, cursor].filter(Boolean).join(" ")}
-      aria-label={locked ? "Panel layout locked" : "Drag title bar to move panel"}
-      onPointerDown={onTitlePointerDown}
-      onPointerMove={onTitlePointerMove}
-      onPointerUp={onTitlePointerUp}
-      onPointerCancel={onTitlePointerUp}
-    >
+    <h3 className={[className, locked ? "select-none opacity-60" : ""].filter(Boolean).join(" ")}>
       {children}
     </h3>
   );

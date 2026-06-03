@@ -26,6 +26,14 @@
     --color-accent: #39ff14;
     --color-accent2: #ff00ff;
     --color-accent3: #efffe3;
+    --color-weather-clear: #fbbf24;
+    --color-weather-partly: #c5e87d;
+    --color-weather-cloud: var(--color-muted);
+    --color-weather-fog: #85967c;
+    --color-weather-drizzle: #67e8f9;
+    --color-weather-rain: #38bdf8;
+    --color-weather-snow: #e0f2fe;
+    --color-weather-storm: var(--color-accent2);
     /* Themed scrollbars (.hud-scrollbar) — acid/magenta thumb on dark track */
     --scrollbar-track: rgb(0 0 0 / 0.32);
     --scrollbar-thumb: color-mix(in srgb, var(--color-accent2) 78%, rgb(15 15 15));
@@ -204,6 +212,18 @@
     @apply max-w-full;
   }
 
+  .hud-draggable-panel:not(.hud-panel-locked) .hud-panel-size-host {
+    @apply cursor-grab;
+  }
+
+  .hud-panel-dragging {
+    @apply cursor-grabbing;
+  }
+
+  .hud-panel-locked .hud-panel-size-host {
+    @apply cursor-not-allowed;
+  }
+
   .hud-panel-size-host > .card {
     @apply flex min-h-0 flex-1 flex-col overflow-hidden;
   }
@@ -241,7 +261,22 @@
   }
 
   .sticky-note-tack.btn.primary {
-    color: rgb(35 28 12);
+    @apply border-0;
+    background: rgb(28 24 14);
+    color: rgb(255 255 255);
+    box-shadow: 2px 2px 0 rgb(0 0 0 / 0.28);
+  }
+
+  .sticky-note-tack.btn.primary:hover {
+    background: rgb(45 38 22);
+    color: rgb(255 255 255);
+    filter: none;
+  }
+
+  .sticky-note-tack.btn.primary:active {
+    background: rgb(22 18 10);
+    color: rgb(255 255 255);
+    filter: none;
   }
 
   .sticky-note-pinned {
@@ -289,6 +324,14 @@
 
   .sticky-note-body {
     @apply flex min-h-0 flex-1 flex-col;
+  }
+
+  .sticky-note-editor {
+    @apply flex min-h-0 flex-1 flex-col;
+  }
+
+  .sticky-note-footer {
+    border-color: rgb(120 85 20 / 0.25);
   }
 
   .sticky-note-resize {
@@ -530,6 +573,102 @@
 
   .weather-big {
     @apply mt-1 text-[1.25rem] leading-tight;
+  }
+
+  .weather-forecast-hero {
+    @apply flex items-center gap-4 border border-border bg-surface-weak px-4 py-3 shadow-[4px_4px_0px_0px_var(--color-accent)];
+  }
+
+  .weather-temp {
+    @apply font-display text-[2rem] font-bold leading-none tracking-tight text-accent tabular-nums;
+  }
+
+  .weather-condition-label {
+    @apply mt-1.5 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted;
+  }
+
+  .weather-condition-icon {
+    @apply shrink-0;
+  }
+
+  .weather-condition-icon--clear {
+    color: var(--color-weather-clear);
+  }
+
+  .weather-condition-icon--partly {
+    color: var(--color-weather-partly);
+  }
+
+  .weather-condition-icon--cloud {
+    color: var(--color-weather-cloud);
+  }
+
+  .weather-condition-icon--fog {
+    color: var(--color-weather-fog);
+  }
+
+  .weather-condition-icon--drizzle {
+    color: var(--color-weather-drizzle);
+  }
+
+  .weather-condition-icon--rain {
+    color: var(--color-weather-rain);
+  }
+
+  .weather-condition-icon--snow {
+    color: var(--color-weather-snow);
+  }
+
+  .weather-condition-icon--storm {
+    color: var(--color-weather-storm);
+  }
+
+  .weather-location-map {
+    @apply relative mt-2 h-28 w-full overflow-hidden border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-border)];
+  }
+
+  .weather-location-map-crop {
+    @apply absolute inset-x-0 top-0 h-[115%];
+  }
+
+  .weather-location-map-img {
+    @apply h-full w-full object-cover object-top bg-input opacity-0 transition-opacity duration-500;
+  }
+
+  .weather-location-map-img.is-loaded {
+    @apply opacity-100;
+  }
+
+  .weather-lakes-stack {
+    @apply flex flex-col gap-3;
+  }
+
+  .weather-lakes-item {
+    @apply border border-border bg-surface-weak shadow-[4px_4px_0px_0px_var(--color-accent)];
+  }
+
+  .weather-lakes-item[data-open] {
+    @apply shadow-[4px_4px_0px_0px_var(--color-accent2)];
+  }
+
+  .weather-lakes-summary {
+    @apply flex w-full cursor-pointer items-center gap-4 border-0 bg-transparent px-4 py-3 text-left transition-[background-color,box-shadow] duration-100 hover:bg-surface active:bg-surface;
+  }
+
+  .weather-lakes-summary-status {
+    @apply shrink-0 font-mono text-xs uppercase tracking-widest;
+  }
+
+  .weather-lakes-body {
+    @apply border-t border-border px-4 py-3;
+  }
+
+  .weather-lakes-stat-grid {
+    @apply grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 font-mono text-sm;
+  }
+
+  .weather-lakes-stat-label {
+    @apply text-xs uppercase tracking-widest text-muted;
   }
 
   .err {

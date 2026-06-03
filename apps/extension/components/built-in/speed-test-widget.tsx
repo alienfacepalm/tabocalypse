@@ -3,15 +3,42 @@
  */
 import { Gauge } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { runCloudflareSpeedTest } from "../../lib/speed-test/run-cloudflare-speed-test";
+import {
+  runCloudflareSpeedTest,
+  type ISpeedTestProgress,
+  type TCloudflareSpeedPhase,
+} from "../../lib/speed-test/run-cloudflare-speed-test";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 
-type TSpeedPhase = "idle" | "downloading" | "uploading" | "done" | "error";
+type TSpeedPhase = "idle" | "running" | "done" | "error";
+
+function phaseLabel(phase: TCloudflareSpeedPhase | null): string {
+  switch (phase) {
+    case "warmup-download":
+      return "Warming up download…";
+    case "download":
+      return "Downloading…";
+    case "warmup-upload":
+      return "Warming up upload…";
+    case "upload":
+      return "Uploading…";
+    default:
+      return "Running…";
+  }
+}
+
+function phaseProgressPct(progress: ISpeedTestProgress | null): number {
+  if (!progress || progress.phaseTargetMs <= 0) return 0;
+  return Math.min(100, (progress.elapsedInPhaseMs / progress.phaseTargetMs) * 100);
+}
 
 export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
   const [phase, setPhase] = useState<TSpeedPhase>("idle");
   const [downMbps, setDownMbps] = useState<number | null>(null);
   const [upMbps, setUpMbps] = useState<number | null>(null);
+  const [downLive, setDownLive] = useState<number | null>(null);
+  const [upLive, setUpLive] = useState<number | null>(null);
+  const [runProgress, setRunProgress] = useState<ISpeedTestProgress | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -24,12 +51,24 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
     [displayLocale],
   );
 
+  const running = phase === "running";
+  const progressPct = phaseProgressPct(runProgress);
+
   useEffect(
     () => () => {
       abortRef.current?.abort();
     },
     [],
   );
+
+  const stop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase("idle");
+    setRunProgress(null);
+    setDownLive(null);
+    setUpLive(null);
+  };
 
   const run = async () => {
     abortRef.current?.abort();
@@ -38,27 +77,41 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
     setErr(null);
     setDownMbps(null);
     setUpMbps(null);
-    setPhase("downloading");
+    setDownLive(null);
+    setUpLive(null);
+    setRunProgress(null);
+    setPhase("running");
     try {
       const result = await runCloudflareSpeedTest({
         signal: ac.signal,
-        onPhase: (p) => setPhase(p === "download" ? "downloading" : "uploading"),
+        onProgress: (p) => {
+          setRunProgress(p);
+          if (p.downloadMbpsLive != null) setDownLive(p.downloadMbpsLive);
+          if (p.uploadMbpsLive != null) setUpLive(p.uploadMbpsLive);
+        },
       });
       setDownMbps(result.downloadMbps);
       setUpMbps(result.uploadMbps);
+      setDownLive(result.downloadMbps);
+      setUpLive(result.uploadMbps);
       setPhase("done");
+      setRunProgress(null);
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
-        setPhase("idle");
+        stop();
         return;
       }
       setErr(e instanceof Error ? e.message : "Speed test failed");
       setPhase("error");
+      setRunProgress(null);
     }
   };
 
+  const showDown = running || phase === "done" ? (downLive ?? downMbps) : downMbps;
+  const showUp = running || phase === "done" ? (upLive ?? upMbps) : upMbps;
+
   return (
-    <section className="card">
+    <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -66,21 +119,50 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
             <HudPanelTitleInline>Speed test</HudPanelTitleInline>
           </div>
         </div>
-        <p className="muted mt-1 text-xs leading-tight">
-          Approximate Mbps only: ~5 MB download then ~2 MB upload via Cloudflare when you press Go.
-        </p>
       </div>
       <HudPanelBody>
+        {running ? (
+          <div className="mb-3">
+            <div className="flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-wide text-muted">
+              <span>{phaseLabel(runProgress?.phase ?? null)}</span>
+              <span className="tabular-nums">{Math.round(progressPct)}%</span>
+            </div>
+            <div
+              className="mt-2 h-2 border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-accent)]"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progressPct)}
+              aria-label={phaseLabel(runProgress?.phase ?? null)}
+            >
+              <div
+                className="h-full bg-accent transition-[width] duration-150 ease-linear"
+                style={{ width: `${String(progressPct)}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 flex-row items-stretch gap-3">
-          <button
-            type="button"
-            className="btn primary min-h-[5.5rem] min-w-[6rem] flex-[1] basis-0 py-6 text-base tracking-widest disabled:opacity-60"
-            disabled={phase === "downloading" || phase === "uploading"}
-            aria-label="Run network speed test: download sample then upload sample through Cloudflare"
-            onClick={() => void run()}
-          >
-            {phase === "downloading" ? "Downloading…" : phase === "uploading" ? "Uploading…" : "Go"}
-          </button>
+          {running ? (
+            <button
+              type="button"
+              className="btn min-h-[5.5rem] min-w-[6rem] flex-[1] basis-0 py-6 text-base tracking-widest"
+              aria-label="Stop network speed test"
+              onClick={stop}
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn primary min-h-[5.5rem] min-w-[6rem] flex-[1] basis-0 py-6 text-base tracking-widest disabled:opacity-60"
+              aria-label="Run network speed test: warmup, download samples, then upload samples through Cloudflare"
+              onClick={() => void run()}
+            >
+              Go
+            </button>
+          )}
 
           <div className="flex min-h-[5.5rem] min-w-0 flex-[1.15] basis-0 flex-col justify-center gap-2 font-mono text-sm">
             <div className="flex items-baseline justify-between gap-3 border border-border bg-surface-weak px-3 py-2 shadow-[3px_3px_0px_0px_var(--color-accent)]">
@@ -88,12 +170,10 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
                 Down
               </span>
               <span className="tabular-nums text-accent">
-                {phase === "done" && downMbps != null ? (
+                {showDown != null ? (
                   <>
-                    {mbpsFmt.format(downMbps)} <span className="text-muted">Mbps</span>
+                    {mbpsFmt.format(showDown)} <span className="text-muted">Mbps</span>
                   </>
-                ) : phase === "downloading" || phase === "uploading" ? (
-                  <span className="text-muted">…</span>
                 ) : (
                   <span className="text-muted">—</span>
                 )}
@@ -104,12 +184,10 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
                 Up
               </span>
               <span className="tabular-nums text-[var(--color-accent2)]">
-                {phase === "done" && upMbps != null ? (
+                {showUp != null ? (
                   <>
-                    {mbpsFmt.format(upMbps)} <span className="text-muted">Mbps</span>
+                    {mbpsFmt.format(showUp)} <span className="text-muted">Mbps</span>
                   </>
-                ) : phase === "downloading" || phase === "uploading" ? (
-                  <span className="text-muted">…</span>
                 ) : (
                   <span className="text-muted">—</span>
                 )}
@@ -118,9 +196,16 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
           </div>
         </div>
 
-        {phase === "downloading" || phase === "uploading" ? (
+        {running ? (
           <p className="muted mt-3 text-xs font-mono uppercase leading-tight">
             Do not close this tab while the test runs.
+          </p>
+        ) : null}
+
+        {phase === "done" ? (
+          <p className="muted mt-3 text-xs leading-tight">
+            Result uses median throughput after connection warmup (first second of each phase
+            ignored).
           </p>
         ) : null}
 

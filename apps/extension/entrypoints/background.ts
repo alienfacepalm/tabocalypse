@@ -7,6 +7,7 @@ import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coin
 import { TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW } from "../lib/crypto/crypto-coingecko-message";
 import {
   arrayBufferToBase64,
+  coercePrivilegedFetchJsonHeaders,
   isPrivilegedExtensionFetchUrlAllowed,
   TABOCALYPSE_PRIV_FETCH_BYTES,
   TABOCALYPSE_PRIV_FETCH_JSON,
@@ -19,13 +20,34 @@ async function getMeta(): Promise<TAlarmMeta> {
   return ((r[META_KEY] as TAlarmMeta) ?? {}) as TAlarmMeta;
 }
 
-async function privilegedFetchJsonInBackground(url: string): Promise<TPrivilegedFetchJsonResponse> {
+async function privilegedFetchJsonInBackground(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<TPrivilegedFetchJsonResponse> {
   if (!isPrivilegedExtensionFetchUrlAllowed(url)) {
     return { ok: false, error: "URL not allowlisted for privileged fetch." };
   }
   try {
-    const res = await fetch(url, { credentials: "omit", cache: "no-store" });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const res = await fetch(url, {
+      credentials: "omit",
+      cache: "no-store",
+      ...(headers ? { headers } : {}),
+    });
+    if (!res.ok) {
+      let error = `HTTP ${res.status}`;
+      try {
+        const body: unknown = await res.json();
+        if (body != null && typeof body === "object" && !Array.isArray(body)) {
+          const row = body as Record<string, unknown>;
+          if (typeof row.message === "string" && row.message.trim().length > 0) {
+            error = row.message.trim();
+          }
+        }
+      } catch {
+        // keep HTTP status fallback
+      }
+      return { ok: false, error };
+    }
     const data: unknown = await res.json();
     return { ok: true, data };
   } catch (e: unknown) {
@@ -56,6 +78,7 @@ export default defineBackground(() => {
     const m = message as {
       type: unknown;
       url?: unknown;
+      headers?: unknown;
       coinId?: unknown;
       ticker?: unknown;
       days?: unknown;
@@ -77,7 +100,12 @@ export default defineBackground(() => {
       }
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_JSON && typeof m.url === "string") {
-      return privilegedFetchJsonInBackground(m.url);
+      const rawHeaders =
+        m.headers != null && typeof m.headers === "object" && !Array.isArray(m.headers)
+          ? (m.headers as Record<string, string>)
+          : undefined;
+      const headers = coercePrivilegedFetchJsonHeaders(m.url, rawHeaders);
+      return privilegedFetchJsonInBackground(m.url, headers);
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_BYTES && typeof m.url === "string") {
       return privilegedFetchBytesInBackground(m.url);

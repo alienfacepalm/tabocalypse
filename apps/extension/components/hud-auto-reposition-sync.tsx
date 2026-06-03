@@ -3,30 +3,35 @@ import type { RefObject } from "react";
 import { computeHudPanelAutoLayoutUpdates } from "../lib/hud-auto-layout";
 import type { IHudPanelPosition, THudPanelId } from "../lib/hud-layout";
 import { measureHudCanvasSize } from "../lib/hud-layout";
-import type { TWidgetKey } from "../lib/settings";
+import { computeStickyNoteResizeUpdates } from "../lib/sticky-note-auto-layout";
+import type { INotePanel, TWidgetKey } from "../lib/settings";
 import { useHudPlacementOptional } from "./hud-placement-context";
 
 const RESIZE_DEBOUNCE_MS = 200;
 const SIZE_EPSILON_PX = 2;
 
 export interface IHudAutoRepositionResult {
-  hudPanelPositions: Partial<Record<THudPanelId, IHudPanelPosition>>;
+  hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
+  notePanels?: INotePanel[];
 }
 
 /** Repositions visible HUD panels when the canvas size changes and auto-reposition is enabled. */
 export function HudAutoRepositionSync({
   canvasRef,
-  enabled,
+  hudAutoRepositionEnabled,
   widgets,
   hudPanelPositions,
+  notePanels,
   pluginDeckVisible,
   notesListPanelVisible,
   onLayout,
 }: {
   canvasRef: RefObject<HTMLElement | null>;
-  enabled: boolean;
+  /** When false, HUD panels are not auto-repacked; unpinned stickies still reflow on resize. */
+  hudAutoRepositionEnabled: boolean;
   widgets: Record<TWidgetKey, boolean>;
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
+  notePanels: readonly INotePanel[];
   pluginDeckVisible: boolean;
   notesListPanelVisible: boolean;
   onLayout: (result: IHudAutoRepositionResult) => void;
@@ -39,14 +44,23 @@ export function HudAutoRepositionSync({
   const layoutInputRef = useRef({
     widgets,
     hudPanelPositions,
+    notePanels,
     pluginDeckVisible,
     notesListPanelVisible,
+    hudAutoRepositionEnabled,
   });
-  layoutInputRef.current = { widgets, hudPanelPositions, pluginDeckVisible, notesListPanelVisible };
+  layoutInputRef.current = {
+    widgets,
+    hudPanelPositions,
+    notePanels,
+    pluginDeckVisible,
+    notesListPanelVisible,
+    hudAutoRepositionEnabled,
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !enabled) {
+    if (!canvas) {
       prevCanvasSizeRef.current = null;
       return;
     }
@@ -60,14 +74,45 @@ export function HudAutoRepositionSync({
     ): void => {
       if (hudPlacement?.dropHighlight) return;
       const input = layoutInputRef.current;
-      const hudUpdates = computeHudPanelAutoLayoutUpdates(input, widthPx, heightPx, {
-        prevCanvasW: prevW,
-        prevCanvasH: prevH,
-        onlyIfChanged: true,
+      const planInput = {
+        widgets: input.widgets,
+        hudPanelPositions: input.hudPanelPositions,
+        pluginDeckVisible: input.pluginDeckVisible,
+        notesListPanelVisible: input.notesListPanelVisible,
+      };
+
+      let effectiveHud = input.hudPanelPositions;
+      let hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> | undefined;
+      if (input.hudAutoRepositionEnabled) {
+        hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
+          prevCanvasW: prevW,
+          prevCanvasH: prevH,
+          onlyIfChanged: true,
+        });
+        if (Object.keys(hudUpdates).length > 0) {
+          effectiveHud = { ...effectiveHud, ...hudUpdates };
+        }
+      }
+
+      const stickyPlanInput = { ...planInput, hudPanelPositions: effectiveHud };
+      const notePanelUpdates = computeStickyNoteResizeUpdates(
+        input.notePanels,
+        stickyPlanInput,
+        widthPx,
+        heightPx,
+        { onlyIfChanged: true },
+      );
+
+      const hasHudUpdates = hudUpdates != null && Object.keys(hudUpdates).length > 0;
+      if (!hasHudUpdates && notePanelUpdates == null) return;
+
+      onLayoutRef.current({
+        ...(hasHudUpdates ? { hudPanelPositions: hudUpdates } : {}),
+        ...(notePanelUpdates != null ? { notePanels: notePanelUpdates } : {}),
       });
-      if (Object.keys(hudUpdates).length === 0) return;
-      onLayoutRef.current({ hudPanelPositions: hudUpdates });
-      canvasEl.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      if (hasHudUpdates) {
+        canvasEl.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }
     };
 
     const schedule = (): void => {
@@ -102,7 +147,7 @@ export function HudAutoRepositionSync({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       prevCanvasSizeRef.current = null;
     };
-  }, [canvasRef, enabled, hudPlacement?.dropHighlight]);
+  }, [canvasRef, hudPlacement?.dropHighlight]);
 
   return null;
 }

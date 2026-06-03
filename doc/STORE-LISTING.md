@@ -1,6 +1,6 @@
 # Store listing checklist
 
-For a full publishing walkthrough (Chrome, Edge, Firefox, Safari, builds, privacy), see **[`PUBLISHING-EXTENSION-STORES.md`](PUBLISHING-EXTENSION-STORES.md)**.
+For a full publishing walkthrough (Chrome, Edge, Firefox, Safari, builds, privacy), see **[`PUBLISHING-EXTENSION-STORES.md`](PUBLISHING-EXTENSION-STORES.md)** and the phased **[`CROSS-BROWSER-PUBLISHING-PLAN.md`](CROSS-BROWSER-PUBLISHING-PLAN.md)**.
 
 - **Single purpose**: Replace the new tab page with widgets and optional humor; user-imported JSON/ZIP packs are optional personal content.
 - **Permissions**: `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; `host_permissions` for Open-Meteo, CoinGecko, and Peapix/Bing imagery; optional OpenAI host for BYO API test only.

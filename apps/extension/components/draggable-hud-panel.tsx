@@ -1,6 +1,10 @@
 import { MoveDiagonal2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HudPanelDragContext, type IHudPanelDragContextValue } from "./hud-panel-drag-context";
+import {
+  HudPanelDragContext,
+  isHudPanelDragExcluded,
+  type IHudPanelDragContextValue,
+} from "./hud-panel-drag-context";
 import { useHudPlacementOptional } from "./hud-placement-context";
 import { HudTip } from "./hud-tip";
 import {
@@ -217,9 +221,10 @@ export function DraggableHudPanel({
     [chaotic, hudPlacement, locked, resolveLayoutMetrics],
   );
 
-  const onTitlePointerDown = useCallback(
+  const onPanelPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       if (e.button !== 0) return;
+      if (isHudPanelDragExcluded(e.target)) return;
       if (locked) {
         const now = Date.now();
         if (now - lockedDragAttemptAtRef.current > 1200) {
@@ -231,6 +236,7 @@ export function DraggableHudPanel({
       const canvas = canvasRef.current;
       const panel = rootRef.current;
       if (!canvas || !panel) return;
+      e.stopPropagation();
       const canvasRect = canvas.getBoundingClientRect();
       const panelRect = panel.getBoundingClientRect();
       dragRef.current = {
@@ -247,7 +253,7 @@ export function DraggableHudPanel({
     [canvasRef, locked],
   );
 
-  const onTitlePointerMove = useCallback(
+  const onPanelPointerMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       const start = dragRef.current;
       if (start === null || e.pointerId !== start.pointerId) return;
@@ -274,7 +280,7 @@ export function DraggableHudPanel({
     [canvasRef, chaotic, computeFromPointer, publishDropHighlight, resolveLayoutMetrics],
   );
 
-  const onTitlePointerUp = useCallback(
+  const onPanelPointerUp = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       if (dragRef.current === null || e.pointerId !== dragRef.current.pointerId) return;
       try {
@@ -350,11 +356,8 @@ export function DraggableHudPanel({
     () => ({
       locked,
       lockedDragAttemptBump,
-      onTitlePointerDown,
-      onTitlePointerMove,
-      onTitlePointerUp,
     }),
-    [locked, lockedDragAttemptBump, onTitlePointerDown, onTitlePointerMove, onTitlePointerUp],
+    [locked, lockedDragAttemptBump],
   );
 
   return (
@@ -362,6 +365,7 @@ export function DraggableHudPanel({
       ref={rootRef}
       className={[
         "hud-draggable-panel pointer-events-auto absolute flex max-w-full min-h-0 flex-col overflow-hidden",
+        locked ? "hud-panel-locked" : "",
         useDefaultWidth ? widthClass : "",
         effectiveH == null ? "max-h-[min(92vh,calc(100vh-5.25rem))]" : "",
       ]
@@ -378,12 +382,16 @@ export function DraggableHudPanel({
       <HudPanelDragContext.Provider value={dragContext}>
         <div
           className={[
-            "hud-panel-size-host relative flex min-h-0 flex-1 flex-col overflow-hidden",
-            // Keep body content clear of the corner handle (anchored inside this host, on the card).
+            "hud-panel-size-host relative flex min-h-0 flex-1 flex-col overflow-hidden touch-manipulation",
+            zLift ? "hud-panel-dragging" : "",
             !locked ? "pb-6 pr-6" : "",
           ]
             .filter(Boolean)
             .join(" ")}
+          onPointerDown={onPanelPointerDown}
+          onPointerMove={onPanelPointerMove}
+          onPointerUp={onPanelPointerUp}
+          onPointerCancel={onPanelPointerUp}
         >
           {children}
           {!locked ? (

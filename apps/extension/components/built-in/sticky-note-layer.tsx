@@ -50,12 +50,15 @@ export function StickyNoteLayer({
             onCommit={(pos) => onCommitPosition(np.noteId, pos)}
             onTogglePin={() => onTogglePin(np.noteId)}
           >
-            <StickyNoteEditor
-              note={note}
-              onUpdateNote={onUpdateNote}
-              onDeleteNote={onDeleteNote}
-              onMarkInactive={() => onMarkInactive(np.noteId)}
-            />
+            {({ resizeControl }) => (
+              <StickyNoteEditor
+                note={note}
+                onUpdateNote={onUpdateNote}
+                onDeleteNote={onDeleteNote}
+                onMarkInactive={() => onMarkInactive(np.noteId)}
+                footerEnd={resizeControl}
+              />
+            )}
           </DraggableStickyNote>
         );
       })}

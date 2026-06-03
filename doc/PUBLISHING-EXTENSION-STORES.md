@@ -19,10 +19,11 @@ From the repo root:
 pnpm build           # chrome_edge-mv3 + safari-mv3 + firefox-mv2 → apps/extension/output/
 pnpm build:firefox   # Firefox only → apps/extension/output/firefox-mv2/
 pnpm build:safari    # Safari MV3 only → apps/extension/output/safari-mv3/
-pnpm zip             # Store-style zip (WXT); confirm output path in the CLI log
+pnpm package:stores  # build + store zips + DELIVERABLES.md (recommended before upload)
+pnpm zip             # WXT zip for one browser (see package:stores for full matrix)
 ```
 
-For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome_edge-mv3`. The **zip** command packages the right tree for upload—verify the generated file name and contents before upload. **Safari** packaging uses Apple’s tools on a Mac against the **`safari-mv3`** folder (or **`chrome_edge-mv3`**; both are MV3 from the same build) — see [Safari (Mac App Store)](#safari-mac-app-store).
+For Chrome and Edge MV3, the **Load unpacked** folder is usually `chrome_edge-mv3`. For store uploads, run **`pnpm package:stores`** from the repo root — it builds all targets and writes zips plus a checklist under **`apps/extension/output/store-deliverables/`**. See [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md).
 
 ## Chrome Web Store
 
@@ -35,24 +36,14 @@ Official: [Chrome Web Store Developer Documentation](https://developer.chrome.co
 
 ## Microsoft Edge Add-ons
 
-- Often the **same MV3 package** as Chrome works; Edge has a separate [Partner Center](https://partner.microsoft.com/dashboard) listing.
+- Upload **`tabocalypse-{version}-edge.zip`** from `store-deliverables/` (same MV3 build as the Chrome zip; separate filename for Partner Center). Edge has a separate [Partner Center](https://partner.microsoft.com/dashboard) listing.
 - Complete the Edge-specific privacy and permissions questionnaire using the same facts as Chrome.
 
 Official: [Publish your extension to the Microsoft Edge Add-ons store](https://learn.microsoft.com/microsoft-edge/extensions-chromium/developer-guide/publish-extension).
 
 ## Firefox (AMO)
 
-1. **Add-on ID** — Replace the placeholder in `wxt.config.ts`:
-
-   ```ts
-   browser_specific_settings: {
-     gecko: {
-       id: "tabocalypse@alienfacepalm.invalid", // ← use your real reverse-ID string
-     },
-   },
-   ```
-
-   AMO requires a **unique** add-on ID; coordinate with your Mozilla account.
+1. **Add-on ID** — Set **`WXT_TABOCALYPSE_FIREFOX_GECKO_ID`** in `apps/extension/.env` (see [`.env.example`](../apps/extension/.env.example)), then rebuild. Do not ship the placeholder `tabocalypse@alienfacepalm.invalid`.
 
 2. **Signing** — Submit the **source** (or built XPI per Mozilla’s process). Follow [Extension Workshop](https://extensionworkshop.com/documentation/publish/) for signing, listed versions, and review expectations.
 

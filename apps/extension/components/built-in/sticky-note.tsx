@@ -42,7 +42,7 @@ function StickyNoteTextarea({
       onBlur={onBlur}
       placeholder="Type here…"
       rows={3}
-      className="sticky-note-textarea hud-scrollbar min-h-[3rem] w-full flex-1 resize-none overflow-y-auto"
+      className="sticky-note-textarea min-h-[3rem] w-full resize-none"
     />
   );
 }
@@ -52,11 +52,13 @@ export function StickyNoteEditor({
   onUpdateNote,
   onDeleteNote,
   onMarkInactive,
+  footerEnd,
 }: {
   note: INote;
   onUpdateNote: (noteId: string, patch: TNotePersistPatch) => void;
   onDeleteNote: (noteId: string) => void;
   onMarkInactive: () => void;
+  footerEnd?: React.ReactNode;
 }): React.JSX.Element {
   const noteText = note.text ?? "";
   const [draftText, setDraftText] = useState(noteText);
@@ -99,59 +101,10 @@ export function StickyNoteEditor({
   const title = useMemo(() => deriveNoteTitle(noteText), [noteText]);
 
   return (
-    <>
-      <div className="sticky-note-toolbar row shrink-0 justify-end gap-0.5 px-1 pb-0.5">
-        <HudTip
-          tip={
-            note.locked
-              ? "Unlock to edit or delete (you can still mark inactive)"
-              : "Lock — no edits or deletes; you can still mark inactive"
-          }
-        >
-          <button
-            type="button"
-            className={["btn", note.locked ? "primary" : "ghost", "icon-only", "sm"].join(" ")}
-            aria-pressed={note.locked}
-            aria-label={note.locked ? `Unlock ${title}` : `Lock ${title}`}
-            onPointerDown={stopToolbarButtonDrag}
-            onClick={() => onUpdateNote(note.id, { locked: !note.locked })}
-          >
-            {note.locked ? (
-              <Lock size={16} strokeWidth={2} aria-hidden />
-            ) : (
-              <Unlock size={16} strokeWidth={2} aria-hidden />
-            )}
-          </button>
-        </HudTip>
-        <HudTip tip={note.locked ? "Unlock to delete" : "Delete this note"}>
-          <button
-            type="button"
-            className="btn ghost icon-only sm"
-            aria-label={`Delete ${title}`}
-            onPointerDown={stopToolbarButtonDrag}
-            onClick={requestDelete}
-            disabled={note.locked}
-          >
-            <Trash2 size={16} strokeWidth={2} aria-hidden />
-          </button>
-        </HudTip>
-        <HudTip tip="Mark inactive (hide from canvas)">
-          <button
-            type="button"
-            className="btn ghost icon-only sm"
-            aria-label="Mark inactive"
-            onPointerDown={stopToolbarButtonDrag}
-            onClick={onMarkInactive}
-          >
-            <X size={16} strokeWidth={2} aria-hidden />
-          </button>
-        </HudTip>
-      </div>
-      <div className="sticky-note-content flex min-h-0 flex-1 flex-col px-2 pb-2 pt-0">
+    <div className="sticky-note-editor flex min-h-0 flex-1 flex-col">
+      <div className="sticky-note-content hud-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-1 pt-1">
         {note.locked ? (
-          <div className="hud-scrollbar min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words text-sm">
-            {note.text ?? ""}
-          </div>
+          <div className="whitespace-pre-wrap break-words text-sm">{note.text ?? ""}</div>
         ) : (
           <StickyNoteTextarea
             value={draftText}
@@ -164,6 +117,56 @@ export function StickyNoteEditor({
           />
         )}
       </div>
-    </>
+      <div className="sticky-note-footer sticky-note-toolbar row shrink-0 items-center justify-between gap-0.5 border-t border-solid px-1 pb-1 pt-0.5">
+        <div className="row gap-0.5">
+          <HudTip
+            tip={
+              note.locked
+                ? "Unlock to edit or delete (you can still mark inactive)"
+                : "Lock — no edits or deletes; you can still mark inactive"
+            }
+          >
+            <button
+              type="button"
+              className={["btn", note.locked ? "primary" : "ghost", "icon-only", "sm"].join(" ")}
+              aria-pressed={note.locked}
+              aria-label={note.locked ? `Unlock ${title}` : `Lock ${title}`}
+              onPointerDown={stopToolbarButtonDrag}
+              onClick={() => onUpdateNote(note.id, { locked: !note.locked })}
+            >
+              {note.locked ? (
+                <Lock size={16} strokeWidth={2} aria-hidden />
+              ) : (
+                <Unlock size={16} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          </HudTip>
+          <HudTip tip={note.locked ? "Unlock to delete" : "Delete this note"}>
+            <button
+              type="button"
+              className="btn ghost icon-only sm"
+              aria-label={`Delete ${title}`}
+              onPointerDown={stopToolbarButtonDrag}
+              onClick={requestDelete}
+              disabled={note.locked}
+            >
+              <Trash2 size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
+          <HudTip tip="Mark inactive (hide from canvas)">
+            <button
+              type="button"
+              className="btn ghost icon-only sm"
+              aria-label="Mark inactive"
+              onPointerDown={stopToolbarButtonDrag}
+              onClick={onMarkInactive}
+            >
+              <X size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
+        </div>
+        {footerEnd}
+      </div>
+    </div>
   );
 }

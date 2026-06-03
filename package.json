@@ -13,6 +13,7 @@
     "build:firefox": "pnpm --filter extension build:firefox",
     "build:safari": "pnpm --filter extension build:safari",
     "zip": "pnpm --filter extension zip",
+    "package:stores": "tsx scripts/package-store-deliverables.ts",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
     "lint": "eslint . --max-warnings=0",

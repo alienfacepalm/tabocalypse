@@ -347,12 +347,22 @@ export function resolveThemeCssVars(
     accent2 = ensureAccent2ReadableInLightMode(accent2);
   }
 
+  const muted = base["--color-muted"];
+
   return {
     ...base,
     "--color-accent": accent,
     "--color-accent2": accent2,
     "--color-accent3": accent3,
     "--color-on-accent": deriveOnAccent(accent),
+    "--color-weather-clear": "#fbbf24",
+    "--color-weather-partly": "#c5e87d",
+    "--color-weather-cloud": muted,
+    "--color-weather-fog": "#85967c",
+    "--color-weather-drizzle": "#67e8f9",
+    "--color-weather-rain": "#38bdf8",
+    "--color-weather-snow": mode === "light" ? "#0284c7" : "#e0f2fe",
+    "--color-weather-storm": accent2,
   };
 }
 

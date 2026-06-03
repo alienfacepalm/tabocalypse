@@ -8,7 +8,7 @@ import {
   type INotePanel,
   type TNotePersistPatch,
 } from "../../lib/settings";
-import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
+import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 
 function stopTitleControlPropagation(e: React.PointerEvent): void {
@@ -50,37 +50,31 @@ export function NotesMasterList({
 
   return (
     <section className="card">
-      <HudPanelTitle>
-        <span className="row min-w-0 justify-between gap-2">
-          <span className="row min-w-0 flex-1 items-center gap-1">
-            <span className="min-w-0 truncate">Notes</span>
-            <span className="row shrink-0 gap-1" onPointerDown={stopTitleControlPropagation}>
-              <HudTip tip="New note">
-                <button
-                  type="button"
-                  className="btn ghost icon-only sm"
-                  aria-label="New note"
-                  onClick={() => onCreateNote({ id: newNoteId(), tags: [] })}
-                >
-                  <Plus size={16} strokeWidth={2} aria-hidden />
-                </button>
-              </HudTip>
-            </span>
-          </span>
-          <span className="row shrink-0 gap-1" onPointerDown={stopTitleControlPropagation}>
-            <HudTip tip="Hide the notes list (active stickies stay on the canvas)">
-              <button
-                type="button"
-                className="btn ghost icon-only sm"
-                aria-label="Hide notes list"
-                onClick={onHideListPanel}
-              >
-                <EyeOff size={16} strokeWidth={2} aria-hidden />
-              </button>
-            </HudTip>
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <HudPanelTitleInline>Notes</HudPanelTitleInline>
+        <span className="row shrink-0 gap-1" onPointerDown={stopTitleControlPropagation}>
+          <HudTip tip="New note">
+            <button
+              type="button"
+              className="btn ghost icon-only sm"
+              aria-label="New note"
+              onClick={() => onCreateNote({ id: newNoteId(), tags: [] })}
+            >
+              <Plus size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
+          <HudTip tip="Hide the notes list (active stickies stay on the canvas)">
+            <button
+              type="button"
+              className="btn ghost icon-only sm"
+              aria-label="Hide notes list"
+              onClick={onHideListPanel}
+            >
+              <EyeOff size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </HudTip>
         </span>
-      </HudPanelTitle>
+      </div>
       <HudPanelBody bodyOverflow={false} className="flex min-h-0 flex-col">
         <div className="hud-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
           {sortedNotes.length === 0 ? (

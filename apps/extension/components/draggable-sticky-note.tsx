@@ -32,7 +32,7 @@ export function DraggableStickyNote({
   onCommit: (next: IStickyNotePosition) => void;
   onTogglePin: () => void;
   onFocus?: () => void;
-  children: React.ReactNode;
+  children: (slots: { resizeControl: React.ReactNode }) => React.ReactNode;
 }): React.JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [liveLayout, setLiveLayout] = useState<IStickyNotePosition | null>(null);
@@ -237,6 +237,22 @@ export function DraggableStickyNote({
     [endResize],
   );
 
+  const resizeControl = (
+    <HudTip tip="Drag to resize this sticky note">
+      <button
+        type="button"
+        className="sticky-note-resize btn ghost icon-only sm touch-manipulation"
+        aria-label="Resize sticky note"
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerUp}
+        onPointerCancel={onResizePointerUp}
+      >
+        <MoveDiagonal2 size={12} strokeWidth={2} aria-hidden />
+      </button>
+    </HudTip>
+  );
+
   return (
     <div
       ref={rootRef}
@@ -267,7 +283,7 @@ export function DraggableStickyNote({
             tip={
               pinned
                 ? "Unpin to move this sticky note"
-                : "Pin in place (locks position; you can still resize)"
+                : "Pin in place (locks position on resize; you can still resize)"
             }
           >
             <button
@@ -288,22 +304,7 @@ export function DraggableStickyNote({
             </button>
           </HudTip>
         </div>
-        <div className="sticky-note-body min-h-0 flex-1 pb-5 pr-5">{children}</div>
-        <div className="pointer-events-none absolute bottom-0 right-0 z-20">
-          <HudTip tip="Drag the corner to resize this sticky note">
-            <button
-              type="button"
-              className="sticky-note-resize btn ghost icon-only sm pointer-events-auto touch-manipulation"
-              aria-label="Resize sticky note"
-              onPointerDown={onResizePointerDown}
-              onPointerMove={onResizePointerMove}
-              onPointerUp={onResizePointerUp}
-              onPointerCancel={onResizePointerUp}
-            >
-              <MoveDiagonal2 size={12} strokeWidth={2} aria-hidden />
-            </button>
-          </HudTip>
-        </div>
+        <div className="sticky-note-body min-h-0 flex-1">{children({ resizeControl })}</div>
       </div>
     </div>
   );

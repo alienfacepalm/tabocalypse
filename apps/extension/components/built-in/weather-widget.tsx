@@ -2,22 +2,20 @@
  * Built-in HUD weather panel. Open-Meteo fetch + unit types live under `lib/weather/`.
  * Declarative plugin panels are rendered separately in `components/plugin-views.tsx`.
  */
-import { ExternalLink } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { fetchOpenMeteo, type IWeatherSnapshot } from "../../lib/weather/fetch-weather";
+import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
+import { LakesBuoyPanel } from "./lakes-buoy-panel";
+import { WeatherStaticMap } from "./weather-static-map";
+import type { TWeatherPanelView } from "../../lib/weather/weather-panel-view";
 import {
   WEATHER_TEMPERATURE_UNITS,
   WEATHER_UNIT_LABELS,
   type TWeatherTemperatureUnit,
 } from "../../lib/weather/weather-units";
-
-/** HTTPS origin embedded when the optional 2 Lakes view is enabled (Settings → Weather). */
-export const LAKES_APP_EMBED_URL = "https://2lakes.app/";
-
-type TWeatherPanelView = "forecast" | "lakes";
 
 export function WeatherWidget({
   lat,
@@ -27,6 +25,9 @@ export function WeatherWidget({
   effectiveTemperatureUnit,
   displayLocale,
   lakesEmbedEnabled,
+  lakesApiKey,
+  panelView,
+  onSelectPanelView,
   onSelectExplicitTemperatureUnit,
 }: {
   lat: number;
@@ -35,22 +36,18 @@ export function WeatherWidget({
   onOpenWeatherSettings: () => void;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
-  /** When true, adds a Forecast / 2 Lakes switch and optional iframe (Settings → Weather). */
+  /** When true, adds a Forecast / 2 Lakes switch with buoy API data (Settings → Weather). */
   lakesEmbedEnabled: boolean;
+  /** User-supplied 2lakes.app Bearer API key (Settings → Weather). */
+  lakesApiKey: string;
+  panelView: TWeatherPanelView;
+  onSelectPanelView: (next: TWeatherPanelView) => void;
   onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
 }) {
   const [w, setW] = useState<IWeatherSnapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [panelView, setPanelView] = useState<TWeatherPanelView>("forecast");
-
-  const coordFmt = useMemo(
-    () =>
-      new Intl.NumberFormat(displayLocale, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-    [displayLocale],
-  );
+  const activePanelView: TWeatherPanelView =
+    lakesEmbedEnabled && panelView === "lakes" ? "lakes" : "forecast";
 
   useEffect(() => {
     let cancelled = false;
@@ -67,41 +64,35 @@ export function WeatherWidget({
     };
   }, [lat, lon, effectiveTemperatureUnit]);
 
-  useEffect(() => {
-    if (!lakesEmbedEnabled) {
-      setPanelView("forecast");
-    }
-  }, [lakesEmbedEnabled]);
-
   return (
-    <section className="card">
+    <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <HudPanelTitleInline>Weather</HudPanelTitleInline>
-          <div className="row wrap gap-1" role="group" aria-label="Temperature units">
-            {WEATHER_TEMPERATURE_UNITS.map((u) => (
-              <HudTip
-                key={u}
-                tip={
-                  u === "celsius"
-                    ? "Always show forecast and readings in Celsius"
-                    : "Always show forecast and readings in Fahrenheit"
-                }
-              >
-                <button
-                  type="button"
-                  className={effectiveTemperatureUnit === u ? "btn primary sm" : "btn sm"}
-                  onClick={() => onSelectExplicitTemperatureUnit(u)}
+          {activePanelView === "forecast" || activePanelView === "lakes" ? (
+            <div className="row wrap gap-1" role="group" aria-label="Temperature units">
+              {WEATHER_TEMPERATURE_UNITS.map((u) => (
+                <HudTip
+                  key={u}
+                  tip={
+                    u === "celsius"
+                      ? "Always show forecast and readings in Celsius"
+                      : "Always show forecast and readings in Fahrenheit"
+                  }
                 >
-                  {WEATHER_UNIT_LABELS[u]}
-                </button>
-              </HudTip>
-            ))}
-          </div>
+                  <button
+                    type="button"
+                    className={effectiveTemperatureUnit === u ? "btn primary sm" : "btn sm"}
+                    onClick={() => onSelectExplicitTemperatureUnit(u)}
+                  >
+                    {WEATHER_UNIT_LABELS[u]}
+                  </button>
+                </HudTip>
+              ))}
+            </div>
+          ) : null}
         </div>
-        <p className="muted mt-1 text-xs leading-tight">
-          Open-Meteo (no key). Coords: {coordFmt.format(lat)}, {coordFmt.format(lon)}
-        </p>
+        <WeatherStaticMap lat={lat} lon={lon} />
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
             Default GEO location still active. Open{" "}
@@ -120,58 +111,56 @@ export function WeatherWidget({
           </p>
         ) : null}
         {lakesEmbedEnabled ? (
-          <div className="row wrap gap-1 mt-1" role="group" aria-label="Weather panel view">
-            <HudTip tip="Show the Open-Meteo forecast for your saved coordinates">
-              <button
-                type="button"
-                className={panelView === "forecast" ? "btn primary sm" : "btn sm"}
-                onClick={() => setPanelView("forecast")}
-              >
-                Forecast
-              </button>
-            </HudTip>
-            <HudTip tip="Show 2lakes.app inside this panel">
-              <button
-                type="button"
-                className={panelView === "lakes" ? "btn primary sm" : "btn sm"}
-                onClick={() => setPanelView("lakes")}
-              >
-                2 Lakes
-              </button>
-            </HudTip>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="row wrap gap-1" role="group" aria-label="Weather panel view">
+              <HudTip tip="Show the Open-Meteo forecast for your saved coordinates">
+                <button
+                  type="button"
+                  className={activePanelView === "forecast" ? "btn primary sm" : "btn sm"}
+                  onClick={() => onSelectPanelView("forecast")}
+                >
+                  Forecast
+                </button>
+              </HudTip>
+              <HudTip tip="Show Lake Sammamish and Lake Washington buoy readings">
+                <button
+                  type="button"
+                  className={activePanelView === "lakes" ? "btn primary sm" : "btn sm"}
+                  onClick={() => onSelectPanelView("lakes")}
+                >
+                  2 Lakes
+                </button>
+              </HudTip>
+            </div>
           </div>
         ) : null}
       </div>
-      <HudPanelBody bodyOverflow={panelView === "lakes" && lakesEmbedEnabled ? false : undefined}>
-        {panelView === "lakes" && lakesEmbedEnabled ? (
-          <div className="flex min-h-[min(50vh,28rem)] flex-1 flex-col gap-2">
-            <div className="row wrap gap-2 shrink-0">
-              <HudTip tip="Open 2lakes.app in a new browser tab">
-                <a
-                  className="btn sm has-icon"
-                  href={LAKES_APP_EMBED_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink size={18} strokeWidth={2} aria-hidden />
-                  <span>Open in tab</span>
-                </a>
-              </HudTip>
-            </div>
-            <iframe
-              title="2lakes.app"
-              src={LAKES_APP_EMBED_URL}
-              className="min-h-0 w-full flex-1 border border-border bg-input"
-            />
-          </div>
+      <HudPanelBody>
+        {activePanelView === "lakes" ? (
+          <LakesBuoyPanel
+            temperatureUnit={effectiveTemperatureUnit}
+            displayLocale={displayLocale}
+            lakesApiKey={lakesApiKey}
+            onOpenWeatherSettings={onOpenWeatherSettings}
+          />
         ) : (
           <>
             {err ? <p className="err">{err}</p> : null}
             {w ? (
-              <p className="weather-big">
-                {formatTemperatureValue(w.temperature, w.temperatureUnit, displayLocale)} ·{" "}
-                {w.summary}
-              </p>
+              <div
+                className="weather-forecast-hero"
+                aria-label={`${formatTemperatureValue(w.temperature, w.temperatureUnit, displayLocale)}, ${w.summary}`}
+              >
+                <WeatherConditionIcon code={w.code} />
+                <div className="min-w-0">
+                  <p className="weather-temp">
+                    {formatTemperatureValue(w.temperature, w.temperatureUnit, displayLocale)}
+                  </p>
+                  <p className="weather-condition-label">
+                    <span>{w.summary}</span>
+                  </p>
+                </div>
+              </div>
             ) : !err ? (
               <p className="muted">Loading…</p>
             ) : null}

@@ -61,6 +61,7 @@ import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { PluginDeck } from "../../components/plugin-views";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
+import { coerceWeatherPanelView } from "../../lib/weather/weather-panel-view";
 import {
   WEATHER_TEMPERATURE_UNITS,
   WEATHER_TEMPERATURE_UNIT_AUTO_LABEL,
@@ -107,6 +108,7 @@ import {
   type THudPanelId,
   type TWidgetKey,
   WIDGET_LABELS,
+  TWO_LAKES_API_KEY_SETTING_LABEL,
 } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import type { IHumorContext } from "../../lib/humor/engine";
@@ -140,6 +142,7 @@ import {
   HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT,
   isHudKeyboardShortcutTypingTarget,
 } from "../../lib/hud-auto-layout";
+import { computeStickyNoteResizeUpdates } from "../../lib/sticky-note-auto-layout";
 import {
   applyDocumentTheme,
   coerceThemeHex,
@@ -372,6 +375,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
     Partial<Record<TSettingsAccordionSection, boolean>>
   >(() => ({ presets: true }));
+  const [twoLakesApiKeyVisible, setTwoLakesApiKeyVisible] = useState(false);
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -1025,9 +1029,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const applyAutoHudLayout = useCallback(
     (result: IHudAutoRepositionResult) => {
+      if (result.hudPanelPositions == null && result.notePanels == null) return;
       void persist((cur) => ({
         ...cur,
-        hudPanelPositions: { ...cur.hudPanelPositions, ...result.hudPanelPositions },
+        ...(result.hudPanelPositions != null
+          ? { hudPanelPositions: { ...cur.hudPanelPositions, ...result.hudPanelPositions } }
+          : {}),
+        ...(result.notePanels != null ? { notePanels: result.notePanels } : {}),
       }));
     },
     [persist],
@@ -1038,20 +1046,32 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!canvas) return;
     const snap = latestSettingsRef.current;
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
-    const hudUpdates = computeHudPanelAutoLayoutUpdates(
-      {
-        widgets: snap.widgets,
-        hudPanelPositions: snap.hudPanelPositions,
-        pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
-        notesListPanelVisible: snap.notesListPanelVisible,
-      },
+    const planInput = {
+      widgets: snap.widgets,
+      hudPanelPositions: snap.hudPanelPositions,
+      pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
+      notesListPanelVisible: snap.notesListPanelVisible,
+    };
+    const hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
+      onlyIfChanged: false,
+    });
+    const effectiveHud = { ...snap.hudPanelPositions, ...hudUpdates };
+    const notePanelUpdates = computeStickyNoteResizeUpdates(
+      snap.notePanels,
+      { ...planInput, hudPanelPositions: effectiveHud },
       widthPx,
       heightPx,
       { onlyIfChanged: false },
     );
-    if (Object.keys(hudUpdates).length === 0) return;
-    applyAutoHudLayout({ hudPanelPositions: hudUpdates });
-    canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const hasHudUpdates = Object.keys(hudUpdates).length > 0;
+    if (!hasHudUpdates && notePanelUpdates == null) return;
+    applyAutoHudLayout({
+      ...(hasHudUpdates ? { hudPanelPositions: hudUpdates } : {}),
+      ...(notePanelUpdates != null ? { notePanels: notePanelUpdates } : {}),
+    });
+    if (hasHudUpdates) {
+      canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
   }, [applyAutoHudLayout]);
 
   const arrangeHudPanelsNowRef = useRef(arrangeHudPanelsNow);
@@ -2144,7 +2164,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </button>
                     <p className="muted sm mb-2">
                       Same repack as resize auto-reflow. Use the header dashboard icon or press{" "}
-                      {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Sticky notes on the canvas stay put.
+                      {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put; unpinned
+                      stickies reflow when the window resizes.
                     </p>
                     <p className="muted sm mb-2">
                       Drag panels by the grip in each header. In grid mode (not chaotic), a
@@ -2967,9 +2988,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </div>
                     <p className="muted sm mb-2 mt-4">2 Lakes</p>
                     <p className="muted text-xs mb-2 mt-0">
-                      Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget,
-                      embedding 2lakes.app in the panel. The site must allow framing; if it does
-                      not, use Open in tab from the widget instead.
+                      Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget with
+                      live buoy readings from 2lakes.app.
                     </p>
                     <div className="row wrap gap-2">
                       <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">
@@ -2983,10 +3003,68 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             }))
                           }
                         >
-                          {s.weatherLakesEmbedEnabled ? "Panel embed on" : "Panel embed off"}
+                          {s.weatherLakesEmbedEnabled ? "2 Lakes view on" : "2 Lakes view off"}
                         </button>
                       </HudTip>
                     </div>
+                    {s.weatherLakesEmbedEnabled ? (
+                      <>
+                        <p className="muted text-xs mb-2 mt-4">To activate buoy readings:</p>
+                        <ol className="muted mb-2 mt-0 list-decimal pl-5 text-xs leading-relaxed">
+                          <li>
+                            Open{" "}
+                            <a
+                              className="linkish"
+                              href="https://2lakes.app/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              2lakes.app
+                            </a>{" "}
+                            and open Settings there.
+                          </li>
+                          <li>Generate a developer API key (Bearer token).</li>
+                          <li>Paste that key in {TWO_LAKES_API_KEY_SETTING_LABEL} below.</li>
+                        </ol>
+                        <label className="block">
+                          <span className="muted text-xs">{TWO_LAKES_API_KEY_SETTING_LABEL}</span>
+                          <div className="mt-1 flex gap-2">
+                            <input
+                              type={twoLakesApiKeyVisible ? "text" : "password"}
+                              autoComplete="off"
+                              className="min-w-0 flex-1"
+                              placeholder="Bearer token from 2lakes.app Settings"
+                              value={s.twoLakesApiKey}
+                              onChange={(e) => {
+                                const twoLakesApiKey = e.target.value;
+                                void persist((cur) => ({ ...cur, twoLakesApiKey }));
+                              }}
+                            />
+                            <HudTip
+                              tip={twoLakesApiKeyVisible ? "Hide the API key" : "Show the API key"}
+                            >
+                              <button
+                                type="button"
+                                className="btn ghost icon-only sm shrink-0"
+                                aria-pressed={twoLakesApiKeyVisible}
+                                aria-label={
+                                  twoLakesApiKeyVisible
+                                    ? "Hide 2LAKES_API_KEY"
+                                    : "Show 2LAKES_API_KEY"
+                                }
+                                onClick={() => setTwoLakesApiKeyVisible((visible) => !visible)}
+                              >
+                                {twoLakesApiKeyVisible ? (
+                                  <EyeOff size={18} strokeWidth={2} aria-hidden />
+                                ) : (
+                                  <Eye size={18} strokeWidth={2} aria-hidden />
+                                )}
+                              </button>
+                            </HudTip>
+                          </div>
+                        </label>
+                      </>
+                    ) : null}
                   </div>
                 </details>
 
@@ -3622,6 +3700,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                     typeof parsed.weatherLakesEmbedEnabled === "boolean"
                                       ? parsed.weatherLakesEmbedEnabled
                                       : d.weatherLakesEmbedEnabled,
+                                  weatherPanelView: coerceWeatherPanelView(
+                                    parsed.weatherPanelView,
+                                    d.weatherPanelView,
+                                  ),
                                   cryptoChartDays: coerceCryptoChartDays(
                                     parsed.cryptoChartDays,
                                     d.cryptoChartDays,
@@ -3741,7 +3823,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             </button>
           </HudTip>
           <HudTip
-            tip={`Repack visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Sticky notes stay put`}
+            tip={`Arrange visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
           >
             <button
               type="button"
@@ -3966,9 +4048,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             />
             <HudAutoRepositionSync
               canvasRef={hudCanvasRef}
-              enabled={isHudAutoRepositionEnabled(s)}
+              hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
               widgets={s.widgets}
               hudPanelPositions={s.hudPanelPositions}
+              notePanels={s.notePanels}
               pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
               notesListPanelVisible={s.notesListPanelVisible}
               onLayout={applyAutoHudLayout}
@@ -4050,6 +4133,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     }))
                   }
                   lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
+                  lakesApiKey={s.twoLakesApiKey}
+                  panelView={s.weatherPanelView}
+                  onSelectPanelView={(weatherPanelView) =>
+                    void persist((cur) => ({ ...cur, weatherPanelView }))
+                  }
                 />
               </DraggableHudPanel>
             ) : null}

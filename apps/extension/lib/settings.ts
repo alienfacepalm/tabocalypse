@@ -18,6 +18,7 @@ import {
   type TThemePalette,
 } from "./theme";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
+import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
   coerceWeatherTemperatureUnit,
   type TWeatherTemperatureUnit,
@@ -27,10 +28,14 @@ import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-ch
 export type { TCryptoChartDays };
 export { coerceCryptoChartDays };
 
+/** Settings → Weather field label for the user-supplied 2lakes.app Bearer token. */
+export const TWO_LAKES_API_KEY_SETTING_LABEL = "2LAKES_API_KEY";
+
 export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
 
 export type { TThemeMode, TThemePalette } from "./theme";
 export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
+export type { TWeatherPanelView } from "./weather/weather-panel-view";
 export type { TWeatherTemperatureUnit } from "./weather/weather-units";
 export type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 
@@ -273,7 +278,7 @@ export function clampStickyNoteSize(
 export interface INotePanel {
   noteId: string;
   position: IStickyNotePosition;
-  /** When true, the sticky stays at {@link position} and cannot be dragged. */
+  /** When true, the sticky stays at {@link position}; cannot be dragged or auto-moved on resize. */
   pinned?: boolean;
 }
 
@@ -563,8 +568,12 @@ export interface ISettings {
   /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
-  /** When true, the Weather HUD panel can switch to an embedded 2lakes.app view (Settings → Weather). */
+  /** User-supplied 2lakes.app Bearer token (Settings → Weather, labeled 2LAKES_API_KEY). */
+  twoLakesApiKey: string;
+  /** When true, the Weather HUD panel can switch to 2 Lakes buoy readings (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
+  /** Last Forecast / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
+  weatherPanelView: TWeatherPanelView;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
   useOpenWeather: boolean;
@@ -804,6 +813,7 @@ export interface ISyncSlice {
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   weatherLakesEmbedEnabled: boolean;
+  weatherPanelView: TWeatherPanelView;
   cryptoChartDays: TCryptoChartDays;
   useOpenWeather: boolean;
   backgroundKind: ISettings["backgroundKind"];
@@ -829,6 +839,9 @@ export interface ILocalSlice {
   backgroundRotateMinutesBing?: number;
   backgroundRotateMinutesUser?: number;
   openWeatherApiKey: string;
+  twoLakesApiKey?: string;
+  /** @deprecated Migrated to `twoLakesApiKey`. */
+  weatherLakesApiKey?: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
   myLines: string[];
@@ -970,6 +983,7 @@ export function defaultSettings(): ISettings {
     clockHourFormatAuto: false,
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
+    weatherPanelView: "forecast",
     cryptoChartDays: 1,
     useOpenWeather: false,
     backgroundKind: "bing",
@@ -989,6 +1003,7 @@ export function defaultSettings(): ISettings {
     userBackgroundActiveId: null,
     bingWallpaperFramings: {},
     openWeatherApiKey: "",
+    twoLakesApiKey: "",
     openaiApiKey: "",
     openaiBaseUrl: "https://api.openai.com/v1",
     myLines: [],
@@ -1037,6 +1052,7 @@ function toSync(s: ISettings): ISyncSlice {
     clockHourFormatAuto: s.clockHourFormatAuto,
     weatherAutoGeo: s.weatherAutoGeo,
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
+    weatherPanelView: s.weatherPanelView,
     cryptoChartDays: s.cryptoChartDays,
     useOpenWeather: s.useOpenWeather,
     backgroundKind: s.backgroundKind,
@@ -1074,6 +1090,7 @@ function toLocal(s: ISettings): ILocalSlice {
     backgroundRotateMinutesBing: s.backgroundRotateMinutesBing,
     backgroundRotateMinutesUser: s.backgroundRotateMinutesUser,
     openWeatherApiKey: s.openWeatherApiKey,
+    twoLakesApiKey: s.twoLakesApiKey,
     openaiApiKey: s.openaiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
     myLines: s.myLines,
@@ -1232,6 +1249,7 @@ function mergeSettings(
         : sync === undefined
           ? d.weatherLakesEmbedEnabled
           : false,
+    weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     useOpenWeather: sync?.useOpenWeather ?? d.useOpenWeather,
     backgroundKind: sync?.backgroundKind ?? d.backgroundKind,
@@ -1265,6 +1283,7 @@ function mergeSettings(
     userBackgroundActiveId,
     bingWallpaperFramings: coerceBingWallpaperFramings(local?.bingWallpaperFramings),
     openWeatherApiKey: local?.openWeatherApiKey ?? d.openWeatherApiKey,
+    twoLakesApiKey: local?.twoLakesApiKey ?? local?.weatherLakesApiKey ?? d.twoLakesApiKey,
     openaiApiKey: local?.openaiApiKey ?? d.openaiApiKey,
     openaiBaseUrl: local?.openaiBaseUrl ?? d.openaiBaseUrl,
     myLines: local?.myLines ?? d.myLines,

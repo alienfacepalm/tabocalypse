@@ -75,7 +75,7 @@ function rowTone(changePct: number): { pct: string; spark: string } {
 function AssetRow({ row, locale }: { row: ICryptoMarketRow; locale: string }) {
   const tone = rowTone(row.changePct);
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2 first:mt-0 first:border-t-0 first:pt-0">
+    <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3 first:mt-0 first:border-t-0 first:pt-0">
       <span className="w-10 shrink-0 font-display text-xs font-bold uppercase tracking-wider text-text">
         {row.ticker}
       </span>
@@ -106,14 +106,12 @@ export function CryptoPricesWidget({
   const [btc, setBtc] = useState<ICryptoMarketRow | null>(null);
   const [eth, setEth] = useState<ICryptoMarketRow | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [showCachedHint, setShowCachedHint] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setErr(null);
     setBtc(null);
     setEth(null);
-    setShowCachedHint(false);
     void Promise.all([
       fetchCoinGeckoMarketRow("bitcoin", "BTC", chartDays),
       fetchCoinGeckoMarketRow("ethereum", "ETH", chartDays),
@@ -122,7 +120,6 @@ export function CryptoPricesWidget({
         if (!cancelled) {
           setBtc(b.row);
           setEth(e.row);
-          setShowCachedHint(b.stale || e.stale);
         }
       })
       .catch((error: unknown) => {
@@ -146,9 +143,9 @@ export function CryptoPricesWidget({
   }, [btc, eth, humorEnabled, humorIntensity, chartDays, displayLocale]);
 
   return (
-    <section className="card">
+    <section className="card flex flex-col gap-4">
       <div className="shrink-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
           <HudPanelTitleInline>Crypto</HudPanelTitleInline>
           <div className="row wrap gap-1" role="group" aria-label="Chart range">
             {CRYPTO_CHART_DAY_OPTIONS.map((d) => (
@@ -164,14 +161,6 @@ export function CryptoPricesWidget({
             ))}
           </div>
         </div>
-        <p className="muted mt-1 text-xs leading-tight">
-          CoinGecko (no key). USD spot and window %.
-          {showCachedHint ? (
-            <span className="block mt-0.5 text-[11px] leading-snug">
-              Showing cached prices while spacing requests for CoinGecko rate limits.
-            </span>
-          ) : null}
-        </p>
       </div>
       <HudPanelBody>
         {err ? <p className="err">{err}</p> : null}

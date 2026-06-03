@@ -12,6 +12,7 @@ Guides live under **`doc/`**. Start at [doc/README.md](doc/README.md); every mar
 - [doc/DEVELOPMENT.md](doc/DEVELOPMENT.md) — contributor setup and commands
 - [doc/INSTALL-LOCAL-TESTING.md](doc/INSTALL-LOCAL-TESTING.md) — load unpacked without a dev setup
 - [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md) — Chrome, Edge, Firefox (AMO), Safari (Mac App Store)
+- [doc/CROSS-BROWSER-PUBLISHING-PLAN.md](doc/CROSS-BROWSER-PUBLISHING-PLAN.md) — phased store rollout and deliverables
 - [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md) — packages and extension surfaces
 - [doc/CONTRIBUTING.md](doc/CONTRIBUTING.md) — PR workflow and checks
 - [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md) — common issues

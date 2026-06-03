@@ -7,7 +7,9 @@ vi.mock("webextension-polyfill", () => ({
 import browser from "webextension-polyfill";
 import {
   arrayBufferToBase64,
+  coercePrivilegedFetchJsonHeaders,
   isPrivilegedExtensionFetchUrlAllowed,
+  isPrivilegedFetchAllowlistError,
   privilegedExtensionFetchJson,
   TABOCALYPSE_PRIV_FETCH_JSON,
 } from "./privileged-extension-fetch";
@@ -28,6 +30,7 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
         "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1",
       ),
     ).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://2lakes.app/api/all-buoy-data")).toBe(true);
   });
 
   it("rejects other hosts and non-HTTPS schemes", () => {
@@ -36,6 +39,31 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     ).toBe(false);
     expect(isPrivilegedExtensionFetchUrlAllowed("http://peapix.com/x")).toBe(false);
     expect(isPrivilegedExtensionFetchUrlAllowed("not a url")).toBe(false);
+  });
+});
+
+describe("isPrivilegedFetchAllowlistError", () => {
+  it("matches foreground and background allowlist messages", () => {
+    expect(
+      isPrivilegedFetchAllowlistError("URL is not allowlisted for privileged extension fetch."),
+    ).toBe(true);
+    expect(isPrivilegedFetchAllowlistError("URL not allowlisted for privileged fetch.")).toBe(true);
+    expect(isPrivilegedFetchAllowlistError("HTTP 403")).toBe(false);
+  });
+});
+
+describe("coercePrivilegedFetchJsonHeaders", () => {
+  it("allows Authorization Bearer on 2lakes URLs only", () => {
+    expect(
+      coercePrivilegedFetchJsonHeaders("https://2lakes.app/api/all-buoy-data", {
+        Authorization: "Bearer secret",
+      }),
+    ).toEqual({ Authorization: "Bearer secret" });
+    expect(
+      coercePrivilegedFetchJsonHeaders("https://peapix.com/x", {
+        Authorization: "Bearer secret",
+      }),
+    ).toBeUndefined();
   });
 });
 
@@ -98,16 +126,23 @@ describe("privilegedExtensionFetchJson", () => {
     expect(data).toEqual([{ fullUrl: "https://img.peapix.com/y.jpg" }]);
   });
 
-  it("uses globalThis.browser.runtime.sendMessage when the module runtime has no sendMessage", async () => {
+  it("forwards Authorization headers for 2lakes requests", async () => {
     vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
     const sendMessage = vi.fn().mockResolvedValue({
       ok: true,
-      data: [{ fullUrl: "https://img.peapix.com/z.jpg" }],
+      data: [{ location: "Lake Sammamish Buoy" }],
     });
-    (globalThis as IGlobalWithOptionalChrome).browser = { runtime: { sendMessage } };
-    const data = await privilegedExtensionFetchJson("https://peapix.com/bing/feed?country=us");
-    expect(sendMessage).toHaveBeenCalledOnce();
-    expect(data).toEqual([{ fullUrl: "https://img.peapix.com/z.jpg" }]);
+    (globalThis as IGlobalWithOptionalChrome).chrome = {
+      runtime: { id: "ext", sendMessage },
+    };
+    await privilegedExtensionFetchJson("https://2lakes.app/api/all-buoy-data", undefined, {
+      headers: { Authorization: "Bearer test-key" },
+    });
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: TABOCALYPSE_PRIV_FETCH_JSON,
+      url: "https://2lakes.app/api/all-buoy-data",
+      headers: { Authorization: "Bearer test-key" },
+    });
   });
 });
 

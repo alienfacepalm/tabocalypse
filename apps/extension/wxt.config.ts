@@ -23,7 +23,9 @@ export default defineConfig({
     action: {},
     browser_specific_settings: {
       gecko: {
-        id: "tabocalypse@alienfacepalm.invalid",
+        id:
+          process.env.WXT_TABOCALYPSE_FIREFOX_GECKO_ID?.trim() ||
+          "tabocalypse@alienfacepalm.invalid",
         strict_min_version: "109.0",
       },
     },
