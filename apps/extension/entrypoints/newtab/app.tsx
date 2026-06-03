@@ -376,6 +376,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     Partial<Record<TSettingsAccordionSection, boolean>>
   >(() => ({ presets: true }));
   const [twoLakesApiKeyVisible, setTwoLakesApiKeyVisible] = useState(false);
+  const [byoAiApiKeyVisible, setByoAiApiKeyVisible] = useState(false);
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -3408,17 +3409,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         void runByoAiTest();
                       }}
                     >
-                      <input
-                        placeholder="API key"
-                        type="password"
-                        autoComplete="off"
-                        value={s.openaiApiKey}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          void persist((cur) => ({ ...cur, openaiApiKey: v }));
-                        }}
-                        className="w-full"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          placeholder="API key"
+                          type={byoAiApiKeyVisible ? "text" : "password"}
+                          autoComplete="off"
+                          value={s.openaiApiKey}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            void persist((cur) => ({ ...cur, openaiApiKey: v }));
+                          }}
+                          className="min-w-0 flex-1"
+                        />
+                        <HudTip tip={byoAiApiKeyVisible ? "Hide the API key" : "Show the API key"}>
+                          <button
+                            type="button"
+                            className="btn ghost icon-only sm shrink-0"
+                            aria-pressed={byoAiApiKeyVisible}
+                            aria-label={byoAiApiKeyVisible ? "Hide API key" : "Show API key"}
+                            onClick={() => setByoAiApiKeyVisible((visible) => !visible)}
+                          >
+                            {byoAiApiKeyVisible ? (
+                              <EyeOff size={18} strokeWidth={2} aria-hidden />
+                            ) : (
+                              <Eye size={18} strokeWidth={2} aria-hidden />
+                            )}
+                          </button>
+                        </HudTip>
+                      </div>
                       <input
                         placeholder="Base URL"
                         value={s.openaiBaseUrl}
