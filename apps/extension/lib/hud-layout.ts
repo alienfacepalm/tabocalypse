@@ -389,6 +389,80 @@ export function hudPositionFromCanvasRect(
 /** Default lift added while dragging/resizing so the active panel stacks above other HUD panels. */
 export const HUD_DRAG_Z_LIFT = 100;
 
+/** Per-monitor HUD panel overrides keyed by {@link getHudDisplayLayoutKey}. */
+export type THudPanelPositionsByDisplay = Record<
+  string,
+  Partial<Record<THudPanelId, IHudPanelPosition>>
+>;
+
+/** Screen geometry used to fingerprint a monitor for HUD layout storage. */
+export interface IHudDisplayScreenMetrics {
+  availLeft: number;
+  availTop: number;
+  width: number;
+  height: number;
+}
+
+const DEFAULT_SCREEN_FOR_HUD_DISPLAY_KEY: IHudDisplayScreenMetrics = {
+  availLeft: 0,
+  availTop: 0,
+  width: 1920,
+  height: 1080,
+};
+
+function readHudDisplayScreenMetrics(): IHudDisplayScreenMetrics {
+  if (typeof window === "undefined") return DEFAULT_SCREEN_FOR_HUD_DISPLAY_KEY;
+  const s = window.screen as unknown as IHudDisplayScreenMetrics;
+  return {
+    availLeft: s.availLeft,
+    availTop: s.availTop,
+    width: window.screen.width,
+    height: window.screen.height,
+  };
+}
+
+/** Stable key for the screen hosting the new tab (avail rect + size). */
+export function getHudDisplayLayoutKey(
+  screenLike: IHudDisplayScreenMetrics = readHudDisplayScreenMetrics(),
+): string {
+  return `${screenLike.availLeft},${screenLike.availTop},${screenLike.width},${screenLike.height}`;
+}
+
+/** Merges legacy/base positions with overrides for the active display. */
+export function resolveHudPanelPositionsForDisplay(
+  base: Record<THudPanelId, IHudPanelPosition>,
+  byDisplay: THudPanelPositionsByDisplay | undefined,
+  displayKey: string,
+): Record<THudPanelId, IHudPanelPosition> {
+  const displayPartial = byDisplay?.[displayKey];
+  if (!displayPartial || Object.keys(displayPartial).length === 0) {
+    return base;
+  }
+  return mergeHudPanelPositions({ ...base, ...displayPartial });
+}
+
+export function patchHudPanelPositionsForDisplay(
+  byDisplay: THudPanelPositionsByDisplay | undefined,
+  displayKey: string,
+  updates: Partial<Record<THudPanelId, IHudPanelPosition>>,
+): THudPanelPositionsByDisplay {
+  const prev = byDisplay?.[displayKey] ?? {};
+  return {
+    ...(byDisplay ?? {}),
+    [displayKey]: { ...prev, ...updates },
+  };
+}
+
+export function resetHudPanelPositionsForDisplay(
+  byDisplay: THudPanelPositionsByDisplay | undefined,
+  displayKey: string,
+): THudPanelPositionsByDisplay {
+  return {
+    ...(byDisplay ?? {}),
+    [displayKey]: { ...DEFAULT_HUD_PANEL_POSITIONS },
+  };
+}
+
 export function mergeHudPanelPositions(
   partial: Partial<Record<THudPanelId, IHudPanelPosition>> | undefined,
 ): Record<THudPanelId, IHudPanelPosition> {

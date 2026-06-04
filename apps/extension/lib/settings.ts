@@ -2,10 +2,12 @@ import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
 import {
   HUD_LAYOUT_REFERENCE_CANVAS,
+  HUD_PANEL_IDS,
   clampHudScalar,
   mergeHudPanelPositions,
   type IHudPanelPosition,
   type THudPanelId,
+  type THudPanelPositionsByDisplay,
 } from "./hud-layout";
 import {
   coerceThemeHex,
@@ -29,7 +31,7 @@ import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-ch
 export type { TCryptoChartDays };
 export { coerceCryptoChartDays };
 
-export type { IHudPanelPosition, THudPanelId } from "./hud-layout";
+export type { IHudPanelPosition, THudPanelId, THudPanelPositionsByDisplay } from "./hud-layout";
 
 export type { TThemeMode, TThemePalette } from "./theme";
 export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
@@ -655,6 +657,8 @@ export interface ISettings {
   hudLayoutAdaptiveWhileLocked: boolean;
   /** Percentage positions of draggable HUD panels within the canvas. */
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
+  /** Per-monitor overrides for {@link hudPanelPositions}; keyed by {@link getHudDisplayLayoutKey}. */
+  hudPanelPositionsByDisplay: THudPanelPositionsByDisplay;
   /**
    * After first-run settings intro is finished, stays true so the welcome callout does not repeat.
    * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
@@ -875,6 +879,38 @@ export interface ILocalSlice {
   hudLayoutAutoReposition?: boolean;
   hudLayoutAdaptiveWhileLocked?: boolean;
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
+  hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
+}
+
+function coerceSingleHudPanelPosition(raw: unknown): IHudPanelPosition | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as IHudPanelPosition;
+  if (!Number.isFinite(p.xPct) || !Number.isFinite(p.yPct)) return null;
+  const next: IHudPanelPosition = { xPct: p.xPct, yPct: p.yPct };
+  if (typeof p.widthPx === "number" && Number.isFinite(p.widthPx) && p.widthPx > 0) {
+    next.widthPx = p.widthPx;
+  }
+  if (typeof p.heightPx === "number" && Number.isFinite(p.heightPx) && p.heightPx > 0) {
+    next.heightPx = p.heightPx;
+  }
+  return next;
+}
+
+function coerceHudPanelPositionsByDisplay(raw: unknown): THudPanelPositionsByDisplay {
+  if (!raw || typeof raw !== "object") return {};
+  const out: THudPanelPositionsByDisplay = {};
+  for (const [displayKey, panelsRaw] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof displayKey !== "string" || !panelsRaw || typeof panelsRaw !== "object") continue;
+    const partial: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
+    for (const id of HUD_PANEL_IDS) {
+      const next = coerceSingleHudPanelPosition(
+        (panelsRaw as Partial<Record<THudPanelId, unknown>>)[id],
+      );
+      if (next) partial[id] = next;
+    }
+    if (Object.keys(partial).length > 0) out[displayKey] = partial;
+  }
+  return out;
 }
 
 /**
@@ -1039,6 +1075,7 @@ export function defaultSettings(): ISettings {
     hudLayoutAutoReposition: true,
     hudLayoutAdaptiveWhileLocked: true,
     hudPanelPositions: mergeHudPanelPositions(undefined),
+    hudPanelPositionsByDisplay: {},
     hasSeenSettingsIntro: false,
   };
 }
@@ -1122,6 +1159,7 @@ function toLocal(s: ISettings): ILocalSlice {
     hudLayoutAutoReposition: s.hudLayoutAutoReposition,
     hudLayoutAdaptiveWhileLocked: s.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: s.hudPanelPositions,
+    hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
   };
 }
 
@@ -1337,6 +1375,7 @@ function mergeSettings(
         ? local.hudLayoutAdaptiveWhileLocked
         : d.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
+    hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
   };
   return applyChaosPresetHumorHarmony(mergedBase);
 }

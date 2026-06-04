@@ -157,7 +157,13 @@ import {
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
-import { DEFAULT_HUD_PANEL_POSITIONS, measureHudCanvasSize } from "../../lib/hud-layout";
+import {
+  getHudDisplayLayoutKey,
+  measureHudCanvasSize,
+  patchHudPanelPositionsForDisplay,
+  resetHudPanelPositionsForDisplay,
+  resolveHudPanelPositionsForDisplay,
+} from "../../lib/hud-layout";
 import {
   computeHudPanelAutoLayoutUpdates,
   HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT,
@@ -1077,14 +1083,41 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [persist, settings.weatherAutoGeo]);
 
   const hudCanvasRef = useRef<HTMLDivElement | null>(null);
+  const displayLayoutKeyRef = useRef(getHudDisplayLayoutKey());
+  const [displayLayoutKey, setDisplayLayoutKey] = useState(() => getHudDisplayLayoutKey());
   /** When opening a pinned note temporarily unlocks HUD, dragging that note prompts to re-lock. */
   const relockPromptNoteIdAfterAutoHudUnlockRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const syncDisplayKey = (): void => {
+      const next = getHudDisplayLayoutKey();
+      displayLayoutKeyRef.current = next;
+      setDisplayLayoutKey((prev) => (prev === next ? prev : next));
+    };
+    syncDisplayKey();
+    window.addEventListener("resize", syncDisplayKey);
+    return () => window.removeEventListener("resize", syncDisplayKey);
+  }, []);
+
+  const effectiveHudPanelPositions = useMemo(
+    () =>
+      resolveHudPanelPositionsForDisplay(
+        settings.hudPanelPositions,
+        settings.hudPanelPositionsByDisplay,
+        displayLayoutKey,
+      ),
+    [settings.hudPanelPositions, settings.hudPanelPositionsByDisplay, displayLayoutKey],
+  );
 
   const commitHudPanel = useCallback(
     (id: THudPanelId, pos: IHudPanelPosition) => {
       void persist((cur) => ({
         ...cur,
-        hudPanelPositions: { ...cur.hudPanelPositions, [id]: pos },
+        hudPanelPositionsByDisplay: patchHudPanelPositionsForDisplay(
+          cur.hudPanelPositionsByDisplay,
+          displayLayoutKeyRef.current,
+          { [id]: pos },
+        ),
       }));
     },
     [persist],
@@ -1096,7 +1129,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       void persist((cur) => ({
         ...cur,
         ...(result.hudPanelPositions != null
-          ? { hudPanelPositions: { ...cur.hudPanelPositions, ...result.hudPanelPositions } }
+          ? {
+              hudPanelPositionsByDisplay: patchHudPanelPositionsForDisplay(
+                cur.hudPanelPositionsByDisplay,
+                displayLayoutKeyRef.current,
+                result.hudPanelPositions,
+              ),
+            }
           : {}),
         ...(result.notePanels != null ? { notePanels: result.notePanels } : {}),
       }));
@@ -1108,10 +1147,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const canvas = hudCanvasRef.current;
     if (!canvas) return;
     const snap = latestSettingsRef.current;
+    const displayKey = displayLayoutKeyRef.current;
+    const effectiveHud = resolveHudPanelPositionsForDisplay(
+      snap.hudPanelPositions,
+      snap.hudPanelPositionsByDisplay,
+      displayKey,
+    );
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
     const planInput = {
       widgets: snap.widgets,
-      hudPanelPositions: snap.hudPanelPositions,
+      hudPanelPositions: effectiveHud,
       pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
       notesListPanelVisible: resolveNotesListPanelVisible(
         snap.notePanels,
@@ -1121,10 +1166,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
       onlyIfChanged: false,
     });
-    const effectiveHud = { ...snap.hudPanelPositions, ...hudUpdates };
+    const effectiveHudAfterArrange = { ...effectiveHud, ...hudUpdates };
     const notePanelUpdates = computeStickyNoteResizeUpdates(
       snap.notePanels,
-      { ...planInput, hudPanelPositions: effectiveHud },
+      { ...planInput, hudPanelPositions: effectiveHudAfterArrange },
       widthPx,
       heightPx,
       { onlyIfChanged: false },
@@ -1167,7 +1212,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           }
           const position = defaultStickyNotePosition(
             cur.notePanels.length,
-            cur.hudPanelPositions.notes,
+            resolveHudPanelPositionsForDisplay(
+              cur.hudPanelPositions,
+              cur.hudPanelPositionsByDisplay,
+              displayLayoutKeyRef.current,
+            ).notes,
           );
           return {
             ...cur,
@@ -3213,7 +3262,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         onClick={() =>
                           void persist((cur) => ({
                             ...cur,
-                            hudPanelPositions: { ...DEFAULT_HUD_PANEL_POSITIONS },
+                            hudPanelPositionsByDisplay: resetHudPanelPositionsForDisplay(
+                              cur.hudPanelPositionsByDisplay,
+                              displayLayoutKeyRef.current,
+                            ),
                           }))
                         }
                       >
@@ -4246,7 +4298,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 canvasRef={hudCanvasRef}
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
                 widgets={s.widgets}
-                hudPanelPositions={s.hudPanelPositions}
+                hudPanelPositions={effectiveHudPanelPositions}
                 notePanels={s.notePanels}
                 pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
                 notesListPanelVisible={notesListPanelEffectiveVisible}
@@ -4258,7 +4310,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="todo"
                   panelId="todo"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.todo}
+                  position={effectiveHudPanelPositions.todo}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("todo", pos)}
@@ -4274,7 +4326,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="clock"
                   panelId="clock"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.clock}
+                  position={effectiveHudPanelPositions.clock}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("clock", pos)}
@@ -4293,7 +4345,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="tabGuilt"
                   panelId="tabGuilt"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.tabGuilt}
+                  position={effectiveHudPanelPositions.tabGuilt}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
@@ -4309,7 +4361,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="weather"
                   panelId="weather"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.weather}
+                  position={effectiveHudPanelPositions.weather}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("weather", pos)}
@@ -4341,7 +4393,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="crypto"
                   panelId="crypto"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.crypto}
+                  position={effectiveHudPanelPositions.crypto}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("crypto", pos)}
@@ -4362,7 +4414,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="speedTest"
                   panelId="speedTest"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.speedTest}
+                  position={effectiveHudPanelPositions.speedTest}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("speedTest", pos)}
@@ -4375,7 +4427,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="aiChat"
                   panelId="aiChat"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.aiChat}
+                  position={effectiveHudPanelPositions.aiChat}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("aiChat", pos)}
@@ -4402,7 +4454,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="topSites"
                   panelId="topSites"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.topSites}
+                  position={effectiveHudPanelPositions.topSites}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("topSites", pos)}
@@ -4418,7 +4470,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="bookmarksStrip"
                   panelId="bookmarksStrip"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.bookmarksStrip}
+                  position={effectiveHudPanelPositions.bookmarksStrip}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
@@ -4434,7 +4486,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   key="pluginDeck"
                   panelId="pluginDeck"
                   canvasRef={hudCanvasRef}
-                  position={s.hudPanelPositions.pluginDeck}
+                  position={effectiveHudPanelPositions.pluginDeck}
                   chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
@@ -4497,7 +4549,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       key="notes-master"
                       panelId="notes"
                       canvasRef={hudCanvasRef}
-                      position={s.hudPanelPositions.notes}
+                      position={effectiveHudPanelPositions.notes}
                       chaotic={s.hudLayoutChaotic}
                       locked={s.hudLayoutLocked}
                       zIndexBase={10}

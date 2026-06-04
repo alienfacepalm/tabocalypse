@@ -5,11 +5,15 @@ import {
   clampHudPanelSize,
   clampHudScalar,
   computeHudDragCanvasRectPx,
+  getHudDisplayLayoutKey,
   getHudGridDropHighlight,
   getHudLayoutMetrics,
   getHudPanelDropCellRange,
   listHudGridCells,
   mergeHudPanelPositions,
+  patchHudPanelPositionsForDisplay,
+  resetHudPanelPositionsForDisplay,
+  resolveHudPanelPositionsForDisplay,
   resolveHudDropTargetPct,
   resolveHudGridDropCellRange,
   snapPanelOriginToLayoutGrid,
@@ -61,6 +65,55 @@ describe("mergeHudPanelPositions", () => {
       todo: { xPct: 0, yPct: 0, widthPx: -1, heightPx: Number.NaN },
     });
     expect(m.todo).toEqual({ xPct: 0, yPct: 0 });
+  });
+});
+
+describe("per-display HUD panel positions", () => {
+  const displayA = getHudDisplayLayoutKey({
+    availLeft: 0,
+    availTop: 0,
+    width: 1920,
+    height: 1080,
+  });
+  const displayB = getHudDisplayLayoutKey({
+    availLeft: 1920,
+    availTop: 0,
+    width: 2560,
+    height: 1440,
+  });
+
+  it("builds a stable display key from screen geometry", () => {
+    expect(displayA).toBe("0,0,1920,1080");
+    expect(displayB).toBe("1920,0,2560,1440");
+  });
+
+  it("uses base positions until a display override exists", () => {
+    const base = mergeHudPanelPositions({ clock: { xPct: 5, yPct: 6 } });
+    expect(resolveHudPanelPositionsForDisplay(base, {}, displayA).clock).toEqual({
+      xPct: 5,
+      yPct: 6,
+    });
+  });
+
+  it("merges display-specific overrides without affecting other displays", () => {
+    const base = mergeHudPanelPositions(undefined);
+    const byDisplay = patchHudPanelPositionsForDisplay(undefined, displayA, {
+      clock: { xPct: 11, yPct: 22 },
+    });
+    expect(resolveHudPanelPositionsForDisplay(base, byDisplay, displayA).clock).toEqual({
+      xPct: 11,
+      yPct: 22,
+    });
+    expect(resolveHudPanelPositionsForDisplay(base, byDisplay, displayB).clock).toEqual(base.clock);
+  });
+
+  it("resets only the active display layout bucket", () => {
+    const byDisplay = patchHudPanelPositionsForDisplay(undefined, displayA, {
+      clock: { xPct: 11, yPct: 22 },
+    });
+    const reset = resetHudPanelPositionsForDisplay(byDisplay, displayA);
+    expect(reset[displayA]?.clock).toEqual(DEFAULT_HUD_PANEL_POSITIONS.clock);
+    expect(reset[displayA]?.todo).toEqual(DEFAULT_HUD_PANEL_POSITIONS.todo);
   });
 });
 
