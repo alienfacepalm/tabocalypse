@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyIdenticalFiles, verifyStoreZip } from "./verify-store-zip";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const extensionDir = join(root, "apps/extension");
@@ -110,6 +111,42 @@ function writeDeliverablesManifest(version: string, files: string[]): void {
   writeFileSync(join(deliverablesDir, "DELIVERABLES.md"), lines.join("\n"));
 }
 
+function verifyDeliverables(
+  version: string,
+  chromeZip: string,
+  edgeZip: string,
+  firefoxZip: string,
+  firefoxSourcesZip: string,
+  safariZipPath: string,
+): void {
+  const zipChecks: Array<{
+    label: string;
+    path: string;
+    kind?: "extension" | "firefox-sources";
+  }> = [
+    { label: "Chrome", path: chromeZip },
+    { label: "Edge", path: edgeZip },
+    { label: "Firefox", path: firefoxZip },
+    { label: "Firefox sources", path: firefoxSourcesZip, kind: "firefox-sources" },
+    { label: "Safari MV3", path: safariZipPath },
+  ];
+
+  for (const { label, path, kind } of zipChecks) {
+    const result = verifyStoreZip(path, { expectedVersion: version, kind });
+    if (!result.ok) {
+      throw new Error(
+        `${label} zip failed verification (${path}):\n  - ${result.errors.join("\n  - ")}`,
+      );
+    }
+  }
+
+  if (!verifyIdenticalFiles(chromeZip, edgeZip)) {
+    throw new Error("Edge zip must be byte-identical to the Chrome zip");
+  }
+
+  console.log("\nAll store zips verified (manifest.json at root, version matches).");
+}
+
 function main(): void {
   const version = readExtensionVersion();
   console.log(`Packaging Tabocalypse v${version} for extension stores…`);
@@ -151,6 +188,8 @@ function main(): void {
     `tabocalypse-${version}-firefox-sources.zip`,
     `tabocalypse-${version}-safari-mv3.zip`,
   ]);
+
+  verifyDeliverables(version, chromeZip, edgeZip, firefoxZip, firefoxSourcesZip, safariZipPath);
 
   console.log("\nStore deliverables ready:");
   console.log(`  ${chromeZip}`);

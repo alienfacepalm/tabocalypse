@@ -57,7 +57,10 @@ pnpm build
 pnpm build:firefox
 pnpm build:safari
 pnpm zip
+pnpm package:stores   # build + store zips + DELIVERABLES.md (Chrome, Edge, Firefox, Safari)
 ```
+
+Store upload zips land in **`apps/extension/output/store-deliverables/`**. See [doc/CROSS-BROWSER-PUBLISHING-PLAN.md](doc/CROSS-BROWSER-PUBLISHING-PLAN.md) for the phased rollout checklist.
 
 ## Quality (format, lint, tests, types)
 

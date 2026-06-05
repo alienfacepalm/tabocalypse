@@ -30,17 +30,18 @@ Use a normal **git** clone so the **Husky** `pre-commit` hook (lint-staged) can 
 
 All commands run from the **repo root** unless noted.
 
-| Command              | Purpose                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`           | WXT dev server (Chrome target by default); reload the unpacked extension after changes                  |
-| `pnpm dev:firefox`   | Same for Firefox                                                                                        |
-| `pnpm build`         | Production build → `chrome_edge-mv3/`, `safari-mv3/`, and `firefox-mv2/` under `apps/extension/output/` |
-| `pnpm build:firefox` | Firefox only → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)                    |
-| `pnpm build:safari`  | Safari MV3 only → `apps/extension/output/safari-mv3/`                                                   |
-| `pnpm zip`           | Produce a store-ready zip (see [publishing](PUBLISHING-EXTENSION-STORES.md))                            |
-| `pnpm check`         | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                             |
-| `pnpm format`        | Prettier write on tracked file types                                                                    |
-| `pnpm test`          | Vitest                                                                                                  |
+| Command               | Purpose                                                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`            | WXT dev server (Chrome target by default); reload the unpacked extension after changes                                                                          |
+| `pnpm dev:firefox`    | Same for Firefox                                                                                                                                                |
+| `pnpm build`          | Production build → `chrome_edge-mv3/`, `safari-mv3/`, and `firefox-mv2/` under `apps/extension/output/`                                                         |
+| `pnpm build:firefox`  | Firefox only → `apps/extension/output/firefox-mv2/` (WXT emits MV2 for Firefox here)                                                                            |
+| `pnpm build:safari`   | Safari MV3 only → `apps/extension/output/safari-mv3/`                                                                                                           |
+| `pnpm zip`            | WXT zip for one browser target (see [publishing](PUBLISHING-EXTENSION-STORES.md))                                                                               |
+| `pnpm package:stores` | **Recommended before store upload:** `pnpm check`, full `pnpm build`, all browser zips, and `DELIVERABLES.md` under `apps/extension/output/store-deliverables/` |
+| `pnpm check`          | Format check, ESLint (zero warnings), tests, TypeScript for SDK + extension                                                                                     |
+| `pnpm format`         | Prettier write on tracked file types                                                                                                                            |
+| `pnpm test`           | Vitest                                                                                                                                                          |
 
 **Safari** ships from **`safari-mv3`** (or **`chrome_edge-mv3`**; both are MV3) with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
 
