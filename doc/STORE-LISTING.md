@@ -39,6 +39,9 @@ Donate/support links open third-party sites only; the extension does not process
 | `api.open-meteo.com`              | Weather widget coordinates → forecast (no publisher API key)                          |
 | `api.coingecko.com`               | Crypto prices widget (public market data)                                             |
 | `peapix.com` / `img.peapix.com`   | Optional Bing spotlight background imagery                                            |
+| `duckduckgo.com`                  | Live search suggestions when Search widget is enabled and DuckDuckGo is selected      |
+| `suggestqueries.google.com`       | Live search suggestions when Search widget is enabled and Google is selected          |
+| `api.bing.com`                    | Live search suggestions when Search widget is enabled and Bing is selected            |
 | `green2.kingcounty.gov`           | Optional Pacific Northwest lake buoy weather data                                     |
 | `speed.cloudflare.com`            | Optional network speed test widget                                                    |
 | OpenAI-compatible host (optional) | BYO AI settings test and optional AI chat widget — user-supplied URL and API key only |
@@ -58,6 +61,6 @@ Typical store sizes: **1280×800** and/or **440×280** — confirm each portal�
 ## Policy alignment
 
 - **Single purpose**: Replace the new tab page with widgets and optional humor; user-imported JSON/ZIP packs are optional personal content.
-- **Permissions**: `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; `host_permissions` for Open-Meteo, CoinGecko, and Peapix/Bing imagery; optional HTTPS/localhost hosts for BYO AI (settings test and optional AI chat widget).
+- **Permissions**: `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; `host_permissions` for Open-Meteo, CoinGecko, Peapix/Bing imagery, and search suggestion endpoints for the user’s chosen engine; optional HTTPS/localhost hosts for BYO AI (settings test and optional AI chat widget).
 - **Privacy**: Summarize [PRIVACY.md](../PRIVACY.md); disclose user-directed network calls (weather, user-configured AI base URL).
 - **Fundraising**: Donate links open third-party sites; the extension does not process payments.

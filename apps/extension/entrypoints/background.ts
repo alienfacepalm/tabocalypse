@@ -49,10 +49,18 @@ export default defineBackground(() => {
       }
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_JSON && typeof m.url === "string") {
-      return privilegedFetchJsonInBackground(m.url);
+      const headers =
+        m.headers != null && typeof m.headers === "object" && !Array.isArray(m.headers)
+          ? (m.headers as Record<string, string>)
+          : undefined;
+      return privilegedFetchJsonInBackground(m.url, headers);
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_TEXT && typeof m.url === "string") {
-      return privilegedFetchTextInBackground(m.url);
+      const headers =
+        m.headers != null && typeof m.headers === "object" && !Array.isArray(m.headers)
+          ? (m.headers as Record<string, string>)
+          : undefined;
+      return privilegedFetchTextInBackground(m.url, headers);
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_BYTES && typeof m.url === "string") {
       return privilegedFetchBytesInBackground(m.url);

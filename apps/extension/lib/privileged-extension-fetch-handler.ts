@@ -55,13 +55,18 @@ export async function privilegedFetchJsonInBackground(
 
 export async function privilegedFetchTextInBackground(
   url: string,
+  headers?: Record<string, string>,
 ): Promise<TPrivilegedFetchTextResponse> {
   const normalizedUrl = resolvePrivilegedFetchUrl(url);
   if (!normalizedUrl) {
     return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
   }
   try {
-    const res = await fetch(normalizedUrl, { credentials: "omit", cache: "no-store" });
+    const res = await fetch(normalizedUrl, {
+      credentials: "omit",
+      cache: "no-store",
+      ...(headers ? { headers } : {}),
+    });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const text = await res.text();
     return { ok: true, text };

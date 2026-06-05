@@ -33,7 +33,7 @@ interface IGlobalWithOptionalChrome {
 }
 
 describe("isPrivilegedExtensionFetchUrlAllowed", () => {
-  it("allows Peapix, Open-Meteo, CoinGecko, King County, and Unsuck hosts", () => {
+  it("allows Peapix, Open-Meteo, CoinGecko, King County, Unsuck, and search suggestion hosts", () => {
     expect(isPrivilegedExtensionFetchUrlAllowed("https://peapix.com/bing/feed?country=us")).toBe(
       true,
     );
@@ -45,6 +45,17 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     ).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://www.unsuck-it.com/classics")).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://duckduckgo.com/ac/?q=tab&type=list")).toBe(
+      true,
+    );
+    expect(
+      isPrivilegedExtensionFetchUrlAllowed(
+        "https://suggestqueries.google.com/complete/search?client=firefox&q=tab",
+      ),
+    ).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://api.bing.com/osjson.aspx?query=tab")).toBe(
+      true,
+    );
     expect(
       isPrivilegedExtensionFetchUrlAllowed(
         `  ${KING_COUNTY_LAKE_BUOY_MAP_DATA_URL.toUpperCase()}  `,
@@ -224,6 +235,17 @@ describe("privilegedExtensionFetchText", () => {
     vi.unstubAllGlobals();
     Reflect.deleteProperty(browser.runtime, "sendMessage");
     vi.restoreAllMocks();
+  });
+
+  it("does not in-page fetch on extension pages when runtime messaging is unavailable", async () => {
+    vi.stubGlobal("location", { protocol: "chrome-extension:" } as unknown as Location);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(privilegedExtensionFetchText(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).rejects.toThrow(
+      PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("requests text through the background worker on extension pages", async () => {

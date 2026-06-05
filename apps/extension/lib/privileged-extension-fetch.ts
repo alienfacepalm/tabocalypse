@@ -176,6 +176,9 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "api.coingecko.com",
   "green2.kingcounty.gov",
   "www.unsuck-it.com",
+  "duckduckgo.com",
+  "suggestqueries.google.com",
+  "api.bing.com",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {
@@ -200,6 +203,7 @@ export type TPrivilegedFetchBytesRequest = {
 export type TPrivilegedFetchTextRequest = {
   type: typeof TABOCALYPSE_PRIV_FETCH_TEXT;
   url: string;
+  headers?: Record<string, string>;
 };
 
 export type TPrivilegedFetchJsonResponse =
@@ -293,6 +297,12 @@ export function useBackgroundPrivilegedFetch(): boolean {
   }
 }
 
+/** In-page fetch is unsafe on extension pages (CORS); only use off-extension surfaces. */
+function shouldUseForegroundPrivilegedFetch(): boolean {
+  if (isPrivilegedFetchExtensionSurface()) return false;
+  return !useBackgroundPrivilegedFetch();
+}
+
 function resolvePrivilegedFetchUrlInput(url: string): string {
   try {
     return normalizePrivilegedExtensionFetchUrl(url);
@@ -324,7 +334,7 @@ export async function privilegedExtensionFetchJson(
   signal?: AbortSignal,
 ): Promise<unknown> {
   const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
-  if (!useBackgroundPrivilegedFetch()) {
+  if (shouldUseForegroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, {
       signal,
       credentials: "omit",
@@ -332,6 +342,9 @@ export async function privilegedExtensionFetchJson(
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
+  }
+  if (!hasExtensionSendMessage()) {
+    throw new Error(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE);
   }
   const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchJsonResponse>(
     {
@@ -346,21 +359,27 @@ export async function privilegedExtensionFetchJson(
 export async function privilegedExtensionFetchText(
   url: string,
   signal?: AbortSignal,
+  headers?: Record<string, string>,
 ): Promise<string> {
   const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
-  if (!useBackgroundPrivilegedFetch()) {
+  if (shouldUseForegroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, {
       signal,
       credentials: "omit",
       cache: "no-store",
+      ...(headers ? { headers } : {}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
+  }
+  if (!hasExtensionSendMessage()) {
+    throw new Error(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE);
   }
   const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchTextResponse>(
     {
       type: TABOCALYPSE_PRIV_FETCH_TEXT,
       url: normalizedUrl,
+      ...(headers ? { headers } : {}),
     } satisfies TPrivilegedFetchTextRequest,
     signal,
   );
@@ -372,12 +391,15 @@ export async function privilegedExtensionFetchBytes(
   signal?: AbortSignal,
 ): Promise<{ mime: string; bytes: ArrayBuffer }> {
   const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
-  if (!useBackgroundPrivilegedFetch()) {
+  if (shouldUseForegroundPrivilegedFetch()) {
     const res = await fetch(normalizedUrl, { signal, credentials: "omit", cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const mime = res.headers.get("content-type") ?? "application/octet-stream";
     const bytes = await res.arrayBuffer();
     return { mime, bytes };
+  }
+  if (!hasExtensionSendMessage()) {
+    throw new Error(PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE);
   }
   const response = await finishPrivilegedBackgroundFetch<TPrivilegedFetchBytesResponse>(
     {
