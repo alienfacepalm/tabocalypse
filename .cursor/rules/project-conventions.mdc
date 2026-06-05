@@ -82,7 +82,8 @@ Read the skill file before following it; do not improvise when a skill applies.
 | Splitting work into small PRs | `split-to-prs` |
 | Rich side-by-side UI for data-heavy or analytical output | `canvas` |
 | Changing editor/VS Code settings | `update-cursor-settings` |
-| **tcp** — test, commit, and push | **[tcp](.cursor/skills/tcp/SKILL.md)** (user says `tcp`) |
+| **check-commit-push** — check, commit, push | **[check-commit-push](.cursor/skills/check-commit-push/SKILL.md)** (user says `ccp`, `check commit and push`) |
+| **tcp** — test, commit, and push (alias) | **[tcp](.cursor/skills/tcp/SKILL.md)** (user says `tcp`) |
 
 ## MCP servers in this workspace (prefer tools over guessing)
 
