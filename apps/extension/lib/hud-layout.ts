@@ -1,3 +1,5 @@
+import type { INotePanel } from "./settings";
+
 /** Identifiers for built-in HUD panels that support drag repositioning. */
 export type THudPanelId =
   | "todo"
@@ -395,6 +397,9 @@ export type THudPanelPositionsByDisplay = Record<
   Partial<Record<THudPanelId, IHudPanelPosition>>
 >;
 
+/** Per-monitor active stickies keyed by {@link getHudDisplayLayoutKey}. */
+export type TNotePanelsByDisplay = Record<string, INotePanel[]>;
+
 /** Screen geometry used to fingerprint a monitor for HUD layout storage. */
 export interface IHudDisplayScreenMetrics {
   availLeft: number;
@@ -461,6 +466,42 @@ export function resetHudPanelPositionsForDisplay(
     ...(byDisplay ?? {}),
     [displayKey]: { ...DEFAULT_HUD_PANEL_POSITIONS },
   };
+}
+
+/** Resolves which stickies are on-screen for the active display. */
+export function resolveNotePanelsForDisplay(
+  base: readonly INotePanel[],
+  byDisplay: TNotePanelsByDisplay | undefined,
+  displayKey: string,
+): INotePanel[] {
+  if (byDisplay && displayKey in byDisplay) {
+    return (byDisplay[displayKey] ?? []).map((panel) => ({ ...panel }));
+  }
+  return base.map((panel) => ({ ...panel }));
+}
+
+export function patchNotePanelsForDisplay(
+  byDisplay: TNotePanelsByDisplay | undefined,
+  displayKey: string,
+  panels: INotePanel[],
+): TNotePanelsByDisplay {
+  return {
+    ...(byDisplay ?? {}),
+    [displayKey]: panels.map((panel) => ({ ...panel })),
+  };
+}
+
+/** Removes a deleted note from every per-monitor sticky list. */
+export function removeNoteFromAllDisplays(
+  byDisplay: TNotePanelsByDisplay | undefined,
+  noteId: string,
+): TNotePanelsByDisplay {
+  if (!byDisplay) return {};
+  const next: TNotePanelsByDisplay = {};
+  for (const [displayKey, panels] of Object.entries(byDisplay)) {
+    next[displayKey] = panels.filter((panel) => panel.noteId !== noteId);
+  }
+  return next;
 }
 
 export function mergeHudPanelPositions(

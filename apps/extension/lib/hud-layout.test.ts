@@ -12,8 +12,10 @@ import {
   listHudGridCells,
   mergeHudPanelPositions,
   patchHudPanelPositionsForDisplay,
+  patchNotePanelsForDisplay,
   resetHudPanelPositionsForDisplay,
   resolveHudPanelPositionsForDisplay,
+  resolveNotePanelsForDisplay,
   resolveHudDropTargetPct,
   resolveHudGridDropCellRange,
   snapPanelOriginToLayoutGrid,
@@ -114,6 +116,48 @@ describe("per-display HUD panel positions", () => {
     const reset = resetHudPanelPositionsForDisplay(byDisplay, displayA);
     expect(reset[displayA]?.clock).toEqual(DEFAULT_HUD_PANEL_POSITIONS.clock);
     expect(reset[displayA]?.todo).toEqual(DEFAULT_HUD_PANEL_POSITIONS.todo);
+  });
+});
+
+describe("per-display sticky note panels", () => {
+  const displayA = getHudDisplayLayoutKey({
+    availLeft: 0,
+    availTop: 0,
+    width: 1920,
+    height: 1080,
+  });
+  const displayB = getHudDisplayLayoutKey({
+    availLeft: 1920,
+    availTop: 0,
+    width: 2560,
+    height: 1440,
+  });
+  const base = [
+    {
+      noteId: "n1",
+      position: { xPx: 100, yPx: 50, widthPx: 260, heightPx: 220 },
+    },
+  ];
+
+  it("uses base panels until a display override exists", () => {
+    expect(resolveNotePanelsForDisplay(base, {}, displayA)).toEqual(base);
+  });
+
+  it("keeps display-specific stickies without affecting other displays", () => {
+    const byDisplay = patchNotePanelsForDisplay(undefined, displayA, [
+      {
+        noteId: "n2",
+        position: { xPx: 200, yPx: 80, widthPx: 260, heightPx: 220 },
+      },
+    ]);
+    expect(resolveNotePanelsForDisplay(base, byDisplay, displayA)[0]?.noteId).toBe("n2");
+    expect(resolveNotePanelsForDisplay(base, byDisplay, displayB)).toEqual(base);
+  });
+
+  it("honors an empty override when all stickies were closed on that display", () => {
+    const byDisplay = patchNotePanelsForDisplay(undefined, displayA, []);
+    expect(resolveNotePanelsForDisplay(base, byDisplay, displayA)).toEqual([]);
+    expect(resolveNotePanelsForDisplay(base, byDisplay, displayB)).toEqual(base);
   });
 });
 

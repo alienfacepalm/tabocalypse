@@ -8,6 +8,7 @@ import {
   type IHudPanelPosition,
   type THudPanelId,
   type THudPanelPositionsByDisplay,
+  type TNotePanelsByDisplay,
 } from "./hud-layout";
 import {
   coerceThemeHex,
@@ -631,8 +632,13 @@ export interface ISettings {
   /** @deprecated Prefer `notes`; kept for storage/load migration only. */
   notesText: string;
   notes: INote[];
-  /** Active notes shown as stickies on the HUD canvas. */
+  /**
+   * Legacy/default sticky layout used when a display has no {@link notePanelsByDisplay} entry yet.
+   * Active stickies are stored per monitor in {@link notePanelsByDisplay}.
+   */
   notePanels: INotePanel[];
+  /** Per-monitor active stickies and positions; keyed by {@link getHudDisplayLayoutKey}. */
+  notePanelsByDisplay: TNotePanelsByDisplay;
   /**
    * Bump whenever {@link notePanels} is replaced (open/close/drag commit). Used to ignore stale
    * `notePanels` from `storage.onChanged` while saves are reordering (see merge on reload).
@@ -880,6 +886,9 @@ export interface ILocalSlice {
   hudLayoutAdaptiveWhileLocked?: boolean;
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
+  notePanelsByDisplay?: TNotePanelsByDisplay;
+  /** @deprecated Migrated to {@link notePanelsByDisplay} on load. */
+  notePanelPositionsByDisplay?: unknown;
 }
 
 function coerceSingleHudPanelPosition(raw: unknown): IHudPanelPosition | null {
@@ -894,6 +903,67 @@ function coerceSingleHudPanelPosition(raw: unknown): IHudPanelPosition | null {
     next.heightPx = p.heightPx;
   }
   return next;
+}
+
+function coerceNotePanelsByDisplay(
+  raw: unknown,
+  validNoteIds: ReadonlySet<string>,
+): TNotePanelsByDisplay {
+  if (!raw || typeof raw !== "object") return {};
+  const out: TNotePanelsByDisplay = {};
+  for (const [displayKey, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof displayKey !== "string") continue;
+    if (Array.isArray(value)) {
+      out[displayKey] = coerceNotePanels(value, validNoteIds);
+      continue;
+    }
+    if (!value || typeof value !== "object") continue;
+    const partial: Partial<Record<string, IStickyNotePosition>> = {};
+    for (const [noteId, posRaw] of Object.entries(value as Record<string, unknown>)) {
+      if (!validNoteIds.has(noteId)) continue;
+      const position = coerceStickyNotePosition(posRaw);
+      if (position) partial[noteId] = position;
+    }
+    if (Object.keys(partial).length > 0) {
+      const panels: INotePanel[] = [];
+      for (const [noteId, position] of Object.entries(partial)) {
+        if (position) panels.push({ noteId, position });
+      }
+      if (panels.length > 0) out[displayKey] = panels;
+    }
+  }
+  return out;
+}
+
+function migrateLegacyNotePanelPositionsByDisplay(
+  base: readonly INotePanel[],
+  raw: unknown,
+  validNoteIds: ReadonlySet<string>,
+): TNotePanelsByDisplay {
+  if (!raw || typeof raw !== "object") return {};
+  const out: TNotePanelsByDisplay = {};
+  for (const [displayKey, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (
+      typeof displayKey !== "string" ||
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      continue;
+    }
+    const partial: Partial<Record<string, IStickyNotePosition>> = {};
+    for (const [noteId, posRaw] of Object.entries(value as Record<string, unknown>)) {
+      if (!validNoteIds.has(noteId)) continue;
+      const position = coerceStickyNotePosition(posRaw);
+      if (position) partial[noteId] = position;
+    }
+    if (Object.keys(partial).length === 0) continue;
+    out[displayKey] = base.map((panel) => ({
+      ...panel,
+      position: partial[panel.noteId] ?? panel.position,
+    }));
+  }
+  return out;
 }
 
 function coerceHudPanelPositionsByDisplay(raw: unknown): THudPanelPositionsByDisplay {
@@ -1067,6 +1137,7 @@ export function defaultSettings(): ISettings {
     notesText: "",
     notes: [],
     notePanels: [],
+    notePanelsByDisplay: {},
     notePanelsEpoch: 0,
     notesListPanelVisible: true,
     todos: [],
@@ -1160,6 +1231,7 @@ function toLocal(s: ISettings): ILocalSlice {
     hudLayoutAdaptiveWhileLocked: s.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: s.hudPanelPositions,
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
+    notePanelsByDisplay: s.notePanelsByDisplay,
   };
 }
 
@@ -1376,6 +1448,16 @@ function mergeSettings(
         : d.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
+    notePanelsByDisplay: (() => {
+      const validNoteIds = new Set(mergedNotes.map((n) => n.id));
+      const direct = coerceNotePanelsByDisplay(local?.notePanelsByDisplay, validNoteIds);
+      if (Object.keys(direct).length > 0) return direct;
+      return migrateLegacyNotePanelPositionsByDisplay(
+        mergedNotePanels,
+        local?.notePanelPositionsByDisplay,
+        validNoteIds,
+      );
+    })(),
   };
   return applyChaosPresetHumorHarmony(mergedBase);
 }

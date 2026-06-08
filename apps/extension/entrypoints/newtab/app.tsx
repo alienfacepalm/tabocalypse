@@ -161,8 +161,11 @@ import {
   getHudDisplayLayoutKey,
   measureHudCanvasSize,
   patchHudPanelPositionsForDisplay,
+  patchNotePanelsForDisplay,
+  removeNoteFromAllDisplays,
   resetHudPanelPositionsForDisplay,
   resolveHudPanelPositionsForDisplay,
+  resolveNotePanelsForDisplay,
 } from "../../lib/hud-layout";
 import {
   computeHudPanelAutoLayoutUpdates,
@@ -777,10 +780,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         clearMyLinesDebouncedSaveTimer();
         const current = latestSettingsRef.current;
         const raw = typeof next === "function" ? next(current) : next;
-        const resolved: ISettings =
-          raw.notePanels !== current.notePanels
-            ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
-            : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
+        const noteLayoutChanged =
+          raw.notePanels !== current.notePanels ||
+          raw.notePanelsByDisplay !== current.notePanelsByDisplay;
+        const resolved: ISettings = noteLayoutChanged
+          ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
+          : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
         latestSettingsRef.current = resolved;
         setSettings(resolved);
         try {
@@ -1109,6 +1114,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     [settings.hudPanelPositions, settings.hudPanelPositionsByDisplay, displayLayoutKey],
   );
 
+  const effectiveNotePanels = useMemo(
+    () =>
+      resolveNotePanelsForDisplay(
+        settings.notePanels,
+        settings.notePanelsByDisplay,
+        displayLayoutKey,
+      ),
+    [settings.notePanels, settings.notePanelsByDisplay, displayLayoutKey],
+  );
+
   const commitHudPanel = useCallback(
     (id: THudPanelId, pos: IHudPanelPosition) => {
       void persist((cur) => ({
@@ -1137,7 +1152,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               ),
             }
           : {}),
-        ...(result.notePanels != null ? { notePanels: result.notePanels } : {}),
+        ...(result.notePanels != null
+          ? {
+              notePanelsByDisplay: patchNotePanelsForDisplay(
+                cur.notePanelsByDisplay,
+                displayLayoutKeyRef.current,
+                result.notePanels,
+              ),
+            }
+          : {}),
       }));
     },
     [persist],
@@ -1159,7 +1182,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       hudPanelPositions: effectiveHud,
       pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
       notesListPanelVisible: resolveNotesListPanelVisible(
-        snap.notePanels,
+        resolveNotePanelsForDisplay(snap.notePanels, snap.notePanelsByDisplay, displayKey),
         snap.notesListPanelVisible,
       ),
     };
@@ -1167,8 +1190,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       onlyIfChanged: false,
     });
     const effectiveHudAfterArrange = { ...effectiveHud, ...hudUpdates };
-    const notePanelUpdates = computeStickyNoteResizeUpdates(
+    const effectiveNotePanels = resolveNotePanelsForDisplay(
       snap.notePanels,
+      snap.notePanelsByDisplay,
+      displayKey,
+    );
+    const notePanelUpdates = computeStickyNoteResizeUpdates(
+      effectiveNotePanels,
       { ...planInput, hudPanelPositions: effectiveHudAfterArrange },
       widthPx,
       heightPx,
@@ -1202,7 +1230,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const setNoteActive = useCallback(
     (noteId: string, active: boolean) => {
       void persist((cur) => {
-        const onCanvas = cur.notePanels.some((p) => p.noteId === noteId);
+        const displayKey = displayLayoutKeyRef.current;
+        const effectivePanels = resolveNotePanelsForDisplay(
+          cur.notePanels,
+          cur.notePanelsByDisplay,
+          displayKey,
+        );
+        const onCanvas = effectivePanels.some((p) => p.noteId === noteId);
         if (active) {
           if (onCanvas) return cur;
           let hudLayoutLockedNext = cur.hudLayoutLocked;
@@ -1211,17 +1245,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             hudLayoutLockedNext = false;
           }
           const position = defaultStickyNotePosition(
-            cur.notePanels.length,
+            effectivePanels.length,
             resolveHudPanelPositionsForDisplay(
               cur.hudPanelPositions,
               cur.hudPanelPositionsByDisplay,
-              displayLayoutKeyRef.current,
+              displayKey,
             ).notes,
           );
           return {
             ...cur,
             hudLayoutLocked: hudLayoutLockedNext,
-            notePanels: [...cur.notePanels, { noteId, position }],
+            notePanelsByDisplay: patchNotePanelsForDisplay(cur.notePanelsByDisplay, displayKey, [
+              ...effectivePanels,
+              { noteId, position },
+            ]),
             notesListPanelVisible: false,
           };
         }
@@ -1231,7 +1268,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         }
         return {
           ...cur,
-          notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+          notePanelsByDisplay: patchNotePanelsForDisplay(
+            cur.notePanelsByDisplay,
+            displayKey,
+            effectivePanels.filter((p) => p.noteId !== noteId),
+          ),
         };
       });
     },
@@ -1248,7 +1289,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const commitStickyNotePosition = useCallback(
     (noteId: string, pos: IStickyNotePosition) => {
       const snapshot = latestSettingsRef.current;
-      const prev = snapshot.notePanels.find((p) => p.noteId === noteId)?.position;
+      const displayKey = displayLayoutKeyRef.current;
+      const effectivePanels = resolveNotePanelsForDisplay(
+        snapshot.notePanels,
+        snapshot.notePanelsByDisplay,
+        displayKey,
+      );
+      const prev = effectivePanels.find((p) => p.noteId === noteId)?.position;
       const moved =
         prev != null &&
         (prev.xPx !== pos.xPx ||
@@ -1259,8 +1306,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       void (async () => {
         await persist((cur) => ({
           ...cur,
-          notePanels: cur.notePanels.map((p) =>
-            p.noteId === noteId ? { ...p, position: pos } : p,
+          notePanelsByDisplay: patchNotePanelsForDisplay(
+            cur.notePanelsByDisplay,
+            displayKey,
+            resolveNotePanelsForDisplay(cur.notePanels, cur.notePanelsByDisplay, displayKey).map(
+              (p) => (p.noteId === noteId ? { ...p, position: pos } : p),
+            ),
           ),
         }));
         if (!moved) return;
@@ -1461,10 +1512,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const s = settings;
 
   const notesListPanelEffectiveVisible = useMemo(
-    () => resolveNotesListPanelVisible(s.notePanels, s.notesListPanelVisible),
-    [s.notePanels, s.notesListPanelVisible],
+    () => resolveNotesListPanelVisible(effectiveNotePanels, s.notesListPanelVisible),
+    [effectiveNotePanels, s.notesListPanelVisible],
   );
-  const hasVisibleStickyNotes = s.notePanels.length > 0;
+  const hasVisibleStickyNotes = effectiveNotePanels.length > 0;
 
   const hudNumberLocale = useMemo(() => getNavigatorFormattingLocale(), []);
   const effectiveWeatherTemperatureUnit = useMemo(
@@ -4299,7 +4350,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
                 widgets={s.widgets}
                 hudPanelPositions={effectiveHudPanelPositions}
-                notePanels={s.notePanels}
+                notePanels={effectiveNotePanels}
                 pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
                 notesListPanelVisible={notesListPanelEffectiveVisible}
                 onLayout={applyAutoHudLayout}
@@ -4499,18 +4550,30 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <StickyNoteLayer
                     canvasRef={hudCanvasRef}
                     notes={s.notes}
-                    notePanels={s.notePanels}
+                    notePanels={effectiveNotePanels}
                     onCommitPosition={(noteId, position) =>
                       commitStickyNotePosition(noteId, position)
                     }
                     onMarkInactive={(noteId) => setNoteActive(noteId, false)}
                     onTogglePin={(noteId) =>
-                      void persist((cur) => ({
-                        ...cur,
-                        notePanels: cur.notePanels.map((p) =>
-                          p.noteId === noteId ? { ...p, pinned: !p.pinned } : p,
-                        ),
-                      }))
+                      void persist((cur) => {
+                        const displayKey = displayLayoutKeyRef.current;
+                        const effectivePanels = resolveNotePanelsForDisplay(
+                          cur.notePanels,
+                          cur.notePanelsByDisplay,
+                          displayKey,
+                        );
+                        return {
+                          ...cur,
+                          notePanelsByDisplay: patchNotePanelsForDisplay(
+                            cur.notePanelsByDisplay,
+                            displayKey,
+                            effectivePanels.map((p) =>
+                              p.noteId === noteId ? { ...p, pinned: !p.pinned } : p,
+                            ),
+                          ),
+                        };
+                      })
                     }
                     onToggleNotesList={toggleNotesListPanel}
                     notesListPanelVisible={notesListPanelEffectiveVisible}
@@ -4540,6 +4603,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           ...cur,
                           notes: cur.notes.filter((n) => n.id !== noteId),
                           notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                          notePanelsByDisplay: removeNoteFromAllDisplays(
+                            cur.notePanelsByDisplay,
+                            noteId,
+                          ),
                         };
                       })
                     }
@@ -4557,7 +4624,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     >
                       <NotesMasterList
                         notes={s.notes}
-                        notePanels={s.notePanels}
+                        notePanels={effectiveNotePanels}
                         onSetNoteActive={setNoteActive}
                         onCreateNote={({ id, tags }) =>
                           void persist((cur) => {
@@ -4605,6 +4672,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               ...cur,
                               notes: cur.notes.filter((n) => n.id !== noteId),
                               notePanels: cur.notePanels.filter((p) => p.noteId !== noteId),
+                              notePanelsByDisplay: removeNoteFromAllDisplays(
+                                cur.notePanelsByDisplay,
+                                noteId,
+                              ),
                             };
                           })
                         }
