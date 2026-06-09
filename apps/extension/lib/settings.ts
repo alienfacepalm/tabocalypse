@@ -1297,7 +1297,7 @@ function buildUserBackgroundImagesFromLocal(
   }));
 }
 
-/** Chaos preset spicy jokes + humor strip (parity with {@link applyPreset} chaos branch). */
+/** Chaos preset: keep joke intensity at least spicy (parity with {@link applyPreset} chaos branch). */
 export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
   if (s.preset !== "chaos") return s;
   let humorIntensity = s.humorIntensity;
@@ -1308,7 +1308,6 @@ export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
     ...s,
     humorEnabled: true,
     humorIntensity,
-    widgets: { ...s.widgets, humorBanner: true },
   };
 }
 

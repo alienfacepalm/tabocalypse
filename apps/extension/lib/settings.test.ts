@@ -157,13 +157,21 @@ describe("applyChaosPresetHumorHarmony", () => {
     });
     expect(spicy.humorIntensity).toBe("spicy");
     expect(spicy.humorEnabled).toBe(true);
-    expect(spicy.widgets.humorBanner).toBe(true);
 
     const unhinged = applyChaosPresetHumorHarmony({
       ...defaultSettings(),
       humorIntensity: "unhinged",
     });
     expect(unhinged.humorIntensity).toBe("unhinged");
+  });
+
+  it("does not force humor banner back on when the user turned it off", () => {
+    const s = applyChaosPresetHumorHarmony({
+      ...defaultSettings(),
+      preset: "chaos",
+      widgets: { ...defaultSettings().widgets, humorBanner: false },
+    });
+    expect(s.widgets.humorBanner).toBe(false);
   });
 
   it("does not change balanced profiles", () => {
@@ -397,6 +405,21 @@ describe("loadSettings", () => {
     expect(s.preset).toBe("chaos");
     expect(s.humorIntensity).toBe("spicy");
     expect(s.widgets.humorBanner).toBe(true);
+  });
+
+  it("keeps humor banner off on chaos preset when stored that way", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        preset: "chaos",
+        humorEnabled: true,
+        humorIntensity: "spicy",
+        widgets: { humorBanner: false },
+      },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.preset).toBe("chaos");
+    expect(s.widgets.humorBanner).toBe(false);
   });
 
   it("keeps unhinged when preset is chaos", async () => {

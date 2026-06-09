@@ -74,10 +74,6 @@ export const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
 export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
   "URL not allowlisted for privileged fetch." as const;
 
-/** Shown when the background worker is older than the new-tab bundle (common after local dev updates). */
-export const PRIV_FETCH_RELOAD_EXTENSION_HINT =
-  "Reload Tabocalypse on chrome://extensions (or edge://extensions), then open a new tab and try again." as const;
-
 /** Foreground throw when messaging succeeded but the service worker returned no payload. */
 export const PRIV_FETCH_BACKGROUND_NO_RESPONSE = "Tabocalypse background did not respond." as const;
 
