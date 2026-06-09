@@ -12,11 +12,13 @@ import type {
   INewsFeedSnapshot,
   INewsTopicRoundup,
 } from "../../lib/news/balanced-news-types";
+import { BALANCED_NEWS_CATEGORY_LABELS } from "../../lib/news/balanced-news-labels";
 import {
-  BALANCED_NEWS_CATEGORY_LABELS,
-  NEWS_PERSPECTIVE_LABELS,
-  topicBalanceBadge,
-} from "../../lib/news/balanced-news-labels";
+  NewsPerspectiveIcon,
+  PERSPECTIVE_SLOT_ACCENT_CLASS,
+  PerspectiveHeader,
+  TopicBalanceIcons,
+} from "../news-perspective-icon";
 import type { TBalancedNewsCategory } from "../../lib/news/balanced-news-types";
 import {
   BALANCED_NEWS_CATEGORY_OPTIONS,
@@ -24,6 +26,7 @@ import {
 } from "../../lib/news/balanced-news-country";
 import { markBalancedNewsManualRefresh } from "../../lib/news/balanced-news-cache";
 import { loadBalancedNewsFeed } from "../../lib/news/load-balanced-news-feed";
+import { normalizeNewsTopicRoundup } from "../../lib/news/normalize-balanced-news-snapshot";
 import { resolveBalancedNewsCountry } from "../../lib/news/resolve-balanced-news-region";
 import type { TPeapixBingCountry } from "../../lib/bing-wallpaper-country";
 
@@ -76,12 +79,9 @@ function PerspectiveSlot({
   article: INewsArticleRef | null;
   accentClass: string;
 }) {
-  const label = NEWS_PERSPECTIVE_LABELS[perspective];
   return (
     <div className={`min-w-0 flex-1 border border-border p-2 ${accentClass}`}>
-      <p className="mb-1 font-display text-[10px] font-bold uppercase tracking-wider text-muted">
-        {label}
-      </p>
+      <PerspectiveHeader perspective={perspective} />
       {article ? (
         <button
           type="button"
@@ -89,19 +89,29 @@ function PerspectiveSlot({
           onClick={() => openArticle(article.url)}
         >
           <TruncatedHudLabel text={article.title} lines={3} />
-          <span className="mt-1 block min-w-0 max-w-full">
-            <TruncatedHudLabel text={article.source} className="text-[10px] text-muted" />
+          <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
+            <NewsPerspectiveIcon
+              perspective={perspective}
+              size={12}
+              bias={article.bias}
+              source={article.source}
+              isOpinion={article.isOpinion}
+              role="article"
+            />
+            <TruncatedHudLabel
+              text={article.source}
+              className="min-w-0 flex-1 text-[10px] text-muted"
+            />
           </span>
         </button>
       ) : (
-        <p className="font-mono text-[10px] text-muted">No {label.toLowerCase()} take found</p>
+        <p className="font-mono text-[10px] text-muted">No {perspective} take found</p>
       )}
     </div>
   );
 }
 
 function ArticleRow({ article }: { article: INewsArticleRef }) {
-  const meta = article.bias !== "unknown" ? `${article.source} · ${article.bias}` : article.source;
   return (
     <button
       type="button"
@@ -109,8 +119,21 @@ function ArticleRow({ article }: { article: INewsArticleRef }) {
       onClick={() => openArticle(article.url)}
     >
       <TruncatedHudLabel text={article.title} lines={3} />
-      <span className="mt-1 block min-w-0 max-w-full">
-        <TruncatedHudLabel text={meta} className="text-[10px] text-muted" />
+      <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
+        {article.perspective ? (
+          <NewsPerspectiveIcon
+            perspective={article.perspective}
+            size={12}
+            bias={article.bias}
+            source={article.source}
+            isOpinion={article.isOpinion}
+            role="article"
+          />
+        ) : null}
+        <TruncatedHudLabel
+          text={article.source}
+          className="min-w-0 flex-1 text-[10px] text-muted"
+        />
       </span>
     </button>
   );
@@ -149,20 +172,22 @@ function TopicArticleList({
 }
 
 function TopicDetail({ topic, locale }: { topic: INewsTopicRoundup; locale: string }) {
+  const normalizedTopic = normalizeNewsTopicRoundup(topic);
+  const articles = normalizedTopic.articles;
   const slottedUrls = new Set(
-    [topic.left, topic.center, topic.right, topic.reporting]
+    [normalizedTopic.left, normalizedTopic.center, normalizedTopic.right, normalizedTopic.reporting]
       .filter((article): article is INewsArticleRef => article != null)
       .map((article) => article.url),
   );
-  const related = topic.articles.filter((article) => !slottedUrls.has(article.url));
+  const related = articles.filter((article) => !slottedUrls.has(article.url));
 
-  if (topic.kind === "reporting") {
+  if (normalizedTopic.kind === "reporting") {
     return (
       <TopicArticleList
-        articles={topic.articles}
+        articles={articles}
         label="Reporting"
         locale={locale}
-        publishedAt={topic.publishedAt}
+        publishedAt={normalizedTopic.publishedAt}
       />
     );
   }
@@ -172,14 +197,18 @@ function TopicDetail({ topic, locale }: { topic: INewsTopicRoundup; locale: stri
       <div className="flex flex-col gap-2 sm:flex-row">
         <PerspectiveSlot
           perspective="left"
-          article={topic.left}
-          accentClass="border-l-2 border-l-primary"
+          article={normalizedTopic.left}
+          accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.left}
         />
-        <PerspectiveSlot perspective="center" article={topic.center} accentClass="" />
+        <PerspectiveSlot
+          perspective="center"
+          article={normalizedTopic.center}
+          accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.center}
+        />
         <PerspectiveSlot
           perspective="right"
-          article={topic.right}
-          accentClass="border-r-2 border-r-[var(--color-accent2)]"
+          article={normalizedTopic.right}
+          accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.right}
         />
       </div>
       {related.length > 0 ? (
@@ -187,7 +216,7 @@ function TopicDetail({ topic, locale }: { topic: INewsTopicRoundup; locale: stri
           articles={related}
           label="Related"
           locale={locale}
-          publishedAt={topic.publishedAt}
+          publishedAt={normalizedTopic.publishedAt}
         />
       ) : null}
     </div>
@@ -455,9 +484,7 @@ export function BalancedNewsWidget({
                         className="font-mono text-xs"
                         wrapClassName="min-w-0 flex-1"
                       />
-                      <span className="shrink-0 font-display text-[10px] uppercase tracking-wide">
-                        {topicBalanceBadge(topic.kind, topic.balanceScore)}
-                      </span>
+                      <TopicBalanceIcons topic={topic} />
                     </button>
                   </li>
                 );

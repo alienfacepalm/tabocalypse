@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
 import type { INewsFeedSnapshot } from "./balanced-news-types";
+import { normalizeNewsFeedSnapshot } from "./normalize-balanced-news-snapshot";
 
 const CACHE_STORAGE_KEY = "tabocalypseBalancedNewsCacheV1";
 const RL_STORAGE_KEY = "tabocalypseBalancedNewsRlV1";
@@ -83,7 +84,7 @@ export async function readBalancedNewsCache(
   const age = now - entry.fetchedAt;
   const fresh = age <= BALANCED_NEWS_CACHE_FRESH_MS;
   return {
-    snapshot: { ...entry.snapshot, stale: !fresh },
+    snapshot: normalizeNewsFeedSnapshot({ ...entry.snapshot, stale: !fresh }),
     canRefresh,
     staleOnly: !fresh && canRefresh,
   };
