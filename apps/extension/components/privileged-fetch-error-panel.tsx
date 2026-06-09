@@ -18,12 +18,12 @@ export function PrivilegedFetchErrorPanel({
   retryAriaLabel: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <p className="err">{message}</p>
       {shouldShowPrivilegedFetchReloadHint(message) ? (
         <p className="muted text-xs leading-tight">{PRIV_FETCH_RELOAD_EXTENSION_HINT}</p>
       ) : null}
-      <div className="row wrap gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2 pb-1">
         <HudTip tip={retryTip}>
           <button
             type="button"

@@ -173,6 +173,8 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "peapix.com",
   "img.peapix.com",
   "api.open-meteo.com",
+  "geocoding-api.open-meteo.com",
+  "freequicknews.com",
   "api.coingecko.com",
   "green2.kingcounty.gov",
   "www.unsuck-it.com",
@@ -332,6 +334,7 @@ async function finishPrivilegedBackgroundFetch<T extends { ok: boolean; error?: 
 export async function privilegedExtensionFetchJson(
   url: string,
   signal?: AbortSignal,
+  headers?: Record<string, string>,
 ): Promise<unknown> {
   const normalizedUrl = assertAllowlistedPrivilegedFetchUrl(url);
   if (shouldUseForegroundPrivilegedFetch()) {
@@ -339,6 +342,7 @@ export async function privilegedExtensionFetchJson(
       signal,
       credentials: "omit",
       cache: "no-store",
+      ...(headers ? { headers } : {}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<unknown>;
@@ -350,6 +354,7 @@ export async function privilegedExtensionFetchJson(
     {
       type: TABOCALYPSE_PRIV_FETCH_JSON,
       url: normalizedUrl,
+      ...(headers ? { headers } : {}),
     } satisfies TPrivilegedFetchJsonRequest,
     signal,
   );

@@ -143,6 +143,20 @@ describe("privilegedFetchJsonInBackground", () => {
     });
   });
 
+  it("allows FreeQuickNews article URLs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ articles: [] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await privilegedFetchJsonInBackground(
+      "https://freequicknews.com/api/v1/articles?country=US&category=politics&limit=10",
+    );
+
+    expect(result).toEqual({ ok: true, data: { articles: [] } });
+  });
+
   it("rejects hosts outside the privileged allowlist", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

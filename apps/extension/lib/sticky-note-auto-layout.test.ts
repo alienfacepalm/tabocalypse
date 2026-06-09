@@ -23,6 +23,7 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
   bookmarksStrip: false,
   tabGuilt: false,
   humorBanner: true,
+  balancedNews: false,
 };
 
 describe("stickyNotePositionEqual", () => {

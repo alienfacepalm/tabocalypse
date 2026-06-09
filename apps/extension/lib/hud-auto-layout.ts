@@ -38,6 +38,7 @@ export const HUD_AUTO_LAYOUT_PANEL_PRIORITY: Record<THudPanelId, number> = {
   crypto: 20,
   speedTest: 21,
   aiChat: 22,
+  balancedNews: 15,
 };
 
 const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
@@ -51,6 +52,7 @@ const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
   topSites: "topSites",
   bookmarksStrip: "bookmarksStrip",
   notes: "notes",
+  balancedNews: "balancedNews",
 };
 
 /** How much HUD canvas is available — drives stack vs spread, not resize deltas alone. */

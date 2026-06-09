@@ -1,11 +1,12 @@
 import "webextension-polyfill";
 import "@fontsource/audiowide";
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import App from "./app";
 import "./tailwind.css";
 import { defaultSettings, loadSettings, type ISettings } from "../../lib/settings";
 import { applyDocumentTheme } from "../../lib/theme";
+
+const App = lazy(() => import("./app"));
 
 void (async () => {
   let initialSettings: ISettings;
@@ -24,7 +25,9 @@ void (async () => {
 
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
-      <App initialSettings={initialSettings} />
+      <Suspense fallback={null}>
+        <App initialSettings={initialSettings} />
+      </Suspense>
     </React.StrictMode>,
   );
 })();

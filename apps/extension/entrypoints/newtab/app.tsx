@@ -70,6 +70,7 @@ import { SearchWidget } from "../../components/built-in/search-widget";
 import { SearchEngineSettingPicker } from "../../components/search-engine-setting-picker";
 import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
+import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widget";
 import { PluginDeck } from "../../components/plugin-views";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
 import { coerceWeatherPanelView } from "../../lib/weather/weather-panel-view";
@@ -122,6 +123,15 @@ import {
   WIDGET_LABELS,
 } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
+import {
+  BALANCED_NEWS_CATEGORY_OPTIONS,
+  coerceBalancedNewsCategory,
+  coerceBalancedNewsTopicCount,
+  defaultBalancedNewsCategoryForCountry,
+  inferBalancedNewsCountryFromNavigator,
+  peapixCountryToFqnCountry,
+} from "../../lib/news/balanced-news-country";
+import { BALANCED_NEWS_CATEGORY_LABELS } from "../../lib/news/balanced-news-labels";
 import type { IHumorContext } from "../../lib/humor/engine";
 import { pickDailyLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
@@ -140,6 +150,7 @@ import {
 import { extractWallpaperAccentsFromImageUrl } from "../../lib/extract-wallpaper-accents";
 import {
   PEAPIX_BING_COUNTRY_OPTIONS,
+  coercePeapixBingCountry,
   resolveEffectivePeapixBingCountry,
 } from "../../lib/bing-wallpaper-country";
 import {
@@ -198,6 +209,7 @@ type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 
 type TSettingsSectionJump =
   | "weather"
+  | "balancedNews"
   | "widgets"
   | "byoAi"
   | "optionalPermissions"
@@ -214,6 +226,7 @@ type TSettingsAccordionSection =
   | "searchEngine"
   | "background"
   | "weather"
+  | "balancedNews"
   | "optionalPermissions"
   | "alarms"
   | "byoAi"
@@ -415,6 +428,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [humorRefreshStatus, setHumorRefreshStatus] = useState<string | null>(null);
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const balancedNewsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -958,11 +972,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     const section =
       pendingSettingsSectionJump === "weather"
         ? weatherSettingsSectionRef.current
-        : pendingSettingsSectionJump === "widgets"
-          ? widgetsSettingsSectionRef.current
-          : pendingSettingsSectionJump === "byoAi"
-            ? byoAiSettingsSectionRef.current
-            : optionalPermissionsSettingsSectionRef.current;
+        : pendingSettingsSectionJump === "balancedNews"
+          ? balancedNewsSettingsSectionRef.current
+          : pendingSettingsSectionJump === "widgets"
+            ? widgetsSettingsSectionRef.current
+            : pendingSettingsSectionJump === "byoAi"
+              ? byoAiSettingsSectionRef.current
+              : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -986,6 +1002,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const openWeatherSettingsSection = useCallback(() => {
     openSettingsAccordionSection("weather");
     setPendingSettingsSectionJump("weather");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openBalancedNewsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("balancedNews");
+    setPendingSettingsSectionJump("balancedNews");
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
@@ -2952,6 +2974,160 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </details>
 
                   <details
+                    ref={balancedNewsSettingsSectionRef}
+                    id="settings-balanced-news"
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("balancedNews")}
+                    onToggle={onSettingsAccordionToggle("balancedNews")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Balanced news</span>
+                    </summary>
+                    <div className="acc-body">
+                      <p className="muted sm mb-2 mt-0">
+                        Region and category for the Balanced news widget. Headlines link out to
+                        original publishers; optional FreeQuickNews API key stays on this device.
+                      </p>
+                      <p className="muted sm mb-2">Feed region</p>
+                      <div
+                        className="row wrap gap-2"
+                        role="group"
+                        aria-label="Balanced news region"
+                      >
+                        <HudTip tip="Pick country from browser locale (or device location when enabled below)">
+                          <button
+                            type="button"
+                            className={s.balancedNewsCountryAuto ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, balancedNewsCountryAuto: true }))
+                            }
+                          >
+                            Auto (locale)
+                          </button>
+                        </HudTip>
+                        <HudTip tip="Always use the fixed country below">
+                          <button
+                            type="button"
+                            className={!s.balancedNewsCountryAuto ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, balancedNewsCountryAuto: false }))
+                            }
+                          >
+                            Fixed country
+                          </button>
+                        </HudTip>
+                      </div>
+                      {!s.balancedNewsCountryAuto ? (
+                        <label className="block mt-3">
+                          Country
+                          <select
+                            value={s.balancedNewsCountry}
+                            onChange={(e) => {
+                              const code = coercePeapixBingCountry(
+                                e.target.value,
+                                s.balancedNewsCountry,
+                              );
+                              void persist((cur) => ({
+                                ...cur,
+                                balancedNewsCountry: code,
+                                balancedNewsCategory: defaultBalancedNewsCategoryForCountry(
+                                  peapixCountryToFqnCountry(code),
+                                ),
+                              }));
+                            }}
+                          >
+                            {PEAPIX_BING_COUNTRY_OPTIONS.map((code) => (
+                              <option key={code} value={code}>
+                                {code.toUpperCase()}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <p className="muted text-xs mt-2 mb-0">
+                          Auto uses your browser locale ({inferBalancedNewsCountryFromNavigator()})
+                          unless device location is on.
+                        </p>
+                      )}
+                      <p className="muted sm mb-2 mt-4">Device location for region</p>
+                      <p className="muted text-xs mb-2 mt-0">
+                        When on, auto region prefers coordinates from Weather (after a location
+                        lookup). Does not enable continuous tracking.
+                      </p>
+                      <HudTip tip="Use saved weather coordinates or a one-time browser lookup for country">
+                        <button
+                          type="button"
+                          className={s.balancedNewsUseDeviceGeo ? "btn primary" : "btn"}
+                          onClick={() =>
+                            void persist((cur) => ({
+                              ...cur,
+                              balancedNewsUseDeviceGeo: !cur.balancedNewsUseDeviceGeo,
+                            }))
+                          }
+                        >
+                          {s.balancedNewsUseDeviceGeo
+                            ? "Device location for region on"
+                            : "Device location for region off"}
+                        </button>
+                      </HudTip>
+                      <p className="muted sm mb-2 mt-4">Category</p>
+                      <div
+                        className="row wrap gap-2"
+                        role="group"
+                        aria-label="Balanced news category"
+                      >
+                        {BALANCED_NEWS_CATEGORY_OPTIONS.map((category) => (
+                          <button
+                            key={category}
+                            type="button"
+                            className={s.balancedNewsCategory === category ? "btn primary" : "btn"}
+                            onClick={() =>
+                              void persist((cur) => ({ ...cur, balancedNewsCategory: category }))
+                            }
+                          >
+                            {BALANCED_NEWS_CATEGORY_LABELS[category]}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="block mt-4">
+                        Topics shown
+                        <input
+                          type="number"
+                          min={3}
+                          max={10}
+                          value={s.balancedNewsTopicCount}
+                          onChange={(e) => {
+                            const balancedNewsTopicCount = coerceBalancedNewsTopicCount(
+                              Number(e.target.value),
+                              s.balancedNewsTopicCount,
+                            );
+                            void persist((cur) => ({ ...cur, balancedNewsTopicCount }));
+                          }}
+                        />
+                      </label>
+                      <label className="block mt-3">
+                        FreeQuickNews API key (optional)
+                        <input
+                          type="password"
+                          autoComplete="off"
+                          value={s.balancedNewsApiKey}
+                          placeholder="fqn_…"
+                          onChange={(e) => {
+                            void persist((cur) => ({
+                              ...cur,
+                              balancedNewsApiKey: e.target.value,
+                            }));
+                          }}
+                        />
+                      </label>
+                      <p className="muted text-xs mt-2 mb-0">
+                        Without a key, FreeQuickNews allows about 100 requests per day. Register at
+                        freequicknews.com for a higher free tier.
+                      </p>
+                    </div>
+                  </details>
+
+                  <details
                     className="acc-item"
                     open={settingsAccordionIsOpen("chaos")}
                     onToggle={onSettingsAccordionToggle("chaos")}
@@ -4015,6 +4191,30 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       parsed.cryptoChartDays,
                                       d.cryptoChartDays,
                                     ),
+                                    balancedNewsCountryAuto:
+                                      typeof parsed.balancedNewsCountryAuto === "boolean"
+                                        ? parsed.balancedNewsCountryAuto
+                                        : d.balancedNewsCountryAuto,
+                                    balancedNewsCountry: coercePeapixBingCountry(
+                                      parsed.balancedNewsCountry,
+                                      d.balancedNewsCountry,
+                                    ),
+                                    balancedNewsUseDeviceGeo:
+                                      typeof parsed.balancedNewsUseDeviceGeo === "boolean"
+                                        ? parsed.balancedNewsUseDeviceGeo
+                                        : d.balancedNewsUseDeviceGeo,
+                                    balancedNewsCategory: coerceBalancedNewsCategory(
+                                      parsed.balancedNewsCategory,
+                                      d.balancedNewsCategory,
+                                    ),
+                                    balancedNewsTopicCount: coerceBalancedNewsTopicCount(
+                                      parsed.balancedNewsTopicCount,
+                                      d.balancedNewsTopicCount,
+                                    ),
+                                    balancedNewsApiKey:
+                                      typeof parsed.balancedNewsApiKey === "string"
+                                        ? parsed.balancedNewsApiKey
+                                        : d.balancedNewsApiKey,
                                     humorBuiltinVoice: coerceHumorBuiltinVoice(
                                       parsed as {
                                         humorBuiltinVoice?: unknown;
@@ -4435,6 +4635,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     panelView={s.weatherPanelView}
                     onSelectPanelView={(weatherPanelView) =>
                       void persist((cur) => ({ ...cur, weatherPanelView }))
+                    }
+                  />
+                </DraggableHudPanel>
+              ) : null}
+              {s.widgets.balancedNews ? (
+                <DraggableHudPanel
+                  key="balancedNews"
+                  panelId="balancedNews"
+                  canvasRef={hudCanvasRef}
+                  position={effectiveHudPanelPositions.balancedNews}
+                  chaotic={s.hudLayoutChaotic}
+                  locked={s.hudLayoutLocked}
+                  onCommit={(pos) => commitHudPanel("balancedNews", pos)}
+                >
+                  <BalancedNewsWidget
+                    balancedNewsCountryAuto={s.balancedNewsCountryAuto}
+                    balancedNewsCountry={s.balancedNewsCountry}
+                    balancedNewsUseDeviceGeo={s.balancedNewsUseDeviceGeo}
+                    balancedNewsCategory={s.balancedNewsCategory}
+                    balancedNewsTopicCount={s.balancedNewsTopicCount}
+                    balancedNewsApiKey={s.balancedNewsApiKey}
+                    weatherGeoAdjusted={s.weatherGeoAdjusted}
+                    weatherLat={s.weatherLat}
+                    weatherLon={s.weatherLon}
+                    displayLocale={hudNumberLocale}
+                    onOpenBalancedNewsSettings={openBalancedNewsSettingsSection}
+                    onSelectCategory={(balancedNewsCategory) =>
+                      void persist((cur) => ({ ...cur, balancedNewsCategory }))
                     }
                   />
                 </DraggableHudPanel>

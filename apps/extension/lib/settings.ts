@@ -28,6 +28,13 @@ import {
   type TWeatherTemperatureUnit,
 } from "./weather/weather-units";
 import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-chart-days";
+import type { TBalancedNewsCategory } from "./news/balanced-news-types";
+import {
+  coerceBalancedNewsCategory,
+  coerceBalancedNewsTopicCount,
+  defaultBalancedNewsCategoryForCountry,
+  inferBalancedNewsCountryFromNavigator,
+} from "./news/balanced-news-country";
 
 export type { TCryptoChartDays };
 export { coerceCryptoChartDays };
@@ -79,7 +86,8 @@ export type TWidgetKey =
   | "bookmarksStrip"
   | "tabGuilt"
   | "humorBanner"
-  | "aiChat";
+  | "aiChat"
+  | "balancedNews";
 
 export interface IImportedUserPack {
   id: string;
@@ -587,6 +595,18 @@ export interface ISettings {
   weatherPanelView: TWeatherPanelView;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
+  /** When true, Balanced news region follows locale or device geo; when false, {@link balancedNewsCountry} is used. */
+  balancedNewsCountryAuto: boolean;
+  /** Peapix-style lowercase country code when {@link balancedNewsCountryAuto} is false. */
+  balancedNewsCountry: TPeapixBingCountry;
+  /** When true with auto region, prefer device coordinates (weather geo) for country resolution. */
+  balancedNewsUseDeviceGeo: boolean;
+  /** FreeQuickNews category filter for the Balanced news widget. */
+  balancedNewsCategory: TBalancedNewsCategory;
+  /** Optional FreeQuickNews API key (local only) for higher rate limits. */
+  balancedNewsApiKey: string;
+  /** Number of topic roundups shown in the Balanced news panel (3–10). */
+  balancedNewsTopicCount: number;
   /** When true, Bing spotlight country follows browser locale; when false, {@link bingWallpaperCountry} is used. */
   bingWallpaperCountryAuto: boolean;
   /** Peapix `country` code when {@link bingWallpaperCountryAuto} is false. */
@@ -839,6 +859,11 @@ export interface ISyncSlice {
   weatherLakesEmbedEnabled: boolean;
   weatherPanelView: TWeatherPanelView;
   cryptoChartDays: TCryptoChartDays;
+  balancedNewsCountryAuto: boolean;
+  balancedNewsCountry: ISettings["balancedNewsCountry"];
+  balancedNewsUseDeviceGeo: boolean;
+  balancedNewsCategory: TBalancedNewsCategory;
+  balancedNewsTopicCount: number;
   bingWallpaperCountryAuto: boolean;
   bingWallpaperCountry: ISettings["bingWallpaperCountry"];
   backgroundKind: ISettings["backgroundKind"];
@@ -869,6 +894,7 @@ export interface ILocalSlice {
   openaiBaseUrl: string;
   /** OpenAI-compatible model id for BYO AI chat and tests. */
   openaiModel: string;
+  balancedNewsApiKey: string;
   myLines: string[];
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
@@ -1013,6 +1039,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   bookmarksStrip: false,
   tabGuilt: false,
   humorBanner: true,
+  balancedNews: false,
 };
 
 /** Merge stored widget toggles into defaults; ignores unknown keys (e.g. removed widgets). */
@@ -1042,6 +1069,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   bookmarksStrip: "Bookmarks strip",
   tabGuilt: "Tab guilt",
   humorBanner: "Humor banner",
+  balancedNews: "Balanced news",
 };
 
 export function resolveWeatherGeoAdjusted(
@@ -1108,6 +1136,14 @@ export function defaultSettings(): ISettings {
     weatherLakesEmbedEnabled: false,
     weatherPanelView: "forecast",
     cryptoChartDays: 1,
+    balancedNewsCountryAuto: true,
+    balancedNewsCountry: "us",
+    balancedNewsUseDeviceGeo: false,
+    balancedNewsCategory: defaultBalancedNewsCategoryForCountry(
+      inferBalancedNewsCountryFromNavigator(),
+    ),
+    balancedNewsApiKey: "",
+    balancedNewsTopicCount: 5,
     bingWallpaperCountryAuto: true,
     bingWallpaperCountry: "us",
     backgroundKind: "bing",
@@ -1180,6 +1216,11 @@ function toSync(s: ISettings): ISyncSlice {
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
     weatherPanelView: s.weatherPanelView,
     cryptoChartDays: s.cryptoChartDays,
+    balancedNewsCountryAuto: s.balancedNewsCountryAuto,
+    balancedNewsCountry: s.balancedNewsCountry,
+    balancedNewsUseDeviceGeo: s.balancedNewsUseDeviceGeo,
+    balancedNewsCategory: s.balancedNewsCategory,
+    balancedNewsTopicCount: s.balancedNewsTopicCount,
     bingWallpaperCountryAuto: s.bingWallpaperCountryAuto,
     bingWallpaperCountry: s.bingWallpaperCountry,
     backgroundKind: s.backgroundKind,
@@ -1220,6 +1261,7 @@ function toLocal(s: ISettings): ILocalSlice {
     geminiApiKey: s.geminiApiKey,
     openaiBaseUrl: s.openaiBaseUrl,
     openaiModel: s.openaiModel,
+    balancedNewsApiKey: s.balancedNewsApiKey,
     myLines: s.myLines,
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
@@ -1380,6 +1422,27 @@ function mergeSettings(
           : false,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
+    balancedNewsCountryAuto:
+      typeof sync?.balancedNewsCountryAuto === "boolean"
+        ? sync.balancedNewsCountryAuto
+        : sync === undefined
+          ? d.balancedNewsCountryAuto
+          : true,
+    balancedNewsCountry: coercePeapixBingCountry(sync?.balancedNewsCountry, d.balancedNewsCountry),
+    balancedNewsUseDeviceGeo:
+      typeof sync?.balancedNewsUseDeviceGeo === "boolean"
+        ? sync.balancedNewsUseDeviceGeo
+        : sync === undefined
+          ? d.balancedNewsUseDeviceGeo
+          : false,
+    balancedNewsCategory: coerceBalancedNewsCategory(
+      sync?.balancedNewsCategory,
+      d.balancedNewsCategory,
+    ),
+    balancedNewsTopicCount: coerceBalancedNewsTopicCount(
+      sync?.balancedNewsTopicCount,
+      d.balancedNewsTopicCount,
+    ),
     bingWallpaperCountryAuto:
       typeof sync?.bingWallpaperCountryAuto === "boolean"
         ? sync.bingWallpaperCountryAuto
@@ -1427,6 +1490,10 @@ function mergeSettings(
       typeof local?.openaiModel === "string" && local.openaiModel.trim().length > 0
         ? local.openaiModel.trim()
         : d.openaiModel,
+    balancedNewsApiKey:
+      typeof local?.balancedNewsApiKey === "string"
+        ? local.balancedNewsApiKey
+        : d.balancedNewsApiKey,
     myLines: local?.myLines ?? d.myLines,
     importedPacks: local?.importedPacks ?? d.importedPacks,
     importedPlugins: local?.importedPlugins ?? d.importedPlugins,

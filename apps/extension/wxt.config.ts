@@ -13,6 +13,8 @@ export default defineConfig({
     optional_permissions: ["bookmarks", "topSites", "tabs"],
     host_permissions: [
       "https://api.open-meteo.com/*",
+      "https://geocoding-api.open-meteo.com/*",
+      "https://freequicknews.com/*",
       "https://api.coingecko.com/*",
       "https://speed.cloudflare.com/*",
       "https://peapix.com/*",
