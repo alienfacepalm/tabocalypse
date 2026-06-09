@@ -52,10 +52,7 @@ export function LakesBuoyPanel({
       .then((buoys) => {
         if (cancelled) return;
         setPanelState({ status: "ready", buoys });
-        setOpenLakeId((prev) => {
-          if (prev && buoys.some((b) => b.id === prev)) return prev;
-          return buoys[0]?.id ?? null;
-        });
+        setOpenLakeId((prev) => (prev && buoys.some((b) => b.id === prev) ? prev : null));
       })
       .catch((e) => {
         if (!cancelled) {
