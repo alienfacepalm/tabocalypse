@@ -16,6 +16,7 @@ import {
   computeHudDragCanvasRectPx,
   getHudGridDropHighlight,
   getHudLayoutMetrics,
+  hudCanvasMaxPanelTopPx,
   measureHudCanvasSize,
   snapPanelOriginToLayoutGrid,
 } from "../lib/hud-layout";
@@ -96,7 +97,7 @@ export function DraggableHudPanel({
       let nextTop = start.originTopCanvasPx + dy;
       const metrics = resolveLayoutMetrics(canvas);
       const maxLeft = Math.max(0, metrics.canvasW - panelRect.width);
-      const maxTop = Math.max(0, metrics.canvasH - panelRect.height);
+      const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, panelRect.height);
       if (snap && !chaotic) {
         const snapped = snapPanelOriginToLayoutGrid(nextLeft, nextTop, metrics);
         nextLeft = snapped.leftPx;
@@ -367,7 +368,7 @@ export function DraggableHudPanel({
         "hud-draggable-panel pointer-events-auto absolute flex max-w-full min-h-0 flex-col overflow-hidden",
         locked ? "hud-panel-locked" : "",
         useDefaultWidth ? widthClass : "",
-        effectiveH == null ? "max-h-[min(92vh,calc(100vh-5.25rem))]" : "",
+        effectiveH == null ? "max-h-[min(92vh,calc(100vh-5.25rem-var(--hud-footer-reserve)))]" : "",
       ]
         .filter(Boolean)
         .join(" ")}

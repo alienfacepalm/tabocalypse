@@ -13,6 +13,7 @@ import {
   HUD_LAYOUT_FOLD_OVERLAP_PX,
   HUD_LAYOUT_REFERENCE_CANVAS,
   hudCanvasFoldBottomPx,
+  hudCanvasMaxPanelTopPx,
   hudPositionFromCanvasRect,
   resolveHudPanelSizePx,
   snapPanelOriginToLayoutGrid,
@@ -353,7 +354,7 @@ function hudPanelPositionToCanvasRect(
   const leftPx = (item.position.xPct / 100) * metrics.canvasW;
   const topPx = (item.position.yPct / 100) * metrics.canvasH;
   const maxLeft = Math.max(0, metrics.canvasW - widthPx);
-  const maxTop = Math.max(0, metrics.canvasH - heightPx);
+  const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, heightPx);
   return {
     key: item.key,
     panelId: item.panelId,
@@ -376,7 +377,7 @@ function resolveHudPanelPlacementOverlaps(
   const settled: IHudPlacedPanelRect[] = [];
 
   for (const panel of sorted) {
-    const maxTop = Math.max(0, metrics.canvasH - panel.heightPx);
+    const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, panel.heightPx);
     let topPx = clampHudScalar(panel.topPx, 0, maxTop);
 
     for (let guard = 0; guard < 64; guard += 1) {
@@ -724,7 +725,7 @@ function snapHudPlacementsToGrid(
 ): void {
   for (const p of placements) {
     const maxLeft = Math.max(0, metrics.canvasW - p.widthPx);
-    const maxTop = Math.max(0, metrics.canvasH - p.heightPx);
+    const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, p.heightPx);
     const snapped = snapPanelOriginToLayoutGrid(p.leftPx, p.topPx, metrics);
     p.leftPx = clampHudScalar(snapped.leftPx, 0, maxLeft);
     p.topPx = clampHudScalar(snapped.topPx, 0, maxTop);
@@ -762,7 +763,7 @@ function normalizeHudColumnStackPlacements(
       const maxLeft = Math.max(0, metrics.canvasW - p.widthPx);
       p.leftPx = clampHudScalar(leftPx, 0, maxLeft);
       if (snapToGrid) {
-        const maxTop = Math.max(0, metrics.canvasH - p.heightPx);
+        const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, p.heightPx);
         const snappedTop = snapPanelOriginToLayoutGrid(p.leftPx, p.topPx, metrics).topPx;
         p.topPx = clampHudScalar(snappedTop, 0, maxTop);
       }

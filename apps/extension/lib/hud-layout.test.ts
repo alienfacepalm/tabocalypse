@@ -11,6 +11,7 @@ import {
   getHudPanelDropCellRange,
   hudCanvasFoldBottomPx,
   hudCanvasInteractableHeightPx,
+  hudCanvasMaxPanelTopPx,
   HUD_LAYOUT_FOLD_PADDING_PX,
   HUD_PAGE_FOOTER_RESERVE_PX,
   listHudGridCells,
@@ -43,6 +44,7 @@ describe("hud canvas fold", () => {
     expect(hudCanvasFoldBottomPx(canvasH)).toBe(
       hudCanvasInteractableHeightPx(canvasH) - HUD_LAYOUT_FOLD_PADDING_PX,
     );
+    expect(hudCanvasMaxPanelTopPx(canvasH, 200)).toBe(hudCanvasFoldBottomPx(canvasH) - 200);
   });
 });
 
@@ -258,5 +260,6 @@ describe("computeHudDragCanvasRectPx", () => {
     expect(rect.topPx).toBe(m.cellH);
     expect(rect.widthPx).toBe(220);
     expect(rect.heightPx).toBe(180);
+    expect(rect.topPx + rect.heightPx).toBeLessThanOrEqual(hudCanvasFoldBottomPx(m.canvasH));
   });
 });

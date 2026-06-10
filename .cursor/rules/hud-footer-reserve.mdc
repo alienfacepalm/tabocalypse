@@ -27,10 +27,11 @@ The new-tab **footer** (`.footer`) is **fixed** at the bottom of the viewport (`
 
 1. **`hudCanvasInteractableHeightPx`** — canvas height minus footer reserve.
 2. **`hudCanvasFoldBottomPx`** — interactable height minus `HUD_LAYOUT_FOLD_PADDING_PX`; used for auto-layout, drag clamp, and resize commit.
-3. **`getHudLayoutMetrics`** — row/grid math uses interactable height, not full canvas height.
-4. **`.hud-canvas`** — `padding-bottom: var(--hud-footer-reserve)` so scroll content clears the footer.
-5. **`HudCanvasGrid`** — vertical grid lines end at interactable height, not full canvas height.
-6. **Do not** raise resize grip `z-index` above the footer as a workaround — reserve space instead.
+3. **`hudCanvasMaxPanelTopPx`** — max panel `top` so bottom stays at or above the fold; use for drag, snap, and column normalize (never `canvasH - height` alone).
+4. **`getHudLayoutMetrics`** — row/grid math uses interactable height, not full canvas height.
+5. **`.hud-canvas`** — `padding-bottom: var(--hud-footer-reserve)` so scroll content clears the footer.
+6. **`HudCanvasGrid`** — vertical grid lines end at interactable height, not full canvas height.
+7. **Do not** raise resize grip `z-index` above the footer as a workaround — reserve space instead.
 
 ## Verification
 

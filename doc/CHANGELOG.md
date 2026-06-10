@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Extension reliability: alarm and link-related text is coerced before React render; alarm reminder storage is normalized for safe display.
 - Notes: detached panels avoid a phantom scrollbar and hug content height where intended; sticky note layout is stored **per monitor** while the master notes list still syncs.
 - HUD auto-layout: improved placement for denser widget grids on the new tab canvas.
+- HUD panels and corner resize grips stay above the fixed footer during drag, grid snap, and column reflow.
 - **Todos** widget: denser list rows with a smaller remove control so more tasks fit in the panel.
 - Tab guilt panel polls for updated tab counts.
 

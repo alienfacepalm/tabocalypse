@@ -153,6 +153,9 @@ export function HudAutoRepositionSync({
 
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
     prevCanvasSizeRef.current = { widthPx, heightPx };
+    if (layoutInputRef.current.hudAutoRepositionEnabled) {
+      runLayout(canvas, widthPx, heightPx);
+    }
 
     const ro = new ResizeObserver(schedule);
     ro.observe(canvas);

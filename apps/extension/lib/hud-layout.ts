@@ -99,6 +99,11 @@ export function hudCanvasFoldBottomPx(canvasHeightPx: number): number {
   return Math.max(1, hudCanvasInteractableHeightPx(canvasHeightPx) - HUD_LAYOUT_FOLD_PADDING_PX);
 }
 
+/** Maximum panel top (px) so the bottom edge stays at or above {@link hudCanvasFoldBottomPx}. */
+export function hudCanvasMaxPanelTopPx(canvasHeightPx: number, panelHeightPx: number): number {
+  return Math.max(0, hudCanvasFoldBottomPx(canvasHeightPx) - panelHeightPx);
+}
+
 /** Vertical overlap between panels when they cannot fit above the fold without scrolling. */
 export const HUD_LAYOUT_FOLD_OVERLAP_PX = 10;
 
@@ -378,7 +383,7 @@ export function computeHudDragCanvasRectPx(
   let leftPx = originLeftCanvasPx + deltaClientX;
   let topPx = originTopCanvasPx + deltaClientY;
   const maxLeft = Math.max(0, metrics.canvasW - panelWidthPx);
-  const maxTop = Math.max(0, metrics.canvasH - panelHeightPx);
+  const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, panelHeightPx);
   if (snapPosition) {
     const snapped = snapPanelOriginToLayoutGrid(leftPx, topPx, metrics);
     leftPx = snapped.leftPx;

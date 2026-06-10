@@ -513,7 +513,7 @@ describe("computeHudColumnStackLayoutUpdates", () => {
     const clockBottom = ((clock.yPct ?? 0) / 100) * metrics.canvasH + (clock.heightPx ?? 0);
     const cryptoBottom = ((crypto.yPct ?? 0) / 100) * metrics.canvasH + (crypto.heightPx ?? 0);
     expect(cryptoBottom).toBeGreaterThan(clockBottom);
-    expect(cryptoBottom).toBeGreaterThan(foldBottom - 40);
+    expect(cryptoBottom).toBeLessThanOrEqual(foldBottom + 1);
   });
 
   it("keeps a lone wide panel in its column while filling height to the fold", () => {
@@ -540,7 +540,7 @@ describe("computeHudColumnStackLayoutUpdates", () => {
     const updates = computeHudColumnStackLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
     const weather = { ...input.hudPanelPositions.weather, ...updates.weather };
     const bottom = ((weather.yPct ?? 0) / 100) * metrics.canvasH + (weather.heightPx ?? 0);
-    expect(bottom).toBeGreaterThan(foldBottom - 20);
+    expect(bottom).toBeLessThanOrEqual(foldBottom + 1);
     expect(weather.heightPx ?? 0).toBeGreaterThan(280);
   });
 
