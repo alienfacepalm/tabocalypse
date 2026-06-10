@@ -65,6 +65,7 @@ async function main(): Promise<void> {
   await writeSizedPng(transparent, 16, join(extensionRoot, "public", "favicon-16.png"));
   await writeSizedPng(transparent, 32, join(extensionRoot, "public", "favicon-32.png"));
   await writeSizedPng(transparent, 180, join(extensionRoot, "public", "apple-touch-icon.png"));
+  await writeSizedPng(transparent, 128, join(extensionRoot, "public", "notification-icon.png"));
 
   const sample = await sharp(join(extensionRoot, "public", "icon", "32.png")).metadata();
   if (!sample.hasAlpha) {

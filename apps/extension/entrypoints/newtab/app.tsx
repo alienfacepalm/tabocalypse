@@ -168,6 +168,7 @@ import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fe
 import {
   getHudDisplayLayoutKey,
   measureHudCanvasSize,
+  measureHudPanelSizesOnCanvas,
   patchHudPanelPositionsForDisplay,
   patchNotePanelsForDisplay,
   removeNoteFromAllDisplays,
@@ -176,7 +177,7 @@ import {
   resolveNotePanelsForDisplay,
 } from "../../lib/hud-layout";
 import {
-  computeHudPanelAutoLayoutUpdates,
+  computeHudColumnStackLayoutUpdates,
   HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT,
   isHudKeyboardShortcutTypingTarget,
 } from "../../lib/hud-auto-layout";
@@ -1191,9 +1192,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         snap.notesListPanelVisible,
       ),
     };
-    const hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
+    const hudUpdates = computeHudColumnStackLayoutUpdates(planInput, widthPx, heightPx, {
       onlyIfChanged: true,
-      ignoreUserSizes: true,
+      measuredSizes: measureHudPanelSizesOnCanvas(canvas),
+      snapToGrid: true,
     });
     const effectiveHudAfterArrange = { ...effectiveHud, ...hudUpdates };
     const effectiveNotePanels = resolveNotePanelsForDisplay(
@@ -1213,7 +1215,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
     if (!hasHudUpdates && !hasStickyUpdates) {
       hudToastRef.current?.showToast({
-        message: "Layout already fits this window.",
+        message: "Columns already fill this window.",
         variant: "info",
       });
       return;
@@ -1224,7 +1226,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     });
     hudToastRef.current?.showToast({
       message: hasHudUpdates
-        ? `Arranged ${Object.keys(hudUpdates).length} panel${Object.keys(hudUpdates).length === 1 ? "" : "s"} to fit this window.`
+        ? `Rearranged ${Object.keys(hudUpdates).length} panel${Object.keys(hudUpdates).length === 1 ? "" : "s"} into columns.`
         : "Reflowed sticky notes around your panels.",
       variant: "success",
     });
@@ -3284,20 +3286,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         onClick={() => arrangeHudPanelsNow()}
                       >
                         <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
-                        <span>Arrange panels to fit ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
+                        <span>Rearrange ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
                       </button>
                       <p className="muted sm mb-2">
-                        Repacks visible panels into columns sized for this window — widths and
-                        heights expand to use available space. Use the header dashboard icon or
-                        press {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
+                        Snaps visible panels into column stacks sized for this window — keeps which
+                        side you put each panel on, stacks shorter panels in the same column, and
+                        grows column height to the fold. Use the header dashboard icon or press{" "}
+                        {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
                         unpinned stickies reflow when the window resizes.
                       </p>
                       <p className="muted sm mb-2">
                         Drag panels by the grip in each header. In grid mode (not chaotic), a
                         12-column dashed overlay fills the HUD while layout is unlocked; drop
                         targets highlight the cells the panel will snap into. Use the top bar for
-                        chaotic mode, arrange panels ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and
-                        layout lock.
+                        chaotic mode, rearrange ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and layout
+                        lock.
                       </p>
                       <label className="check-row">
                         <input
@@ -4077,12 +4080,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               </button>
             </HudTip>
             <HudTip
-              tip={`Repack HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Resizes columns to use available space; pinned stickies stay put`}
+              tip={`Stack HUD panels into columns and fill the fold (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Keeps your left/right placement; pinned stickies stay put`}
             >
               <button
                 type="button"
                 className="btn ghost icon-only"
-                aria-label={`Arrange HUD panels to fit (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
+                aria-label={`Rearrange HUD panels (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
                 onClick={() => arrangeHudPanelsNow()}
               >
                 <LayoutDashboard size={20} strokeWidth={2} aria-hidden />
@@ -4647,7 +4650,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
         {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
           <p
-            className="bing-wallpaper-caption pointer-events-none fixed bottom-14 right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
+            className="bing-wallpaper-caption pointer-events-none fixed right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
+            style={{ bottom: "calc(var(--hud-footer-reserve) + 0.5rem)" }}
             aria-live="polite"
           >
             {bingWallpaperCaption}

@@ -13,7 +13,7 @@ import {
   privilegedFetchJsonInBackground,
   privilegedFetchTextInBackground,
 } from "../lib/privileged-extension-fetch-handler";
-import { sendTabocalypseTestNotification } from "../lib/tabocalypse-alarm-notification";
+import { sendTabocalypseTestNotificationFromBackground } from "../lib/tabocalypse-alarm-notification";
 import {
   TABOCALYPSE_ALARM_DELETE,
   TABOCALYPSE_ALARM_SCHEDULE,
@@ -57,7 +57,7 @@ export default defineBackground(() => {
       return deleteTabocalypseAlarm(m.name);
     }
     if (m.type === TABOCALYPSE_ALARM_TEST_NOTIFICATION) {
-      return sendTabocalypseTestNotification();
+      return sendTabocalypseTestNotificationFromBackground();
     }
     if (m.type === TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW) {
       const coinId = m.coinId;

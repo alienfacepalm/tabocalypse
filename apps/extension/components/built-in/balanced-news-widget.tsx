@@ -40,7 +40,8 @@ import type { TPeapixBingCountry } from "../../lib/bing-wallpaper-country";
 
 const TOPIC_PREVIEW_WIDTH_PX = 320;
 const TOPIC_PREVIEW_ESTIMATED_HEIGHT_PX = 300;
-const TOPIC_PREVIEW_HOVER_CLOSE_MS = 120;
+/** Debounced delay before closing the topic preview after pointer leaves the widget and popover. */
+const TOPIC_PREVIEW_ROLLOFF_DEBOUNCE_MS = 350;
 
 interface IHoverTopicPreview {
   topic: INewsTopicRoundup;
@@ -410,6 +411,7 @@ export function BalancedNewsWidget({
   const [refreshing, setRefreshing] = useState(false);
   const isMountRef = useRef(true);
   const prevCategoryRef = useRef(balancedNewsCategory);
+  const widgetSectionRef = useRef<HTMLElement | null>(null);
   const hoverPreviewPanelRef = useRef<HTMLDivElement | null>(null);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -420,13 +422,22 @@ export function BalancedNewsWidget({
     }
   }, []);
 
+  const isHoverPreviewTargetHovered = useCallback((): boolean => {
+    const widgetEl = widgetSectionRef.current;
+    const popoverEl = hoverPreviewPanelRef.current;
+    return Boolean(
+      (widgetEl && widgetEl.matches(":hover")) || (popoverEl && popoverEl.matches(":hover")),
+    );
+  }, []);
+
   const scheduleHoverPreviewClose = useCallback(() => {
     clearHoverCloseTimer();
     hoverCloseTimerRef.current = setTimeout(() => {
+      if (isHoverPreviewTargetHovered()) return;
       setHoverPreview(null);
       setPreviewPlacement(null);
-    }, TOPIC_PREVIEW_HOVER_CLOSE_MS);
-  }, [clearHoverCloseTimer]);
+    }, TOPIC_PREVIEW_ROLLOFF_DEBOUNCE_MS);
+  }, [clearHoverCloseTimer, isHoverPreviewTargetHovered]);
 
   const openHoverPreview = useCallback(
     (topic: INewsTopicRoundup, anchorEl: HTMLElement) => {
@@ -607,7 +618,12 @@ export function BalancedNewsWidget({
 
   return (
     <>
-      <section className="card flex h-full min-h-0 flex-col gap-3">
+      <section
+        ref={widgetSectionRef}
+        className="card flex h-full min-h-0 flex-col gap-3"
+        onPointerEnter={clearHoverCloseTimer}
+        onPointerLeave={scheduleHoverPreviewClose}
+      >
         <div className="shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <HudPanelTitleInline>Balanced news</HudPanelTitleInline>
@@ -711,10 +727,18 @@ export function BalancedNewsWidget({
                         }
                         aria-pressed={active}
                         onClick={() => setSelectedTopicId(topic.id)}
-                        onMouseEnter={(e) => openHoverPreview(topic, e.currentTarget)}
-                        onMouseLeave={scheduleHoverPreviewClose}
+                        onPointerEnter={(e) => openHoverPreview(topic, e.currentTarget)}
                         onFocus={(e) => openHoverPreview(topic, e.currentTarget)}
-                        onBlur={scheduleHoverPreviewClose}
+                        onBlur={(e) => {
+                          const next = e.relatedTarget;
+                          if (
+                            next instanceof Node &&
+                            hoverPreviewPanelRef.current?.contains(next)
+                          ) {
+                            return;
+                          }
+                          scheduleHoverPreviewClose();
+                        }}
                       >
                         {previewArticle ? (
                           <ArticleThumbnail article={previewArticle} />

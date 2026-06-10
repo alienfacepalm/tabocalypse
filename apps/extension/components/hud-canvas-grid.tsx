@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { resolveHudDropTargetPct } from "../lib/hud-layout";
+import { hudCanvasInteractableHeightPx, resolveHudDropTargetPct } from "../lib/hud-layout";
 import { useHudPlacement } from "./hud-placement-context";
 
 export function HudCanvasGrid({ visible }: { visible: boolean }): React.JSX.Element | null {
@@ -15,6 +15,7 @@ export function HudCanvasGrid({ visible }: { visible: boolean }): React.JSX.Elem
   }
 
   const { cols, rows, cellW, cellH, canvasW, canvasH } = layoutMetrics;
+  const gridHeightPx = hudCanvasInteractableHeightPx(canvasH);
 
   return (
     <div
@@ -24,8 +25,8 @@ export function HudCanvasGrid({ visible }: { visible: boolean }): React.JSX.Elem
       <svg
         className="hud-grid-lines pointer-events-none absolute left-0 top-0 h-full w-full"
         width={canvasW}
-        height={canvasH}
-        viewBox={`0 0 ${canvasW} ${canvasH}`}
+        height={gridHeightPx}
+        viewBox={`0 0 ${canvasW} ${gridHeightPx}`}
         preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -35,7 +36,7 @@ export function HudCanvasGrid({ visible }: { visible: boolean }): React.JSX.Elem
             x1={i * cellW}
             y1={0}
             x2={i * cellW}
-            y2={canvasH}
+            y2={gridHeightPx}
             className="hud-grid-pattern-stroke"
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"

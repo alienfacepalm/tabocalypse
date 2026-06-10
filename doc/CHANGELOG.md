@@ -28,14 +28,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Extension reliability: alarm and link-related text is coerced before React render; alarm reminder storage is normalized for safe display.
 - Notes: detached panels avoid a phantom scrollbar and hug content height where intended; sticky note layout is stored **per monitor** while the master notes list still syncs.
 - HUD auto-layout: improved placement for denser widget grids on the new tab canvas.
+- **Todos** widget: denser list rows with a smaller remove control so more tasks fit in the panel.
 - Tab guilt panel polls for updated tab counts.
 
 ### Fixed
 
+- **Clock** alarms: test notifications try the page and background paths, with mocked regression tests for MV3 promise API, icon fallbacks, and timeouts; packaged `notification-icon.png` ships in the extension bundle for reliable Windows toasts.
 - Link HUD widgets (**Top Sites** and **Bookmarks**) refetch when optional host permissions change, so granting access no longer leaves stale error placeholders until a full new-tab reload.
 - Restored regressed defaults for **background rotate**, **HUD layout chaotic**, Chaotic labeling, and balanced default HUD widget toggles; **background rotate** defaults to on when settings are absent or invalid.
 - Humor banner toggle is honored again; reload hint copy names the correct browser-specific steps.
 - Weather **2 Lakes** accordion stays collapsed on first load.
+- **Rearrange** (F10 / header dashboard icon) stacks panels into columns inferred from where you placed them, grows each column to the fold, and no longer leaves large empty gaps under short panels.
+- Enabling a HUD widget reflows the column stack when auto-reposition is on, and column layouts now patch every panel together so new widgets do not overlap neighbors.
+- HUD panel resize grips and the snap grid stay above the fixed page footer instead of drawing underneath it.
 
 ## [0.1] - 2026-05-05
 

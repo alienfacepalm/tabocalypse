@@ -83,6 +83,22 @@ export const HUD_LAYOUT_REFERENCE_CANVAS = { widthPx: 1200, heightPx: 800 };
 /** Inset from the visible HUD canvas bottom (the fold) when auto-fitting panels. */
 export const HUD_LAYOUT_FOLD_PADDING_PX = 16;
 
+/**
+ * Space reserved for the fixed page footer (`.footer` in tailwind.css).
+ * Keep in sync with `--hud-footer-reserve` so corner resize grips stay above the footer.
+ */
+export const HUD_PAGE_FOOTER_RESERVE_PX = 56;
+
+/** Canvas height available for HUD panels, grid, and resize grips (above the fixed footer). */
+export function hudCanvasInteractableHeightPx(canvasHeightPx: number): number {
+  return Math.max(1, canvasHeightPx - HUD_PAGE_FOOTER_RESERVE_PX);
+}
+
+/** Bottom edge (px) of the visible HUD canvas — panels should stay at or above this when possible. */
+export function hudCanvasFoldBottomPx(canvasHeightPx: number): number {
+  return Math.max(1, hudCanvasInteractableHeightPx(canvasHeightPx) - HUD_LAYOUT_FOLD_PADDING_PX);
+}
+
 /** Vertical overlap between panels when they cannot fit above the fold without scrolling. */
 export const HUD_LAYOUT_FOLD_OVERLAP_PX = 10;
 
@@ -217,11 +233,6 @@ export function measureHudPanelSizesOnCanvas(
   return out;
 }
 
-/** Bottom edge (px) of the visible HUD canvas — panels should stay at or above this when possible. */
-export function hudCanvasFoldBottomPx(canvasHeightPx: number): number {
-  return Math.max(1, canvasHeightPx - HUD_LAYOUT_FOLD_PADDING_PX);
-}
-
 /** Pulls a panel up when its bottom would sit below the visible canvas fold. */
 export function clampHudPanelPositionToFold(
   canvas: HTMLElement,
@@ -244,11 +255,12 @@ export function getHudLayoutMetrics(
 ): IHudLayoutMetrics {
   const cols = HUD_LAYOUT_COLUMNS;
   const safeW = Math.max(1, canvasWidthPx);
-  const safeH = Math.max(1, canvasHeightPx);
+  const canvasH = Math.max(1, canvasHeightPx);
+  const interactableH = hudCanvasInteractableHeightPx(canvasH);
   const cellW = safeW / cols;
-  const rows = Math.max(1, Math.floor(safeH / cellW));
-  const cellH = safeH / rows;
-  return { cols, rows, cellW, cellH, canvasW: safeW, canvasH: safeH };
+  const rows = Math.max(1, Math.floor(interactableH / cellW));
+  const cellH = interactableH / rows;
+  return { cols, rows, cellW, cellH, canvasW: safeW, canvasH };
 }
 
 /** Snaps a panel origin to the nearest layout cell (top-left of cell). */

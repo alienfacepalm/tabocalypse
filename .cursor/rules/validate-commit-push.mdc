@@ -20,6 +20,10 @@ Trivial-only edits (e.g. pure whitespace in a non-functional file) still warrant
 3. Use **`pnpm build:firefox`** or **`pnpm build:safari`** when you only need one target (faster iteration) instead of the full **`pnpm build`** matrix.
 4. Fix failures before committing. Run **`pnpm format`** when Prettier reports drift.
 
+## Docs (before commit)
+
+After checks pass, update shipped-behavior documentation **before** **`git commit`** — see [update-docs-before-commit.mdc](update-docs-before-commit.mdc). **Keep [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) [Unreleased] current** for every user-facing change; do not commit meaningful shipped work with a stale changelog.
+
 ## Commit
 
 - **`git status`** — stage only intentional paths; do not commit **`apps/extension/output/`**, **`.wxt/`**, or **`node_modules/`** (they are gitignored).

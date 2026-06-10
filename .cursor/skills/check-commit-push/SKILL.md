@@ -22,6 +22,10 @@ From the **repo root**:
 
 Details: [validate-commit-push.mdc](../../rules/validate-commit-push.mdc).
 
+## 1b. Docs (after check passes, before commit)
+
+Review staged/changed paths against [update-docs-before-commit.mdc](../../rules/update-docs-before-commit.mdc). **Keep [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) [Unreleased] up to date** — required for user-facing changes. Update privacy/store docs when required. Stage doc updates with the same commit when they belong together.
+
 ## 2. Commit (only if check passed)
 
 Skip this section if there is nothing to commit.

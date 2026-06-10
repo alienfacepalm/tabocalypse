@@ -9,6 +9,10 @@ import {
   getHudGridDropHighlight,
   getHudLayoutMetrics,
   getHudPanelDropCellRange,
+  hudCanvasFoldBottomPx,
+  hudCanvasInteractableHeightPx,
+  HUD_LAYOUT_FOLD_PADDING_PX,
+  HUD_PAGE_FOOTER_RESERVE_PX,
   listHudGridCells,
   mergeHudPanelPositions,
   patchHudPanelPositionsForDisplay,
@@ -29,6 +33,16 @@ describe("snapScalarToGrid", () => {
     expect(snapScalarToGrid(12, 24)).toBe(24);
     expect(snapScalarToGrid(35, 24)).toBe(24);
     expect(snapScalarToGrid(37, 24)).toBe(48);
+  });
+});
+
+describe("hud canvas fold", () => {
+  it("reserves space above the fixed page footer for panels and resize grips", () => {
+    const canvasH = 900;
+    expect(hudCanvasInteractableHeightPx(canvasH)).toBe(canvasH - HUD_PAGE_FOOTER_RESERVE_PX);
+    expect(hudCanvasFoldBottomPx(canvasH)).toBe(
+      hudCanvasInteractableHeightPx(canvasH) - HUD_LAYOUT_FOLD_PADDING_PX,
+    );
   });
 });
 
@@ -176,18 +190,24 @@ describe("HUD layout grid", () => {
     expect(HUD_LAYOUT_COLUMNS).toBe(12);
   });
 
-  it("fills canvas with square-ish cells", () => {
+  it("fills the interactable canvas with square-ish cells", () => {
     const m = getHudLayoutMetrics(1200, 800);
+    const interactableH = hudCanvasInteractableHeightPx(800);
     expect(m.cols).toBe(12);
     expect(m.cellW).toBe(100);
     expect(m.rows).toBeGreaterThanOrEqual(1);
-    expect(m.cellH * m.rows).toBeCloseTo(800, 5);
+    expect(m.cellH * m.rows).toBeCloseTo(interactableH, 5);
   });
 
   it("snaps panel origin to cell top-left", () => {
     const m = getHudLayoutMetrics(1200, 800);
     const snapped = snapPanelOriginToLayoutGrid(130, 90, m);
-    expect(snapped).toEqual({ leftPx: 100, topPx: 100, col: 1, row: 1 });
+    expect(snapped).toEqual({
+      leftPx: 100,
+      topPx: m.cellH,
+      col: 1,
+      row: 1,
+    });
   });
 
   it("highlights drop cells from anchor, not tiny pixels", () => {
@@ -235,7 +255,7 @@ describe("computeHudDragCanvasRectPx", () => {
     const m = getHudLayoutMetrics(1200, 800);
     const rect = computeHudDragCanvasRectPx(10, 10, 130, 90, 220, 180, m, true);
     expect(rect.leftPx).toBe(100);
-    expect(rect.topPx).toBe(100);
+    expect(rect.topPx).toBe(m.cellH);
     expect(rect.widthPx).toBe(220);
     expect(rect.heightPx).toBe(180);
   });

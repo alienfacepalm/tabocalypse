@@ -5,7 +5,9 @@ import {
   META_KEY,
   removeAlarmMeta,
   TABOCALYPSE_ALARM_NOTIFICATION_ICON,
+  TABOCALYPSE_NOTIFICATION_ICON_CANDIDATES,
   tabocalypseAlarmNotificationId,
+  tabocalypseTestNotificationId,
 } from "./alarm-meta";
 
 describe("alarm-meta constants", () => {
@@ -41,6 +43,20 @@ describe("tabocalypseAlarmNotificationId", () => {
 describe("TABOCALYPSE_ALARM_NOTIFICATION_ICON", () => {
   it("points at the packaged extension icon path", () => {
     expect(TABOCALYPSE_ALARM_NOTIFICATION_ICON).toBe("icons/128.png");
+  });
+});
+
+describe("TABOCALYPSE_NOTIFICATION_ICON_CANDIDATES", () => {
+  it("includes the root notification icon path and fallbacks", () => {
+    expect(TABOCALYPSE_NOTIFICATION_ICON_CANDIDATES[0]).toBe("notification-icon.png");
+    expect(TABOCALYPSE_NOTIFICATION_ICON_CANDIDATES).toContain("icons/128.png");
+    expect(TABOCALYPSE_NOTIFICATION_ICON_CANDIDATES).toContain("icon/128.png");
+  });
+});
+
+describe("tabocalypseTestNotificationId", () => {
+  it("uses a unique test prefix so each toast is fresh", () => {
+    expect(tabocalypseTestNotificationId(1_700_000_000_000)).toBe("tabocalypse-test-1700000000000");
   });
 });
 

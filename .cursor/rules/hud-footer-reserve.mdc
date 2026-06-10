@@ -1,0 +1,37 @@
+---
+description: Reserve space above the fixed page footer for HUD panels, grid, and resize grips
+alwaysApply: false
+globs:
+  - apps/extension/lib/hud-layout.ts
+  - apps/extension/lib/hud-auto-layout.ts
+  - apps/extension/components/hud-canvas-grid.tsx
+  - apps/extension/components/draggable-hud-panel.tsx
+  - apps/extension/entrypoints/newtab/tailwind.css
+  - apps/extension/entrypoints/newtab/app.tsx
+---
+
+# HUD footer reserve (resize grips and grid)
+
+The new-tab **footer** (`.footer`) is **fixed** at the bottom of the viewport (`z-[45]`). HUD panels, the snap grid, and **corner resize grips** must stay **above** that bar so users can always reach them.
+
+## Single source of truth
+
+| Layer | Symbol |
+| --- | --- |
+| CSS | `--hud-footer-reserve: 3.5rem` on `:root` in [`tailwind.css`](../../apps/extension/entrypoints/newtab/tailwind.css) |
+| Layout math | `HUD_PAGE_FOOTER_RESERVE_PX` (56px at 16px root) in [`hud-layout.ts`](../../apps/extension/lib/hud-layout.ts) |
+
+**Keep these in sync.** If you change footer padding, border, or min-height, update both.
+
+## Required behavior
+
+1. **`hudCanvasInteractableHeightPx`** — canvas height minus footer reserve.
+2. **`hudCanvasFoldBottomPx`** — interactable height minus `HUD_LAYOUT_FOLD_PADDING_PX`; used for auto-layout, drag clamp, and resize commit.
+3. **`getHudLayoutMetrics`** — row/grid math uses interactable height, not full canvas height.
+4. **`.hud-canvas`** — `padding-bottom: var(--hud-footer-reserve)` so scroll content clears the footer.
+5. **`HudCanvasGrid`** — vertical grid lines end at interactable height, not full canvas height.
+6. **Do not** raise resize grip `z-index` above the footer as a workaround — reserve space instead.
+
+## Verification
+
+After footer or HUD layout changes: tall column-stacked panels should end above the footer; corner grips and dashed grid lines must not draw under the version bar.

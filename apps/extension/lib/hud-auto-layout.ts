@@ -15,6 +15,7 @@ import {
   hudCanvasFoldBottomPx,
   hudPositionFromCanvasRect,
   resolveHudPanelSizePx,
+  snapPanelOriginToLayoutGrid,
 } from "./hud-layout";
 
 export type { IHudAutoLayoutItem, THudLayoutDensity } from "./hud-layout";
@@ -595,8 +596,8 @@ export function computeHudPanelAutoLayoutUpdates(
 }
 
 /**
- * Keeps each panel's saved position and size, only nudging panels that clip the canvas or fold.
- * Used for manual arrange (F10 / header button) so user layouts are not repacked.
+ * Keeps each panel's saved position and size, snaps origins to the HUD grid, then nudges panels
+ * that overlap neighbors or clip the canvas fold. Used for manual rearrange (F10 / header button).
  */
 export function computeHudPanelAdjustLayoutUpdates(
   input: IHudAutoLayoutPlanInput,
@@ -605,6 +606,8 @@ export function computeHudPanelAdjustLayoutUpdates(
   options?: {
     onlyIfChanged?: boolean;
     measuredSizes?: Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>>;
+    /** When true (default), panel origins align to the 12-column snap grid before overlap resolve. */
+    snapToGrid?: boolean;
   },
 ): Partial<Record<THudPanelId, IHudPanelPosition>> {
   const metrics = getHudLayoutMetrics(canvasW, canvasH);
@@ -614,28 +617,265 @@ export function computeHudPanelAdjustLayoutUpdates(
   const placements = items.map((item) =>
     hudPanelPositionToCanvasRect(item, metrics, options?.measuredSizes),
   );
+  if (options?.snapToGrid !== false) {
+    snapHudPlacementsToGrid(placements, metrics);
+  }
   resolveHudPanelPlacementOverlaps(placements, metrics);
   fitHudPlacementsToFold(placements, metrics.canvasH, { shrinkHeights: false });
 
-  const onlyIfChanged = options?.onlyIfChanged !== false;
+  return placementsToHudUpdates(
+    placements,
+    input.hudPanelPositions,
+    metrics,
+    options?.onlyIfChanged !== false,
+    { preserveSavedSizes: true },
+  );
+}
+
+/** Nearest equal-width column band from the panel's left edge (wide panels must not spill into the next column). */
+export function assignHudPanelColumnIndex(
+  leftPx: number,
+  _widthPx: number,
+  columnCount: number,
+  metrics: IHudLayoutMetrics,
+): number {
+  const margin = HUD_LAND_MARGIN_PX;
+  const gap = HUD_LAND_GAP_PX;
+  const cols = Math.max(1, columnCount);
+  const innerW = metrics.canvasW - margin * 2 - gap * Math.max(0, cols - 1);
+  const colWidth = innerW / cols;
+  const band = colWidth + gap;
+  const relative = leftPx - margin + colWidth * 0.5;
+  if (relative <= 0) return 0;
+  return clampHudScalar(Math.floor(relative / band), 0, cols - 1);
+}
+
+function resolveHudStackColumnCount(
+  placements: readonly IHudPlacedPanelRect[],
+  metrics: IHudLayoutMetrics,
+): number {
+  if (placements.length === 0) return 1;
+  if (resolveHudLandMode(metrics.canvasW, metrics.canvasH) === "tight") return 1;
+  const maxCols = resolveHudSpreadColumnCount(metrics.canvasW, placements.length);
+  const usedCols = new Set(
+    placements.map((p) => assignHudPanelColumnIndex(p.leftPx, p.widthPx, maxCols, metrics)),
+  ).size;
+  return Math.max(1, Math.min(maxCols, usedCols));
+}
+
+function stackHudPlacementsInColumns(
+  placements: readonly IHudPlacedPanelRect[],
+  items: readonly IHudAutoLayoutItem[],
+  metrics: IHudLayoutMetrics,
+  columnCount: number,
+  layoutOptions?: IHudAutoLayoutOptions,
+): IHudPlacedPanelRect[] {
+  const gap = HUD_LAND_GAP_PX;
+  const margin = HUD_LAND_MARGIN_PX;
+  const cols = Math.max(1, columnCount);
+  const innerW = metrics.canvasW - margin * 2 - gap * Math.max(0, cols - 1);
+  const colWidth = innerW / cols;
+  const itemByPanelId = new Map(items.map((item) => [item.panelId, item]));
+  const columns: IHudPlacedPanelRect[][] = Array.from({ length: cols }, () => []);
+
+  for (const p of placements) {
+    const col = assignHudPanelColumnIndex(p.leftPx, p.widthPx, cols, metrics);
+    columns[col]!.push(p);
+  }
+
+  const stacked: IHudPlacedPanelRect[] = [];
+  for (let c = 0; c < cols; c += 1) {
+    const colPanels = columns[c]!;
+    if (colPanels.length === 0) continue;
+    colPanels.sort((a, b) => a.topPx - b.topPx || a.priority - b.priority);
+    const leftPx = margin + c * (colWidth + gap);
+    let topPx = margin;
+    for (const p of colPanels) {
+      const item = itemByPanelId.get(p.panelId);
+      const size =
+        item != null
+          ? resolvePanelSizeForLand(item, item.position, metrics, "roomy", colWidth, layoutOptions)
+          : {
+              widthPx: clampHudPanelSize(
+                p.panelId,
+                Math.min(p.widthPx, colWidth),
+                p.heightPx,
+                metrics.canvasW,
+                metrics.canvasH,
+              ).widthPx,
+              heightPx: p.heightPx,
+            };
+      stacked.push({
+        ...p,
+        leftPx,
+        topPx,
+        widthPx: size.widthPx,
+        heightPx: size.heightPx,
+      });
+      topPx += size.heightPx + gap;
+    }
+  }
+  return stacked;
+}
+
+function snapHudPlacementsToGrid(
+  placements: IHudPlacedPanelRect[],
+  metrics: IHudLayoutMetrics,
+): void {
+  for (const p of placements) {
+    const maxLeft = Math.max(0, metrics.canvasW - p.widthPx);
+    const maxTop = Math.max(0, metrics.canvasH - p.heightPx);
+    const snapped = snapPanelOriginToLayoutGrid(p.leftPx, p.topPx, metrics);
+    p.leftPx = clampHudScalar(snapped.leftPx, 0, maxLeft);
+    p.topPx = clampHudScalar(snapped.topPx, 0, maxTop);
+  }
+}
+
+/** Aligns stacked panels to shared column origins and clamps widths so columns cannot overlap. */
+function normalizeHudColumnStackPlacements(
+  placements: IHudPlacedPanelRect[],
+  columnCount: number,
+  metrics: IHudLayoutMetrics,
+  snapToGrid: boolean,
+): void {
+  const margin = HUD_LAND_MARGIN_PX;
+  const gap = HUD_LAND_GAP_PX;
+  const cols = Math.max(1, columnCount);
+  const innerW = metrics.canvasW - margin * 2 - gap * Math.max(0, cols - 1);
+  const colWidth = Math.floor(innerW / cols);
+  const byCol = new Map<number, IHudPlacedPanelRect[]>();
+
+  for (const p of placements) {
+    const col = assignHudPanelColumnIndex(p.leftPx, p.widthPx, cols, metrics);
+    const list = byCol.get(col) ?? [];
+    list.push(p);
+    byCol.set(col, list);
+  }
+
+  for (const [col, panels] of byCol) {
+    let leftPx = margin + col * (colWidth + gap);
+    if (snapToGrid) {
+      leftPx = snapPanelOriginToLayoutGrid(leftPx, margin, metrics).leftPx;
+    }
+    for (const p of panels) {
+      p.widthPx = colWidth;
+      const maxLeft = Math.max(0, metrics.canvasW - p.widthPx);
+      p.leftPx = clampHudScalar(leftPx, 0, maxLeft);
+      if (snapToGrid) {
+        const maxTop = Math.max(0, metrics.canvasH - p.heightPx);
+        const snappedTop = snapPanelOriginToLayoutGrid(p.leftPx, p.topPx, metrics).topPx;
+        p.topPx = clampHudScalar(snappedTop, 0, maxTop);
+      }
+    }
+  }
+}
+
+function placementsToHudUpdates(
+  placements: readonly IHudPlacedPanelRect[],
+  prevPositions: Record<THudPanelId, IHudPanelPosition>,
+  metrics: IHudLayoutMetrics,
+  onlyIfChanged: boolean,
+  options?: { preserveSavedSizes?: boolean },
+): Partial<Record<THudPanelId, IHudPanelPosition>> {
   const hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
   for (const p of placements) {
     const panelId = p.panelId;
-    const prev = input.hudPanelPositions[panelId];
+    const prev = prevPositions[panelId];
     const rect: IHudCanvasRectPx = {
       leftPx: p.leftPx,
       topPx: p.topPx,
       widthPx: p.widthPx,
       heightPx: p.heightPx,
     };
-    // Keep saved sizes; measured/placement sizes are for overlap/fold math only.
-    const pos = hudPositionFromCanvasRect(
-      rect,
-      { widthPx: prev?.widthPx, heightPx: prev?.heightPx },
-      metrics,
-    );
-    if (onlyIfChanged && prev != null && hudPanelOriginEqual(prev, pos)) continue;
+    const size = options?.preserveSavedSizes
+      ? { widthPx: prev?.widthPx, heightPx: prev?.heightPx }
+      : { widthPx: p.widthPx, heightPx: p.heightPx };
+    const pos = hudPositionFromCanvasRect(rect, size, metrics);
+    if (onlyIfChanged && prev != null && hudPanelPositionsEqual(prev, pos)) continue;
     hudUpdates[panelId] = pos;
   }
   return hudUpdates;
+}
+
+/** Column stacks must patch every panel together — partial updates leave widths/positions out of sync. */
+function placementsToHudColumnStackUpdates(
+  placements: readonly IHudPlacedPanelRect[],
+  prevPositions: Record<THudPanelId, IHudPanelPosition>,
+  metrics: IHudLayoutMetrics,
+  onlyIfChanged: boolean,
+): Partial<Record<THudPanelId, IHudPanelPosition>> {
+  const next: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
+  for (const p of placements) {
+    const rect: IHudCanvasRectPx = {
+      leftPx: p.leftPx,
+      topPx: p.topPx,
+      widthPx: p.widthPx,
+      heightPx: p.heightPx,
+    };
+    next[p.panelId] = hudPositionFromCanvasRect(
+      rect,
+      { widthPx: p.widthPx, heightPx: p.heightPx },
+      metrics,
+    );
+  }
+  if (!onlyIfChanged) return next;
+
+  let anyChanged = false;
+  for (const [panelId, pos] of Object.entries(next) as [THudPanelId, IHudPanelPosition][]) {
+    const prev = prevPositions[panelId];
+    if (prev == null || !hudPanelPositionsEqual(prev, pos)) {
+      anyChanged = true;
+      break;
+    }
+  }
+  return anyChanged ? next : {};
+}
+
+/**
+ * Stacks panels vertically within column bands inferred from their horizontal placement,
+ * then grows column heights to the canvas fold. Preserves which side each panel is on.
+ */
+export function computeHudColumnStackLayoutUpdates(
+  input: IHudAutoLayoutPlanInput,
+  canvasW: number,
+  canvasH: number,
+  options?: {
+    onlyIfChanged?: boolean;
+    measuredSizes?: Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>>;
+    snapToGrid?: boolean;
+    layoutOptions?: IHudAutoLayoutOptions;
+  },
+): Partial<Record<THudPanelId, IHudPanelPosition>> {
+  const metrics = getHudLayoutMetrics(canvasW, canvasH);
+  const items = buildHudAutoLayoutItems(input);
+  if (items.length === 0) return {};
+
+  const seedPlacements = items.map((item) =>
+    hudPanelPositionToCanvasRect(item, metrics, options?.measuredSizes),
+  );
+  const columnCount = resolveHudStackColumnCount(seedPlacements, metrics);
+  const placements = stackHudPlacementsInColumns(
+    seedPlacements,
+    items,
+    metrics,
+    columnCount,
+    options?.layoutOptions,
+  );
+  if (resolveHudLandMode(metrics.canvasW, metrics.canvasH) === "roomy") {
+    expandRoomyPlacementsToFold(placements, metrics.canvasH, HUD_LAND_GAP_PX);
+  }
+  fitHudPlacementsToFold(placements, metrics.canvasH, { shrinkHeights: false });
+  normalizeHudColumnStackPlacements(
+    placements,
+    columnCount,
+    metrics,
+    options?.snapToGrid !== false,
+  );
+
+  return placementsToHudColumnStackUpdates(
+    placements,
+    input.hudPanelPositions,
+    metrics,
+    options?.onlyIfChanged !== false,
+  );
 }

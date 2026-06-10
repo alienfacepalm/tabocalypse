@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHudAutoLayoutItems,
   computeAutoHudPanelLayout,
+  computeHudColumnStackLayoutUpdates,
   computeHudPanelAdjustLayoutUpdates,
   computeHudPanelAutoLayoutUpdates,
   fitHudPlacementsToFold,
@@ -370,10 +371,13 @@ describe("computeHudPanelAdjustLayoutUpdates", () => {
       pluginDeckVisible: false,
     };
     const updates = computeHudPanelAdjustLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
-    expect(updates.balancedNews).toBeUndefined();
     expect(updates.bookmarksStrip?.yPct).toBeDefined();
     expect(updates.bookmarksStrip!.yPct!).toBeGreaterThan(bookmarksStrip.yPct);
     expect(updates.bookmarksStrip?.widthPx).toBe(320);
+    if (updates.balancedNews != null) {
+      expect(updates.balancedNews.widthPx).toBe(720);
+      expect(updates.balancedNews.xPct).toBeGreaterThan(30);
+    }
   });
 
   it("uses measured panel sizes when content is taller than stored defaults", () => {
@@ -410,6 +414,45 @@ describe("computeHudPanelAdjustLayoutUpdates", () => {
     expect(top + 520).toBeLessThanOrEqual(foldBottom + 1);
   });
 
+  it("preserves user-swapped panel sides when snapping to the grid", () => {
+    const metrics = getHudLayoutMetrics(1600, 900);
+    const weatherRight = { xPct: 55, yPct: 2, widthPx: 576, heightPx: 280 };
+    const newsLeft = { xPct: 2, yPct: 40, widthPx: 720, heightPx: 420 };
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        clock: false,
+        todo: false,
+        tabGuilt: false,
+        crypto: false,
+        notes: false,
+        weather: true,
+        balancedNews: true,
+      },
+      hudPanelPositions: {
+        ...DEFAULT_HUD_PANEL_POSITIONS,
+        weather: weatherRight,
+        balancedNews: newsLeft,
+      },
+      pluginDeckVisible: false,
+    };
+    const autoUpdates = computeHudPanelAutoLayoutUpdates(input, metrics.canvasW, metrics.canvasH, {
+      onlyIfChanged: false,
+      ignoreUserSizes: true,
+    });
+    expect(autoUpdates.weather?.xPct ?? 0).toBeLessThan(weatherRight.xPct);
+
+    const adjustUpdates = computeHudColumnStackLayoutUpdates(
+      input,
+      metrics.canvasW,
+      metrics.canvasH,
+    );
+    const nextWeather = { ...weatherRight, ...adjustUpdates.weather };
+    const nextNews = { ...newsLeft, ...adjustUpdates.balancedNews };
+    expect(nextWeather.xPct).toBeGreaterThan(40);
+    expect(nextNews.xPct).toBeLessThan(25);
+  });
+
   it("does not shrink a wide saved width when the DOM is clamped narrower", () => {
     const metrics = getHudLayoutMetrics(900, 700);
     const balancedNews = { xPct: 34, yPct: 88, widthPx: 720, heightPx: 420 };
@@ -436,6 +479,143 @@ describe("computeHudPanelAdjustLayoutUpdates", () => {
     if (next != null) {
       expect(next.widthPx).toBe(720);
       expect(next.heightPx).toBe(420);
+    }
+  });
+});
+
+describe("computeHudColumnStackLayoutUpdates", () => {
+  it("stacks short panels in the same column and grows the stack to the fold", () => {
+    const metrics = getHudLayoutMetrics(1600, 900);
+    const foldBottom = hudCanvasFoldBottomPx(metrics.canvasH);
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        clock: true,
+        crypto: true,
+        weather: false,
+        todo: false,
+        notes: false,
+        tabGuilt: false,
+        balancedNews: false,
+        bookmarksStrip: false,
+      },
+      hudPanelPositions: {
+        ...DEFAULT_HUD_PANEL_POSITIONS,
+        clock: { xPct: 25, yPct: 2, widthPx: 352, heightPx: 200 },
+        crypto: { xPct: 26, yPct: 55, widthPx: 448, heightPx: 240 },
+      },
+      pluginDeckVisible: false,
+    };
+    const updates = computeHudColumnStackLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
+    const clock = { ...input.hudPanelPositions.clock, ...updates.clock };
+    const crypto = { ...input.hudPanelPositions.crypto, ...updates.crypto };
+    expect(clock.xPct).toBeCloseTo(crypto.xPct!, 0);
+    const clockBottom = ((clock.yPct ?? 0) / 100) * metrics.canvasH + (clock.heightPx ?? 0);
+    const cryptoBottom = ((crypto.yPct ?? 0) / 100) * metrics.canvasH + (crypto.heightPx ?? 0);
+    expect(cryptoBottom).toBeGreaterThan(clockBottom);
+    expect(cryptoBottom).toBeGreaterThan(foldBottom - 40);
+  });
+
+  it("keeps a lone wide panel in its column while filling height to the fold", () => {
+    const metrics = getHudLayoutMetrics(1600, 900);
+    const foldBottom = hudCanvasFoldBottomPx(metrics.canvasH);
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        weather: true,
+        clock: false,
+        crypto: false,
+        todo: false,
+        notes: false,
+        tabGuilt: false,
+        balancedNews: false,
+        bookmarksStrip: false,
+      },
+      hudPanelPositions: {
+        ...DEFAULT_HUD_PANEL_POSITIONS,
+        weather: { xPct: 2, yPct: 2, widthPx: 576, heightPx: 280 },
+      },
+      pluginDeckVisible: false,
+    };
+    const updates = computeHudColumnStackLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
+    const weather = { ...input.hudPanelPositions.weather, ...updates.weather };
+    const bottom = ((weather.yPct ?? 0) / 100) * metrics.canvasH + (weather.heightPx ?? 0);
+    expect(bottom).toBeGreaterThan(foldBottom - 20);
+    expect(weather.heightPx ?? 0).toBeGreaterThan(280);
+  });
+
+  it("returns a full-stack patch when any panel changes so columns stay aligned", () => {
+    const metrics = getHudLayoutMetrics(1600, 900);
+    const stackedWeather = { xPct: 1, yPct: 1, widthPx: 360, heightPx: 820 };
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        weather: true,
+        todo: true,
+        clock: false,
+        crypto: false,
+        notes: false,
+        tabGuilt: false,
+        balancedNews: false,
+        bookmarksStrip: false,
+      },
+      hudPanelPositions: {
+        ...DEFAULT_HUD_PANEL_POSITIONS,
+        weather: stackedWeather,
+        todo: { xPct: 2, yPct: 40, widthPx: 352, heightPx: 200 },
+      },
+      pluginDeckVisible: false,
+    };
+    const updates = computeHudColumnStackLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
+    expect(Object.keys(updates)).toEqual(expect.arrayContaining(["weather", "todo"]));
+    expect(updates.todo?.widthPx).toBe(updates.weather?.widthPx);
+    expect(updates.todo?.xPct).toBeCloseTo(updates.weather?.xPct ?? 0, 0);
+  });
+
+  it("does not let a wide panel spill into the next column", () => {
+    const metrics = getHudLayoutMetrics(1600, 900);
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        weather: true,
+        todo: true,
+        clock: true,
+        crypto: true,
+        notes: false,
+        tabGuilt: false,
+        balancedNews: false,
+        bookmarksStrip: false,
+      },
+      hudPanelPositions: {
+        ...DEFAULT_HUD_PANEL_POSITIONS,
+        weather: { xPct: 1, yPct: 1, widthPx: 720, heightPx: 320 },
+        todo: { xPct: 1, yPct: 45, widthPx: 352, heightPx: 200 },
+        clock: { xPct: 28, yPct: 1, widthPx: 352, heightPx: 200 },
+        crypto: { xPct: 28, yPct: 35, widthPx: 448, heightPx: 240 },
+      },
+      pluginDeckVisible: false,
+    };
+    const updates = computeHudColumnStackLayoutUpdates(input, metrics.canvasW, metrics.canvasH);
+    const rects = (["weather", "todo", "clock", "crypto"] as const).map((id) => {
+      const pos = { ...input.hudPanelPositions[id], ...updates[id] };
+      return {
+        left: ((pos.xPct ?? 0) / 100) * metrics.canvasW,
+        top: ((pos.yPct ?? 0) / 100) * metrics.canvasH,
+        w: pos.widthPx ?? 320,
+        h: pos.heightPx ?? 200,
+      };
+    });
+    for (let i = 0; i < rects.length; i += 1) {
+      for (let j = i + 1; j < rects.length; j += 1) {
+        const a = rects[i]!;
+        const b = rects[j]!;
+        const overlap =
+          a.left < b.left + b.w &&
+          a.left + a.w > b.left &&
+          a.top < b.top + b.h &&
+          a.top + a.h > b.top;
+        expect(overlap).toBe(false);
+      }
     }
   });
 });

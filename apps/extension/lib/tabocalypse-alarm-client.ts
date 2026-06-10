@@ -1,5 +1,8 @@
-import browser from "webextension-polyfill";
 import type { IScheduleTabocalypseAlarmInput } from "./tabocalypse-alarm-service";
+import {
+  extensionRuntimeSendMessage,
+  PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+} from "./privileged-extension-fetch";
 import {
   TABOCALYPSE_ALARM_DELETE,
   TABOCALYPSE_ALARM_SCHEDULE,
@@ -8,8 +11,6 @@ import {
   type TTabocalypseAlarmScheduleResponse,
   type TTabocalypseAlarmTestNotificationResponse,
 } from "./tabocalypse-alarm-message";
-
-const BACKGROUND_NO_RESPONSE = "Tabocalypse background did not respond.";
 
 function isScheduleResponse(value: unknown): value is TTabocalypseAlarmScheduleResponse {
   return (
@@ -31,37 +32,58 @@ function isDeleteResponse(value: unknown): value is TTabocalypseAlarmDeleteRespo
 export async function scheduleTabocalypseAlarmViaBackground(
   input: IScheduleTabocalypseAlarmInput,
 ): Promise<TTabocalypseAlarmScheduleResponse> {
-  const response = await browser.runtime.sendMessage({
-    type: TABOCALYPSE_ALARM_SCHEDULE,
-    whenMs: input.whenMs,
-    message: input.message,
-    existingName: input.existingName ?? null,
-  });
-  if (!isScheduleResponse(response)) {
-    return { ok: false, error: BACKGROUND_NO_RESPONSE };
+  try {
+    const response = await extensionRuntimeSendMessage<TTabocalypseAlarmScheduleResponse>({
+      type: TABOCALYPSE_ALARM_SCHEDULE,
+      whenMs: input.whenMs,
+      message: input.message,
+      existingName: input.existingName ?? null,
+    });
+    if (!isScheduleResponse(response)) {
+      return { ok: false, error: PRIV_FETCH_BACKGROUND_NO_RESPONSE };
+    }
+    return response;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+    };
   }
-  return response;
 }
 
 export async function deleteTabocalypseAlarmViaBackground(
   name: string,
 ): Promise<TTabocalypseAlarmDeleteResponse> {
-  const response = await browser.runtime.sendMessage({
-    type: TABOCALYPSE_ALARM_DELETE,
-    name,
-  });
-  if (!isDeleteResponse(response)) {
-    return { ok: false, error: BACKGROUND_NO_RESPONSE };
+  try {
+    const response = await extensionRuntimeSendMessage<TTabocalypseAlarmDeleteResponse>({
+      type: TABOCALYPSE_ALARM_DELETE,
+      name,
+    });
+    if (!isDeleteResponse(response)) {
+      return { ok: false, error: PRIV_FETCH_BACKGROUND_NO_RESPONSE };
+    }
+    return response;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+    };
   }
-  return response;
 }
 
 export async function sendTabocalypseTestNotificationViaBackground(): Promise<TTabocalypseAlarmTestNotificationResponse> {
-  const response = await browser.runtime.sendMessage({
-    type: TABOCALYPSE_ALARM_TEST_NOTIFICATION,
-  });
-  if (!isScheduleResponse(response)) {
-    return { ok: false, error: BACKGROUND_NO_RESPONSE };
+  try {
+    const response = await extensionRuntimeSendMessage<TTabocalypseAlarmTestNotificationResponse>({
+      type: TABOCALYPSE_ALARM_TEST_NOTIFICATION,
+    });
+    if (!isScheduleResponse(response)) {
+      return { ok: false, error: PRIV_FETCH_BACKGROUND_NO_RESPONSE };
+    }
+    return response;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+    };
   }
-  return response;
 }

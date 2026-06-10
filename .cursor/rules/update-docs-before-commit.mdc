@@ -1,0 +1,51 @@
+---
+description: After checks pass, update shipped-behavior docs before git commit; keep doc/CHANGELOG.md [Unreleased] current
+alwaysApply: true
+---
+
+# Update docs before commit
+
+After **`pnpm check`** passes (and **`pnpm build`** when [validate-commit-push.mdc](validate-commit-push.mdc) requires it), and **before** **`git commit`**, confirm documentation matches what you are about to ship.
+
+## Keep CHANGELOG up to date
+
+**[`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) must stay current** with shipped user-facing work. Treat a stale **[Unreleased]** section as a blocker for commit — same as a failing test.
+
+- **When:** any user-visible feature, fix, default change, permission/network change, or settings/UI copy that affects what people see or do.
+- **Where:** append under **[Unreleased]** in **Added**, **Changed**, or **Fixed** ([Keep a Changelog](https://keepachangelog.com/) style).
+- **How:** plain language about what users notice — not commit hashes, file paths, or internal refactors.
+- **Scope:** major/minor lines only (see the header in `CHANGELOG.md`); patch detail stays in Git history.
+- **Same commit:** stage CHANGELOG updates **with** the code they describe whenever possible; do not leave **[Unreleased]** empty while landing meaningful extension changes.
+
+When unsure whether something is user-facing, add a short **[Unreleased]** line rather than ship silent product changes.
+
+## When to update other docs
+
+| Change | Update |
+| ------ | ------ |
+| User-facing feature, fix, or default | **[Unreleased]** in [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) (required — see above) |
+| Permissions, `host_permissions`, manifest, or network use | [`PRIVACY.md`](../../PRIVACY.md); [`doc/STORE-LISTING.md`](../../doc/STORE-LISTING.md) / [`doc/PUBLISHING-EXTENSION-STORES.md`](../../doc/PUBLISHING-EXTENSION-STORES.md) when store copy or justifications change |
+| New or renamed `doc/*.md` guide | Root [`README.md`](../../README.md) Documentation section + [`doc/README.md`](../../doc/README.md) index ([documentation-layout.mdc](documentation-layout.mdc)) |
+| Supported browsers, install steps, or WXT output paths | Relevant `doc/*`, [`README.md`](../../README.md); keep Safari with Chrome, Edge, Firefox ([safari-supported-browser.mdc](safari-supported-browser.mdc)) |
+| Settings paths, widget labels, or first-run copy | Matching doc section + CHANGELOG when user-visible ([user-facing-copy.mdc](user-facing-copy.mdc)) |
+
+## When to skip
+
+- Internal refactors with **no** shipped behavior, permissions, or network change
+- Test-only, tooling-only, or agent-only edits (`.cursor/`, CI internals) with no product impact
+- Trivial typo in a non-shipped comment
+
+Use judgment on other docs; **CHANGELOG is never optional** for user-facing shipped work.
+
+## Workflow order
+
+```
+pnpm check → (pnpm build when needed) → review + update docs → stage docs → git commit
+```
+
+Do **not** commit meaningful shipped work when checks are green but **[Unreleased]** in `doc/CHANGELOG.md` (or required privacy/store docs) is stale.
+
+## Commit pairing
+
+- Prefer **one commit** that includes code + doc updates when they describe the same change.
+- A **docs-only follow-up** is fine when catching up on CHANGELOG after an earlier code commit — still run **`pnpm check`** before that commit.

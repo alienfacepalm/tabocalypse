@@ -38,6 +38,8 @@
     --scrollbar-track: rgb(0 0 0 / 0.32);
     --scrollbar-thumb: color-mix(in srgb, var(--color-accent2) 78%, rgb(15 15 15));
     --scrollbar-thumb-hover: color-mix(in srgb, var(--color-accent2) 92%, white);
+    /* Fixed `.footer` clearance — keep in sync with HUD_PAGE_FOOTER_RESERVE_PX in hud-layout.ts */
+    --hud-footer-reserve: 3.5rem;
   }
 
   [data-theme="light"] {
@@ -207,6 +209,7 @@
   .hud-canvas {
     @apply hud-scrollbar relative isolate min-h-0 w-full flex-1 touch-manipulation overflow-auto;
     min-height: 100%;
+    padding-bottom: var(--hud-footer-reserve);
   }
 
   .hud-grid-overlay {
@@ -705,7 +708,19 @@
   }
 
   .todo-row {
-    @apply flex items-center justify-between gap-2 border-b border-border py-[0.45rem];
+    @apply flex items-center justify-between gap-1 border-b border-border py-0.5;
+  }
+
+  .todo-row .btn.icon-only {
+    @apply min-h-0 min-w-0 h-[1.125rem] w-[1.125rem] p-0 shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  .todo-row .btn.icon-only:active {
+    @apply shadow-[1px_1px_0px_0px_var(--color-accent2)];
+  }
+
+  .todo-row .btn.ghost:hover {
+    @apply shadow-[2px_2px_0px_0px_var(--color-accent2)];
   }
 
   .done {

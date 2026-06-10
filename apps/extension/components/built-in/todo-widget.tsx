@@ -38,11 +38,11 @@ export function TodoWidget({
               <HudTip tip="Remove this task from the list">
                 <button
                   type="button"
-                  className="btn ghost icon-only sm"
+                  className="btn ghost icon-only shrink-0"
                   aria-label="Remove todo"
                   onClick={() => onChange(items.filter((x) => x.id !== it.id))}
                 >
-                  <Trash2 size={18} strokeWidth={2} aria-hidden />
+                  <Trash2 size={14} strokeWidth={2} aria-hidden />
                 </button>
               </HudTip>
             </li>

@@ -11,10 +11,11 @@ import type { TClockHourFormat } from "../../lib/clock-hour-format";
 import {
   deleteTabocalypseAlarmViaBackground,
   scheduleTabocalypseAlarmViaBackground,
-  sendTabocalypseTestNotificationViaBackground,
 } from "../../lib/tabocalypse-alarm-client";
 import {
   getTabocalypseNotificationPermissionLevel,
+  hasNativeExtensionNotificationsApi,
+  sendTabocalypseTestNotification,
   TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE,
   type TNotificationPermissionLevel,
 } from "../../lib/tabocalypse-alarm-notification";
@@ -193,22 +194,32 @@ export function ClockAlarmsSection({
   const runTestNotification = async () => {
     setTestNotificationBusy(true);
     setAlarmScheduleBanner(null);
-    const result = await sendTabocalypseTestNotificationViaBackground();
-    setTestNotificationBusy(false);
-    const permission = await getTabocalypseNotificationPermissionLevel();
-    setNotificationPermission(permission);
-    if (!result.ok) {
-      setAlarmScheduleBanner({ kind: "err", message: result.error });
-      return;
+    try {
+      if (!hasNativeExtensionNotificationsApi()) {
+        setAlarmScheduleBanner({
+          kind: "err",
+          message:
+            "System notifications are unavailable in this browser context. Reload the extension and try again.",
+        });
+        return;
+      }
+      const result = await sendTabocalypseTestNotification();
+      if (!result.ok) {
+        setAlarmScheduleBanner({ kind: "err", message: result.error });
+        return;
+      }
+      setAlarmScheduleBanner({
+        kind: "ok",
+        message:
+          "Test notification sent. Check your system notification center if you do not see a banner.",
+      });
+      window.setTimeout(() => {
+        setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
+      }, 8000);
+    } finally {
+      setTestNotificationBusy(false);
+      void getTabocalypseNotificationPermissionLevel().then(setNotificationPermission);
     }
-    setAlarmScheduleBanner({
-      kind: "ok",
-      message:
-        "Test notification sent. Check the Windows notification center if you do not see a banner.",
-    });
-    window.setTimeout(() => {
-      setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
-    }, 8000);
   };
 
   const alarmSummaryLabel =
@@ -232,8 +243,8 @@ export function ClockAlarmsSection({
             {TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE}
           </p>
         ) : null}
-        <div>
-          <HudTip tip="Send a test notification now to verify Windows and browser settings">
+        <div className="grid gap-2">
+          <HudTip tip="Send a test OS notification now to verify browser and system notification settings">
             <button
               type="button"
               className="btn sm has-icon"
@@ -244,6 +255,16 @@ export function ClockAlarmsSection({
               <span>{testNotificationBusy ? "Sending…" : "Test notification"}</span>
             </button>
           </HudTip>
+          {alarmScheduleBanner ? (
+            <p
+              role="status"
+              className={
+                alarmScheduleBanner.kind === "err" ? "err sm m-0" : "m-0 text-sm text-accent"
+              }
+            >
+              {alarmScheduleBanner.message}
+            </p>
+          ) : null}
         </div>
         <form
           onSubmit={(e) => {
@@ -315,16 +336,6 @@ export function ClockAlarmsSection({
               </button>
             ) : null}
           </div>
-          {alarmScheduleBanner ? (
-            <p
-              role="status"
-              className={
-                alarmScheduleBanner.kind === "err" ? "err sm m-0" : "m-0 text-sm text-accent"
-              }
-            >
-              {alarmScheduleBanner.message}
-            </p>
-          ) : null}
         </form>
         {pendingAlarms.length > 0 ? (
           <>

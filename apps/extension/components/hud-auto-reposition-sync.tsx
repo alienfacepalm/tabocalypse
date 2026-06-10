@@ -1,14 +1,36 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import { computeHudPanelAutoLayoutUpdates } from "../lib/hud-auto-layout";
+import {
+  computeHudColumnStackLayoutUpdates,
+  buildHudAutoLayoutItems,
+} from "../lib/hud-auto-layout";
 import type { IHudPanelPosition, THudPanelId } from "../lib/hud-layout";
-import { measureHudCanvasSize } from "../lib/hud-layout";
+import {
+  DEFAULT_HUD_PANEL_POSITIONS,
+  measureHudCanvasSize,
+  measureHudPanelSizesOnCanvas,
+} from "../lib/hud-layout";
 import { computeStickyNoteResizeUpdates } from "../lib/sticky-note-auto-layout";
 import type { INotePanel, TWidgetKey } from "../lib/settings";
 import { useHudPlacementOptional } from "./hud-placement-context";
 
 const RESIZE_DEBOUNCE_MS = 200;
 const SIZE_EPSILON_PX = 2;
+
+function hudPanelSetSignature(input: {
+  widgets: Record<TWidgetKey, boolean>;
+  pluginDeckVisible: boolean;
+  notesListPanelVisible: boolean;
+}): string {
+  return buildHudAutoLayoutItems({
+    widgets: input.widgets,
+    hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
+    pluginDeckVisible: input.pluginDeckVisible,
+    notesListPanelVisible: input.notesListPanelVisible,
+  })
+    .map((item) => item.key)
+    .join("|");
+}
 
 export interface IHudAutoRepositionResult {
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
@@ -58,6 +80,10 @@ export function HudAutoRepositionSync({
     hudAutoRepositionEnabled,
   };
 
+  const runLayoutRef = useRef<
+    ((canvasEl: HTMLElement, widthPx: number, heightPx: number) => void) | null
+  >(null);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -65,13 +91,7 @@ export function HudAutoRepositionSync({
       return;
     }
 
-    const runLayout = (
-      canvasEl: HTMLElement,
-      widthPx: number,
-      heightPx: number,
-      prevW: number,
-      prevH: number,
-    ): void => {
+    const runLayout = (canvasEl: HTMLElement, widthPx: number, heightPx: number): void => {
       if (hudPlacement?.dropHighlight) return;
       const input = layoutInputRef.current;
       const planInput = {
@@ -84,10 +104,9 @@ export function HudAutoRepositionSync({
       let effectiveHud = input.hudPanelPositions;
       let hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> | undefined;
       if (input.hudAutoRepositionEnabled) {
-        hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
-          prevCanvasW: prevW,
-          prevCanvasH: prevH,
+        hudUpdates = computeHudColumnStackLayoutUpdates(planInput, widthPx, heightPx, {
           onlyIfChanged: true,
+          measuredSizes: measureHudPanelSizesOnCanvas(canvasEl),
         });
         if (Object.keys(hudUpdates).length > 0) {
           effectiveHud = { ...effectiveHud, ...hudUpdates };
@@ -114,6 +133,7 @@ export function HudAutoRepositionSync({
         canvasEl.scrollTo({ top: 0, left: 0, behavior: "auto" });
       }
     };
+    runLayoutRef.current = runLayout;
 
     const schedule = (): void => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -125,7 +145,7 @@ export function HudAutoRepositionSync({
           const dw = Math.abs(prev.widthPx - widthPx);
           const dh = Math.abs(prev.heightPx - heightPx);
           if (dw < SIZE_EPSILON_PX && dh < SIZE_EPSILON_PX) return;
-          runLayout(canvas, widthPx, heightPx, prev.widthPx, prev.heightPx);
+          runLayout(canvas, widthPx, heightPx);
         }
         prevCanvasSizeRef.current = { widthPx, heightPx };
       }, RESIZE_DEBOUNCE_MS);
@@ -146,8 +166,32 @@ export function HudAutoRepositionSync({
       vv?.removeEventListener("resize", schedule);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       prevCanvasSizeRef.current = null;
+      runLayoutRef.current = null;
     };
   }, [canvasRef, hudPlacement?.dropHighlight]);
+
+  const prevPanelSetSignatureRef = useRef<string | null>(null);
+  useEffect(() => {
+    const signature = hudPanelSetSignature({
+      widgets,
+      pluginDeckVisible,
+      notesListPanelVisible,
+    });
+    const prev = prevPanelSetSignatureRef.current;
+    prevPanelSetSignatureRef.current = signature;
+    if (prev == null || prev === signature || !hudAutoRepositionEnabled) return;
+    const canvas = canvasRef.current;
+    if (!canvas || hudPlacement?.dropHighlight) return;
+    const { widthPx, heightPx } = measureHudCanvasSize(canvas);
+    runLayoutRef.current?.(canvas, widthPx, heightPx);
+  }, [
+    canvasRef,
+    hudAutoRepositionEnabled,
+    hudPlacement?.dropHighlight,
+    notesListPanelVisible,
+    pluginDeckVisible,
+    widgets,
+  ]);
 
   return null;
 }
