@@ -1,0 +1,36 @@
+---
+description: Alarms run in the MV3 service worker and deliver OS notifications only
+globs: apps/extension/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Extension alarms (background + OS notifications)
+
+Tabocalypse alarms must work **without** an open new-tab page. The browser tracks scheduled times via **`browser.alarms`**; the **MV3 service worker** ([`background.ts`](../../apps/extension/entrypoints/background.ts)) is the only place that handles `onAlarm` and shows reminders.
+
+## Architecture
+
+| Layer | Responsibility |
+|-------|----------------|
+| **Clock HUD panel (`ClockAlarmsSection`)** | Form UI, validation of user input, list display |
+| **`tabocalypse-alarm-client.ts`** | `runtime.sendMessage` for schedule/delete |
+| **`tabocalypse-alarm-service.ts`** | `browser.alarms.create/clear`, `alarmMeta` storage, `handleTabocalypseAlarmFired` |
+| **`tabocalypse-alarm-notification.ts`** | `browser.notifications.create` (OS notification — **default and only** delivery path) |
+
+## Do
+
+- Route **schedule** and **delete** through **`scheduleTabocalypseAlarmViaBackground`** / **`deleteTabocalypseAlarmViaBackground`** so the service worker owns alarm side effects.
+- Fire reminders only from **`handleTabocalypseAlarmFired`** → **`showTabocalypseAlarmNotification`**.
+- **`browser.alarms.onAlarm`** listener must **return** the async handler promise so the MV3 service worker stays alive until **`notifications.create`** finishes (Windows drops notifications if the worker exits early).
+- Use **`ALARM_PREFIX`**, **`META_KEY`**, and **`isTabocalypseAlarm`** from [`alarm-meta.ts`](../../apps/extension/lib/alarm-meta.ts).
+- Keep **`alarms`** and **`notifications`** in [`wxt.config.ts`](../../apps/extension/wxt.config.ts) manifest permissions.
+
+## Do not
+
+- Add **`browser.alarms.onAlarm`** listeners in the new-tab React app.
+- Deliver alarm reminders with **in-tab HUD toasts** instead of **`browser.notifications`**.
+- Call **`browser.alarms.create`** / **`clear`** directly from UI code — use the background client.
+
+## User-facing copy
+
+The **Clock** panel alarms section should state that reminders run in the **background** and the **new tab can be closed**; mention **system notifications** and browser/OS permission if delivery may fail.

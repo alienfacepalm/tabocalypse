@@ -15,6 +15,8 @@ function article(
     publishedAt: null,
     isOpinion: false,
     fqnCategory: null,
+    imageUrl: null,
+    description: null,
     ...partial,
   };
 }

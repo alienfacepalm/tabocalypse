@@ -14,6 +14,8 @@ const reportingArticle: INewsArticleRef = {
   publishedAt: 1_700_000_000_000,
   isOpinion: false,
   fqnCategory: "politics",
+  imageUrl: null,
+  description: null,
 };
 
 function topicWithoutArticles(

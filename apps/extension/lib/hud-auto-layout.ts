@@ -9,9 +9,9 @@ import {
   type THudLayoutDensity,
   type THudPanelId,
   clampHudPanelSize,
+  clampHudScalar,
   HUD_LAYOUT_FOLD_OVERLAP_PX,
   HUD_LAYOUT_REFERENCE_CANVAS,
-  HUD_PANEL_DEFAULT_SIZE_PX,
   hudCanvasFoldBottomPx,
   hudPositionFromCanvasRect,
   resolveHudPanelSizePx,
@@ -35,10 +35,10 @@ export const HUD_AUTO_LAYOUT_PANEL_PRIORITY: Record<THudPanelId, number> = {
   topSites: 10,
   bookmarksStrip: 11,
   pluginDeck: 12,
+  balancedNews: 8,
   crypto: 20,
   speedTest: 21,
   aiChat: 22,
-  balancedNews: 15,
 };
 
 const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
@@ -215,6 +215,7 @@ function overlayPackOverflowToFold(placements: IHudPlacedPanelRect[], foldBottom
 export function fitHudPlacementsToFold(
   placements: IHudPlacedPanelRect[],
   foldHeightPx: number,
+  options?: { shrinkHeights?: boolean },
 ): void {
   if (placements.length === 0) return;
   const foldBottomPx = hudCanvasFoldBottomPx(foldHeightPx);
@@ -222,8 +223,10 @@ export function fitHudPlacementsToFold(
   const targetSpan = foldBottomPx - minTop;
 
   clampPlacementsAboveFold(placements, foldBottomPx);
-  shrinkPlacementHeightsToSpan(placements, targetSpan);
-  clampPlacementsAboveFold(placements, foldBottomPx);
+  if (options?.shrinkHeights !== false) {
+    shrinkPlacementHeightsToSpan(placements, targetSpan);
+    clampPlacementsAboveFold(placements, foldBottomPx);
+  }
   overlayPackOverflowToFold(placements, foldBottomPx);
 }
 
@@ -245,32 +248,152 @@ function scaleResolvedHeightsToFold(
   }
 }
 
+function hudPanelHasUserWidth(position: IHudPanelPosition): boolean {
+  return position.widthPx != null && Number.isFinite(position.widthPx) && position.widthPx > 0;
+}
+
+export interface IHudAutoLayoutOptions {
+  /** When true, panels expand to column/canvas width instead of honoring saved widths. */
+  ignoreUserSizes?: boolean;
+}
+
+/**
+ * Width for auto-arrange repack: fit the column or canvas first, then use spare width.
+ * Explicit user resizes are kept up to that cap; otherwise panels expand to fill available land.
+ */
 function resolvePanelSizeForLand(
   item: IHudAutoLayoutItem,
   position: IHudPanelPosition,
   metrics: IHudLayoutMetrics,
   landMode: THudLandMode,
   columnInnerWidthPx?: number,
+  layoutOptions?: IHudAutoLayoutOptions,
 ): { widthPx: number; heightPx: number } {
   const { widthPx: rawW, heightPx } = resolveHudPanelSizePx(item.panelId, position, metrics);
+  const limits = HUD_PANEL_SIZE_LIMITS[item.panelId];
+  const hasUserWidth = !layoutOptions?.ignoreUserSizes && hudPanelHasUserWidth(position);
+  const canvasInnerW = metrics.canvasW - HUD_LAND_MARGIN_PX * 2;
+
   let widthPx = rawW;
-  const def = HUD_PANEL_DEFAULT_SIZE_PX[item.panelId];
 
   if (landMode === "roomy" && columnInnerWidthPx != null) {
-    const maxW = Math.min(def.widthPx, Math.floor(columnInnerWidthPx));
-    widthPx = Math.min(widthPx, maxW);
+    const maxW = Math.min(Math.floor(columnInnerWidthPx), limits.maxW, canvasInnerW);
+    widthPx = hasUserWidth
+      ? Math.min(maxW, Math.max(limits.minW, rawW))
+      : Math.max(limits.minW, maxW);
   } else if (landMode === "tight") {
-    const maxW = metrics.canvasW - HUD_LAND_MARGIN_PX * 2;
-    widthPx = Math.min(widthPx, def.widthPx, maxW);
+    const maxW = Math.min(limits.maxW, canvasInnerW);
+    widthPx = hasUserWidth
+      ? Math.min(maxW, Math.max(limits.minW, rawW))
+      : Math.max(limits.minW, maxW);
   }
 
   return clampHudPanelSize(item.panelId, widthPx, heightPx, metrics.canvasW, metrics.canvasH);
+}
+
+/** Grows each masonry column so panels fill from their top edge down to the fold. */
+function expandRoomyPlacementsToFold(
+  placed: IHudPlacedPanelRect[],
+  foldHeightPx: number,
+  gapPx: number,
+): void {
+  if (placed.length === 0) return;
+  const foldBottom = hudCanvasFoldBottomPx(foldHeightPx);
+  const byColumn = new Map<number, IHudPlacedPanelRect[]>();
+  for (const p of placed) {
+    const col = byColumn.get(p.leftPx) ?? [];
+    col.push(p);
+    byColumn.set(p.leftPx, col);
+  }
+
+  for (const colPanels of byColumn.values()) {
+    colPanels.sort((a, b) => a.topPx - b.topPx);
+    const colTop = colPanels[0]!.topPx;
+    const gaps = Math.max(0, colPanels.length - 1) * gapPx;
+    const targetBody = foldBottom - colTop - gaps;
+    if (targetBody <= 0) continue;
+
+    const currentBody = colPanels.reduce((sum, p) => sum + p.heightPx, 0);
+    const scale = currentBody > 0 ? targetBody / currentBody : 1;
+
+    let y = colTop;
+    let assigned = 0;
+    for (let i = 0; i < colPanels.length; i += 1) {
+      const p = colPanels[i]!;
+      const limits = HUD_PANEL_SIZE_LIMITS[p.panelId];
+      let newH: number;
+      if (i === colPanels.length - 1) {
+        newH = Math.max(limits.minH, Math.min(limits.maxH, targetBody - assigned));
+      } else {
+        newH = Math.max(limits.minH, Math.min(limits.maxH, Math.round(p.heightPx * scale)));
+        assigned += newH;
+      }
+      p.heightPx = newH;
+      p.topPx = y;
+      y += newH + gapPx;
+    }
+  }
+}
+
+function hudPanelPositionToCanvasRect(
+  item: IHudAutoLayoutItem,
+  metrics: IHudLayoutMetrics,
+  measuredSizes?: Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>>,
+): IHudPlacedPanelRect {
+  const measured = measuredSizes?.[item.panelId];
+  const resolved = resolveHudPanelSizePx(item.panelId, item.position, metrics);
+  const { widthPx, heightPx } = clampHudPanelSize(
+    item.panelId,
+    measured?.widthPx ?? resolved.widthPx,
+    measured?.heightPx ?? resolved.heightPx,
+    metrics.canvasW,
+    metrics.canvasH,
+  );
+  const leftPx = (item.position.xPct / 100) * metrics.canvasW;
+  const topPx = (item.position.yPct / 100) * metrics.canvasH;
+  const maxLeft = Math.max(0, metrics.canvasW - widthPx);
+  const maxTop = Math.max(0, metrics.canvasH - heightPx);
+  return {
+    key: item.key,
+    panelId: item.panelId,
+    priority: item.priority,
+    leftPx: clampHudScalar(leftPx, 0, maxLeft),
+    topPx: clampHudScalar(topPx, 0, maxTop),
+    widthPx,
+    heightPx,
+  };
+}
+
+/** Nudge lower-priority panels down to clear overlap while keeping size and horizontal position. */
+function resolveHudPanelPlacementOverlaps(
+  placements: IHudPlacedPanelRect[],
+  metrics: IHudLayoutMetrics,
+): void {
+  const sorted = [...placements].sort(
+    (a, b) => a.priority - b.priority || a.topPx - b.topPx || a.leftPx - b.leftPx,
+  );
+  const settled: IHudPlacedPanelRect[] = [];
+
+  for (const panel of sorted) {
+    const maxTop = Math.max(0, metrics.canvasH - panel.heightPx);
+    let topPx = clampHudScalar(panel.topPx, 0, maxTop);
+
+    for (let guard = 0; guard < 64; guard += 1) {
+      const blocker = settled.find((other) => hudPanelBoxesOverlap({ ...panel, topPx }, other));
+      if (!blocker) break;
+      topPx = clampHudScalar(blocker.topPx + blocker.heightPx + HUD_LAND_GAP_PX, 0, maxTop);
+    }
+
+    panel.topPx = topPx;
+    settled.push({ ...panel, topPx });
+  }
 }
 
 /** Masonry columns with equal gaps — uses horizontal real estate on wide screens. */
 function placeRoomySpreadLayout(
   resolved: IResolvedPanel[],
   metrics: IHudLayoutMetrics,
+  layoutOptions?: IHudAutoLayoutOptions,
 ): IHudPlacedPanelRect[] {
   const placed: IHudPlacedPanelRect[] = [];
   const cols = resolveHudSpreadColumnCount(metrics.canvasW, resolved.length);
@@ -292,6 +415,7 @@ function placeRoomySpreadLayout(
       metrics,
       "roomy",
       colWidth,
+      layoutOptions,
     );
 
     const leftPx = margin + col * (colWidth + gap);
@@ -315,6 +439,7 @@ function placeRoomySpreadLayout(
 function placeTightStackLayout(
   resolved: IResolvedPanel[],
   metrics: IHudLayoutMetrics,
+  layoutOptions?: IHudAutoLayoutOptions,
 ): IHudPlacedPanelRect[] {
   const placed: IHudPlacedPanelRect[] = [];
   const gap = HUD_LAND_GAP_PX;
@@ -322,7 +447,14 @@ function placeTightStackLayout(
   let topPx = margin;
 
   for (const { item } of resolved) {
-    const { widthPx, heightPx } = resolvePanelSizeForLand(item, item.position, metrics, "tight");
+    const { widthPx, heightPx } = resolvePanelSizeForLand(
+      item,
+      item.position,
+      metrics,
+      "tight",
+      undefined,
+      layoutOptions,
+    );
     placed.push({
       key: item.key,
       panelId: item.panelId,
@@ -346,13 +478,21 @@ export function computeAutoHudPanelLayout(
   items: readonly IHudAutoLayoutItem[],
   metrics: IHudLayoutMetrics,
   _density: THudLayoutDensity,
+  layoutOptions?: IHudAutoLayoutOptions,
 ): Map<string, IHudPanelPosition> {
   const out = new Map<string, IHudPanelPosition>();
   if (items.length === 0) return out;
 
   const landMode = resolveHudLandMode(metrics.canvasW, metrics.canvasH);
   const resolved: IResolvedPanel[] = items.map((item) => {
-    const size = resolvePanelSizeForLand(item, item.position, metrics, landMode);
+    const size = resolvePanelSizeForLand(
+      item,
+      item.position,
+      metrics,
+      landMode,
+      undefined,
+      layoutOptions,
+    );
     return { item, ...size };
   });
 
@@ -362,8 +502,12 @@ export function computeAutoHudPanelLayout(
 
   const placedRects =
     landMode === "roomy"
-      ? placeRoomySpreadLayout(resolved, metrics)
-      : placeTightStackLayout(resolved, metrics);
+      ? placeRoomySpreadLayout(resolved, metrics, layoutOptions)
+      : placeTightStackLayout(resolved, metrics, layoutOptions);
+
+  if (landMode === "roomy") {
+    expandRoomyPlacementsToFold(placedRects, metrics.canvasH, HUD_LAND_GAP_PX);
+  }
 
   fitHudPlacementsToFold(placedRects, metrics.canvasH);
 
@@ -383,7 +527,7 @@ export function computeAutoHudPanelLayout(
   return out;
 }
 
-/** Keyboard shortcut for manual HUD panel auto-arrange (header button uses the same action). */
+/** Keyboard shortcut for manual HUD panel adjust-to-fit (header button uses the same action). */
 export const HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT = "F10" as const;
 
 export interface IHudAutoLayoutPlanInput {
@@ -397,6 +541,11 @@ export function hudPanelPositionsEqual(a: IHudPanelPosition, b: IHudPanelPositio
   return (
     a.xPct === b.xPct && a.yPct === b.yPct && a.widthPx === b.widthPx && a.heightPx === b.heightPx
   );
+}
+
+/** Compares only canvas origin — adjust-to-fit (F10) must not treat size drift as a move. */
+export function hudPanelOriginEqual(a: IHudPanelPosition, b: IHudPanelPosition): boolean {
+  return a.xPct === b.xPct && a.yPct === b.yPct;
 }
 
 /** True when the event target is a field where F-keys should not trigger HUD shortcuts. */
@@ -415,7 +564,12 @@ export function computeHudPanelAutoLayoutUpdates(
   input: IHudAutoLayoutPlanInput,
   canvasW: number,
   canvasH: number,
-  options?: { prevCanvasW?: number; prevCanvasH?: number; onlyIfChanged?: boolean },
+  options?: {
+    prevCanvasW?: number;
+    prevCanvasH?: number;
+    onlyIfChanged?: boolean;
+    ignoreUserSizes?: boolean;
+  },
 ): Partial<Record<THudPanelId, IHudPanelPosition>> {
   const metrics = getHudLayoutMetrics(canvasW, canvasH);
   const density = resolveHudLayoutDensity(
@@ -425,13 +579,62 @@ export function computeHudPanelAutoLayoutUpdates(
     options?.prevCanvasH,
   );
   const items = buildHudAutoLayoutItems(input);
-  const placed = computeAutoHudPanelLayout(items, metrics, density);
+  const layoutOptions: IHudAutoLayoutOptions | undefined = options?.ignoreUserSizes
+    ? { ignoreUserSizes: true }
+    : undefined;
+  const placed = computeAutoHudPanelLayout(items, metrics, density, layoutOptions);
   const onlyIfChanged = options?.onlyIfChanged !== false;
   const hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
   for (const [key, pos] of placed) {
     const panelId = key as THudPanelId;
     const prev = input.hudPanelPositions[panelId];
     if (onlyIfChanged && prev != null && hudPanelPositionsEqual(prev, pos)) continue;
+    hudUpdates[panelId] = pos;
+  }
+  return hudUpdates;
+}
+
+/**
+ * Keeps each panel's saved position and size, only nudging panels that clip the canvas or fold.
+ * Used for manual arrange (F10 / header button) so user layouts are not repacked.
+ */
+export function computeHudPanelAdjustLayoutUpdates(
+  input: IHudAutoLayoutPlanInput,
+  canvasW: number,
+  canvasH: number,
+  options?: {
+    onlyIfChanged?: boolean;
+    measuredSizes?: Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>>;
+  },
+): Partial<Record<THudPanelId, IHudPanelPosition>> {
+  const metrics = getHudLayoutMetrics(canvasW, canvasH);
+  const items = buildHudAutoLayoutItems(input);
+  if (items.length === 0) return {};
+
+  const placements = items.map((item) =>
+    hudPanelPositionToCanvasRect(item, metrics, options?.measuredSizes),
+  );
+  resolveHudPanelPlacementOverlaps(placements, metrics);
+  fitHudPlacementsToFold(placements, metrics.canvasH, { shrinkHeights: false });
+
+  const onlyIfChanged = options?.onlyIfChanged !== false;
+  const hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> = {};
+  for (const p of placements) {
+    const panelId = p.panelId;
+    const prev = input.hudPanelPositions[panelId];
+    const rect: IHudCanvasRectPx = {
+      leftPx: p.leftPx,
+      topPx: p.topPx,
+      widthPx: p.widthPx,
+      heightPx: p.heightPx,
+    };
+    // Keep saved sizes; measured/placement sizes are for overlap/fold math only.
+    const pos = hudPositionFromCanvasRect(
+      rect,
+      { widthPx: prev?.widthPx, heightPx: prev?.heightPx },
+      metrics,
+    );
+    if (onlyIfChanged && prev != null && hudPanelOriginEqual(prev, pos)) continue;
     hudUpdates[panelId] = pos;
   }
   return hudUpdates;

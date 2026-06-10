@@ -8,6 +8,7 @@ import {
   writeBalancedNewsCache,
 } from "./balanced-news-cache";
 import { clusterNewsTopics } from "./cluster-news-topics";
+import { enrichNewsArticlesWithKnownThumbnails } from "./enrich-news-articles-with-thumbnails";
 import { fetchBalancedNewsArticles } from "./fetch-balanced-news";
 
 export interface ILoadBalancedNewsFeedInput {
@@ -23,6 +24,20 @@ export type TLoadBalancedNewsFeedResult =
   | { kind: "cached"; snapshot: INewsFeedSnapshot }
   | { kind: "rate_limited"; snapshot: INewsFeedSnapshot | null; message: string };
 
+function cachedFeedResult(
+  cacheRead: Awaited<ReturnType<typeof readBalancedNewsCache>>,
+): TLoadBalancedNewsFeedResult {
+  const snapshot = { ...cacheRead.snapshot!, stale: true };
+  if (cacheRead.inRateLimitBackoff) {
+    return {
+      kind: "rate_limited",
+      snapshot,
+      message: "FreeQuickNews rate or quota limit reached.",
+    };
+  }
+  return { kind: "cached", snapshot };
+}
+
 export async function loadBalancedNewsFeed(
   input: ILoadBalancedNewsFeedInput,
   signal?: AbortSignal,
@@ -34,22 +49,21 @@ export async function loadBalancedNewsFeed(
     return { kind: "cached", snapshot: cacheRead.snapshot };
   }
 
-  if (!input.forceRefresh && cacheRead.snapshot && !cacheRead.canRefresh) {
-    return {
-      kind: "cached",
-      snapshot: { ...cacheRead.snapshot, stale: true },
-    };
+  if (cacheRead.snapshot && !cacheRead.canRefresh) {
+    return cachedFeedResult(cacheRead);
   }
 
   try {
-    const articles = await fetchBalancedNewsArticles(
-      {
-        country: input.country,
-        category: input.category,
-        limit: input.topicCount,
-        apiKey: input.apiKey,
-      },
-      signal,
+    const articles = enrichNewsArticlesWithKnownThumbnails(
+      await fetchBalancedNewsArticles(
+        {
+          country: input.country,
+          category: input.category,
+          limit: input.topicCount,
+          apiKey: input.apiKey,
+        },
+        signal,
+      ),
     );
     const topics = clusterNewsTopics(articles, input.topicCount, now);
     const snapshot: INewsFeedSnapshot = {

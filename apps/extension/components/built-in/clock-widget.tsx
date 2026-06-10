@@ -6,6 +6,7 @@ import {
 } from "../../lib/clock-hour-format";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
+import { ClockAlarmsSection } from "./clock-alarms-section";
 
 export function ClockWidget({
   locale,
@@ -73,6 +74,7 @@ export function ClockWidget({
           })}
         </div>
         <div className="clock-tz muted">{tz}</div>
+        <ClockAlarmsSection locale={locale} hourFormat={hourFormat} />
       </HudPanelBody>
     </section>
   );

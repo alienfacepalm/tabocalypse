@@ -1,0 +1,38 @@
+---
+description: User-visible times must respect the global 12h / 24h clock setting
+globs: apps/extension/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Clock hour format (extension)
+
+Tabocalypse has a **global** 12-hour / 24-hour preference (`clockHourFormat`, optional `clockHourFormatAuto` in [`apps/extension/lib/settings.ts`](../../apps/extension/lib/settings.ts)). Users set it from the **Clock** widget toggles; alarms and other HUD surfaces must honor the same effective value.
+
+## Resolve the effective format
+
+- Use **`resolveEffectiveClockHourFormat`** from [`apps/extension/lib/locale-units.ts`](../../apps/extension/lib/locale-units.ts) — do not read `clockHourFormat` alone when `clockHourFormatAuto` may apply.
+- In the new-tab app, memoize once (same pattern as `effectiveWeatherTemperatureUnit`) and pass the result into formatters / widgets.
+
+## Format user-visible local times
+
+- **Do not** call bare **`Date#toLocaleString()`** or **`Date#toLocaleTimeString()`** for extension UI that shows a clock time — browser locale defaults ignore Tabocalypse’s setting (e.g. US locale forces PM even when the user chose 24-hour).
+- Pass explicit **`Intl`** options with **`hour12: hourFormat === "12h"`** (and matching `hour` / `minute` / `second` digit options).
+- Use **`getNavigatorFormattingLocale()`** for the locale argument unless a caller already has a HUD display locale.
+
+### Shared helpers (prefer these)
+
+| Surface | Helper / pattern |
+|--------|-------------------|
+| Scheduled alarms list | **`formatAlarmScheduledLabel`** in [`apps/extension/lib/alarm-datetime.ts`](../../apps/extension/lib/alarm-datetime.ts) |
+| Live clock widget | **`toLocaleTimeString(locale, { hour12: hourFormat === "12h", … })`** — see [`clock-widget.tsx`](../../apps/extension/components/built-in/clock-widget.tsx) |
+
+When adding a **new** user-visible timestamp, add or extend a colocated helper in `lib/` (and a `*.test.ts` case) instead of inlining another one-off `toLocaleString`.
+
+## `datetime-local` inputs (exception)
+
+**`<input type="datetime-local">`** display is controlled by the **browser/OS**; you cannot force 12h vs 24h in that control. Store/edit values with **`formatDatetimeLocalFromDate`** (always 24h-style `YYYY-MM-DDTHH:mm` internally). Only **read-only labels** (lists, toasts, notifications copy) must follow the global clock setting.
+
+## Tests
+
+- Extend **`alarm-datetime.test.ts`** (or the relevant `*.test.ts`) when changing alarm/time formatters.
+- Assert both **`"12h"`** and **`"24h"`** for at least one fixed `Date` + locale (e.g. 15:15 → `15:15:00` vs `03:15:00 PM` under `en-US`).

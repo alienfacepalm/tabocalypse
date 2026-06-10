@@ -3,7 +3,8 @@
  */
 import browser from "webextension-polyfill";
 import { RefreshCw, Settings2 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
@@ -25,10 +26,27 @@ import {
   type TBalancedNewsCountry,
 } from "../../lib/news/balanced-news-country";
 import { markBalancedNewsManualRefresh } from "../../lib/news/balanced-news-cache";
+import { formatArticleSynopsis } from "../../lib/news/format-article-synopsis";
 import { loadBalancedNewsFeed } from "../../lib/news/load-balanced-news-feed";
+import { resolveNewsArticleDisplayThumbnailUrl } from "../../lib/news/resolve-news-article-display-thumbnail-url";
+import { resolveTopicPreviewArticle } from "../../lib/news/resolve-topic-preview-article";
+import {
+  resolveTopicPreviewPlacement,
+  type ITopicPreviewPlacementResult,
+} from "../../lib/news/resolve-topic-preview-placement";
 import { normalizeNewsTopicRoundup } from "../../lib/news/normalize-balanced-news-snapshot";
 import { resolveBalancedNewsCountry } from "../../lib/news/resolve-balanced-news-region";
 import type { TPeapixBingCountry } from "../../lib/bing-wallpaper-country";
+
+const TOPIC_PREVIEW_WIDTH_PX = 320;
+const TOPIC_PREVIEW_ESTIMATED_HEIGHT_PX = 300;
+const TOPIC_PREVIEW_HOVER_CLOSE_MS = 120;
+
+interface IHoverTopicPreview {
+  topic: INewsTopicRoundup;
+  previewArticle: INewsArticleRef;
+  anchorEl: HTMLElement;
+}
 
 function formatTopicAge(ms: number | null, locale: string): string {
   if (ms == null) return "";
@@ -44,6 +62,33 @@ function openArticle(url: string): void {
 }
 
 /** Single-line or clamped label with ellipsis and a HUD hover tip for the full string. */
+/** Thumbnail beside a headline row; `lg` is 2× the default list size for the selected preview. */
+function ArticleThumbnail({
+  article,
+  size = "md",
+}: {
+  article: INewsArticleRef;
+  size?: "md" | "lg";
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = resolveNewsArticleDisplayThumbnailUrl(article);
+  const sizeClass = size === "lg" ? "h-24 w-24" : "h-12 w-12";
+  if (failed) return null;
+
+  return (
+    <img
+      src={url}
+      alt=""
+      width={size === "lg" ? 96 : 48}
+      height={size === "lg" ? 96 : 48}
+      loading="lazy"
+      decoding="async"
+      className={`${sizeClass} shrink-0 border border-border object-cover bg-surface-container`}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function TruncatedHudLabel({
   text,
   className,
@@ -85,23 +130,26 @@ function PerspectiveSlot({
       {article ? (
         <button
           type="button"
-          className="linkish w-full min-w-0 text-left font-mono text-xs leading-snug"
+          className="linkish flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
           onClick={() => openArticle(article.url)}
         >
-          <TruncatedHudLabel text={article.title} lines={3} />
-          <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
-            <NewsPerspectiveIcon
-              perspective={perspective}
-              size={12}
-              bias={article.bias}
-              source={article.source}
-              isOpinion={article.isOpinion}
-              role="article"
-            />
-            <TruncatedHudLabel
-              text={article.source}
-              className="min-w-0 flex-1 text-[10px] text-muted"
-            />
+          <ArticleThumbnail article={article} />
+          <span className="min-w-0 flex-1">
+            <TruncatedHudLabel text={article.title} lines={3} />
+            <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
+              <NewsPerspectiveIcon
+                perspective={perspective}
+                size={12}
+                bias={article.bias}
+                source={article.source}
+                isOpinion={article.isOpinion}
+                role="article"
+              />
+              <TruncatedHudLabel
+                text={article.source}
+                className="min-w-0 flex-1 text-[10px] text-muted"
+              />
+            </span>
           </span>
         </button>
       ) : (
@@ -115,27 +163,113 @@ function ArticleRow({ article }: { article: INewsArticleRef }) {
   return (
     <button
       type="button"
-      className="linkish w-full min-w-0 text-left font-mono text-xs leading-snug"
+      className="linkish flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
       onClick={() => openArticle(article.url)}
     >
-      <TruncatedHudLabel text={article.title} lines={3} />
-      <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
-        {article.perspective ? (
-          <NewsPerspectiveIcon
-            perspective={article.perspective}
-            size={12}
-            bias={article.bias}
-            source={article.source}
-            isOpinion={article.isOpinion}
-            role="article"
+      <ArticleThumbnail article={article} />
+      <span className="min-w-0 flex-1">
+        <TruncatedHudLabel text={article.title} lines={3} />
+        <span className="mt-1 flex min-w-0 max-w-full items-center gap-1">
+          {article.perspective ? (
+            <NewsPerspectiveIcon
+              perspective={article.perspective}
+              size={12}
+              bias={article.bias}
+              source={article.source}
+              isOpinion={article.isOpinion}
+              role="article"
+            />
+          ) : null}
+          <TruncatedHudLabel
+            text={article.source}
+            className="min-w-0 flex-1 text-[10px] text-muted"
           />
-        ) : null}
-        <TruncatedHudLabel
-          text={article.source}
-          className="min-w-0 flex-1 text-[10px] text-muted"
-        />
+        </span>
       </span>
     </button>
+  );
+}
+
+function TopicHoverPreviewPanel({
+  topic,
+  previewArticle,
+  locale,
+  previewId,
+  placement,
+  panelRef,
+  onStayOpen,
+  onRequestClose,
+}: {
+  topic: INewsTopicRoundup;
+  previewArticle: INewsArticleRef;
+  locale: string;
+  previewId: string;
+  placement: ITopicPreviewPlacementResult;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  onStayOpen: () => void;
+  onRequestClose: () => void;
+}) {
+  const synopsis = formatArticleSynopsis(previewArticle);
+  const sectionLabel = topic.kind === "reporting" ? "Reporting" : "Preview";
+
+  return (
+    <div
+      ref={panelRef}
+      id={previewId}
+      role="tooltip"
+      data-hud-no-drag
+      className="hud-glass-popover pointer-events-auto fixed z-[1500] w-[20rem] max-w-[min(20rem,calc(100vw-1rem))] p-3"
+      style={{
+        top: placement.topPx,
+        left: placement.leftPx,
+      }}
+      onPointerEnter={onStayOpen}
+      onPointerLeave={onRequestClose}
+      onFocus={onStayOpen}
+      onBlur={onRequestClose}
+    >
+      <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-wider text-primary">
+        {sectionLabel}
+      </p>
+      <p className="mb-3 font-mono text-[10px] text-muted">
+        Open the article to read the full story.
+      </p>
+      <button
+        type="button"
+        className="linkish flex w-full min-w-0 gap-3 text-left"
+        onClick={() => openArticle(previewArticle.url)}
+      >
+        <ArticleThumbnail article={previewArticle} size="lg" />
+        <span className="min-w-0 flex-1">
+          <TruncatedHudLabel
+            text={previewArticle.title}
+            className="font-mono text-base leading-snug"
+            lines={3}
+          />
+          <p className="hud-scrollbar mt-2 max-h-24 overflow-y-auto font-mono text-xs leading-relaxed text-on-surface-variant">
+            {synopsis}
+          </p>
+          <span className="mt-2 flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] text-muted">
+            {previewArticle.perspective ? (
+              <NewsPerspectiveIcon
+                perspective={previewArticle.perspective}
+                size={12}
+                bias={previewArticle.bias}
+                source={previewArticle.source}
+                isOpinion={previewArticle.isOpinion}
+                role="article"
+              />
+            ) : null}
+            <TruncatedHudLabel
+              text={previewArticle.source}
+              className="min-w-0 text-[10px] text-muted"
+            />
+            <span aria-hidden>·</span>
+            <span>{formatTopicAge(previewArticle.publishedAt ?? topic.publishedAt, locale)}</span>
+          </span>
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -171,7 +305,15 @@ function TopicArticleList({
   );
 }
 
-function TopicDetail({ topic, locale }: { topic: INewsTopicRoundup; locale: string }) {
+function TopicDetail({
+  topic,
+  locale,
+  previewArticle,
+}: {
+  topic: INewsTopicRoundup;
+  locale: string;
+  previewArticle: INewsArticleRef | null;
+}) {
   const normalizedTopic = normalizeNewsTopicRoundup(topic);
   const articles = normalizedTopic.articles;
   const slottedUrls = new Set(
@@ -180,12 +322,17 @@ function TopicDetail({ topic, locale }: { topic: INewsTopicRoundup; locale: stri
       .map((article) => article.url),
   );
   const related = articles.filter((article) => !slottedUrls.has(article.url));
+  const reportingArticles =
+    previewArticle && normalizedTopic.kind === "reporting"
+      ? articles.filter((article) => article.url !== previewArticle.url)
+      : articles;
 
   if (normalizedTopic.kind === "reporting") {
+    if (reportingArticles.length === 0) return null;
     return (
       <TopicArticleList
-        articles={articles}
-        label="Reporting"
+        articles={reportingArticles}
+        label="More reporting"
         locale={locale}
         publishedAt={normalizedTopic.publishedAt}
       />
@@ -255,19 +402,93 @@ export function BalancedNewsWidget({
   const [rateLimitHint, setRateLimitHint] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<IHoverTopicPreview | null>(null);
+  const [previewPlacement, setPreviewPlacement] = useState<ITopicPreviewPlacementResult | null>(
+    null,
+  );
   const [reloadToken, setReloadToken] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const isMountRef = useRef(true);
   const prevCategoryRef = useRef(balancedNewsCategory);
+  const hoverPreviewPanelRef = useRef<HTMLDivElement | null>(null);
+  const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHoverCloseTimer = useCallback(() => {
+    if (hoverCloseTimerRef.current != null) {
+      clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHoverPreviewClose = useCallback(() => {
+    clearHoverCloseTimer();
+    hoverCloseTimerRef.current = setTimeout(() => {
+      setHoverPreview(null);
+      setPreviewPlacement(null);
+    }, TOPIC_PREVIEW_HOVER_CLOSE_MS);
+  }, [clearHoverCloseTimer]);
+
+  const openHoverPreview = useCallback(
+    (topic: INewsTopicRoundup, anchorEl: HTMLElement) => {
+      const previewArticle = resolveTopicPreviewArticle(topic);
+      if (!previewArticle) return;
+      clearHoverCloseTimer();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      setPreviewPlacement(
+        resolveTopicPreviewPlacement({
+          anchorRect,
+          previewWidthPx: TOPIC_PREVIEW_WIDTH_PX,
+          previewHeightPx: TOPIC_PREVIEW_ESTIMATED_HEIGHT_PX,
+          viewportWidthPx: window.innerWidth,
+          viewportHeightPx: window.innerHeight,
+        }),
+      );
+      setHoverPreview({ topic, previewArticle, anchorEl });
+    },
+    [clearHoverCloseTimer],
+  );
+
+  const updatePreviewPlacement = useCallback(() => {
+    if (!hoverPreview) return;
+    const anchorRect = hoverPreview.anchorEl.getBoundingClientRect();
+    const measuredHeight =
+      hoverPreviewPanelRef.current?.offsetHeight ?? TOPIC_PREVIEW_ESTIMATED_HEIGHT_PX;
+    setPreviewPlacement(
+      resolveTopicPreviewPlacement({
+        anchorRect,
+        previewWidthPx: TOPIC_PREVIEW_WIDTH_PX,
+        previewHeightPx: measuredHeight,
+        viewportWidthPx: window.innerWidth,
+        viewportHeightPx: window.innerHeight,
+      }),
+    );
+  }, [hoverPreview]);
+
+  useLayoutEffect(() => {
+    if (!hoverPreview) return;
+    updatePreviewPlacement();
+  }, [hoverPreview, updatePreviewPlacement]);
+
+  useEffect(() => {
+    if (!hoverPreview) return;
+    const onViewportChange = (): void => {
+      updatePreviewPlacement();
+    };
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
+    };
+  }, [hoverPreview, updatePreviewPlacement]);
+
+  useEffect(() => () => clearHoverCloseTimer(), [clearHoverCloseTimer]);
 
   const loadFeed = useCallback(
     (forceRefresh: boolean) => {
       let cancelled = false;
       setErr(null);
       setRateLimitHint(null);
-      if (forceRefresh) {
-        setSnapshot(null);
-      }
       setLoading(true);
 
       void (async () => {
@@ -345,6 +566,8 @@ export function BalancedNewsWidget({
 
     if (categoryChanged) {
       setSelectedTopicId(null);
+      setHoverPreview(null);
+      setPreviewPlacement(null);
       setRefreshing(true);
       void markBalancedNewsManualRefresh().then(() => loadFeed(true));
       return undefined;
@@ -379,123 +602,166 @@ export function BalancedNewsWidget({
     ? `${snapshot.country} · ${BALANCED_NEWS_CATEGORY_LABELS[snapshot.category as TBalancedNewsCategory] ?? snapshot.category}`
     : BALANCED_NEWS_CATEGORY_LABELS[balancedNewsCategory];
 
-  return (
-    <section className="card flex h-full min-h-0 flex-col gap-3">
-      <div className="shrink-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <HudPanelTitleInline>Balanced news</HudPanelTitleInline>
-          <div className="flex flex-wrap items-center gap-1">
-            <HudTip tip="Refresh headlines (respects cache and rate limits)">
-              <button
-                type="button"
-                className="btn ghost icon-only sm"
-                aria-label="Refresh balanced news headlines"
-                disabled={refreshing || loading}
-                onClick={manualRefresh}
-              >
-                <RefreshCw size={18} strokeWidth={2} aria-hidden />
-              </button>
-            </HudTip>
-            <HudTip tip="Open Settings, Balanced news section">
-              <button
-                type="button"
-                className="btn ghost icon-only sm"
-                aria-label="Open balanced news settings"
-                onClick={onOpenBalancedNewsSettings}
-              >
-                <Settings2 size={18} strokeWidth={2} aria-hidden />
-              </button>
-            </HudTip>
-          </div>
-        </div>
-        <p className="mt-1 font-mono text-[10px] text-muted">{regionLabel}</p>
-        <div className="row wrap mt-2 gap-1" role="group" aria-label="News category">
-          {BALANCED_NEWS_CATEGORY_OPTIONS.map((category) => (
-            <HudTip
-              key={category}
-              tip={`Show latest ${BALANCED_NEWS_CATEGORY_LABELS[category].toLowerCase()} headlines`}
-            >
-              <button
-                type="button"
-                className={balancedNewsCategory === category ? "btn primary sm" : "btn sm"}
-                aria-pressed={balancedNewsCategory === category}
-                disabled={refreshing || (loading && balancedNewsCategory === category)}
-                onClick={() => {
-                  if (category === balancedNewsCategory) return;
-                  onSelectCategory(category);
-                }}
-              >
-                {BALANCED_NEWS_CATEGORY_LABELS[category]}
-              </button>
-            </HudTip>
-          ))}
-        </div>
-      </div>
+  const hoverPreviewId =
+    hoverPreview != null ? `balanced-news-preview-${hoverPreview.topic.id}` : undefined;
 
-      <HudPanelBody className="min-h-0 flex-1 overflow-y-auto">
-        {loading && !snapshot ? (
-          <p className="muted font-mono text-xs">Loading headlines…</p>
-        ) : err ? (
-          <div className="flex flex-col gap-3">
-            <PrivilegedFetchErrorPanel
-              message={err}
-              onRetry={() => setReloadToken((n) => n + 1)}
-              retryTip="Try fetching balanced news headlines again"
-              retryAriaLabel="Retry balanced news headlines"
-            />
-            <p className="muted m-0 border-t border-border pt-3 text-xs leading-relaxed">
-              Check Settings &gt; Balanced news for region and optional API key.{" "}
-              <button type="button" className="linkish" onClick={onOpenBalancedNewsSettings}>
-                Open settings
-              </button>
-            </p>
+  return (
+    <>
+      <section className="card flex h-full min-h-0 flex-col gap-3">
+        <div className="shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <HudPanelTitleInline>Balanced news</HudPanelTitleInline>
+            <div className="flex flex-wrap items-center gap-1">
+              <HudTip tip="Refresh headlines (respects cache and rate limits)">
+                <button
+                  type="button"
+                  className="btn ghost icon-only sm"
+                  aria-label="Refresh balanced news headlines"
+                  disabled={refreshing || loading}
+                  onClick={manualRefresh}
+                >
+                  <RefreshCw size={18} strokeWidth={2} aria-hidden />
+                </button>
+              </HudTip>
+              <HudTip tip="Open Settings, Balanced news section">
+                <button
+                  type="button"
+                  className="btn ghost icon-only sm"
+                  aria-label="Open balanced news settings"
+                  onClick={onOpenBalancedNewsSettings}
+                >
+                  <Settings2 size={18} strokeWidth={2} aria-hidden />
+                </button>
+              </HudTip>
+            </div>
           </div>
-        ) : snapshot && snapshot.topics.length === 0 ? (
-          <p className="muted font-mono text-xs">
-            No topics found for this region. Try another category above.
-          </p>
-        ) : snapshot ? (
-          <>
-            {rateLimitHint ? (
-              <p className="mb-2 font-mono text-[10px] text-[var(--color-accent2)]">
-                {rateLimitHint}
+          <p className="mt-1 font-mono text-[10px] text-muted">{regionLabel}</p>
+          <div className="row wrap mt-2 gap-1" role="group" aria-label="News category">
+            {BALANCED_NEWS_CATEGORY_OPTIONS.map((category) => (
+              <HudTip
+                key={category}
+                tip={`Show latest ${BALANCED_NEWS_CATEGORY_LABELS[category].toLowerCase()} headlines`}
+              >
+                <button
+                  type="button"
+                  className={balancedNewsCategory === category ? "btn primary sm" : "btn sm"}
+                  aria-pressed={balancedNewsCategory === category}
+                  disabled={refreshing || (loading && balancedNewsCategory === category)}
+                  onClick={() => {
+                    if (category === balancedNewsCategory) return;
+                    onSelectCategory(category);
+                  }}
+                >
+                  {BALANCED_NEWS_CATEGORY_LABELS[category]}
+                </button>
+              </HudTip>
+            ))}
+          </div>
+        </div>
+
+        <HudPanelBody className="min-h-0 flex-1 overflow-y-auto">
+          {loading && !snapshot ? (
+            <p className="muted font-mono text-xs">Loading headlines…</p>
+          ) : err ? (
+            <div className="flex flex-col gap-3">
+              <PrivilegedFetchErrorPanel
+                message={err}
+                onRetry={() => setReloadToken((n) => n + 1)}
+                retryTip="Try fetching balanced news headlines again"
+                retryAriaLabel="Retry balanced news headlines"
+              />
+              <p className="muted m-0 border-t border-border pt-3 text-xs leading-relaxed">
+                Check Settings &gt; Balanced news for region and optional API key.{" "}
+                <button type="button" className="linkish" onClick={onOpenBalancedNewsSettings}>
+                  Open settings
+                </button>
               </p>
-            ) : null}
-            {snapshot.stale ? (
-              <p className="mb-2 font-mono text-[10px] text-muted">Showing cached headlines.</p>
-            ) : null}
-            <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {snapshot.topics.map((topic) => {
-                const active = topic.id === selectedTopicId;
-                return (
-                  <li key={topic.id}>
-                    <button
-                      type="button"
-                      className={
-                        active
-                          ? "btn primary flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal"
-                          : "btn ghost flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal"
-                      }
-                      aria-pressed={active}
-                      onClick={() => setSelectedTopicId(topic.id)}
-                    >
-                      <TruncatedHudLabel
-                        text={topic.title}
-                        className="font-mono text-xs"
-                        wrapClassName="min-w-0 flex-1"
-                      />
-                      <TopicBalanceIcons topic={topic} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {selectedTopic ? (
-              <TopicDetail key={selectedTopic.id} topic={selectedTopic} locale={displayLocale} />
-            ) : null}
-          </>
-        ) : null}
-      </HudPanelBody>
-    </section>
+            </div>
+          ) : snapshot && snapshot.topics.length === 0 ? (
+            <p className="muted font-mono text-xs">
+              No topics found for this region. Try another category above.
+            </p>
+          ) : snapshot ? (
+            <>
+              {rateLimitHint ? (
+                <p className="mb-2 font-mono text-[10px] text-[var(--color-accent2)]">
+                  {rateLimitHint}
+                </p>
+              ) : null}
+              {snapshot.stale ? (
+                <p className="mb-2 font-mono text-[10px] text-muted">Showing cached headlines.</p>
+              ) : null}
+              <ul className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Headline topics">
+                {snapshot.topics.map((topic) => {
+                  const active = topic.id === selectedTopicId;
+                  const previewArticle = resolveTopicPreviewArticle(topic);
+                  const previewPanelId = `balanced-news-preview-${topic.id}`;
+                  return (
+                    <li key={topic.id}>
+                      <button
+                        type="button"
+                        aria-selected={active}
+                        aria-describedby={
+                          hoverPreview?.topic.id === topic.id ? previewPanelId : undefined
+                        }
+                        className={
+                          active
+                            ? "btn primary flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal ring-2 ring-primary ring-offset-2 ring-offset-surface"
+                            : "btn ghost flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal"
+                        }
+                        aria-pressed={active}
+                        onClick={() => setSelectedTopicId(topic.id)}
+                        onMouseEnter={(e) => openHoverPreview(topic, e.currentTarget)}
+                        onMouseLeave={scheduleHoverPreviewClose}
+                        onFocus={(e) => openHoverPreview(topic, e.currentTarget)}
+                        onBlur={scheduleHoverPreviewClose}
+                      >
+                        {previewArticle ? (
+                          <ArticleThumbnail article={previewArticle} />
+                        ) : (
+                          <span
+                            className="h-12 w-12 shrink-0 border border-border bg-surface-container"
+                            aria-hidden
+                          />
+                        )}
+                        <TruncatedHudLabel
+                          text={topic.title}
+                          className="font-mono text-xs"
+                          wrapClassName="min-w-0 flex-1"
+                        />
+                        <TopicBalanceIcons topic={topic} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {selectedTopic ? (
+                <TopicDetail
+                  key={selectedTopic.id}
+                  topic={selectedTopic}
+                  locale={displayLocale}
+                  previewArticle={resolveTopicPreviewArticle(selectedTopic)}
+                />
+              ) : null}
+            </>
+          ) : null}
+        </HudPanelBody>
+      </section>
+      {hoverPreview != null && previewPlacement != null && typeof document !== "undefined"
+        ? createPortal(
+            <TopicHoverPreviewPanel
+              topic={hoverPreview.topic}
+              previewArticle={hoverPreview.previewArticle}
+              locale={displayLocale}
+              previewId={hoverPreviewId ?? `balanced-news-preview-${hoverPreview.topic.id}`}
+              placement={previewPlacement}
+              panelRef={hoverPreviewPanelRef}
+              onStayOpen={clearHoverCloseTimer}
+              onRequestClose={scheduleHoverPreviewClose}
+            />,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

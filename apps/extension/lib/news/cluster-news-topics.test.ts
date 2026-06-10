@@ -14,6 +14,8 @@ function article(
     publishedAt: now - 60 * 60 * 1000,
     isOpinion: false,
     fqnCategory: null,
+    imageUrl: null,
+    description: null,
     ...partial,
   };
 }

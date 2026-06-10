@@ -1,7 +1,5 @@
 import { defineBackground } from "wxt/sandbox";
 import browser from "webextension-polyfill";
-import { ALARM_PREFIX, META_KEY, removeAlarmMeta, type TAlarmMeta } from "../lib/alarm-meta";
-import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import { coerceCryptoChartDays } from "../lib/crypto/crypto-chart-days";
 import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coingecko-background";
 import { TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW } from "../lib/crypto/crypto-coingecko-message";
@@ -15,11 +13,17 @@ import {
   privilegedFetchJsonInBackground,
   privilegedFetchTextInBackground,
 } from "../lib/privileged-extension-fetch-handler";
-
-async function getMeta(): Promise<TAlarmMeta> {
-  const r = await browser.storage.local.get(META_KEY);
-  return ((r[META_KEY] as TAlarmMeta) ?? {}) as TAlarmMeta;
-}
+import { sendTabocalypseTestNotification } from "../lib/tabocalypse-alarm-notification";
+import {
+  TABOCALYPSE_ALARM_DELETE,
+  TABOCALYPSE_ALARM_SCHEDULE,
+  TABOCALYPSE_ALARM_TEST_NOTIFICATION,
+} from "../lib/tabocalypse-alarm-message";
+import {
+  deleteTabocalypseAlarm,
+  handleTabocalypseAlarmFired,
+  scheduleTabocalypseAlarm,
+} from "../lib/tabocalypse-alarm-service";
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown) => {
@@ -31,7 +35,30 @@ export default defineBackground(() => {
       coinId?: unknown;
       ticker?: unknown;
       days?: unknown;
+      whenMs?: unknown;
+      message?: unknown;
+      existingName?: unknown;
+      name?: unknown;
     };
+    if (m.type === TABOCALYPSE_ALARM_SCHEDULE) {
+      const whenMs = m.whenMs;
+      const reminder = m.message;
+      if (typeof whenMs === "number" && typeof reminder === "string") {
+        const existingName =
+          m.existingName === null || m.existingName === undefined
+            ? null
+            : typeof m.existingName === "string"
+              ? m.existingName
+              : null;
+        return scheduleTabocalypseAlarm({ whenMs, message: reminder, existingName });
+      }
+    }
+    if (m.type === TABOCALYPSE_ALARM_DELETE && typeof m.name === "string") {
+      return deleteTabocalypseAlarm(m.name);
+    }
+    if (m.type === TABOCALYPSE_ALARM_TEST_NOTIFICATION) {
+      return sendTabocalypseTestNotification();
+    }
     if (m.type === TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW) {
       const coinId = m.coinId;
       const ticker = m.ticker;
@@ -68,20 +95,8 @@ export default defineBackground(() => {
     return undefined;
   });
 
-  browser.alarms.onAlarm.addListener(async (alarm) => {
-    if (!alarm.name.startsWith(ALARM_PREFIX)) return;
-    const meta = await getMeta();
-    const message = coerceAlarmMetaMessage(meta[alarm.name]) || "Tabocalypse alarm.";
-    await browser.storage.local.set({ [META_KEY]: removeAlarmMeta(meta, alarm.name) });
-
-    try {
-      await browser.notifications.create(`tabocalypse-${alarm.name}`, {
-        type: "basic",
-        title: "Tabocalypse",
-        message,
-      });
-    } catch {
-      // notifications may fail without permission on some builds
-    }
+  browser.alarms.onAlarm.addListener((alarm) => {
+    // Return the promise so the MV3 service worker stays alive until the OS notification is created.
+    return handleTabocalypseAlarmFired(alarm.name);
   });
 });

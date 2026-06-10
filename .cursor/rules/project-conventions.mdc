@@ -73,7 +73,7 @@ Read the skill file before following it; do not improvise when a skill applies.
 | Topic | Skill |
 |-------|--------|
 | GitHub Actions / CI workflows | **[github-actions-opt-in.mdc](github-actions-opt-in.mdc)** — do not add `/.github/workflows/**` unless the owner explicitly asks |
-| Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc); WXT out dir: [extension-build-output.mdc](extension-build-output.mdc); validate / commit / push: [validate-commit-push.mdc](validate-commit-push.mdc); UI labels: [user-facing-copy.mdc](user-facing-copy.mdc) |
+| Editing this rule or adding project rules | `create-rule` (`~/.cursor/skills-cursor/create-rule/SKILL.md`); doc tree: [documentation-layout.mdc](documentation-layout.mdc); WXT out dir: [extension-build-output.mdc](extension-build-output.mdc); validate / commit / push: [validate-commit-push.mdc](validate-commit-push.mdc); UI labels: [user-facing-copy.mdc](user-facing-copy.mdc); 12h/24h times: [clock-hour-format.mdc](clock-hour-format.mdc); alarms/background: [extension-alarms-background.mdc](extension-alarms-background.mdc) |
 | Authoring new agent skills | `create-skill` |
 | Cursor hooks / automation around agent events | `create-hook` |
 | Firebase CLI, env, deploy, or services | `firebase-basics` first; then domain skills under `~/.cursor/plugins/cache/cursor-public/firebase/.../skills/` |

@@ -2,8 +2,6 @@ import browser from "webextension-polyfill";
 import {
   Bookmark,
   Braces,
-  Calendar,
-  CalendarClock,
   CheckCircle2,
   CircleX,
   Download,
@@ -22,7 +20,6 @@ import {
   Moon,
   Move,
   Paintbrush,
-  Pencil,
   Scale,
   Sun,
   Settings as SettingsIcon,
@@ -74,6 +71,7 @@ import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widg
 import { PluginDeck } from "../../components/plugin-views";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
 import { coerceWeatherPanelView } from "../../lib/weather/weather-panel-view";
+import { coerceWeatherTenDayLayout } from "../../lib/weather/weather-ten-day-layout";
 import {
   WEATHER_TEMPERATURE_UNITS,
   WEATHER_TEMPERATURE_UNIT_AUTO_LABEL,
@@ -82,6 +80,7 @@ import {
 } from "../../lib/weather/weather-units";
 import {
   getNavigatorFormattingLocale,
+  resolveEffectiveClockHourFormat,
   resolveEffectiveWeatherTemperatureUnit,
 } from "../../lib/locale-units";
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
@@ -166,8 +165,6 @@ import {
   refreshHumorContentIfStale,
 } from "../../lib/humor/humor-content-cache";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
-import { defaultAlarmWhenLocal, formatDatetimeLocalFromDate } from "../../lib/alarm-datetime";
-import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
 import {
   getHudDisplayLayoutKey,
   measureHudCanvasSize,
@@ -228,25 +225,12 @@ type TSettingsAccordionSection =
   | "weather"
   | "balancedNews"
   | "optionalPermissions"
-  | "alarms"
   | "byoAi"
   | "importPack"
   | "importPlugin"
   | "manageImports"
   | "debug"
   | "data";
-
-type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
-
-type TPendingAlarm = { name: string; scheduledTime: number; message: string };
-
-/** Safe string for React children; alarmMeta may store legacy `{ message, title }` objects. */
-function formatAlarmReminderForList(raw: unknown): string | null {
-  const line = coerceAlarmMetaMessage(raw).trim();
-  if (!line) return null;
-  if (/^Tabocalypse alarm\.?$/.test(line)) return null;
-  return line;
-}
 
 type TBackgroundStyleExtras = {
   bingImageUrl?: string | null;
@@ -435,13 +419,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabsPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [alarmWhen, setAlarmWhen] = useState("");
-  const [alarmMessage, setAlarmMessage] = useState("");
-  const [alarmScheduleBanner, setAlarmScheduleBanner] = useState<TAlarmScheduleBanner | null>(null);
-  const [pendingAlarms, setPendingAlarms] = useState<TPendingAlarm[]>([]);
-  const [editingAlarmName, setEditingAlarmName] = useState<string | null>(null);
-  const alarmWhenInputRef = useRef<HTMLInputElement>(null);
-  const alarmDatetimeMin = useMemo(() => formatDatetimeLocalFromDate(new Date()), [openSettings]);
   const supportActions = useMemo(() => getSupportActions(), []);
   const extensionVersion = useMemo(() => browser.runtime.getManifest().version, []);
   const bingPaintUrlRef = useRef<string | null>(null);
@@ -1190,7 +1167,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const arrangeHudPanelsNow = useCallback(() => {
     const canvas = hudCanvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      hudToastRef.current?.showToast({
+        message: "HUD canvas is not ready yet. Try again in a moment.",
+        variant: "warn",
+      });
+      return;
+    }
     const snap = latestSettingsRef.current;
     const displayKey = displayLayoutKeyRef.current;
     const effectiveHud = resolveHudPanelPositionsForDisplay(
@@ -1209,7 +1192,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       ),
     };
     const hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
-      onlyIfChanged: false,
+      onlyIfChanged: true,
+      ignoreUserSizes: true,
     });
     const effectiveHudAfterArrange = { ...effectiveHud, ...hudUpdates };
     const effectiveNotePanels = resolveNotePanelsForDisplay(
@@ -1222,17 +1206,28 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       { ...planInput, hudPanelPositions: effectiveHudAfterArrange },
       widthPx,
       heightPx,
-      { onlyIfChanged: false },
+      { onlyIfChanged: true },
     );
     const hasHudUpdates = Object.keys(hudUpdates).length > 0;
-    if (!hasHudUpdates && notePanelUpdates == null) return;
+    const hasStickyUpdates = notePanelUpdates != null;
+    canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (!hasHudUpdates && !hasStickyUpdates) {
+      hudToastRef.current?.showToast({
+        message: "Layout already fits this window.",
+        variant: "info",
+      });
+      return;
+    }
     applyAutoHudLayout({
       ...(hasHudUpdates ? { hudPanelPositions: hudUpdates } : {}),
-      ...(notePanelUpdates != null ? { notePanels: notePanelUpdates } : {}),
+      ...(hasStickyUpdates ? { notePanels: notePanelUpdates } : {}),
     });
-    if (hasHudUpdates) {
-      canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    }
+    hudToastRef.current?.showToast({
+      message: hasHudUpdates
+        ? `Arranged ${Object.keys(hudUpdates).length} panel${Object.keys(hudUpdates).length === 1 ? "" : "s"} to fit this window.`
+        : "Reflowed sticky notes around your panels.",
+      variant: "success",
+    });
   }, [applyAutoHudLayout]);
 
   const arrangeHudPanelsNowRef = useRef(arrangeHudPanelsNow);
@@ -1240,13 +1235,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key !== HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT) return;
+      if (ev.code !== "F10" && ev.key !== HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT) return;
       if (isHudKeyboardShortcutTypingTarget(ev.target)) return;
       ev.preventDefault();
+      ev.stopPropagation();
       arrangeHudPanelsNowRef.current();
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
 
   const setNoteActive = useCallback(
@@ -1383,49 +1379,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     void refreshOptionalApiPerms();
   }, [openSettings, refreshOptionalApiPerms]);
 
-  const refreshPendingAlarms = useCallback(async () => {
-    try {
-      const alarms = await browser.alarms.getAll();
-      const r = await browser.storage.local.get("alarmMeta");
-      const meta = (typeof r.alarmMeta === "object" && r.alarmMeta ? r.alarmMeta : {}) as Record<
-        string,
-        string
-      >;
-      const pending: TPendingAlarm[] = alarms
-        .filter((a) => a.name.startsWith("tabocalypse:"))
-        .map((a) => ({
-          name: a.name,
-          scheduledTime: a.scheduledTime,
-          message: coerceAlarmMetaMessage(meta[a.name]) || "Tabocalypse alarm",
-        }))
-        .sort((a, b) => a.scheduledTime - b.scheduledTime);
-      setPendingAlarms(pending);
-    } catch {
-      // alarms API unavailable outside extension context
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!openSettings) return;
-    setAlarmScheduleBanner(null);
-    setEditingAlarmName(null);
-    setAlarmWhen((prev) => (prev ? prev : defaultAlarmWhenLocal()));
-    void refreshPendingAlarms();
-  }, [openSettings, refreshPendingAlarms]);
-
-  const openAlarmWhenPicker = useCallback(() => {
-    const el = alarmWhenInputRef.current;
-    if (!el) return;
-    const pick = el.showPicker;
-    if (typeof pick === "function") {
-      void Promise.resolve(pick.call(el)).catch(() => {
-        el.focus();
-      });
-    } else {
-      el.focus();
-    }
-  }, []);
-
   const scheduleMyLinesPersist = useCallback(
     (myLines: string[]) => {
       const current = latestSettingsRef.current;
@@ -1543,6 +1496,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const effectiveWeatherTemperatureUnit = useMemo(
     () => resolveEffectiveWeatherTemperatureUnit(s),
     [s.weatherTemperatureUnit, s.weatherTemperatureUnitAuto],
+  );
+  const effectiveClockHourFormat = useMemo(
+    () => resolveEffectiveClockHourFormat(s),
+    [s.clockHourFormat, s.clockHourFormatAuto],
   );
   /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
   const onBackgroundSolidColorChange = useCallback(
@@ -1905,104 +1862,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     },
     [s.hudLayoutLocked, s.backgroundKind, visibleUserBackground.dataUrl],
   );
-
-  const scheduleAlarm = async () => {
-    setAlarmScheduleBanner(null);
-    const raw = alarmWhen.trim();
-    if (!raw) {
-      setAlarmScheduleBanner({
-        kind: "err",
-        message: "Choose a date and time first (or use the calendar button).",
-      });
-      return;
-    }
-    const whenMs = new Date(raw).getTime();
-    if (Number.isNaN(whenMs)) {
-      setAlarmScheduleBanner({
-        kind: "err",
-        message: "That date and time is not valid.",
-      });
-      return;
-    }
-    if (whenMs < Date.now()) {
-      setAlarmScheduleBanner({
-        kind: "err",
-        message: "Pick a time in the future.",
-      });
-      return;
-    }
-    const metaKey = "alarmMeta";
-    const isEdit = editingAlarmName !== null;
-    try {
-      if (isEdit) {
-        await browser.alarms.clear(editingAlarmName);
-      }
-      const name = isEdit ? editingAlarmName : `tabocalypse:${crypto.randomUUID()}`;
-      const cur = await browser.storage.local.get(metaKey);
-      const meta = {
-        ...(typeof cur[metaKey] === "object" && cur[metaKey] ? cur[metaKey] : {}),
-        [name]: alarmMessage.trim() || "Tabocalypse alarm",
-      };
-      await browser.storage.local.set({ [metaKey]: meta });
-      await browser.alarms.create(name, { when: whenMs });
-    } catch (e) {
-      setAlarmScheduleBanner({
-        kind: "err",
-        message: e instanceof Error ? e.message : "Could not schedule the notification.",
-      });
-      return;
-    }
-    setAlarmMessage("");
-    setAlarmWhen("");
-    setEditingAlarmName(null);
-    setAlarmScheduleBanner({
-      kind: "ok",
-      message: isEdit
-        ? "Alarm updated."
-        : "Scheduled. You will get a browser notification at that time (if notifications are allowed for this extension).",
-    });
-    void refreshPendingAlarms();
-    window.setTimeout(() => {
-      setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
-    }, 6000);
-  };
-
-  const deleteAlarm = async (name: string) => {
-    try {
-      await browser.alarms.clear(name);
-      const r = await browser.storage.local.get("alarmMeta");
-      const meta = (typeof r.alarmMeta === "object" && r.alarmMeta ? r.alarmMeta : {}) as Record<
-        string,
-        string
-      >;
-      const { [name]: _, ...rest } = meta;
-      await browser.storage.local.set({ alarmMeta: rest });
-    } catch {
-      // ignore
-    }
-    if (editingAlarmName === name) {
-      setEditingAlarmName(null);
-      setAlarmWhen(defaultAlarmWhenLocal());
-      setAlarmMessage("");
-    }
-    void refreshPendingAlarms();
-  };
-
-  const startEditAlarm = (alarm: TPendingAlarm) => {
-    setEditingAlarmName(alarm.name);
-    setAlarmWhen(formatDatetimeLocalFromDate(new Date(alarm.scheduledTime)));
-    setAlarmMessage(
-      alarm.message === "Tabocalypse alarm" ? "" : coerceAlarmMetaMessage(alarm.message),
-    );
-    setAlarmScheduleBanner(null);
-  };
-
-  const cancelEdit = () => {
-    setEditingAlarmName(null);
-    setAlarmWhen(defaultAlarmWhenLocal());
-    setAlarmMessage("");
-    setAlarmScheduleBanner(null);
-  };
 
   const runByoAiTest = async () => {
     setAiResult(null);
@@ -2951,11 +2810,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </div>
                       <p className="muted sm mb-2 mt-4">2 Lakes</p>
                       <p className="muted text-xs mb-2 mt-0">
-                        Adds a &quot;2 Lakes&quot; view next to Forecast on the Weather widget with
-                        buoy readings from King County (Lake Washington and Lake Sammamish).
+                        Adds a &quot;2 Lakes&quot; view next to Forecast and 10 Day on the Weather
+                        widget with buoy readings from King County (Lake Washington and Lake
+                        Sammamish).
                       </p>
                       <div className="row wrap gap-2">
-                        <HudTip tip="Adds Forecast / 2 Lakes tabs on the Weather widget">
+                        <HudTip tip="Adds a 2 Lakes tab on the Weather widget">
                           <button
                             type="button"
                             className={s.weatherLakesEmbedEnabled ? "btn primary" : "btn"}
@@ -3424,11 +3284,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         onClick={() => arrangeHudPanelsNow()}
                       >
                         <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
-                        <span>Arrange panels now ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
+                        <span>Arrange panels to fit ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
                       </button>
                       <p className="muted sm mb-2">
-                        Same repack as resize auto-reflow. Use the header dashboard icon or press{" "}
-                        {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
+                        Repacks visible panels into columns sized for this window — widths and
+                        heights expand to use available space. Use the header dashboard icon or
+                        press {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
                         unpinned stickies reflow when the window resizes.
                       </p>
                       <p className="muted sm mb-2">
@@ -3679,150 +3540,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <p className="muted sm mt-1" style={{ color: "var(--color-danger)" }}>
                           Geolocation is not available in this browser.
                         </p>
-                      ) : null}
-                    </div>
-                  </details>
-
-                  <details
-                    className="acc-item"
-                    open={settingsAccordionIsOpen("alarms")}
-                    onToggle={onSettingsAccordionToggle("alarms")}
-                  >
-                    <summary className="acc-summary">
-                      <span className="acc-title">Alarms</span>
-                    </summary>
-                    <div className="acc-body">
-                      <p className="muted sm mb-3 mt-0">
-                        One-time reminders as browser notifications (when the extension alarm API is
-                        available).
-                      </p>
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void scheduleAlarm();
-                        }}
-                        className="grid gap-3"
-                      >
-                        <label className="block">
-                          <span className="muted sm">Date and time</span>
-                          <div className="mt-1 flex max-w-md gap-2">
-                            <input
-                              ref={alarmWhenInputRef}
-                              id="tabocalypse-alarm-when"
-                              type="datetime-local"
-                              step={60}
-                              min={alarmDatetimeMin}
-                              className="min-w-0 flex-1"
-                              value={alarmWhen}
-                              onChange={(e) => {
-                                setAlarmWhen(e.target.value);
-                                setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
-                              }}
-                              aria-label="Alarm date and time"
-                            />
-                            <HudTip tip="Open the date and time picker">
-                              <button
-                                type="button"
-                                className="btn ghost sm icon-only shrink-0"
-                                aria-label="Open date and time picker"
-                                onClick={() => openAlarmWhenPicker()}
-                              >
-                                <Calendar size={18} strokeWidth={2} aria-hidden />
-                              </button>
-                            </HudTip>
-                          </div>
-                        </label>
-                        <label className="block">
-                          <span className="muted sm">Message (optional)</span>
-                          <input
-                            id="tabocalypse-alarm-msg"
-                            type="text"
-                            placeholder="What the notification should say"
-                            className="mt-1 w-full"
-                            value={alarmMessage}
-                            onChange={(e) => {
-                              setAlarmMessage(e.target.value);
-                              setAlarmScheduleBanner((b) => (b?.kind === "err" ? null : b));
-                            }}
-                            aria-label="Alarm notification message"
-                          />
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <HudTip
-                            tip={
-                              editingAlarmName
-                                ? "Save changes to this alarm"
-                                : "Save this one-time reminder using the time and message above"
-                            }
-                          >
-                            <button type="submit" className="btn primary has-icon">
-                              <CalendarClock size={20} strokeWidth={2} aria-hidden />
-                              <span>{editingAlarmName ? "Update" : "Schedule"}</span>
-                            </button>
-                          </HudTip>
-                          {editingAlarmName ? (
-                            <button type="button" className="btn ghost" onClick={cancelEdit}>
-                              Cancel
-                            </button>
-                          ) : null}
-                        </div>
-                        {alarmScheduleBanner ? (
-                          <p
-                            role="status"
-                            className={
-                              alarmScheduleBanner.kind === "err"
-                                ? "err sm m-0"
-                                : "m-0 text-sm text-accent"
-                            }
-                          >
-                            {alarmScheduleBanner.message}
-                          </p>
-                        ) : null}
-                      </form>
-                      {pendingAlarms.length > 0 ? (
-                        <>
-                          <h4 className="mt-6 mb-2">Scheduled alarms</h4>
-                          <ul className="grid gap-2" style={{ listStyle: "none", padding: 0 }}>
-                            {pendingAlarms.map((alarm) => {
-                              const reminderLine = formatAlarmReminderForList(alarm.message);
-                              return (
-                                <li
-                                  key={alarm.name}
-                                  className={`flex items-center gap-3 rounded border px-3 py-2 text-sm${editingAlarmName === alarm.name ? " border-accent" : ""}`}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <span className="font-mono text-xs opacity-70">
-                                      {new Date(alarm.scheduledTime).toLocaleString()}
-                                    </span>
-                                    {reminderLine ? (
-                                      <span className="ml-2">{reminderLine}</span>
-                                    ) : null}
-                                  </div>
-                                  <HudTip tip="Edit this alarm">
-                                    <button
-                                      type="button"
-                                      className="btn ghost sm icon-only"
-                                      aria-label="Edit alarm"
-                                      onClick={() => startEditAlarm(alarm)}
-                                    >
-                                      <Pencil size={16} strokeWidth={2} aria-hidden />
-                                    </button>
-                                  </HudTip>
-                                  <HudTip tip="Delete this alarm">
-                                    <button
-                                      type="button"
-                                      className="btn ghost sm icon-only"
-                                      aria-label="Delete alarm"
-                                      onClick={() => void deleteAlarm(alarm.name)}
-                                    >
-                                      <Trash2 size={16} strokeWidth={2} aria-hidden />
-                                    </button>
-                                  </HudTip>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </>
                       ) : null}
                     </div>
                   </details>
@@ -4187,6 +3904,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       parsed.weatherPanelView,
                                       d.weatherPanelView,
                                     ),
+                                    weatherTenDayLayout: coerceWeatherTenDayLayout(
+                                      parsed.weatherTenDayLayout,
+                                      d.weatherTenDayLayout,
+                                    ),
                                     cryptoChartDays: coerceCryptoChartDays(
                                       parsed.cryptoChartDays,
                                       d.cryptoChartDays,
@@ -4356,12 +4077,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               </button>
             </HudTip>
             <HudTip
-              tip={`Arrange visible HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
+              tip={`Repack HUD panels to fit this window (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Resizes columns to use available space; pinned stickies stay put`}
             >
               <button
                 type="button"
                 className="btn ghost icon-only"
-                aria-label={`Arrange HUD panels (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
+                aria-label={`Arrange HUD panels to fit (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})`}
                 onClick={() => arrangeHudPanelsNow()}
               >
                 <LayoutDashboard size={20} strokeWidth={2} aria-hidden />
@@ -4584,7 +4305,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 >
                   <ClockWidget
                     locale={hudNumberLocale}
-                    hourFormat={s.clockHourFormat}
+                    hourFormat={effectiveClockHourFormat}
                     onSelectHourFormat={(clockHourFormat) =>
                       void persist((cur) => ({ ...cur, clockHourFormat }))
                     }
@@ -4633,8 +4354,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     }
                     lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
                     panelView={s.weatherPanelView}
+                    tenDayLayout={s.weatherTenDayLayout}
                     onSelectPanelView={(weatherPanelView) =>
                       void persist((cur) => ({ ...cur, weatherPanelView }))
+                    }
+                    onSelectTenDayLayout={(weatherTenDayLayout) =>
+                      void persist((cur) => ({ ...cur, weatherTenDayLayout }))
                     }
                   />
                 </DraggableHudPanel>

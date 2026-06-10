@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { isRateOrQuotaLimitError } from "../format-api-error";
 import type { INewsFeedSnapshot } from "./balanced-news-types";
 import { normalizeNewsFeedSnapshot } from "./normalize-balanced-news-snapshot";
 
@@ -59,14 +60,22 @@ async function persistState(cache: ICacheState, rl: IRlState): Promise<void> {
 }
 
 export function isBalancedNewsRateLimitError(message: string): boolean {
+  if (isRateOrQuotaLimitError(message)) return true;
   const lower = message.toLowerCase();
-  return lower.includes("http 429") || lower.includes("rate limit");
+  return (
+    lower.includes("http 429") ||
+    lower.includes("rate limit") ||
+    lower.includes("quota") ||
+    lower.includes("too many requests")
+  );
 }
 
 export interface IReadBalancedNewsCacheResult {
   snapshot: INewsFeedSnapshot | null;
   canRefresh: boolean;
   staleOnly: boolean;
+  /** True while a prior HTTP 429 (or quota) response is in backoff. */
+  inRateLimitBackoff: boolean;
 }
 
 export async function readBalancedNewsCache(
@@ -77,9 +86,10 @@ export async function readBalancedNewsCache(
   const { cache, rl } = await loadState();
   const key = cacheKey(country, category);
   const entry = cache.entries[key];
+  const inRateLimitBackoff = now < rl.backoffUntil;
   const canRefresh = now >= rl.nextAllowedAt && now >= rl.backoffUntil;
   if (!entry) {
-    return { snapshot: null, canRefresh, staleOnly: false };
+    return { snapshot: null, canRefresh, staleOnly: false, inRateLimitBackoff };
   }
   const age = now - entry.fetchedAt;
   const fresh = age <= BALANCED_NEWS_CACHE_FRESH_MS;
@@ -87,6 +97,7 @@ export async function readBalancedNewsCache(
     snapshot: normalizeNewsFeedSnapshot({ ...entry.snapshot, stale: !fresh }),
     canRefresh,
     staleOnly: !fresh && canRefresh,
+    inRateLimitBackoff,
   };
 }
 

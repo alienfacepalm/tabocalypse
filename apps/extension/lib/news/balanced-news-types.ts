@@ -20,6 +20,10 @@ export interface INewsArticleRef {
   isOpinion: boolean;
   /** FreeQuickNews category slug when present (e.g. tech, politics). */
   fqnCategory: string | null;
+  /** Article hero/thumbnail URL when FreeQuickNews provides one. */
+  imageUrl: string | null;
+  /** Short summary or lede when FreeQuickNews provides one. */
+  description: string | null;
 }
 
 export type TNewsTopicKind = "opinion" | "reporting";

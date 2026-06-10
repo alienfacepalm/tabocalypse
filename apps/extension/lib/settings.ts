@@ -24,6 +24,10 @@ import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpap
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
+  coerceWeatherTenDayLayout,
+  type TWeatherTenDayLayout,
+} from "./weather/weather-ten-day-layout";
+import {
   coerceWeatherTemperatureUnit,
   type TWeatherTemperatureUnit,
 } from "./weather/weather-units";
@@ -44,6 +48,7 @@ export type { IHudPanelPosition, THudPanelId, THudPanelPositionsByDisplay } from
 export type { TThemeMode, TThemePalette } from "./theme";
 export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 export type { TWeatherPanelView } from "./weather/weather-panel-view";
+export type { TWeatherTenDayLayout } from "./weather/weather-ten-day-layout";
 export type { TWeatherTemperatureUnit } from "./weather/weather-units";
 
 export type THumorIntensity = "off" | "mild" | "spicy" | "unhinged";
@@ -584,15 +589,17 @@ export interface ISettings {
   weatherTemperatureUnit: TWeatherTemperatureUnit;
   /** When true, temperature units follow the browser locale; when false, `weatherTemperatureUnit` is fixed. */
   weatherTemperatureUnitAuto: boolean;
-  /** Clock widget only: 12-hour (with AM/PM) vs 24-hour time. */
+  /** Global HUD preference: 12-hour (with AM/PM) vs 24-hour time (clock, alarms, and other read-only timestamps). */
   clockHourFormat: TClockHourFormat;
   /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   /** When true, the Weather HUD panel can switch to 2 Lakes buoy readings (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
-  /** Last Forecast / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
+  /** Last Forecast / 10 Day / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
+  /** Row vs vertical stack for the 10-day forecast cells. */
+  weatherTenDayLayout: TWeatherTenDayLayout;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
   /** When true, Balanced news region follows locale or device geo; when false, {@link balancedNewsCountry} is used. */
@@ -858,6 +865,7 @@ export interface ISyncSlice {
   weatherAutoGeo: boolean;
   weatherLakesEmbedEnabled: boolean;
   weatherPanelView: TWeatherPanelView;
+  weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: ISettings["balancedNewsCountry"];
@@ -1135,6 +1143,7 @@ export function defaultSettings(): ISettings {
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
     weatherPanelView: "forecast",
+    weatherTenDayLayout: "row",
     cryptoChartDays: 1,
     balancedNewsCountryAuto: true,
     balancedNewsCountry: "us",
@@ -1215,6 +1224,7 @@ function toSync(s: ISettings): ISyncSlice {
     weatherAutoGeo: s.weatherAutoGeo,
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
     weatherPanelView: s.weatherPanelView,
+    weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
     balancedNewsCountry: s.balancedNewsCountry,
@@ -1420,6 +1430,10 @@ function mergeSettings(
           ? d.weatherLakesEmbedEnabled
           : false,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
+    weatherTenDayLayout: coerceWeatherTenDayLayout(
+      sync?.weatherTenDayLayout,
+      d.weatherTenDayLayout,
+    ),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     balancedNewsCountryAuto:
       typeof sync?.balancedNewsCountryAuto === "boolean"

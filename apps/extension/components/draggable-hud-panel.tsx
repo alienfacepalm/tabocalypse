@@ -362,6 +362,7 @@ export function DraggableHudPanel({
   return (
     <div
       ref={rootRef}
+      data-hud-panel-id={panelId}
       className={[
         "hud-draggable-panel pointer-events-auto absolute flex max-w-full min-h-0 flex-col overflow-hidden",
         locked ? "hud-panel-locked" : "",

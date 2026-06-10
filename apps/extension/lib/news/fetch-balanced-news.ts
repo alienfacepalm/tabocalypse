@@ -3,9 +3,8 @@ import { buildFqnArticlesUrl, buildFqnFetchHeaders } from "./balanced-news-fqn-u
 import type { TBalancedNewsCategory } from "./balanced-news-types";
 import type { TBalancedNewsCountry } from "./balanced-news-country";
 import { filterArticlesForBalancedNewsCategory } from "./balanced-news-category-filter";
-import { detectOpinionArticle } from "./detect-opinion-article";
-import { coerceFqnBiasLabel, mapBiasToPerspective } from "./map-bias-perspective";
-import type { INewsArticleRef, TFqnBiasLabel } from "./balanced-news-types";
+import { normalizeFqnArticleRow } from "./normalize-fqn-article-row";
+import type { INewsArticleRef } from "./balanced-news-types";
 
 export { buildFqnArticlesUrl, buildFqnFetchHeaders } from "./balanced-news-fqn-url";
 
@@ -17,51 +16,6 @@ export interface IFetchBalancedNewsInput {
 }
 
 const MAX_FETCH_PAGES = 4;
-
-function parsePublishedAt(raw: unknown): number | null {
-  if (typeof raw !== "string" || raw.trim().length === 0) return null;
-  const ms = Date.parse(raw);
-  return Number.isFinite(ms) ? ms : null;
-}
-
-function pickString(row: Record<string, unknown>, keys: readonly string[]): string {
-  for (const key of keys) {
-    const v = row[key];
-    if (typeof v === "string" && v.trim().length > 0) return v.trim();
-  }
-  return "";
-}
-
-function normalizeFqnCategory(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  const trimmed = raw.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizeArticleRow(raw: unknown): INewsArticleRef | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const row = raw as Record<string, unknown>;
-  const title = pickString(row, ["title", "headline", "name"]);
-  const url = pickString(row, ["url", "link", "articleUrl"]);
-  const source = pickString(row, ["source", "sourceName", "publisher", "outlet"]);
-  if (!title || !url) return null;
-
-  const bias: TFqnBiasLabel = coerceFqnBiasLabel(row.bias ?? row.biasRating ?? row.politicalBias);
-  const category = row.category ?? row.section;
-  const tags = row.tags;
-  const contentType = row.contentType;
-
-  return {
-    title,
-    url,
-    source: source || "Unknown source",
-    bias,
-    perspective: mapBiasToPerspective(bias),
-    publishedAt: parsePublishedAt(row.date ?? row.publishedAt ?? row.published_at),
-    isOpinion: detectOpinionArticle({ title, url, category, tags, contentType }),
-    fqnCategory: normalizeFqnCategory(category),
-  };
-}
 
 function extractArticleRows(payload: unknown): unknown[] {
   if (!payload || typeof payload !== "object") return [];
@@ -84,7 +38,7 @@ async function fetchArticlePage(
   const rows = extractArticleRows(payload);
   const out: INewsArticleRef[] = [];
   for (const raw of rows) {
-    const article = normalizeArticleRow(raw);
+    const article = normalizeFqnArticleRow(raw);
     if (article) out.push(article);
   }
   return out;

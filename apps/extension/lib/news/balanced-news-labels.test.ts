@@ -15,6 +15,8 @@ const article = {
   publishedAt: null,
   isOpinion: true,
   fqnCategory: null,
+  imageUrl: null,
+  description: null,
 };
 
 function opinionTopic(

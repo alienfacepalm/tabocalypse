@@ -196,6 +196,27 @@ export function measureHudCanvasSize(canvas: HTMLElement): { widthPx: number; he
   return { widthPx, heightPx };
 }
 
+const HUD_PANEL_ID_SET = new Set<string>(HUD_PANEL_IDS);
+
+/** Live outer sizes for draggable HUD panels on the canvas (used by manual adjust-to-fit). */
+export function measureHudPanelSizesOnCanvas(
+  canvas: HTMLElement,
+): Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>> {
+  const out: Partial<Record<THudPanelId, { widthPx: number; heightPx: number }>> = {};
+  for (const el of canvas.querySelectorAll<HTMLElement>("[data-hud-panel-id]")) {
+    const raw = el.dataset.hudPanelId;
+    if (raw == null || !HUD_PANEL_ID_SET.has(raw)) continue;
+    const panelId = raw as THudPanelId;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    out[panelId] = {
+      widthPx: Math.round(rect.width),
+      heightPx: Math.round(rect.height),
+    };
+  }
+  return out;
+}
+
 /** Bottom edge (px) of the visible HUD canvas — panels should stay at or above this when possible. */
 export function hudCanvasFoldBottomPx(canvasHeightPx: number): number {
   return Math.max(1, canvasHeightPx - HUD_LAYOUT_FOLD_PADDING_PX);

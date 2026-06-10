@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ALARM_PREFIX, isTabocalypseAlarm, META_KEY, removeAlarmMeta } from "./alarm-meta";
+import {
+  ALARM_PREFIX,
+  isTabocalypseAlarm,
+  META_KEY,
+  removeAlarmMeta,
+  TABOCALYPSE_ALARM_NOTIFICATION_ICON,
+  tabocalypseAlarmNotificationId,
+} from "./alarm-meta";
 
 describe("alarm-meta constants", () => {
   it("ALARM_PREFIX is a non-empty string ending with ':'", () => {
@@ -22,6 +29,18 @@ describe("isTabocalypseAlarm", () => {
     expect(isTabocalypseAlarm("other:alarm")).toBe(false);
     expect(isTabocalypseAlarm("")).toBe(false);
     expect(isTabocalypseAlarm("tabocalyps:almost")).toBe(false);
+  });
+});
+
+describe("tabocalypseAlarmNotificationId", () => {
+  it("prefixes alarm names for stable notification ids", () => {
+    expect(tabocalypseAlarmNotificationId("tabocalypse:abc")).toBe("tabocalypse-tabocalypse_abc");
+  });
+});
+
+describe("TABOCALYPSE_ALARM_NOTIFICATION_ICON", () => {
+  it("points at the packaged extension icon path", () => {
+    expect(TABOCALYPSE_ALARM_NOTIFICATION_ICON).toBe("icons/128.png");
   });
 });
 
