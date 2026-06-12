@@ -11,9 +11,16 @@ import {
 
 export { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./parse-king-county-lake-buoy-map-data";
 
+export const LAKES_BUOY_NO_ACTIVE_DATA_ERROR = "No active buoy data returned";
+
+export const LAKES_BUOY_STATUS_ACTIVE = "ACTIVE";
+export const LAKES_BUOY_STATUS_WATER_TEMP_MISSING = "Live sensor (water temp missing)";
+export const LAKES_BUOY_STATUS_WATER_TEMP_MISSING_DETAIL =
+  "Water temp temporarily missing, but other data active";
+
 export interface ILakesBuoySnapshot {
   location: string;
-  waterTemp: number;
+  waterTemp: number | null;
   airTemp: number | null;
   windSpeed: number | null;
   humidity: number | null;
@@ -33,7 +40,10 @@ export interface ILakesBuoyEntry {
 
 function formatBuoyCondition(row: IKingCountyLakeBuoyRow): string {
   const parts: string[] = [];
-  if (row.windDirection) parts.push(row.windDirection);
+  const windDirection = row.windDirection?.trim();
+  if (windDirection && windDirection.toUpperCase() !== "NA") {
+    parts.push(windDirection);
+  }
   if (row.windSpeedMps != null) {
     parts.push(`${kingCountyWindMetersPerSecToMph(row.windSpeedMps)} mph`);
   }
@@ -48,15 +58,18 @@ function snapshotFromKingCountyRow(
   row: IKingCountyLakeBuoyRow,
   temperatureUnit: TWeatherTemperatureUnit,
 ): ILakesBuoySnapshot | null {
-  if (!row.active || row.waterTempC == null) return null;
+  if (!row.active) return null;
 
   const location = kingCountyLakeBuoyLocationName(row.name, row.active);
-  const waterTemp = temperatureFromCelsius(row.waterTempC, temperatureUnit);
+  const waterTemp =
+    row.waterTempC == null ? null : temperatureFromCelsius(row.waterTempC, temperatureUnit);
   const airTemp =
     row.airTempC == null ? null : temperatureFromCelsius(row.airTempC, temperatureUnit);
   const windSpeed =
     row.windSpeedMps == null ? null : kingCountyWindMetersPerSecToMph(row.windSpeedMps);
   const timestamp = row.collectDate ?? row.profileDate ?? "—";
+  const status =
+    waterTemp != null ? LAKES_BUOY_STATUS_ACTIVE : LAKES_BUOY_STATUS_WATER_TEMP_MISSING;
 
   return {
     location,
@@ -65,7 +78,7 @@ function snapshotFromKingCountyRow(
     windSpeed,
     humidity: null,
     condition: formatBuoyCondition(row),
-    status: "ACTIVE",
+    status,
     timestamp,
     temperatureUnit,
   };
@@ -109,8 +122,8 @@ export function mapKingCountyRowsToBuoyEntries(
     });
   }
 
-  if (buoys.length === 0) {
-    throw new Error("No active buoy data returned");
+  if (buoys.length === 0 && !rows.some((row) => row.active)) {
+    throw new Error(LAKES_BUOY_NO_ACTIVE_DATA_ERROR);
   }
 
   return buoys;

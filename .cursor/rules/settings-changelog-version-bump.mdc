@@ -1,0 +1,33 @@
+---
+description: When bumping apps/extension/package.json version, roll doc/CHANGELOG.md and regenerate settings changelog embed
+alwaysApply: true
+---
+
+# Settings changelog on version bump
+
+The extension settings **Changelog** accordion reads embedded markdown from [`apps/extension/lib/changelog/changelog.generated.ts`](../../apps/extension/lib/changelog/changelog.generated.ts), generated from [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md).
+
+## When `apps/extension/package.json` `version` changes
+
+Do this in the **same commit** as the version bump (or immediately before tagging a release):
+
+1. **Roll [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md)** — move **[Unreleased]** entries into a new dated section for the bumped **major/minor** line (Keep a Changelog style). Leave **[Unreleased]** empty or with only new in-flight items.
+2. **Regenerate the embed** — from repo root: **`pnpm generate:settings-changelog`** (writes `changelog.generated.ts` and stamps `SETTINGS_CHANGELOG_EXTENSION_VERSION`).
+3. **Stage both** — `doc/CHANGELOG.md` and `apps/extension/lib/changelog/changelog.generated.ts` with the version bump and any code the release describes.
+
+## Also regenerate when
+
+- You edit **`doc/CHANGELOG.md`** for user-visible history that should appear in **Settings > Changelog**, even without a version bump (for example catching up **[Unreleased]** before merge).
+
+## Do not
+
+- Hand-edit **`changelog.generated.ts`** — it is AUTO-GENERATED.
+- Ship a version bump with stale embedded changelog (settings would show the previous release history).
+
+## Skill
+
+Agents should follow **[sync-settings-changelog](../skills/sync-settings-changelog/SKILL.md)** for the step-by-step workflow.
+
+## Relation to other rules
+
+- **[update-docs-before-commit.mdc](update-docs-before-commit.mdc)** — **[Unreleased]** must stay current for user-facing work; this rule adds the **embed regen** step when the extension version or shipped changelog history changes.

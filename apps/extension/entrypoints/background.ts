@@ -24,6 +24,8 @@ import {
   handleTabocalypseAlarmFired,
   scheduleTabocalypseAlarm,
 } from "../lib/tabocalypse-alarm-service";
+import { TABOCALYPSE_FEEDBACK_SEND } from "../lib/feedback/feedback-message";
+import { handleTabocalypseFeedbackSendRequest } from "../lib/feedback/feedback-background-handler";
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown) => {
@@ -91,6 +93,9 @@ export default defineBackground(() => {
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_BYTES && typeof m.url === "string") {
       return privilegedFetchBytesInBackground(m.url);
+    }
+    if (m.type === TABOCALYPSE_FEEDBACK_SEND) {
+      return handleTabocalypseFeedbackSendRequest(message);
     }
     return undefined;
   });

@@ -24,6 +24,8 @@ export default defineConfig({
       "https://duckduckgo.com/*",
       "https://suggestqueries.google.com/*",
       "https://api.bing.com/*",
+      "https://smtp.elasticemail.com/*",
+      "https://api.wikimedia.org/*",
     ],
     optional_host_permissions: [
       "https://api.openai.com/*",

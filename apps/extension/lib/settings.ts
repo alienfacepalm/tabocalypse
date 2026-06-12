@@ -39,6 +39,21 @@ import {
   defaultBalancedNewsCategoryForCountry,
   inferBalancedNewsCountryFromNavigator,
 } from "./news/balanced-news-country";
+import {
+  DEFAULT_EXPERIMENTAL_FEATURES,
+  mergeExperimentalFeatures,
+  type TExperimentalFeatureFlag,
+} from "./feature-flags";
+
+export type { TExperimentalFeatureFlag } from "./feature-flags";
+export {
+  DEFAULT_EXPERIMENTAL_FEATURES,
+  EXPERIMENTAL_FEATURE_DESCRIPTIONS,
+  EXPERIMENTAL_FEATURE_FLAG_KEYS,
+  EXPERIMENTAL_FEATURE_LABELS,
+  isExperimentalFeatureEnabled,
+  mergeExperimentalFeatures,
+} from "./feature-flags";
 
 export type { TCryptoChartDays };
 export { coerceCryptoChartDays };
@@ -697,6 +712,8 @@ export interface ISettings {
    * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
    */
   hasSeenSettingsIntro: boolean;
+  /** Opt-in experimental features (Settings > Experimental); synced across devices. */
+  experimentalFeatures: Record<TExperimentalFeatureFlag, boolean>;
 }
 
 const SYNC_KEY = "tabocalypseSync";
@@ -884,6 +901,7 @@ export interface ISyncSlice {
   backgroundGradientCenterYPct: number;
   debugPluginSource: boolean;
   hasSeenSettingsIntro: boolean;
+  experimentalFeatures: Record<TExperimentalFeatureFlag, boolean>;
 }
 
 export interface ILocalSlice {
@@ -1193,6 +1211,7 @@ export function defaultSettings(): ISettings {
     hudPanelPositions: mergeHudPanelPositions(undefined),
     hudPanelPositionsByDisplay: {},
     hasSeenSettingsIntro: false,
+    experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
   };
 }
 
@@ -1243,6 +1262,7 @@ function toSync(s: ISettings): ISyncSlice {
     backgroundGradientCenterYPct: s.backgroundGradientCenterYPct,
     debugPluginSource: s.debugPluginSource,
     hasSeenSettingsIntro: s.hasSeenSettingsIntro,
+    experimentalFeatures: s.experimentalFeatures,
   };
 }
 
@@ -1491,6 +1511,9 @@ function mergeSettings(
       d.backgroundGradientCenterYPct,
     ),
     debugPluginSource: sync?.debugPluginSource ?? d.debugPluginSource,
+    experimentalFeatures: mergeExperimentalFeatures(
+      sync?.experimentalFeatures as Partial<Record<string, unknown>> | undefined,
+    ),
     userBackgroundDataUrl,
     userBackgroundDataUrls,
     userBackgroundImages,

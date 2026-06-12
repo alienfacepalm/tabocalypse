@@ -10,6 +10,7 @@
 ## Network requests (only when you use a feature)
 
 - **Open-Meteo** (`api.open-meteo.com`) when the Weather widget is enabled — approximate location from coordinates you set (or from the browser geolocation prompt if you click “Use my location”).
+- **Wikimedia** (`api.wikimedia.org`) when you open the Weather **Forecast** view — fetches public “on this day” facts for the current calendar date (English Wikipedia feed by default). No Tabocalypse account; facts are attributed to Wikipedia in the panel.
 - **CoinGecko** (`api.coingecko.com`) when the Crypto prices widget is enabled — public USD spot and chart samples for BTC and ETH (no Tabocalypse account; no API key shipped by the publisher).
 - **FreeQuickNews** (`freequicknews.com`) when the **Balanced news** widget is enabled — bias-labeled headline metadata for your chosen region and category (optional API key you supply stays in local storage; headlines open the original publisher in a new tab). **Open-Meteo Geocoding** (`geocoding-api.open-meteo.com`) may be used when device location is enabled for region — reverse lookup only, no Tabocalypse account.
 - **Peapix** (`peapix.com`, `img.peapix.com`) when you choose **Bing spotlight** as the new-tab background — the extension loads a public JSON feed that mirrors Bing’s daily images (no Tabocalypse account; subject to Peapix’s and Microsoft’s terms and privacy policies for that imagery).
@@ -20,6 +21,8 @@
 ## Donations / feature suggestions
 
 Support links open third-party sites (e.g. Ko-fi, GitHub Issues) in a new tab. Tabocalypse does not process payments.
+
+When you submit **Settings > Feedback & Feature Requests**, the extension may send your message (type, text, optional reply email, extension version, and browser user-agent string) to the maintainer via **Elastic Email’s public SMTP relay** (`smtp.elasticemail.com`) using a build-time SMTP.js secure token — only when that token is configured for the build. If direct send is unavailable, you can use **Use email app** (your local mail client). We do not store feedback on AlienFacepalm servers.
 
 ## User-imported content
 

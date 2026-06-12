@@ -6,6 +6,7 @@ import {
 } from "./hud-panel-drag-context";
 import { useHudPlacementOptional } from "./hud-placement-context";
 import { HudCornerResize } from "./hud-corner-resize";
+import { resolveHudPanelResponsiveRect } from "../lib/hud-auto-layout";
 import {
   HUD_DRAG_Z_LIFT,
   HUD_PANEL_WIDTH_CLASSES,
@@ -83,6 +84,19 @@ export function DraggableHudPanel({
   const effectiveW = liveSize?.w ?? position.widthPx;
   const effectiveH = liveSize?.h ?? position.heightPx;
   const useDefaultWidth = effectiveW == null;
+
+  const responsiveLayout = useMemo(() => {
+    if (chaotic || effectiveW != null || livePct != null) return null;
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const { widthPx: canvasW, heightPx: canvasH } = measureHudCanvasSize(canvas);
+    const metrics = hudPlacement?.layoutMetrics ?? getHudLayoutMetrics(canvasW, canvasH);
+    const rect = resolveHudPanelResponsiveRect(panelId, display, metrics);
+    return {
+      leftPct: (rect.leftPx / metrics.canvasW) * 100,
+      widthPx: rect.widthPx,
+    };
+  }, [canvasRef, chaotic, display, effectiveW, hudPlacement?.layoutMetrics, livePct, panelId]);
 
   const computeFromPointer = useCallback(
     (clientX: number, clientY: number, snap: boolean): IHudPanelPosition | null => {
@@ -367,16 +381,20 @@ export function DraggableHudPanel({
       className={[
         "hud-draggable-panel pointer-events-auto absolute flex max-w-full min-h-0 flex-col overflow-hidden",
         locked ? "hud-panel-locked" : "",
-        useDefaultWidth ? widthClass : "",
+        useDefaultWidth && responsiveLayout == null ? widthClass : "",
         effectiveH == null ? "max-h-[min(92vh,calc(100vh-5.25rem-var(--hud-footer-reserve)))]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       style={{
-        left: `${display.xPct}%`,
+        left: responsiveLayout ? `${responsiveLayout.leftPct}%` : `${display.xPct}%`,
         top: `${display.yPct}%`,
         zIndex: (zIndexBase ?? 10) + (zLift ? HUD_DRAG_Z_LIFT : 0),
-        ...(effectiveW != null ? { width: effectiveW } : {}),
+        ...(effectiveW != null
+          ? { width: effectiveW }
+          : responsiveLayout != null
+            ? { width: responsiveLayout.widthPx }
+            : {}),
         ...(effectiveH != null ? { height: effectiveH } : {}),
       }}
     >

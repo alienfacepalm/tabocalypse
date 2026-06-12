@@ -94,18 +94,17 @@ describe("privilegedFetchTextInBackground (King County e2e)", () => {
     const rows = parseKingCountyLakeBuoyMapData(result.text);
     expect(rows.length).toBeGreaterThan(0);
 
-    let buoys: ReturnType<typeof mapKingCountyRowsToBuoyEntries>;
-    try {
-      buoys = mapKingCountyRowsToBuoyEntries(rows, "fahrenheit");
-    } catch (error) {
-      if (error instanceof Error && error.message === "No active buoy data returned") {
-        // County feed can return rows while water-temp sensors are offline.
-        return;
-      }
-      throw error;
-    }
+    const buoys = mapKingCountyRowsToBuoyEntries(rows, "fahrenheit");
     expect(buoys.length).toBeGreaterThanOrEqual(2);
-    expect(buoys.every((row) => row.data.waterTemp > 32)).toBe(true);
+    const activeLakeBuoys = buoys.filter((row) => row.label.startsWith("Lake "));
+    expect(activeLakeBuoys.length).toBeGreaterThanOrEqual(2);
+    if (activeLakeBuoys.every((row) => row.data.waterTemp != null)) {
+      expect(activeLakeBuoys.every((row) => (row.data.waterTemp ?? 0) > 32)).toBe(true);
+    } else {
+      expect(
+        activeLakeBuoys.every((row) => row.data.status === "Live sensor (water temp missing)"),
+      ).toBe(true);
+    }
   }, 20_000);
 });
 

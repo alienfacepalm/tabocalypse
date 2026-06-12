@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
+import { WeatherStaleNotice } from "../weather-stale-notice";
 import {
-  fetchAllLakesBuoys,
+  LAKES_BUOY_NO_ACTIVE_DATA_ERROR,
+  LAKES_BUOY_STATUS_ACTIVE,
+  LAKES_BUOY_STATUS_WATER_TEMP_MISSING,
+  LAKES_BUOY_STATUS_WATER_TEMP_MISSING_DETAIL,
   type ILakesBuoyEntry,
   type ILakesBuoySnapshot,
 } from "../../lib/weather/fetch-lakes-buoy-data";
+import { loadLakesBuoyData } from "../../lib/weather/load-lakes-buoy-data";
 import { TemperatureValue } from "../temperature-value";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { BuoyConditionIcon } from "../../lib/weather/weather-condition-icon";
@@ -12,11 +17,19 @@ import type { TWeatherTemperatureUnit } from "../../lib/weather/weather-units";
 
 type TPanelLoadState =
   | { status: "loading" }
-  | { status: "ready"; buoys: ILakesBuoyEntry[] }
+  | { status: "ready"; buoys: ILakesBuoyEntry[]; stale: boolean; fetchedAt: number }
   | { status: "error"; message: string };
 
 function lakeHeroAriaLabel(label: string, data: ILakesBuoySnapshot, displayLocale: string): string {
-  return `${label}, water ${formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}, ${data.condition}`;
+  const water =
+    data.waterTemp == null
+      ? `${LAKES_BUOY_STATUS_WATER_TEMP_MISSING}. ${LAKES_BUOY_STATUS_WATER_TEMP_MISSING_DETAIL}`
+      : `water ${formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}`;
+  const status =
+    data.status === LAKES_BUOY_STATUS_ACTIVE
+      ? "active"
+      : "live sensor with missing water temperature";
+  return `${label}, ${water}, ${data.condition}, ${status}`;
 }
 
 function formatOptionalNumber(value: number | null, suffix = ""): string {
@@ -40,11 +53,16 @@ export function LakesBuoyPanel({
     let cancelled = false;
     setPanelState({ status: "loading" });
 
-    void fetchAllLakesBuoys(temperatureUnit)
-      .then((buoys) => {
+    void loadLakesBuoyData(temperatureUnit)
+      .then((result) => {
         if (cancelled) return;
-        setPanelState({ status: "ready", buoys });
-        setOpenLakeId((prev) => (prev && buoys.some((b) => b.id === prev) ? prev : null));
+        setPanelState({
+          status: "ready",
+          buoys: result.buoys,
+          stale: result.stale,
+          fetchedAt: result.fetchedAt,
+        });
+        setOpenLakeId((prev) => (prev && result.buoys.some((b) => b.id === prev) ? prev : null));
       })
       .catch((e) => {
         if (!cancelled) {
@@ -74,17 +92,30 @@ export function LakesBuoyPanel({
   }
 
   if (panelState.status === "error") {
+    const showTwoLakesVerifyLink = panelState.message === LAKES_BUOY_NO_ACTIVE_DATA_ERROR;
+
     return (
       <PrivilegedFetchErrorPanel
         message={panelState.message}
         onRetry={retryBuoyFetch}
         retryTip="Try fetching King County lake buoy readings again"
         retryAriaLabel="Retry lake buoy data"
+        supplement={
+          showTwoLakesVerifyLink ? (
+            <p className="muted m-0 text-xs leading-relaxed">
+              Check live readings on{" "}
+              <a href="https://2lakes.app" target="_blank" rel="noreferrer" className="linkish">
+                2lakes.app
+              </a>{" "}
+              to confirm whether the buoys are reporting.
+            </p>
+          ) : undefined
+        }
       />
     );
   }
 
-  const { buoys } = panelState;
+  const { buoys, stale, fetchedAt } = panelState;
 
   if (buoys.length === 0) {
     return <p className="muted">No buoy readings available.</p>;
@@ -92,6 +123,13 @@ export function LakesBuoyPanel({
 
   return (
     <div className="flex flex-col gap-2">
+      {stale ? (
+        <WeatherStaleNotice
+          dataLabel="buoy readings"
+          fetchedAt={fetchedAt}
+          displayLocale={displayLocale}
+        />
+      ) : null}
       <div
         className="weather-lakes-stack"
         role="region"
@@ -101,6 +139,7 @@ export function LakesBuoyPanel({
           const { data } = buoy;
           const isOpen = openLakeId === buoy.id;
           const bodyId = `${panelIdPrefix}-${buoy.id}-body`;
+          const waterTempMissing = data.status === LAKES_BUOY_STATUS_WATER_TEMP_MISSING;
 
           return (
             <div key={buoy.id} className="weather-lakes-item" data-open={isOpen ? "" : undefined}>
@@ -116,17 +155,40 @@ export function LakesBuoyPanel({
                   className="min-w-0 flex-1"
                   aria-label={lakeHeroAriaLabel(buoy.label, data, displayLocale)}
                 >
-                  <p className="weather-condition-label mt-0">{buoy.label}</p>
-                  <p className="weather-temp">
-                    <TemperatureValue
-                      value={data.waterTemp}
-                      unit={data.temperatureUnit}
-                      locale={displayLocale}
+                  <p className="weather-condition-label mt-0">
+                    <span
+                      className={
+                        waterTempMissing
+                          ? "weather-lakes-status-dot weather-lakes-status-dot--partial"
+                          : "weather-lakes-status-dot weather-lakes-status-dot--active"
+                      }
+                      aria-hidden
                     />
+                    <span>{buoy.label}</span>
                   </p>
+                  {waterTempMissing ? (
+                    <>
+                      <p className="weather-lakes-status-heading">{data.status}</p>
+                      <p className="weather-lakes-status-detail">
+                        {LAKES_BUOY_STATUS_WATER_TEMP_MISSING_DETAIL}
+                      </p>
+                    </>
+                  ) : data.waterTemp != null ? (
+                    <p className="weather-temp">
+                      <TemperatureValue
+                        value={data.waterTemp}
+                        unit={data.temperatureUnit}
+                        locale={displayLocale}
+                      />
+                    </p>
+                  ) : null}
                   <p className="weather-condition-label">
                     <span>{data.condition}</span>
-                    <span className="normal-case tracking-normal opacity-80">· {data.status}</span>
+                    {!waterTempMissing ? (
+                      <span className="normal-case tracking-normal opacity-80">
+                        · {LAKES_BUOY_STATUS_ACTIVE}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <span className="weather-lakes-summary-status text-muted normal-case tracking-normal">
@@ -138,11 +200,19 @@ export function LakesBuoyPanel({
                   <dl className="weather-lakes-stat-grid">
                     <dt className="weather-lakes-stat-label">Water</dt>
                     <dd>
-                      <TemperatureValue
-                        value={data.waterTemp}
-                        unit={data.temperatureUnit}
-                        locale={displayLocale}
-                      />
+                      {waterTempMissing ? (
+                        <span className="text-xs leading-snug text-muted">
+                          {LAKES_BUOY_STATUS_WATER_TEMP_MISSING_DETAIL}
+                        </span>
+                      ) : data.waterTemp != null ? (
+                        <TemperatureValue
+                          value={data.waterTemp}
+                          unit={data.temperatureUnit}
+                          locale={displayLocale}
+                        />
+                      ) : (
+                        "—"
+                      )}
                     </dd>
                     <dt className="weather-lakes-stat-label">Air</dt>
                     <dd>

@@ -673,22 +673,12 @@
       4px 4px 0 0 var(--color-shadow-hard);
   }
 
-  .humor-banner {
-    @apply mb-6 border px-4 py-3 text-[1.05rem];
-    border-color: rgb(148 163 184 / 0.22);
-    background:
-      linear-gradient(
-        168deg,
-        rgb(255 255 255 / 0.085) 0%,
-        rgb(255 255 255 / 0.02) 36%,
-        rgb(0 0 0 / 0.22) 100%
-      ),
-      rgb(5 5 5 / 0.4);
-    backdrop-filter: blur(18px) saturate(1.18);
-    -webkit-backdrop-filter: blur(18px) saturate(1.18);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.11),
-      4px 4px 0 0 var(--color-accent2);
+  .humor-banner-snark {
+    @apply pointer-events-none m-0 line-clamp-2 font-display text-[0.65rem] font-bold uppercase leading-snug tracking-widest text-accent2;
+  }
+
+  .header-search .humor-banner-snark {
+    @apply mb-1;
   }
 
   .clock-time {
@@ -733,6 +723,42 @@
 
   .weather-forecast-hero {
     @apply flex items-center gap-4 border border-border bg-surface-weak px-4 py-3 shadow-[4px_4px_0px_0px_var(--color-accent)];
+  }
+
+  .weather-hud-engagement {
+    @apply shrink-0 border border-accent2 bg-surface px-2 py-1 text-right font-display text-[10px] uppercase tracking-wide text-accent2 shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  .weather-hud-engagement-streak {
+    @apply block leading-tight;
+  }
+
+  .weather-hud-engagement-points {
+    @apply block font-mono text-[11px] normal-case tracking-normal text-text;
+  }
+
+  .weather-on-this-day {
+    @apply border border-border bg-surface-weak px-3 py-3 shadow-[3px_3px_0px_0px_var(--color-border)];
+  }
+
+  .weather-on-this-day-title {
+    @apply mb-2 mt-0 font-display text-[11px] font-bold uppercase tracking-widest text-accent;
+  }
+
+  .weather-on-this-day-list {
+    @apply m-0 list-none space-y-2 p-0;
+  }
+
+  .weather-on-this-day-list li {
+    @apply border-l-2 border-accent pl-2 font-mono text-[11px] leading-relaxed text-text;
+  }
+
+  .weather-on-this-day-year {
+    @apply mr-2 font-display text-[10px] font-bold uppercase tracking-wide text-accent2;
+  }
+
+  .weather-on-this-day-credit {
+    @apply mb-0 mt-3;
   }
 
   .weather-temp {
@@ -816,15 +842,11 @@
   }
 
   .weather-location-map {
-    @apply relative mt-2 h-28 w-full overflow-hidden border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-border)];
-  }
-
-  .weather-location-map-crop {
-    @apply absolute inset-x-0 top-0 h-[115%];
+    @apply relative mt-2 w-full overflow-hidden border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-border)];
   }
 
   .weather-location-map-img {
-    @apply h-full w-full object-cover object-top bg-input opacity-0 transition-opacity duration-500;
+    @apply block h-auto w-full bg-input opacity-0 transition-opacity duration-500;
   }
 
   .weather-location-map-img.is-loaded {
@@ -849,6 +871,26 @@
 
   .weather-lakes-summary-status {
     @apply shrink-0 font-mono text-xs uppercase tracking-widest;
+  }
+
+  .weather-lakes-status-dot {
+    @apply inline-block h-2 w-2 shrink-0 rounded-full;
+  }
+
+  .weather-lakes-status-dot--active {
+    background-color: var(--color-accent);
+  }
+
+  .weather-lakes-status-dot--partial {
+    background-color: var(--color-weather-clear);
+  }
+
+  .weather-lakes-status-heading {
+    @apply font-mono text-sm font-semibold normal-case leading-snug tracking-normal text-[var(--color-weather-clear)];
+  }
+
+  .weather-lakes-status-detail {
+    @apply mt-1 font-mono text-[10px] normal-case leading-snug tracking-normal text-muted;
   }
 
   .weather-lakes-body {
@@ -1129,6 +1171,22 @@
     @apply px-4 py-3;
   }
 
+  .settings-changelog-h2 {
+    @apply mb-2 mt-4 font-display text-sm font-bold uppercase tracking-widest text-accent first:mt-0;
+  }
+
+  .settings-changelog-h3 {
+    @apply mb-1 mt-3 font-display text-[11px] font-bold uppercase tracking-wide text-accent2;
+  }
+
+  .settings-changelog-li {
+    @apply mb-1 ml-3 border-l-2 border-accent2 pl-2 font-mono text-[11px] leading-relaxed text-text;
+  }
+
+  .settings-changelog-p {
+    @apply mb-2 font-mono text-[11px] leading-relaxed text-muted;
+  }
+
   .dialog.small {
     @apply w-[min(420px,100%)];
   }
@@ -1313,21 +1371,6 @@
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.72),
       4px 4px 0 0 var(--color-primary);
-  }
-
-  [data-theme="light"] .humor-banner {
-    border-color: color-mix(in srgb, var(--color-border) 55%, transparent);
-    background:
-      linear-gradient(
-        168deg,
-        rgb(255 255 255 / 0.55) 0%,
-        rgb(255 255 255 / 0.2) 38%,
-        rgb(0 0 0 / 0.03) 100%
-      ),
-      rgb(255 255 255 / 0.48);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.65),
-      4px 4px 0 0 var(--color-accent2);
   }
 
   [data-theme="light"] .dialog {

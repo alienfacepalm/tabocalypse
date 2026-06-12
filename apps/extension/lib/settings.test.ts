@@ -33,6 +33,7 @@ const {
   applyChaosPresetHumorHarmony,
   coercePreset,
   DEFAULT_WIDGETS,
+  DEFAULT_EXPERIMENTAL_FEATURES,
   mergeWidgets,
   resolveWeatherGeoAdjusted,
   WIDGET_LABELS,
@@ -707,6 +708,28 @@ describe("loadSettings", () => {
       { noteId: "n1", position: { xPx: 840, yPx: 16, widthPx: 260, heightPx: 220 } },
     ]);
     expect(s.notePanelsEpoch).toBe(3);
+  });
+
+  it("defaults experimental features off when sync omits them", async () => {
+    syncGet.mockResolvedValue({ [SYNC_KEY]: { version: 1, preset: "balanced" } });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.experimentalFeatures).toEqual(DEFAULT_EXPERIMENTAL_FEATURES);
+  });
+
+  it("coerces stored experimental feature toggles on load", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        experimentalFeatures: { weatherHudGamification: true, unknownFlag: true },
+      },
+    });
+    localGet.mockResolvedValue({});
+    const s = await loadSettings();
+    expect(s.experimentalFeatures.weatherHudGamification).toBe(true);
+    expect(Object.keys(s.experimentalFeatures).sort()).toEqual(
+      Object.keys(DEFAULT_EXPERIMENTAL_FEATURES).sort(),
+    );
   });
 
   it("merges newer note from sync over older mirror by updatedAt", async () => {

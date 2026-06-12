@@ -14,24 +14,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Weather** widget: Open-Meteo forecast and **2 Lakes** buoy readings are saved on this device after a successful load; when a service is down, the last saved data is shown with a clear “saved / not live” notice instead of an empty panel (when no saved data exists, the existing error and retry UI still appears).
+- **Settings > Experimental** — opt-in checkboxes for in-development features (all off by default). Weather HUD streak and points are behind **Weather HUD streak & points** until you enable it.
+- **Settings > Changelog** — full release history embedded from the project changelog, updated when the extension version bumps.
+- **Settings > Feedback & Feature Requests** — in-dialog form to email the maintainer via public SMTP relay (with **Use email app** fallback when SMTP is not configured for the build).
 - **Balanced News** HUD panel: topic list from FreeQuickNews with category filters, left/center/right perspective icons, and assignment tooltips on article rows.
 - **Balanced News** topic hover previews: article thumbnail, synopsis, and a frosted-glass popover when you hover or focus a topic in the list.
 - **Clock** widget: schedule Tabocalypse alarms with labels and background notifications when a reminder fires.
-- **Weather** widget: ten-day forecast panel with shared Open-Meteo parsing and day labels; days default to a vertical stack and stay stacked when the panel is narrow.
+- **Weather** widget: Forecast tab now shows today’s detail grid (precip, wind, feels-like, high/low, UV, sunrise/sunset), Wikipedia “On this day” trivia, and a local daily streak counter; today’s row in **10 Day** uses live conditions so the icon matches outside weather.
 - **Weather** widget: tap a 10-day row to expand one day at a time with precip chance, precip amount, wind, feels-like highs/lows, UV index, and sunrise/sunset.
 - **Weather** and **2 Lakes** panels: temperature values use the 2lakes.app color scale (cold indigo/blue through hot red); hover a 10-day weekday label for the full date and condition.
 - **Weather** 10-day expanded rows: small icons beside precip, wind, feels-like, UV, and sunrise/sunset metrics.
+- **2 Lakes** buoy panel: when no active buoy data is returned, a link to 2lakes.app opens in a new tab so you can verify readings on the source site.
 
 ### Fixed
 
+- **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.
+- **New tab HUD** on wide monitors: widget columns now expand to use horizontal space instead of leaving large gutters with truncated text inside fixed-width panels.
+- **2 Lakes** buoy panel: active King County buoys still appear when water temperature is temporarily missing (shows **Live sensor (water temp missing)** with an amber status indicator and explanatory copy aligned with 2lakes.app, instead of **NO RECENT DATA** or a full error).
+- **Settings > Import pack** — disclaimer under **Choose file** has clearer spacing from the section border.
+- **Settings > Feedback** — **Use email app** mailto links now use `%20` for spaces instead of `+`, so subject and body text open correctly in Mail for Windows and other clients.
+- **Weather** and other privileged-fetch panels no longer show raw allowlist errors; users get reload instructions with a link to the browser extensions page instead.
 - **Weather** 10-day high/low temperatures now reliably show the 2lakes.app color scale (each value colored independently).
+- **Weather** widget location map: the pin stays centered in the map view when the panel is resized instead of drifting toward the bottom edge.
+- **Weather** widget location map: lakes and rivers now appear on the map (hybrid satellite layer) instead of a pale road-only view that could omit nearby water bodies.
 - **Classic jargon** humor voice and a built-in glossary pack (**Unsuck It Classics**), embedded via the maintainer scraper workflow.
 
 ### Changed
 
-- Settings: optional permissions, weather, alarms, and BYO AI are grouped in accordions; import, debug, and data sections are folded similarly; the overlay is treated as a **dialog** (not “modal”) in naming.
+- **Weather** widget location map: requests tiles sized to the panel width (height follows) so the pin-centered view fills the available space.
+- **Weather** widget: daily streak counter and points in Forecast are hidden until you turn on **Settings > Experimental > Weather HUD streak & points**; On this day trivia stays available either way.
+- Settings: removed the standalone **Debug** section (the plugin widget-type overlay was a maintainer-only aid and is no longer exposed in the dialog).
+- Settings: optional permissions, weather, alarms, and BYO AI are grouped in accordions; import and data sections are folded similarly; the overlay is treated as a **dialog** (not “modal”) in naming.
 - Settings: **Chaos** preset is the default with **Gen-Z** humor voice; preset buttons show a clear active state; first-run settings intro can auto-open.
-- Settings: removed the in-page **Feedback and support** block (support remains configurable via environment / link-out patterns documented in the root README).
+- Settings: removed the in-page **Feedback and support** block (support remains configurable via environment / link-out patterns documented in the root README); feedback now lives under **Settings > Feedback & Feature Requests** with optional SMTP relay.
 - Extension reliability: alarm and link-related text is coerced before React render; alarm reminder storage is normalized for safe display.
 - Notes: detached panels avoid a phantom scrollbar and hug content height where intended; sticky note layout is stored **per monitor** while the master notes list still syncs.
 - HUD auto-layout: improved placement for denser widget grids on the new tab canvas.

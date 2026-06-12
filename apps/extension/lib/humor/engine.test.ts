@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILTIN_PACKS, GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
-import { pickDailyLine, type IHumorContext } from "./engine";
+import { pickDailyLine, resolveHumorBannerLine, type IHumorContext } from "./engine";
 
 const genZLines = BUILTIN_PACKS.find((p) => p.id === GEN_Z_PACK_ID)?.lines ?? [];
 const unsuckLines = BUILTIN_PACKS.find((p) => p.id === UNSUCK_CLASSICS_PACK_ID)?.lines ?? [];
@@ -18,6 +18,31 @@ function baseCtx(over: Partial<IHumorContext>): IHumorContext {
     ...over,
   };
 }
+
+describe("resolveHumorBannerLine", () => {
+  it("returns a line when master humor is off but the banner widget is enabled", () => {
+    const line = resolveHumorBannerLine(
+      baseCtx({
+        humorEnabled: false,
+        humorIntensity: "off",
+        humorBuiltinVoice: "gen_z",
+      }),
+    );
+    expect(line).toBeTruthy();
+    expect(genZLines).toContain(line);
+  });
+
+  it("bumps off intensity to mild so the banner still has copy", () => {
+    const line = resolveHumorBannerLine(
+      baseCtx({
+        humorEnabled: true,
+        humorIntensity: "off",
+        enabledBuiltinPackIds: ["tab_shame"],
+      }),
+    );
+    expect(line).toBeTruthy();
+  });
+});
 
 describe("pickDailyLine", () => {
   it("uses only Gen-Z built-ins when Gen-Z voice is selected", () => {

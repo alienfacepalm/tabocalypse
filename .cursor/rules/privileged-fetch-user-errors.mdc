@@ -1,0 +1,30 @@
+---
+description: Hide privileged-fetch allowlist internals; show reload instructions with extension page link
+alwaysApply: true
+---
+
+# Privileged fetch user errors
+
+When extension UI surfaces errors from **`privilegedExtensionFetch*`** (background `runtime.sendMessage` fetch), **never** show raw allowlist strings such as **`URL not allowlisted for privileged fetch.`** or **`URL is not allowlisted for privileged extension fetch.`** to users.
+
+## User-facing resolver
+
+- Use **`resolvePrivilegedFetchUserMessage`** in [`apps/extension/lib/privileged-fetch-user-message.ts`](../../apps/extension/lib/privileged-fetch-user-message.ts).
+- Prefer **`PrivilegedFetchUserError`** ([`apps/extension/components/privileged-fetch-user-error.tsx`](../../apps/extension/components/privileged-fetch-user-error.tsx)) or **`PrivilegedFetchErrorPanel`** for full error panels with Retry.
+- **`ExtensionReloadHint`** ([`apps/extension/components/extension-reload-hint.tsx`](../../apps/extension/components/extension-reload-hint.tsx)) must accompany allowlist and background-unavailable cases — it links to the browser extensions page with reload steps.
+
+## When adding a new HTTPS host
+
+1. Append the hostname to **`PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS`** in [`apps/extension/lib/privileged-extension-fetch.ts`](../../apps/extension/lib/privileged-extension-fetch.ts).
+2. Add matching **`host_permissions`** in [`apps/extension/wxt.config.ts`](../../apps/extension/wxt.config.ts).
+3. Rebuild and reload the unpacked extension (or ship an update) — users with a stale service worker see the allowlist message until reload.
+
+## Copy rules
+
+- **Allowlist / background unavailable:** plain-language reload instructions only; no internal error text.
+- **User-actionable errors** (API key, rate limit, network, settings path): show the formatted message as-is.
+- **Other opaque internals:** generic “could not load” copy; optional small monospace technical line only when it helps support — not for allowlist cases.
+
+## Tests
+
+Extend [`apps/extension/lib/privileged-fetch-user-message.test.ts`](../../apps/extension/lib/privileged-fetch-user-message.test.ts) when adding new mapped error classes.

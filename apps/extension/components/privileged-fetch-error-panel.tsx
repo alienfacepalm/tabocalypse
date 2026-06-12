@@ -1,6 +1,6 @@
 import { RotateCw } from "lucide-react";
 import React from "react";
-import { shouldShowPrivilegedFetchReloadHint } from "../lib/privileged-extension-fetch";
+import { resolvePrivilegedFetchUserMessage } from "../lib/privileged-fetch-user-message";
 import { ExtensionReloadHint } from "./extension-reload-hint";
 import { HudTip } from "./hud-tip";
 
@@ -9,16 +9,26 @@ export function PrivilegedFetchErrorPanel({
   onRetry,
   retryTip,
   retryAriaLabel,
+  supplement,
 }: {
   message: string;
   onRetry: () => void;
   retryTip: string;
   retryAriaLabel: string;
+  supplement?: React.ReactNode;
 }) {
+  const resolved = resolvePrivilegedFetchUserMessage(message);
+
   return (
     <div className="flex flex-col gap-3">
-      <p className="err">{message}</p>
-      {shouldShowPrivilegedFetchReloadHint(message) ? <ExtensionReloadHint /> : null}
+      <p className="err">{resolved.userMessage}</p>
+      {resolved.showReloadHint ? <ExtensionReloadHint /> : null}
+      {resolved.showTechnicalDetail && resolved.technicalDetail ? (
+        <p className="muted mb-0 font-mono text-[10px] leading-relaxed">
+          {resolved.technicalDetail}
+        </p>
+      ) : null}
+      {supplement}
       <div className="flex w-full flex-wrap items-center gap-2 pb-1">
         <HudTip tip={retryTip}>
           <button

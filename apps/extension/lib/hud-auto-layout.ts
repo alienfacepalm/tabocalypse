@@ -254,6 +254,85 @@ function hudPanelHasUserWidth(position: IHudPanelPosition): boolean {
   return position.widthPx != null && Number.isFinite(position.widthPx) && position.widthPx > 0;
 }
 
+/** Classic HUD uses three vertical bands on wide canvases (see DEFAULT_HUD_PANEL_POSITIONS). */
+const HUD_RESPONSIVE_COLUMN_CAP = 3;
+
+export interface IHudPanelResponsiveRect {
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+}
+
+/**
+ * Live panel box for the HUD canvas: snap default-width panels into equal column bands and
+ * expand to the band width on roomy viewports so wide monitors do not leave empty gutters.
+ * Honors explicit user resizes ({@link IHudPanelPosition.widthPx}).
+ */
+export function resolveHudPanelResponsiveRect(
+  panelId: THudPanelId,
+  position: IHudPanelPosition,
+  metrics: IHudLayoutMetrics,
+): IHudPanelResponsiveRect {
+  const storedLeftPx = (position.xPct / 100) * metrics.canvasW;
+  const storedTopPx = (position.yPct / 100) * metrics.canvasH;
+  const defaultSize = resolveHudPanelSizePx(panelId, position, metrics);
+
+  if (hudPanelHasUserWidth(position)) {
+    const widthPx = defaultSize.widthPx;
+    const heightPx = defaultSize.heightPx;
+    return {
+      leftPx: clampHudScalar(storedLeftPx, 0, Math.max(0, metrics.canvasW - widthPx)),
+      topPx: clampHudScalar(storedTopPx, 0, hudCanvasMaxPanelTopPx(metrics.canvasH, heightPx)),
+      widthPx,
+      heightPx,
+    };
+  }
+
+  const landMode = resolveHudLandMode(metrics.canvasW, metrics.canvasH);
+  if (landMode === "tight") {
+    const margin = HUD_LAND_MARGIN_PX;
+    const { widthPx, heightPx } = clampHudPanelSize(
+      panelId,
+      metrics.canvasW - margin * 2,
+      defaultSize.heightPx,
+      metrics.canvasW,
+      metrics.canvasH,
+    );
+    return {
+      leftPx: margin,
+      topPx: clampHudScalar(storedTopPx, 0, hudCanvasMaxPanelTopPx(metrics.canvasH, heightPx)),
+      widthPx,
+      heightPx,
+    };
+  }
+
+  const columnCount = Math.min(
+    HUD_RESPONSIVE_COLUMN_CAP,
+    resolveHudSpreadColumnCount(metrics.canvasW, HUD_RESPONSIVE_COLUMN_CAP),
+  );
+  const col = assignHudPanelColumnIndex(storedLeftPx, defaultSize.widthPx, columnCount, metrics);
+  const margin = HUD_LAND_MARGIN_PX;
+  const gap = HUD_LAND_GAP_PX;
+  const innerW = metrics.canvasW - margin * 2 - gap * Math.max(0, columnCount - 1);
+  const colWidth = Math.floor(innerW / columnCount);
+  const leftPx = margin + col * (colWidth + gap);
+  const { widthPx, heightPx } = clampHudPanelSize(
+    panelId,
+    colWidth,
+    defaultSize.heightPx,
+    metrics.canvasW,
+    metrics.canvasH,
+  );
+
+  return {
+    leftPx,
+    topPx: clampHudScalar(storedTopPx, 0, hudCanvasMaxPanelTopPx(metrics.canvasH, heightPx)),
+    widthPx,
+    heightPx,
+  };
+}
+
 export interface IHudAutoLayoutOptions {
   /** When true, panels expand to column/canvas width instead of honoring saved widths. */
   ignoreUserSizes?: boolean;

@@ -84,7 +84,7 @@ function ArticleThumbnail({
       height={size === "lg" ? 96 : 48}
       loading="lazy"
       decoding="async"
-      className={`${sizeClass} shrink-0 border border-border object-cover bg-surface-container`}
+      className={`${sizeClass} shrink-0 object-cover bg-surface-container`}
       onError={() => setFailed(true)}
     />
   );
@@ -743,10 +743,7 @@ export function BalancedNewsWidget({
                         {previewArticle ? (
                           <ArticleThumbnail article={previewArticle} />
                         ) : (
-                          <span
-                            className="h-12 w-12 shrink-0 border border-border bg-surface-container"
-                            aria-hidden
-                          />
+                          <span className="h-12 w-12 shrink-0 bg-surface-container" aria-hidden />
                         )}
                         <TruncatedHudLabel
                           text={topic.title}

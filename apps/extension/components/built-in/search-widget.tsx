@@ -45,6 +45,7 @@ export function SearchWidget({
   onAssistActiveChange,
   humorEnabled,
   humorIntensity,
+  humorBannerLine,
   variant = "card",
 }: {
   engine: ISettings["searchEngine"];
@@ -52,6 +53,8 @@ export function SearchWidget({
   onAssistActiveChange: (active: boolean) => void;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
+  /** Snark overlay above the field when Settings > Widgets > Humor banner is on. */
+  humorBannerLine?: string | null;
   variant?: "card" | "header";
 }) {
   const [q, setQ] = useState("");
@@ -371,7 +374,18 @@ export function SearchWidget({
     </form>
   );
 
-  if (variant === "header") return <div className="header-search">{form}</div>;
+  if (variant === "header") {
+    return (
+      <div className="header-search">
+        {humorBannerLine ? (
+          <p className="humor-banner-snark" role="note">
+            {humorBannerLine}
+          </p>
+        ) : null}
+        {form}
+      </div>
+    );
+  }
 
   return (
     <section className="card">

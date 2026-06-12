@@ -69,6 +69,8 @@ import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widget";
 import { PluginDeck } from "../../components/plugin-views";
+import { SettingsChangelogPanel } from "../../components/settings-changelog-panel";
+import { SettingsFeedbackForm } from "../../components/settings-feedback-form";
 import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
 import { coerceWeatherPanelView } from "../../lib/weather/weather-panel-view";
 import { coerceWeatherTenDayLayout } from "../../lib/weather/weather-ten-day-layout";
@@ -111,6 +113,7 @@ import {
   loadSettings,
   mergeNotePanelsForStorageReload,
   mergeWidgets,
+  mergeExperimentalFeatures,
   mergeNotesPreferNewerBaseline,
   resolveNotesListPanelVisible,
   resolveWeatherGeoAdjusted,
@@ -119,6 +122,10 @@ import {
   type THumorIntensity,
   type THudPanelId,
   type TWidgetKey,
+  EXPERIMENTAL_FEATURE_DESCRIPTIONS,
+  EXPERIMENTAL_FEATURE_FLAG_KEYS,
+  EXPERIMENTAL_FEATURE_LABELS,
+  isExperimentalFeatureEnabled,
   WIDGET_LABELS,
 } from "../../lib/settings";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
@@ -132,7 +139,7 @@ import {
 } from "../../lib/news/balanced-news-country";
 import { BALANCED_NEWS_CATEGORY_LABELS } from "../../lib/news/balanced-news-labels";
 import type { IHumorContext } from "../../lib/humor/engine";
-import { pickDailyLine } from "../../lib/humor/engine";
+import { resolveHumorBannerLine } from "../../lib/humor/engine";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
 import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
 import { getSupportActions, openExternal } from "../../lib/support-links";
@@ -229,7 +236,9 @@ type TSettingsAccordionSection =
   | "importPack"
   | "importPlugin"
   | "manageImports"
-  | "debug"
+  | "experimental"
+  | "changelog"
+  | "feedback"
   | "data";
 
 type TBackgroundStyleExtras = {
@@ -1477,12 +1486,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
   }, [shellStyle]);
 
-  const [bannerLine, setBannerLine] = useState(() => pickDailyLine(humorCtx));
+  const humorBannerWidgetOn = settings.widgets.humorBanner;
+  const [bannerLine, setBannerLine] = useState<string | null>(null);
   useEffect(() => {
-    setBannerLine(pickDailyLine(humorCtx));
-    const t = window.setInterval(() => setBannerLine(pickDailyLine(humorCtx)), 5 * 60_000);
+    if (!humorBannerWidgetOn) {
+      setBannerLine(null);
+      return;
+    }
+    const refresh = (): void => {
+      setBannerLine(resolveHumorBannerLine(humorCtx));
+    };
+    refresh();
+    const t = window.setInterval(refresh, 5 * 60_000);
     return () => window.clearInterval(t);
-  }, [humorCtx, humorContentRevision]);
+  }, [humorBannerWidgetOn, humorCtx, humorContentRevision]);
 
   const s = settings;
 
@@ -3676,7 +3693,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           onChange={(e) => void importPackFile(e.target.files![0]!)}
                         />
                       </label>
-                      <p className="muted sm">You are responsible for imported content.</p>
+                      <p className="muted sm mt-2 mb-2">
+                        You are responsible for imported content.
+                      </p>
                     </div>
                   </details>
 
@@ -3955,6 +3974,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       typeof parsed.hasSeenSettingsIntro === "boolean"
                                         ? parsed.hasSeenSettingsIntro
                                         : true,
+                                    experimentalFeatures: mergeExperimentalFeatures(
+                                      parsed.experimentalFeatures as
+                                        | Partial<Record<string, unknown>>
+                                        | undefined,
+                                    ),
                                   };
                                   void persist(applyChaosPresetHumorHarmony(merged));
                                 } catch {
@@ -3969,25 +3993,66 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </div>
                   </details>
                   <details
+                    id="settings-experimental"
                     className="acc-item"
-                    open={settingsAccordionIsOpen("debug")}
-                    onToggle={onSettingsAccordionToggle("debug")}
+                    open={settingsAccordionIsOpen("experimental")}
+                    onToggle={onSettingsAccordionToggle("experimental")}
                   >
                     <summary className="acc-summary">
-                      <span className="acc-title">Debug</span>
+                      <span className="acc-title">Experimental</span>
                     </summary>
                     <div className="acc-body">
-                      <label className="check-row mt-0">
-                        <input
-                          type="checkbox"
-                          checked={s.debugPluginSource}
-                          onChange={(e) => {
-                            const v = e.target.checked;
-                            void persist((cur) => ({ ...cur, debugPluginSource: v }));
-                          }}
-                        />
-                        <span>Show plugin widget types</span>
-                      </label>
+                      <p className="muted sm mb-2 mt-0">
+                        Optional features still in development. All are off by default.
+                      </p>
+                      {EXPERIMENTAL_FEATURE_FLAG_KEYS.map((flag) => (
+                        <div key={flag} className="mb-3">
+                          <label className="check-row">
+                            <input
+                              type="checkbox"
+                              checked={s.experimentalFeatures[flag]}
+                              onChange={(e) => {
+                                const enabled = e.target.checked;
+                                void persist((cur) => ({
+                                  ...cur,
+                                  experimentalFeatures: {
+                                    ...cur.experimentalFeatures,
+                                    [flag]: enabled,
+                                  },
+                                }));
+                              }}
+                            />
+                            <span>{EXPERIMENTAL_FEATURE_LABELS[flag]}</span>
+                          </label>
+                          <p className="muted sm mt-1 mb-0 pl-6">
+                            {EXPERIMENTAL_FEATURE_DESCRIPTIONS[flag]}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("changelog")}
+                    onToggle={onSettingsAccordionToggle("changelog")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Changelog</span>
+                    </summary>
+                    <div className="acc-body">
+                      <SettingsChangelogPanel />
+                    </div>
+                  </details>
+                  <details
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("feedback")}
+                    onToggle={onSettingsAccordionToggle("feedback")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Feedback &amp; Feature Requests</span>
+                    </summary>
+                    <div className="acc-body">
+                      <SettingsFeedbackForm extensionVersion={extensionVersion} />
                     </div>
                   </details>
                 </div>
@@ -4035,6 +4100,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             <div>
               <h1 className="title">Tabocalypse</h1>
               <p className="tagline">SYSTEM_STABLE: FALSE</p>
+              {s.widgets.humorBanner && bannerLine && !s.widgets.search ? (
+                <p className="humor-banner-snark mt-1" role="note">
+                  {bannerLine}
+                </p>
+              ) : s.widgets.humorBanner && bannerLine && s.widgets.search ? (
+                <p className="humor-banner-snark mt-1 lg:hidden" role="note">
+                  {bannerLine}
+                </p>
+              ) : null}
             </div>
           </div>
           {s.widgets.search ? (
@@ -4046,6 +4120,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               }}
               humorEnabled={s.humorEnabled}
               humorIntensity={s.humorIntensity}
+              humorBannerLine={s.widgets.humorBanner ? bannerLine : null}
               variant="header"
             />
           ) : null}
@@ -4234,12 +4309,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           </div>
         ) : null}
 
-        {s.widgets.humorBanner && bannerLine ? (
-          <div className="humor-banner">
-            <span>{bannerLine}</span>
-          </div>
-        ) : null}
-
         <main className="hud-main">
           <div ref={hudCanvasRef} className="hud-canvas">
             <HudPlacementProvider>
@@ -4263,10 +4332,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 onDoubleClick={onBackgroundPanDoubleClick}
                 onContextMenu={onUserBackgroundContextMenu}
               />
-              <HudLayoutMetricsSync
-                canvasRef={hudCanvasRef}
-                enabled={!s.hudLayoutChaotic && !s.hudLayoutLocked}
-              />
+              <HudLayoutMetricsSync canvasRef={hudCanvasRef} enabled={!s.hudLayoutChaotic} />
               <HudAutoRepositionSync
                 canvasRef={hudCanvasRef}
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
@@ -4346,6 +4412,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     onOpenWeatherSettings={openWeatherSettingsSection}
                     effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
                     displayLocale={hudNumberLocale}
+                    gamificationEnabled={isExperimentalFeatureEnabled(
+                      s.experimentalFeatures,
+                      "weatherHudGamification",
+                    )}
                     onSelectExplicitTemperatureUnit={(weatherTemperatureUnit) =>
                       void persist((cur) => ({
                         ...cur,

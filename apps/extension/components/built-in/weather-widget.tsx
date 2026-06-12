@@ -25,18 +25,31 @@ import {
   formatWeatherSunTime,
   formatWindSpeedMax,
 } from "../../lib/weather/format-weather-daily-detail";
-import { TemperatureHighLowRange, TemperatureValue } from "../temperature-value";
+import { TemperatureHighLowRange } from "../temperature-value";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { formatWeatherDayLabel } from "../../lib/weather/format-weather-day-label";
 import { formatWeatherDayTooltip } from "../../lib/weather/format-weather-day-tooltip";
-import {
-  fetchOpenMeteo,
-  type IWeatherDayForecast,
-  type IWeatherForecast,
-} from "../../lib/weather/fetch-weather";
+import { type IWeatherDayForecast, type IWeatherForecast } from "../../lib/weather/fetch-weather";
+import { loadOpenMeteoForecast } from "../../lib/weather/load-open-meteo-forecast";
 import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
+import { WeatherStaleNotice } from "../weather-stale-notice";
 import { LakesBuoyPanel } from "./lakes-buoy-panel";
+import { WeatherForecastPanel } from "./weather-forecast-panel";
 import { WeatherStaticMap } from "./weather-static-map";
+import {
+  fetchOnThisDayTrivia,
+  type IOnThisDayFact,
+} from "../../lib/weather/fetch-on-this-day-trivia";
+import { isWeatherDateToday } from "../../lib/weather/is-weather-date-today";
+import {
+  formatTenDayRowSummary,
+  resolveTenDayRowCondition,
+} from "../../lib/weather/resolve-ten-day-row-condition";
+import {
+  loadWeatherHudEngagement,
+  recordWeatherHudDailyCheckIn,
+  type IWeatherHudEngagement,
+} from "../../lib/weather/weather-hud-engagement";
 import {
   resolveWeatherPanelView,
   type TWeatherPanelView,
@@ -103,6 +116,8 @@ function buildWeatherTenDayDetailRows(
 
 function WeatherTenDayRow({
   day,
+  conditionCode,
+  conditionSummary,
   temperatureUnit,
   displayLocale,
   layout,
@@ -110,6 +125,8 @@ function WeatherTenDayRow({
   onToggle,
 }: {
   day: IWeatherDayForecast;
+  conditionCode: number;
+  conditionSummary: string;
   temperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
   layout: TWeatherTenDayLayout;
@@ -120,7 +137,7 @@ function WeatherTenDayRow({
   const dayLabel = formatWeatherDayLabel(day.date, displayLocale);
   const dayTooltip = formatWeatherDayTooltip(day.date, displayLocale, day.summary);
   const detailRows = buildWeatherTenDayDetailRows(day, temperatureUnit, displayLocale);
-  const ariaLabel = `${dayLabel}, high ${formatTemperatureValue(day.high, temperatureUnit, displayLocale)}, low ${formatTemperatureValue(day.low, temperatureUnit, displayLocale)}, ${day.summary}`;
+  const ariaLabel = `${dayLabel}, high ${formatTemperatureValue(day.high, temperatureUnit, displayLocale)}, low ${formatTemperatureValue(day.low, temperatureUnit, displayLocale)}, ${conditionSummary}`;
   const toggleTip = isExpanded ? "Hide day details" : "Show day details";
 
   const chevron = isExpanded ? (
@@ -147,12 +164,12 @@ function WeatherTenDayRow({
           aria-label={`${ariaLabel}. ${toggleTip}.`}
         >
           <div className="weather-ten-day-stack-main">
-            <WeatherConditionIcon code={day.code} size={28} />
+            <WeatherConditionIcon code={conditionCode} size={28} />
             <div className="min-w-0">
               <HudTip tip={dayTooltip}>
                 <p className="weather-ten-day-day">{dayLabel}</p>
               </HudTip>
-              <p className="weather-ten-day-summary">{day.summary}</p>
+              <p className="weather-ten-day-summary">{conditionSummary}</p>
             </div>
           </div>
           <div className="weather-ten-day-trigger-end">
@@ -214,7 +231,7 @@ function WeatherTenDayRow({
         <HudTip tip={dayTooltip}>
           <p className="weather-ten-day-day">{dayLabel}</p>
         </HudTip>
-        <WeatherConditionIcon code={day.code} size={24} />
+        <WeatherConditionIcon code={conditionCode} size={24} />
         <p className="weather-ten-day-temps">
           <TemperatureHighLowRange
             high={day.high}
@@ -260,6 +277,7 @@ export function WeatherWidget({
   onOpenWeatherSettings,
   effectiveTemperatureUnit,
   displayLocale,
+  gamificationEnabled,
   lakesEmbedEnabled,
   panelView,
   tenDayLayout,
@@ -272,6 +290,8 @@ export function WeatherWidget({
   onOpenWeatherSettings: () => void;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
+  /** When true, Weather → Forecast shows streak/points and records daily check-ins. */
+  gamificationEnabled: boolean;
   /** When true, adds a Forecast / 2 Lakes switch with King County buoy data (Settings → Weather). */
   lakesEmbedEnabled: boolean;
   panelView: TWeatherPanelView;
@@ -280,10 +300,16 @@ export function WeatherWidget({
   onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
 }) {
   const [forecast, setForecast] = useState<IWeatherForecast | null>(null);
+  const [forecastStale, setForecastStale] = useState(false);
+  const [forecastFetchedAt, setForecastFetchedAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [tenDayContainerWidthPx, setTenDayContainerWidthPx] = useState<number | null>(null);
   const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
+  const [engagement, setEngagement] = useState<IWeatherHudEngagement | null>(null);
+  const [trivia, setTrivia] = useState<IOnThisDayFact[]>([]);
+  const [triviaLoading, setTriviaLoading] = useState(false);
+  const [triviaError, setTriviaError] = useState<string | null>(null);
   const tenDayContainerRef = useRef<HTMLDivElement | null>(null);
   const activePanelView = resolveWeatherPanelView(panelView, lakesEmbedEnabled);
   const effectiveTenDayLayout = resolveWeatherTenDayLayout(tenDayLayout, tenDayContainerWidthPx);
@@ -292,10 +318,16 @@ export function WeatherWidget({
     let cancelled = false;
     setErr(null);
     setForecast(null);
+    setForecastStale(false);
+    setForecastFetchedAt(null);
 
-    void fetchOpenMeteo(lat, lon, effectiveTemperatureUnit)
-      .then((snap) => {
-        if (!cancelled) setForecast(snap);
+    void loadOpenMeteoForecast(lat, lon, effectiveTemperatureUnit)
+      .then((result) => {
+        if (!cancelled) {
+          setForecast(result.forecast);
+          setForecastStale(result.stale);
+          setForecastFetchedAt(result.fetchedAt);
+        }
       })
       .catch((e) => {
         if (!cancelled) setErr(e instanceof Error ? e.message : "Weather failed");
@@ -307,6 +339,60 @@ export function WeatherWidget({
   }, [lat, lon, effectiveTemperatureUnit]);
 
   useEffect(() => loadForecast(), [loadForecast, reloadToken]);
+
+  useEffect(() => {
+    if (!gamificationEnabled) {
+      setEngagement(null);
+      return;
+    }
+    if (activePanelView !== "forecast" || !forecast) {
+      return;
+    }
+    let cancelled = false;
+    void recordWeatherHudDailyCheckIn()
+      .then((next) => {
+        if (!cancelled) setEngagement(next);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          void loadWeatherHudEngagement().then((row) => {
+            if (!cancelled) setEngagement(row);
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanelView, forecast, gamificationEnabled]);
+
+  useEffect(() => {
+    if (activePanelView !== "forecast" || !forecast) {
+      setTrivia([]);
+      setTriviaError(null);
+      setTriviaLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTriviaLoading(true);
+    setTriviaError(null);
+    void fetchOnThisDayTrivia(new Date(), displayLocale.split("-")[0] ?? "en")
+      .then((facts) => {
+        if (!cancelled) {
+          setTrivia(facts);
+          setTriviaLoading(false);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setTrivia([]);
+          setTriviaLoading(false);
+          setTriviaError(e instanceof Error ? e.message : "Could not load on-this-day facts");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanelView, forecast, displayLocale]);
 
   useEffect(() => {
     if (activePanelView !== "tenDay") {
@@ -334,6 +420,7 @@ export function WeatherWidget({
   };
 
   const current = forecast?.current ?? null;
+  const todayForecast = forecast?.daily[0] ?? null;
 
   return (
     <section className="card flex flex-col gap-4">
@@ -433,6 +520,13 @@ export function WeatherWidget({
                 retryAriaLabel="Retry weather forecast"
               />
             ) : null}
+            {forecastStale && forecastFetchedAt != null ? (
+              <WeatherStaleNotice
+                dataLabel="forecast"
+                fetchedAt={forecastFetchedAt}
+                displayLocale={displayLocale}
+              />
+            ) : null}
             {forecast ? (
               <div
                 ref={tenDayContainerRef}
@@ -443,19 +537,26 @@ export function WeatherWidget({
                 }
                 aria-label="10-day forecast"
               >
-                {forecast.daily.map((day) => (
-                  <WeatherTenDayRow
-                    key={day.date}
-                    day={day}
-                    temperatureUnit={effectiveTemperatureUnit}
-                    displayLocale={displayLocale}
-                    layout={effectiveTenDayLayout}
-                    isExpanded={expandedDayDate === day.date}
-                    onToggle={() => {
-                      setExpandedDayDate((prev) => (prev === day.date ? null : day.date));
-                    }}
-                  />
-                ))}
+                {forecast.daily.map((day) => {
+                  const isToday = isWeatherDateToday(day.date);
+                  const condition = resolveTenDayRowCondition(day, forecast.current, isToday);
+                  const conditionSummary = formatTenDayRowSummary(condition);
+                  return (
+                    <WeatherTenDayRow
+                      key={day.date}
+                      day={day}
+                      conditionCode={condition.code}
+                      conditionSummary={conditionSummary}
+                      temperatureUnit={effectiveTemperatureUnit}
+                      displayLocale={displayLocale}
+                      layout={effectiveTenDayLayout}
+                      isExpanded={expandedDayDate === day.date}
+                      onToggle={() => {
+                        setExpandedDayDate((prev) => (prev === day.date ? null : day.date));
+                      }}
+                    />
+                  );
+                })}
               </div>
             ) : !err ? (
               <p className="muted">Loading…</p>
@@ -471,25 +572,25 @@ export function WeatherWidget({
                 retryAriaLabel="Retry weather forecast"
               />
             ) : null}
-            {current ? (
-              <div
-                className="weather-forecast-hero"
-                aria-label={`${formatTemperatureValue(current.temperature, current.temperatureUnit, displayLocale)}, ${current.summary}`}
-              >
-                <WeatherConditionIcon code={current.code} />
-                <div className="min-w-0">
-                  <p className="weather-temp">
-                    <TemperatureValue
-                      value={current.temperature}
-                      unit={current.temperatureUnit}
-                      locale={displayLocale}
-                    />
-                  </p>
-                  <p className="weather-condition-label">
-                    <span>{current.summary}</span>
-                  </p>
-                </div>
-              </div>
+            {forecastStale && forecastFetchedAt != null ? (
+              <WeatherStaleNotice
+                dataLabel="forecast"
+                fetchedAt={forecastFetchedAt}
+                displayLocale={displayLocale}
+              />
+            ) : null}
+            {current && todayForecast ? (
+              <WeatherForecastPanel
+                current={current}
+                today={todayForecast}
+                temperatureUnit={effectiveTemperatureUnit}
+                displayLocale={displayLocale}
+                gamificationEnabled={gamificationEnabled}
+                engagement={engagement}
+                trivia={trivia}
+                triviaLoading={triviaLoading}
+                triviaError={triviaError}
+              />
             ) : !err ? (
               <p className="muted">Loading…</p>
             ) : null}

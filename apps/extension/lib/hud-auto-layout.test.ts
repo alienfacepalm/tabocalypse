@@ -8,6 +8,7 @@ import {
   fitHudPlacementsToFold,
   resolveHudLandMode,
   resolveHudLayoutDensity,
+  resolveHudPanelResponsiveRect,
   resolveHudSpreadColumnCount,
 } from "./hud-auto-layout";
 import {
@@ -33,6 +34,43 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
   humorBanner: true,
   balancedNews: false,
 };
+
+describe("resolveHudPanelResponsiveRect", () => {
+  function threeColumnWidth(canvasW: number): number {
+    const gap = 20;
+    const margin = 16;
+    const cols = 3;
+    return Math.floor((canvasW - margin * 2 - gap * (cols - 1)) / cols);
+  }
+
+  it("expands default-width panels to their column band on wide canvases", () => {
+    const metrics = getHudLayoutMetrics(2560, 1200);
+    const colWidth = threeColumnWidth(metrics.canvasW);
+    const weather = resolveHudPanelResponsiveRect(
+      "weather",
+      DEFAULT_HUD_PANEL_POSITIONS.weather,
+      metrics,
+    );
+    expect(weather.widthPx).toBeGreaterThanOrEqual(colWidth - 1);
+    expect(weather.widthPx).toBeGreaterThan(576);
+    const clock = resolveHudPanelResponsiveRect(
+      "clock",
+      DEFAULT_HUD_PANEL_POSITIONS.clock,
+      metrics,
+    );
+    expect(clock.leftPx).toBeLessThan(weather.leftPx);
+  });
+
+  it("keeps explicit user width while still clamping to the canvas", () => {
+    const metrics = getHudLayoutMetrics(2560, 1200);
+    const rect = resolveHudPanelResponsiveRect(
+      "weather",
+      { ...DEFAULT_HUD_PANEL_POSITIONS.weather, widthPx: 640 },
+      metrics,
+    );
+    expect(rect.widthPx).toBe(640);
+  });
+});
 
 describe("resolveHudLandMode", () => {
   it("uses roomy layout on wide viewports", () => {

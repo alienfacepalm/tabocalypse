@@ -1,4 +1,9 @@
 import browser from "webextension-polyfill";
+import {
+  PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND,
+  PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+  PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE,
+} from "./privileged-fetch-error-identifiers";
 
 /** Narrow `globalThis.chrome` without referencing an unbound `chrome` identifier (ESLint). */
 interface IChromeRuntimeShim {
@@ -66,16 +71,15 @@ function hasExtensionSendMessage(): boolean {
   }
 }
 
-export const PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE =
-  "runtime.sendMessage is unavailable." as const;
-
-export const PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND =
-  "URL is not allowlisted for privileged extension fetch." as const;
-export const PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND =
-  "URL not allowlisted for privileged fetch." as const;
-
-/** Foreground throw when messaging succeeded but the service worker returned no payload. */
-export const PRIV_FETCH_BACKGROUND_NO_RESPONSE = "Tabocalypse background did not respond." as const;
+export {
+  PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND,
+  PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND,
+  PRIV_FETCH_BACKGROUND_NO_RESPONSE,
+  PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE,
+  isPrivilegedFetchAllowlistError,
+  isPrivilegedFetchBackgroundUnavailableError,
+  shouldShowPrivilegedFetchReloadHint,
+} from "./privileged-fetch-error-identifiers";
 
 /** Chromium `runtime.lastError` when the service worker never answered `sendMessage`. */
 export const CHROME_MESSAGE_PORT_CLOSED_ERROR =
@@ -177,6 +181,7 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "duckduckgo.com",
   "suggestqueries.google.com",
   "api.bing.com",
+  "api.wikimedia.org",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {
@@ -226,29 +231,6 @@ export function isPrivilegedExtensionFetchUrlAllowed(url: string): boolean {
   } catch {
     return false;
   }
-}
-
-/** Matches foreground throws and background `privilegedFetch*` error strings. */
-export function isPrivilegedFetchAllowlistError(message: string): boolean {
-  return (
-    message === PRIV_FETCH_ALLOWLIST_ERROR_FOREGROUND ||
-    message === PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND
-  );
-}
-
-/** Matches stale service worker / runtime messaging failures that a reload usually fixes. */
-export function isPrivilegedFetchBackgroundUnavailableError(message: string): boolean {
-  return (
-    message === PRIV_FETCH_RUNTIME_SEND_MESSAGE_UNAVAILABLE ||
-    message === PRIV_FETCH_BACKGROUND_NO_RESPONSE
-  );
-}
-
-/** Whether UI should show the extension reload hint below a privileged-fetch error. */
-export function shouldShowPrivilegedFetchReloadHint(message: string): boolean {
-  return (
-    isPrivilegedFetchAllowlistError(message) || isPrivilegedFetchBackgroundUnavailableError(message)
-  );
 }
 
 function assertPrivilegedFetchResponse(response: unknown): asserts response is { ok: boolean } {

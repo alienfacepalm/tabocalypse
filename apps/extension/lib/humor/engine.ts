@@ -69,6 +69,16 @@ function builtinPackAllowed(user: THumorIntensity, packMax: THumorIntensity): bo
   return RANK[packMax] <= RANK[user];
 }
 
+/** Humor banner widget: always draw from packs even when master humor is off or intensity is off. */
+export function resolveHumorBannerLine(ctx: IHumorContext): string {
+  const effective: IHumorContext = {
+    ...ctx,
+    humorEnabled: true,
+    humorIntensity: ctx.humorIntensity === "off" ? "mild" : ctx.humorIntensity,
+  };
+  return pickDailyLine(effective) ?? randomRoast(effective);
+}
+
 export function pickDailyLine(ctx: IHumorContext): string | null {
   if (!ctx.humorEnabled || ctx.humorIntensity === "off") return null;
 
@@ -101,7 +111,7 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
   return candidates[idx] ?? null;
 }
 
-export function randomRoast(ctx: IHumorContext): string | null {
+export function randomRoast(ctx: IHumorContext): string {
   const line = pickDailyLine(ctx);
   if (line) return line;
   return "Humor packs disabled. Chaos respects consent.";

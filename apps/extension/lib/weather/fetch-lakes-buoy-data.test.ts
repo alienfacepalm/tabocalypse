@@ -18,6 +18,8 @@ vi.mock("webextension-polyfill", () => ({
 import {
   fetchAllLakesBuoys,
   KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
+  LAKES_BUOY_STATUS_ACTIVE,
+  LAKES_BUOY_STATUS_WATER_TEMP_MISSING,
   lakesBuoyDisplayLabel,
   lakesBuoyIdFromLocation,
   mapKingCountyRowsToBuoyEntries,
@@ -54,7 +56,7 @@ describe("mapKingCountyRowsToBuoyEntries", () => {
     expect(snap?.temperatureUnit).toBe("celsius");
   });
 
-  it("throws when no active lakes have water temperature", () => {
+  it("throws when no active lakes are returned", () => {
     expect(() =>
       mapKingCountyRowsToBuoyEntries(
         [
@@ -75,6 +77,44 @@ describe("mapKingCountyRowsToBuoyEntries", () => {
       ),
     ).toThrow(/No active buoy/);
   });
+
+  it("keeps active lakes when water temperature is temporarily missing", () => {
+    const rows = mapKingCountyRowsToBuoyEntries(
+      [
+        {
+          name: "Sammamish",
+          active: true,
+          collectDate: null,
+          airTempC: null,
+          windSpeedMps: null,
+          windDirection: "NA",
+          waterTempC: null,
+          profileDate: null,
+          latitude: 47.58167,
+          longitude: -122.09,
+        },
+        {
+          name: "Washington",
+          active: true,
+          collectDate: null,
+          airTempC: null,
+          windSpeedMps: null,
+          windDirection: "NA",
+          waterTempC: null,
+          profileDate: null,
+          latitude: 47.61222,
+          longitude: -122.25428,
+        },
+      ],
+      "fahrenheit",
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.data.waterTemp == null)).toBe(true);
+    expect(rows.every((row) => row.data.status === LAKES_BUOY_STATUS_WATER_TEMP_MISSING)).toBe(
+      true,
+    );
+  });
 });
 
 describe("fetchAllLakesBuoys", () => {
@@ -92,8 +132,22 @@ describe("fetchAllLakesBuoys", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]?.data).toMatchObject({
       temperatureUnit: "fahrenheit",
-      status: "ACTIVE",
+      status: LAKES_BUOY_STATUS_ACTIVE,
     } satisfies Partial<ILakesBuoySnapshot>);
+  });
+
+  it("maps the live King County feed shape when sensors are quiet", async () => {
+    const liveShape =
+      "Sammamish|\t|\t|\t|\tNA|\t|\t|\t47.58167|\t-122.09000|\tY^|Washington|\t|\t|\t|\tNA|\t|\t|\t47.61222|\t-122.25428|\tY^|";
+    privilegedExtensionFetchText.mockReset();
+    privilegedExtensionFetchText.mockResolvedValue(liveShape);
+
+    const rows = await fetchAllLakesBuoys("fahrenheit");
+
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.data.status === LAKES_BUOY_STATUS_WATER_TEMP_MISSING)).toBe(
+      true,
+    );
   });
 });
 
