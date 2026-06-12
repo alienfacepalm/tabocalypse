@@ -15,6 +15,15 @@ export interface IWeatherDayForecast {
   summary: string;
   high: number;
   low: number;
+  precipChancePercent: number | null;
+  precipSum: number | null;
+  windSpeedMax: number | null;
+  windDirectionDegrees: number | null;
+  uvIndexMax: number | null;
+  sunrise: string | null;
+  sunset: string | null;
+  feelsLikeHigh: number | null;
+  feelsLikeLow: number | null;
 }
 
 export interface IWeatherForecast {
@@ -34,10 +43,28 @@ export async function fetchOpenMeteo(
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
   url.searchParams.set("current", "temperature_2m,weather_code");
-  url.searchParams.set("daily", "weather_code,temperature_2m_max,temperature_2m_min");
+  url.searchParams.set(
+    "daily",
+    [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "apparent_temperature_max",
+      "apparent_temperature_min",
+      "precipitation_probability_max",
+      "precipitation_sum",
+      "wind_speed_10m_max",
+      "wind_direction_10m_dominant",
+      "uv_index_max",
+      "sunrise",
+      "sunset",
+    ].join(","),
+  );
   url.searchParams.set("forecast_days", "10");
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("temperature_unit", temperatureUnit);
+  url.searchParams.set("wind_speed_unit", temperatureUnit === "fahrenheit" ? "mph" : "kmh");
+  url.searchParams.set("precipitation_unit", temperatureUnit === "fahrenheit" ? "inch" : "mm");
 
   const data = (await privilegedExtensionFetchJson(url.toString())) as Parameters<
     typeof parseOpenMeteoForecastPayload

@@ -24,6 +24,43 @@ vi.mock("./privileged-extension-fetch", () => ({
   extensionRuntimeSendMessage: vi.fn(),
 }));
 
+describe("resolveTabocalypseAlarmNotificationCopy", () => {
+  beforeEach(async () => {
+    vi.resetModules();
+  });
+
+  it("uses the user reminder as the notification title on Windows", async () => {
+    const { resolveTabocalypseAlarmNotificationCopy } =
+      await import("./tabocalypse-alarm-notification");
+    expect(resolveTabocalypseAlarmNotificationCopy("Take out trash")).toEqual({
+      title: "Take out trash",
+      message: "Tabocalypse",
+    });
+  });
+
+  it("keeps the default reminder copy when the message field was left blank", async () => {
+    const { resolveTabocalypseAlarmNotificationCopy } =
+      await import("./tabocalypse-alarm-notification");
+    expect(resolveTabocalypseAlarmNotificationCopy("")).toEqual({
+      title: "Tabocalypse",
+      message: "Tabocalypse alarm",
+    });
+  });
+
+  it("uses the test fallback when no reminder text is provided", async () => {
+    const { resolveTabocalypseAlarmNotificationCopy } =
+      await import("./tabocalypse-alarm-notification");
+    expect(
+      resolveTabocalypseAlarmNotificationCopy("", {
+        testFallback: "If you see this, Tabocalypse notifications are working.",
+      }),
+    ).toEqual({
+      title: "If you see this, Tabocalypse notifications are working.",
+      message: "Tabocalypse",
+    });
+  });
+});
+
 describe("buildTabocalypseNotificationOptionSets", () => {
   beforeEach(async () => {
     vi.resetModules();
@@ -42,9 +79,13 @@ describe("buildTabocalypseNotificationOptionSets", () => {
 
     const { buildTabocalypseNotificationOptionSets } =
       await import("./tabocalypse-alarm-notification");
-    const [first] = buildTabocalypseNotificationOptionSets("hello");
+    const [first] = buildTabocalypseNotificationOptionSets({
+      title: "Take out trash",
+      message: "Tabocalypse",
+    });
     expect(first?.iconUrl).toBe("notification-icon.png");
-    expect(first?.message).toBe("hello");
+    expect(first?.title).toBe("Take out trash");
+    expect(first?.message).toBe("Tabocalypse");
   });
 
   it("prefers runtime.getURL icon paths on extension HTML pages", async () => {
@@ -52,7 +93,10 @@ describe("buildTabocalypseNotificationOptionSets", () => {
 
     const { buildTabocalypseNotificationOptionSets } =
       await import("./tabocalypse-alarm-notification");
-    const [first] = buildTabocalypseNotificationOptionSets("hello");
+    const [first] = buildTabocalypseNotificationOptionSets({
+      title: "hello",
+      message: "Tabocalypse",
+    });
     expect(first?.iconUrl).toBe("chrome-extension://unit-test/notification-icon.png");
   });
 });
@@ -116,14 +160,14 @@ describe("createTabocalypseNotificationOnce", () => {
     vi.spyOn(mod, "buildTabocalypseNotificationOptionSets").mockReturnValue([
       {
         type: "basic",
-        title: "Tabocalypse",
-        message: "Reminder",
+        title: "Reminder",
+        message: "Tabocalypse",
         iconUrl: "bad.png",
       },
       {
         type: "basic",
-        title: "Tabocalypse",
-        message: "Reminder",
+        title: "Reminder",
+        message: "Tabocalypse",
         iconUrl: "good.png",
       },
     ]);

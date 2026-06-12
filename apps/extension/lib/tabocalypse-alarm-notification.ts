@@ -9,6 +9,7 @@ import { extensionRuntimeSendMessage } from "./privileged-extension-fetch";
 import { tabocalypseAlarmNotificationId, tabocalypseTestNotificationId } from "./alarm-meta";
 import { coerceAlarmMetaMessage } from "./alarm-meta-message";
 import { TABOCALYPSE_ALARM_TEST_NOTIFICATION } from "./tabocalypse-alarm-message";
+import { TABOCALYPSE_ALARM_DEFAULT_MESSAGE } from "./tabocalypse-alarm-validation";
 import {
   tabocalypseNotificationIconRelativePaths,
   tabocalypseNotificationIconUrlAttempts,
@@ -34,6 +35,41 @@ export type TBasicNotificationOptions = {
   message: string;
   iconUrl: string;
 };
+
+export interface ITabocalypseAlarmNotificationCopy {
+  title: string;
+  message: string;
+}
+
+const TABOCALYPSE_ALARM_TEST_FALLBACK_MESSAGE =
+  "If you see this, Tabocalypse notifications are working." as const;
+
+/** Map stored alarm text to OS notification title/body (Windows emphasizes the title line). */
+export function resolveTabocalypseAlarmNotificationCopy(
+  rawMessage: unknown,
+  options?: { testFallback?: string },
+): ITabocalypseAlarmNotificationCopy {
+  const reminder = coerceAlarmMetaMessage(rawMessage).trim() || TABOCALYPSE_ALARM_DEFAULT_MESSAGE;
+
+  if (reminder !== TABOCALYPSE_ALARM_DEFAULT_MESSAGE) {
+    return {
+      title: reminder,
+      message: TABOCALYPSE_ALARM_NOTIFICATION_TITLE,
+    };
+  }
+
+  if (options?.testFallback?.trim()) {
+    return {
+      title: options.testFallback.trim(),
+      message: TABOCALYPSE_ALARM_NOTIFICATION_TITLE,
+    };
+  }
+
+  return {
+    title: TABOCALYPSE_ALARM_NOTIFICATION_TITLE,
+    message: TABOCALYPSE_ALARM_DEFAULT_MESSAGE,
+  };
+}
 
 interface IChromeNotificationsShim {
   create?: (
@@ -80,9 +116,9 @@ function listManifestIconPaths(): string[] {
   );
 }
 
-/** Exported for unit tests — builds icon+message option sets for `notifications.create`. */
+/** Exported for unit tests — builds icon+title/body option sets for `notifications.create`. */
 export function buildTabocalypseNotificationOptionSets(
-  message: string,
+  copy: ITabocalypseAlarmNotificationCopy,
 ): TBasicNotificationOptions[] {
   const relativePaths = tabocalypseNotificationIconRelativePaths(listManifestIconPaths());
   const iconUrls = tabocalypseNotificationIconUrlAttempts(
@@ -92,8 +128,8 @@ export function buildTabocalypseNotificationOptionSets(
   );
   return iconUrls.map((iconUrl) => ({
     type: "basic",
-    title: TABOCALYPSE_ALARM_NOTIFICATION_TITLE,
-    message,
+    title: copy.title,
+    message: copy.message,
     iconUrl,
   }));
 }
@@ -192,8 +228,11 @@ async function keepNotificationServiceWorkerAlive(): Promise<void> {
   });
 }
 
-async function createOsNotification(notificationId: string, message: string): Promise<string> {
-  const optionSets = buildTabocalypseNotificationOptionSets(message);
+async function createOsNotification(
+  notificationId: string,
+  copy: ITabocalypseAlarmNotificationCopy,
+): Promise<string> {
+  const optionSets = buildTabocalypseNotificationOptionSets(copy);
   let lastError: unknown;
 
   for (const options of optionSets) {
@@ -254,14 +293,15 @@ export async function getTabocalypseNotificationPermissionLevel(): Promise<TNoti
 export async function showTabocalypseAlarmNotification(
   alarmName: string,
   rawMessage: unknown,
-  options?: { notificationId?: string },
+  options?: { notificationId?: string; testFallback?: string },
 ): Promise<TTabocalypseNotificationResult> {
-  const message =
-    coerceAlarmMetaMessage(rawMessage).trim() || `${TABOCALYPSE_ALARM_NOTIFICATION_TITLE} alarm.`;
+  const copy = resolveTabocalypseAlarmNotificationCopy(rawMessage, {
+    testFallback: options?.testFallback,
+  });
   const notificationId = options?.notificationId ?? tabocalypseAlarmNotificationId(alarmName);
 
   try {
-    await createOsNotification(notificationId, message);
+    await createOsNotification(notificationId, copy);
     return { ok: true };
   } catch (err) {
     const detail = formatTabocalypseNotificationError(err);
@@ -287,10 +327,12 @@ function isTabocalypseNotificationResult(value: unknown): value is TTabocalypseN
 }
 
 /** Test OS delivery: try this page first, then the MV3 service worker. */
-export async function sendTabocalypseTestNotification(): Promise<TTabocalypseNotificationResult> {
-  const message = "If you see this, Tabocalypse notifications are working.";
-  const fromPage = await showTabocalypseAlarmNotification("__test__", message, {
+export async function sendTabocalypseTestNotification(
+  rawMessage?: unknown,
+): Promise<TTabocalypseNotificationResult> {
+  const fromPage = await showTabocalypseAlarmNotification("__test__", rawMessage, {
     notificationId: tabocalypseTestNotificationId(),
+    testFallback: TABOCALYPSE_ALARM_TEST_FALLBACK_MESSAGE,
   });
   if (fromPage.ok) return fromPage;
 
@@ -313,11 +355,10 @@ export async function sendTabocalypseTestNotification(): Promise<TTabocalypseNot
 
 /** Background-only entry for the service worker message handler. */
 export async function sendTabocalypseTestNotificationFromBackground(): Promise<TTabocalypseNotificationResult> {
-  return showTabocalypseAlarmNotification(
-    "__test__",
-    "If you see this, Tabocalypse notifications are working.",
-    { notificationId: tabocalypseTestNotificationId() },
-  );
+  return showTabocalypseAlarmNotification("__test__", undefined, {
+    notificationId: tabocalypseTestNotificationId(),
+    testFallback: TABOCALYPSE_ALARM_TEST_FALLBACK_MESSAGE,
+  });
 }
 
 /** True when a notifications API is reachable in this extension context. */

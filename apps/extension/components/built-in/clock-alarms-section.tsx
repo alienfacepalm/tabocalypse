@@ -203,7 +203,7 @@ export function ClockAlarmsSection({
         });
         return;
       }
-      const result = await sendTabocalypseTestNotification();
+      const result = await sendTabocalypseTestNotification(alarmMessage);
       if (!result.ok) {
         setAlarmScheduleBanner({ kind: "err", message: result.error });
         return;

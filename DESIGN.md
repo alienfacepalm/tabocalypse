@@ -174,3 +174,22 @@ This design system strictly forbids rounded corners. All elements—including bu
 
 - **Glitch Overlay:** A full-screen scanline overlay (low opacity) to add texture.
 - **Judgment Meter:** A progress bar (stepped blocks) that turns from Acid Green to Glitch Magenta as the user opens more tabs.
+
+### Temperature color scale
+
+Use this scale for **every temperature reading** in Tabocalypse (air, water, feels-like, high/low). It matches the banding on [2lakes.app](https://2lakes.app): cold reads indigo/blue, comfortable cyan/emerald, warm amber/orange, hot red.
+
+Bands are defined on **Fahrenheit** thresholds. Convert Celsius to °F for lookup so the same absolute temperature always gets the same color.
+
+| Band    | °F (inclusive lower, exclusive upper) | Dark UI color | Hex       |
+| ------- | ------------------------------------- | ------------- | --------- |
+| Indigo  | below 45                              | indigo-400    | `#818cf8` |
+| Blue    | 45 – 55                               | blue-400      | `#60a5fa` |
+| Cyan    | 55 – 65                               | cyan-400      | `#22d3ee` |
+| Emerald | 65 – 75                               | emerald-400   | `#34d399` |
+| Amber   | 75 – 85                               | amber-400     | `#fbbf24` |
+| Orange  | 85 – 100                              | orange-400    | `#fb923c` |
+| Red     | 100 – 125                             | red-500       | `#ef4444` |
+| Red hot | 125 and above                         | red-600       | `#dc2626` |
+
+Implementation: `resolveTemperatureColorClass` in `apps/extension/lib/weather/temperature-color-scale.ts`; render via `TemperatureValue` / `TemperatureHighLowRange` in `apps/extension/components/temperature-value.tsx` with `.temp-color-*` utilities in `tailwind.css`.

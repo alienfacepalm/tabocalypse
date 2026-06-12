@@ -168,7 +168,6 @@ import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fe
 import {
   getHudDisplayLayoutKey,
   measureHudCanvasSize,
-  measureHudPanelSizesOnCanvas,
   patchHudPanelPositionsForDisplay,
   patchNotePanelsForDisplay,
   removeNoteFromAllDisplays,
@@ -177,7 +176,7 @@ import {
   resolveNotePanelsForDisplay,
 } from "../../lib/hud-layout";
 import {
-  computeHudColumnStackLayoutUpdates,
+  computeHudPanelAutoLayoutUpdates,
   HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT,
   isHudKeyboardShortcutTypingTarget,
 } from "../../lib/hud-auto-layout";
@@ -1192,10 +1191,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         snap.notesListPanelVisible,
       ),
     };
-    const hudUpdates = computeHudColumnStackLayoutUpdates(planInput, widthPx, heightPx, {
-      onlyIfChanged: true,
-      measuredSizes: measureHudPanelSizesOnCanvas(canvas),
-      snapToGrid: true,
+    const hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
+      onlyIfChanged: false,
+      ignoreUserSizes: true,
     });
     const effectiveHudAfterArrange = { ...effectiveHud, ...hudUpdates };
     const effectiveNotePanels = resolveNotePanelsForDisplay(
@@ -1215,7 +1213,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     canvas.scrollTo({ top: 0, left: 0, behavior: "auto" });
     if (!hasHudUpdates && !hasStickyUpdates) {
       hudToastRef.current?.showToast({
-        message: "Columns already fill this window.",
+        message: "Panels already fit this window.",
         variant: "info",
       });
       return;
@@ -1226,7 +1224,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     });
     hudToastRef.current?.showToast({
       message: hasHudUpdates
-        ? `Rearranged ${Object.keys(hudUpdates).length} panel${Object.keys(hudUpdates).length === 1 ? "" : "s"} into columns.`
+        ? `Rearranged ${Object.keys(hudUpdates).length} panel${Object.keys(hudUpdates).length === 1 ? "" : "s"} to fit this window.`
         : "Reflowed sticky notes around your panels.",
       variant: "success",
     });
@@ -3289,9 +3287,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <span>Rearrange ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT})</span>
                       </button>
                       <p className="muted sm mb-2">
-                        Snaps visible panels into column stacks sized for this window — keeps which
-                        side you put each panel on, stacks shorter panels in the same column, and
-                        grows column height to the fold. Use the header dashboard icon or press{" "}
+                        Repacks visible panels into a multi-column masonry layout sized for this
+                        window — spreads widgets across the HUD, fills each column to the fold, and
+                        avoids a single full-width stack. Use the header dashboard icon or press{" "}
                         {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}. Pinned sticky notes stay put;
                         unpinned stickies reflow when the window resizes.
                       </p>
@@ -4080,7 +4078,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               </button>
             </HudTip>
             <HudTip
-              tip={`Stack HUD panels into columns and fill the fold (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Keeps your left/right placement; pinned stickies stay put`}
+              tip={`Repack HUD panels into a multi-column layout and fill the fold (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
             >
               <button
                 type="button"
@@ -4360,9 +4358,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     tenDayLayout={s.weatherTenDayLayout}
                     onSelectPanelView={(weatherPanelView) =>
                       void persist((cur) => ({ ...cur, weatherPanelView }))
-                    }
-                    onSelectTenDayLayout={(weatherTenDayLayout) =>
-                      void persist((cur) => ({ ...cur, weatherTenDayLayout }))
                     }
                   />
                 </DraggableHudPanel>

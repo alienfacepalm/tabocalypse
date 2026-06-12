@@ -5,6 +5,7 @@ import {
   type ILakesBuoyEntry,
   type ILakesBuoySnapshot,
 } from "../../lib/weather/fetch-lakes-buoy-data";
+import { TemperatureValue } from "../temperature-value";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import { BuoyConditionIcon } from "../../lib/weather/weather-condition-icon";
 import type { TWeatherTemperatureUnit } from "../../lib/weather/weather-units";
@@ -16,15 +17,6 @@ type TPanelLoadState =
 
 function lakeHeroAriaLabel(label: string, data: ILakesBuoySnapshot, displayLocale: string): string {
   return `${label}, water ${formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}, ${data.condition}`;
-}
-
-function formatOptionalTemperatureValue(
-  temperature: number | null,
-  unit: TWeatherTemperatureUnit,
-  displayLocale: string,
-): string {
-  if (temperature == null) return "—";
-  return formatTemperatureValue(temperature, unit, displayLocale);
 }
 
 function formatOptionalNumber(value: number | null, suffix = ""): string {
@@ -126,7 +118,11 @@ export function LakesBuoyPanel({
                 >
                   <p className="weather-condition-label mt-0">{buoy.label}</p>
                   <p className="weather-temp">
-                    {formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}
+                    <TemperatureValue
+                      value={data.waterTemp}
+                      unit={data.temperatureUnit}
+                      locale={displayLocale}
+                    />
                   </p>
                   <p className="weather-condition-label">
                     <span>{data.condition}</span>
@@ -142,14 +138,22 @@ export function LakesBuoyPanel({
                   <dl className="weather-lakes-stat-grid">
                     <dt className="weather-lakes-stat-label">Water</dt>
                     <dd>
-                      {formatTemperatureValue(data.waterTemp, data.temperatureUnit, displayLocale)}
+                      <TemperatureValue
+                        value={data.waterTemp}
+                        unit={data.temperatureUnit}
+                        locale={displayLocale}
+                      />
                     </dd>
                     <dt className="weather-lakes-stat-label">Air</dt>
                     <dd>
-                      {formatOptionalTemperatureValue(
-                        data.airTemp,
-                        data.temperatureUnit,
-                        displayLocale,
+                      {data.airTemp == null ? (
+                        "—"
+                      ) : (
+                        <TemperatureValue
+                          value={data.airTemp}
+                          unit={data.temperatureUnit}
+                          locale={displayLocale}
+                        />
                       )}
                     </dd>
                     <dt className="weather-lakes-stat-label">Wind</dt>

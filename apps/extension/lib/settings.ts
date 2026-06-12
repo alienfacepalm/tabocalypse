@@ -1143,7 +1143,7 @@ export function defaultSettings(): ISettings {
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
     weatherPanelView: "forecast",
-    weatherTenDayLayout: "row",
+    weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
     balancedNewsCountryAuto: true,
     balancedNewsCountry: "us",

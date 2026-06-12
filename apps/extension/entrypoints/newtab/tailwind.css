@@ -736,7 +736,43 @@
   }
 
   .weather-temp {
-    @apply font-display text-[2rem] font-bold leading-none tracking-tight text-accent tabular-nums;
+    @apply font-display text-[2rem] font-bold leading-none tracking-tight tabular-nums;
+  }
+
+  .temp-color-indigo {
+    color: #818cf8;
+  }
+
+  .temp-color-blue {
+    color: #60a5fa;
+  }
+
+  .temp-color-cyan {
+    color: #22d3ee;
+  }
+
+  .temp-color-emerald {
+    color: #34d399;
+  }
+
+  .temp-color-amber {
+    color: #fbbf24;
+  }
+
+  .temp-color-orange {
+    color: #fb923c;
+  }
+
+  .temp-color-red {
+    color: #ef4444;
+  }
+
+  .temp-color-red-hot {
+    color: #dc2626;
+  }
+
+  .temp-color-neutral {
+    @apply text-text;
   }
 
   .weather-condition-label {
@@ -840,11 +876,11 @@
   }
 
   .weather-ten-day-item--row {
-    @apply flex min-w-[4.75rem] flex-col items-center gap-1 px-2 py-2 text-center;
+    @apply flex min-w-[4.75rem] flex-col;
   }
 
   .weather-ten-day-item--stack {
-    @apply flex items-center justify-between gap-3 px-3 py-2;
+    @apply flex flex-col;
   }
 
   .weather-ten-day-stack-main {
@@ -860,11 +896,107 @@
   }
 
   .weather-ten-day-temps {
-    @apply font-mono text-xs tabular-nums text-accent;
+    @apply font-mono text-xs tabular-nums;
+  }
+
+  .weather-ten-day-temps .temp-color-indigo,
+  .weather-ten-day-detail-grid .temp-color-indigo,
+  .weather-temp .temp-color-indigo {
+    color: #818cf8;
+  }
+
+  .weather-ten-day-temps .temp-color-blue,
+  .weather-ten-day-detail-grid .temp-color-blue,
+  .weather-temp .temp-color-blue {
+    color: #60a5fa;
+  }
+
+  .weather-ten-day-temps .temp-color-cyan,
+  .weather-ten-day-detail-grid .temp-color-cyan,
+  .weather-temp .temp-color-cyan {
+    color: #22d3ee;
+  }
+
+  .weather-ten-day-temps .temp-color-emerald,
+  .weather-ten-day-detail-grid .temp-color-emerald,
+  .weather-temp .temp-color-emerald {
+    color: #34d399;
+  }
+
+  .weather-ten-day-temps .temp-color-amber,
+  .weather-ten-day-detail-grid .temp-color-amber,
+  .weather-temp .temp-color-amber {
+    color: #fbbf24;
+  }
+
+  .weather-ten-day-temps .temp-color-orange,
+  .weather-ten-day-detail-grid .temp-color-orange,
+  .weather-temp .temp-color-orange {
+    color: #fb923c;
+  }
+
+  .weather-ten-day-temps .temp-color-red,
+  .weather-ten-day-detail-grid .temp-color-red,
+  .weather-temp .temp-color-red {
+    color: #ef4444;
+  }
+
+  .weather-ten-day-temps .temp-color-red-hot,
+  .weather-ten-day-detail-grid .temp-color-red-hot,
+  .weather-temp .temp-color-red-hot {
+    color: #dc2626;
   }
 
   .weather-ten-day-item--row .weather-ten-day-temps {
     @apply text-[0.65rem] leading-tight;
+  }
+
+  .weather-ten-day-item--expanded.weather-ten-day-item--row {
+    @apply min-w-[9.5rem];
+  }
+
+  .weather-ten-day-trigger {
+    @apply w-full border-0 bg-transparent p-0 text-left text-inherit transition-colors duration-100;
+  }
+
+  .weather-ten-day-trigger:hover {
+    @apply bg-surface2;
+  }
+
+  .weather-ten-day-trigger:active {
+    @apply bg-surface-strong;
+  }
+
+  .weather-ten-day-trigger--stack {
+    @apply flex items-center justify-between gap-3 px-3 py-2;
+  }
+
+  .weather-ten-day-trigger--row {
+    @apply flex min-w-[4.75rem] flex-col items-center gap-1 px-2 py-2 text-center;
+  }
+
+  .weather-ten-day-trigger-end {
+    @apply flex shrink-0 items-center gap-2;
+  }
+
+  .weather-ten-day-chevron {
+    @apply text-accent;
+  }
+
+  .weather-ten-day-details {
+    @apply border-t border-border px-3 py-2;
+  }
+
+  .weather-ten-day-detail-grid {
+    @apply grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-xs;
+  }
+
+  .weather-ten-day-detail-label {
+    @apply flex items-center gap-1.5 text-[0.65rem] uppercase tracking-widest text-muted;
+  }
+
+  .weather-ten-day-detail-icon {
+    @apply shrink-0 text-accent;
   }
 
   .err {

@@ -1,15 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import {
-  computeHudColumnStackLayoutUpdates,
-  buildHudAutoLayoutItems,
-} from "../lib/hud-auto-layout";
+import { buildHudAutoLayoutItems, computeHudPanelAutoLayoutUpdates } from "../lib/hud-auto-layout";
 import type { IHudPanelPosition, THudPanelId } from "../lib/hud-layout";
-import {
-  DEFAULT_HUD_PANEL_POSITIONS,
-  measureHudCanvasSize,
-  measureHudPanelSizesOnCanvas,
-} from "../lib/hud-layout";
+import { DEFAULT_HUD_PANEL_POSITIONS, measureHudCanvasSize } from "../lib/hud-layout";
 import { computeStickyNoteResizeUpdates } from "../lib/sticky-note-auto-layout";
 import type { INotePanel, TWidgetKey } from "../lib/settings";
 import { useHudPlacementOptional } from "./hud-placement-context";
@@ -81,7 +74,13 @@ export function HudAutoRepositionSync({
   };
 
   const runLayoutRef = useRef<
-    ((canvasEl: HTMLElement, widthPx: number, heightPx: number) => void) | null
+    | ((
+        canvasEl: HTMLElement,
+        widthPx: number,
+        heightPx: number,
+        prevSize: { widthPx: number; heightPx: number } | null,
+      ) => void)
+    | null
   >(null);
 
   useEffect(() => {
@@ -91,7 +90,12 @@ export function HudAutoRepositionSync({
       return;
     }
 
-    const runLayout = (canvasEl: HTMLElement, widthPx: number, heightPx: number): void => {
+    const runLayout = (
+      canvasEl: HTMLElement,
+      widthPx: number,
+      heightPx: number,
+      prevSize: { widthPx: number; heightPx: number } | null,
+    ): void => {
       if (hudPlacement?.dropHighlight) return;
       const input = layoutInputRef.current;
       const planInput = {
@@ -104,9 +108,10 @@ export function HudAutoRepositionSync({
       let effectiveHud = input.hudPanelPositions;
       let hudUpdates: Partial<Record<THudPanelId, IHudPanelPosition>> | undefined;
       if (input.hudAutoRepositionEnabled) {
-        hudUpdates = computeHudColumnStackLayoutUpdates(planInput, widthPx, heightPx, {
+        hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
           onlyIfChanged: true,
-          measuredSizes: measureHudPanelSizesOnCanvas(canvasEl),
+          prevCanvasW: prevSize?.widthPx,
+          prevCanvasH: prevSize?.heightPx,
         });
         if (Object.keys(hudUpdates).length > 0) {
           effectiveHud = { ...effectiveHud, ...hudUpdates };
@@ -145,7 +150,7 @@ export function HudAutoRepositionSync({
           const dw = Math.abs(prev.widthPx - widthPx);
           const dh = Math.abs(prev.heightPx - heightPx);
           if (dw < SIZE_EPSILON_PX && dh < SIZE_EPSILON_PX) return;
-          runLayout(canvas, widthPx, heightPx);
+          runLayout(canvas, widthPx, heightPx, prev);
         }
         prevCanvasSizeRef.current = { widthPx, heightPx };
       }, RESIZE_DEBOUNCE_MS);
@@ -154,7 +159,7 @@ export function HudAutoRepositionSync({
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
     prevCanvasSizeRef.current = { widthPx, heightPx };
     if (layoutInputRef.current.hudAutoRepositionEnabled) {
-      runLayout(canvas, widthPx, heightPx);
+      runLayout(canvas, widthPx, heightPx, null);
     }
 
     const ro = new ResizeObserver(schedule);
@@ -186,7 +191,7 @@ export function HudAutoRepositionSync({
     const canvas = canvasRef.current;
     if (!canvas || hudPlacement?.dropHighlight) return;
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
-    runLayoutRef.current?.(canvas, widthPx, heightPx);
+    runLayoutRef.current?.(canvas, widthPx, heightPx, null);
   }, [
     canvasRef,
     hudAutoRepositionEnabled,
