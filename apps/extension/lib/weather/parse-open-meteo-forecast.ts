@@ -3,7 +3,15 @@ import type { IWeatherDayForecast, IWeatherForecast, IWeatherSnapshot } from "./
 import { summarizeWeatherCode } from "./summarize-weather-code";
 
 interface IOpenMeteoForecastPayload {
-  current?: { temperature_2m?: number; weather_code?: number };
+  current?: {
+    temperature_2m?: number;
+    weather_code?: number;
+    apparent_temperature?: number;
+    wind_speed_10m?: number;
+    wind_direction_10m?: number;
+    relative_humidity_2m?: number;
+    precipitation?: number;
+  };
   daily?: {
     time?: string[];
     weather_code?: number[];
@@ -29,6 +37,10 @@ function readOptionalNumber(values: number[] | undefined, index: number): number
 function readOptionalString(values: string[] | undefined, index: number): string | null {
   const value = values?.[index];
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readOptionalFiniteNumber(value: number | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function parseOpenMeteoForecastPayload(
@@ -86,6 +98,11 @@ export function parseOpenMeteoForecastPayload(
     temperatureUnit,
     code,
     summary: summarizeWeatherCode(code),
+    feelsLike: readOptionalFiniteNumber(data.current?.apparent_temperature),
+    windSpeed: readOptionalFiniteNumber(data.current?.wind_speed_10m),
+    windDirectionDegrees: readOptionalFiniteNumber(data.current?.wind_direction_10m),
+    relativeHumidityPercent: readOptionalFiniteNumber(data.current?.relative_humidity_2m),
+    precipitation: readOptionalFiniteNumber(data.current?.precipitation),
   };
 
   return { current, daily };

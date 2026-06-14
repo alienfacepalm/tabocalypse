@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatRelativeHumidityPercent,
   formatPrecipChancePercent,
   formatPrecipSum,
   formatUvIndexMax,
@@ -14,6 +15,16 @@ describe("formatWindDirectionCompass", () => {
     expect(formatWindDirectionCompass(45)).toBe("NE");
     expect(formatWindDirectionCompass(180)).toBe("S");
     expect(formatWindDirectionCompass(225)).toBe("SW");
+  });
+});
+
+describe("formatRelativeHumidityPercent", () => {
+  it("rounds finite values", () => {
+    expect(formatRelativeHumidityPercent(62.4)).toBe("62%");
+  });
+
+  it("returns null for missing values", () => {
+    expect(formatRelativeHumidityPercent(null)).toBeNull();
   });
 });
 

@@ -1,30 +1,18 @@
 import React from "react";
+import { CloudRain, Droplets, Thermometer, Wind, type LucideIcon } from "lucide-react";
+import { TemperatureValue } from "../temperature-value";
 import {
-  CloudRain,
-  Droplets,
-  Sun,
-  Sunrise,
-  Sunset,
-  Thermometer,
-  Wind,
-  type LucideIcon,
-} from "lucide-react";
-import { TemperatureHighLowRange, TemperatureValue } from "../temperature-value";
-import {
-  formatPrecipChancePercent,
   formatPrecipSum,
-  formatUvIndexMax,
-  formatWeatherSunTime,
+  formatRelativeHumidityPercent,
   formatWindSpeedMax,
 } from "../../lib/weather/format-weather-daily-detail";
 import { formatTemperatureValue } from "../../lib/weather/format-weather-temperature";
 import type { IOnThisDayFact } from "../../lib/weather/fetch-on-this-day-trivia";
-import type { IWeatherDayForecast, IWeatherSnapshot } from "../../lib/weather/fetch-weather";
+import type { IWeatherSnapshot } from "../../lib/weather/fetch-weather";
 import type { IWeatherHudEngagement } from "../../lib/weather/weather-hud-engagement";
 import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
 import { HudTip } from "../hud-tip";
 import { PrivilegedFetchUserError } from "../privileged-fetch-user-error";
-import type { TWeatherTemperatureUnit } from "../../lib/weather/weather-units";
 
 type TWeatherDetailRow = {
   label: string;
@@ -32,59 +20,43 @@ type TWeatherDetailRow = {
   Icon: LucideIcon;
 };
 
-function buildTodayDetailRows(
-  day: IWeatherDayForecast,
-  temperatureUnit: TWeatherTemperatureUnit,
+function buildCurrentDetailRows(
+  current: IWeatherSnapshot,
   displayLocale: string,
 ): TWeatherDetailRow[] {
   const rows: TWeatherDetailRow[] = [];
-  const precipChance = formatPrecipChancePercent(day.precipChancePercent);
-  if (precipChance) {
-    rows.push({ label: "Precip chance", value: precipChance, Icon: Droplets });
-  }
-  const precipAmount = formatPrecipSum(day.precipSum, temperatureUnit, displayLocale);
-  if (precipAmount) {
-    rows.push({ label: "Precip amount", value: precipAmount, Icon: CloudRain });
-  }
-  const wind = formatWindSpeedMax(
-    day.windSpeedMax,
-    day.windDirectionDegrees,
-    temperatureUnit,
-    displayLocale,
-  );
-  if (wind) rows.push({ label: "Wind", value: wind, Icon: Wind });
-  if (day.feelsLikeHigh != null && day.feelsLikeLow != null) {
+  if (current.feelsLike != null) {
     rows.push({
       label: "Feels like",
       Icon: Thermometer,
       value: (
-        <TemperatureHighLowRange
-          high={day.feelsLikeHigh}
-          low={day.feelsLikeLow}
-          unit={temperatureUnit}
+        <TemperatureValue
+          value={current.feelsLike}
+          unit={current.temperatureUnit}
           locale={displayLocale}
         />
       ),
     });
   }
-  rows.push({
-    label: "High / low",
-    Icon: Thermometer,
-    value: (
-      <TemperatureHighLowRange
-        high={day.high}
-        low={day.low}
-        unit={temperatureUnit}
-        locale={displayLocale}
-      />
-    ),
-  });
-  const uv = formatUvIndexMax(day.uvIndexMax, displayLocale);
-  if (uv) rows.push({ label: "UV index", value: uv, Icon: Sun });
-  const sunrise = formatWeatherSunTime(day.sunrise, displayLocale);
-  if (sunrise) rows.push({ label: "Sunrise", value: sunrise, Icon: Sunrise });
-  const sunset = formatWeatherSunTime(day.sunset, displayLocale);
-  if (sunset) rows.push({ label: "Sunset", value: sunset, Icon: Sunset });
+  const wind = formatWindSpeedMax(
+    current.windSpeed,
+    current.windDirectionDegrees,
+    current.temperatureUnit,
+    displayLocale,
+  );
+  if (wind) rows.push({ label: "Wind", value: wind, Icon: Wind });
+  const humidity = formatRelativeHumidityPercent(current.relativeHumidityPercent);
+  if (humidity) rows.push({ label: "Humidity", value: humidity, Icon: Droplets });
+  if (current.precipitation != null && current.precipitation > 0) {
+    const precipAmount = formatPrecipSum(
+      current.precipitation,
+      current.temperatureUnit,
+      displayLocale,
+    );
+    if (precipAmount) {
+      rows.push({ label: "Precipitation", value: precipAmount, Icon: CloudRain });
+    }
+  }
   return rows;
 }
 
@@ -111,8 +83,6 @@ function WeatherDetailGrid({ rows }: { rows: TWeatherDetailRow[] }): React.JSX.E
 
 export function WeatherForecastPanel({
   current,
-  today,
-  temperatureUnit,
   displayLocale,
   gamificationEnabled,
   engagement,
@@ -121,8 +91,6 @@ export function WeatherForecastPanel({
   triviaError,
 }: {
   current: IWeatherSnapshot;
-  today: IWeatherDayForecast;
-  temperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
   gamificationEnabled: boolean;
   engagement: IWeatherHudEngagement | null;
@@ -130,7 +98,7 @@ export function WeatherForecastPanel({
   triviaLoading: boolean;
   triviaError: string | null;
 }): React.JSX.Element {
-  const detailRows = buildTodayDetailRows(today, temperatureUnit, displayLocale);
+  const detailRows = buildCurrentDetailRows(current, displayLocale);
 
   return (
     <div>
@@ -190,4 +158,4 @@ export function WeatherForecastPanel({
   );
 }
 
-export { buildTodayDetailRows };
+export { buildCurrentDetailRows };

@@ -262,7 +262,7 @@ export function SearchWidget({
 
   const form = (
     <form
-      className="row w-full min-w-0"
+      className="row w-full min-w-0 flex-nowrap"
       onSubmit={(e) => {
         e.preventDefault();
         submit();

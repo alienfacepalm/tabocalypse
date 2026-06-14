@@ -5,7 +5,15 @@ describe("parseOpenMeteoForecastPayload", () => {
   it("parses current conditions and up to ten daily rows", () => {
     const forecast = parseOpenMeteoForecastPayload(
       {
-        current: { temperature_2m: 18.4, weather_code: 2 },
+        current: {
+          temperature_2m: 18.4,
+          weather_code: 2,
+          apparent_temperature: 17.2,
+          wind_speed_10m: 9,
+          wind_direction_10m: 225,
+          relative_humidity_2m: 62,
+          precipitation: 0,
+        },
         daily: {
           time: ["2026-06-09", "2026-06-10", "2026-06-11"],
           weather_code: [2, 61, 0],
@@ -27,6 +35,13 @@ describe("parseOpenMeteoForecastPayload", () => {
 
     expect(forecast.current.temperature).toBe(18.4);
     expect(forecast.current.summary).toBe("Partly cloudy");
+    expect(forecast.current).toMatchObject({
+      feelsLike: 17.2,
+      windSpeed: 9,
+      windDirectionDegrees: 225,
+      relativeHumidityPercent: 62,
+      precipitation: 0,
+    });
     expect(forecast.daily).toHaveLength(3);
     expect(forecast.daily[0]).toMatchObject({
       date: "2026-06-09",

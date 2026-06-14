@@ -582,8 +582,6 @@ export function WeatherWidget({
             {current && todayForecast ? (
               <WeatherForecastPanel
                 current={current}
-                today={todayForecast}
-                temperatureUnit={effectiveTemperatureUnit}
                 displayLocale={displayLocale}
                 gamificationEnabled={gamificationEnabled}
                 engagement={engagement}

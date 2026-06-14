@@ -33,6 +33,11 @@ const sampleForecast = (): IWeatherForecast => ({
     temperatureUnit: "fahrenheit",
     code: 0,
     summary: "Clear",
+    feelsLike: null,
+    windSpeed: null,
+    windDirectionDegrees: null,
+    relativeHumidityPercent: null,
+    precipitation: null,
   },
   daily: [
     {

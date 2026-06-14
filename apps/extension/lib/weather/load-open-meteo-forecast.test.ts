@@ -27,6 +27,11 @@ const sampleForecast = (): IWeatherForecast => ({
     temperatureUnit: "celsius",
     code: 2,
     summary: "Partly cloudy",
+    feelsLike: null,
+    windSpeed: null,
+    windDirectionDegrees: null,
+    relativeHumidityPercent: null,
+    precipitation: null,
   },
   daily: [
     {

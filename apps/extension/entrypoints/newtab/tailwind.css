@@ -102,6 +102,11 @@
     @apply relative flex min-h-screen flex-col px-4 pb-0 pt-20;
   }
 
+  /* Humor banner above header search adds a second row — reserve space so HUD panels stay below the bar */
+  .shell:has(.top-bar .header-search .humor-banner-snark) {
+    @apply pt-24;
+  }
+
   .glitch-overlay {
     @apply pointer-events-none fixed inset-0 z-50 opacity-20;
 
@@ -118,7 +123,7 @@
   }
 
   .top-bar {
-    @apply fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between gap-4 overflow-visible border-b-2 border-accent px-4;
+    @apply fixed left-0 right-0 top-0 z-40 flex min-h-16 items-end justify-between gap-4 overflow-visible border-b-2 border-accent px-4 pb-2 pt-2;
     background:
       linear-gradient(
         168deg,
@@ -136,7 +141,7 @@
 
   .header-search {
     /* min-w-0: allow this flex item to shrink so extra toolbar buttons do not overflow the top bar */
-    @apply hidden min-w-0 flex-1 overflow-visible px-8 lg:block;
+    @apply hidden min-w-0 flex-1 flex-col justify-end gap-1 overflow-visible px-8 lg:flex;
   }
 
   .search-field-anchor {
@@ -675,10 +680,6 @@
 
   .humor-banner-snark {
     @apply pointer-events-none m-0 line-clamp-2 font-display text-[0.65rem] font-bold uppercase leading-snug tracking-widest text-accent2;
-  }
-
-  .header-search .humor-banner-snark {
-    @apply mb-1;
   }
 
   .clock-time {

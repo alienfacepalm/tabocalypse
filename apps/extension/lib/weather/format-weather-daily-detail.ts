@@ -7,6 +7,11 @@ export function formatWindDirectionCompass(degrees: number): string {
   return directions[index] ?? "N";
 }
 
+export function formatRelativeHumidityPercent(humidity: number | null): string | null {
+  if (humidity == null || !Number.isFinite(humidity)) return null;
+  return `${Math.round(humidity)}%`;
+}
+
 export function formatPrecipChancePercent(chance: number | null): string | null {
   if (chance == null || !Number.isFinite(chance)) return null;
   return `${Math.round(chance)}%`;

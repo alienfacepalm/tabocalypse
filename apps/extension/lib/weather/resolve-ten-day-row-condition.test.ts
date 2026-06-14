@@ -18,13 +18,21 @@ const day = {
   feelsLikeLow: 54,
 };
 
+const currentSnapshot = {
+  temperature: 68,
+  temperatureUnit: "fahrenheit" as const,
+  code: 0,
+  summary: "Clear",
+  feelsLike: null,
+  windSpeed: null,
+  windDirectionDegrees: null,
+  relativeHumidityPercent: null,
+  precipitation: null,
+};
+
 describe("resolveTenDayRowCondition", () => {
   it("uses live current conditions for today when they differ from the daily outlook", () => {
-    const result = resolveTenDayRowCondition(
-      day,
-      { temperature: 68, temperatureUnit: "fahrenheit", code: 0, summary: "Clear" },
-      true,
-    );
+    const result = resolveTenDayRowCondition(day, currentSnapshot, true);
     expect(result.code).toBe(0);
     expect(result.summary).toBe("Clear");
     expect(result.dailyOutlookSummary).toBe("Overcast");
@@ -32,11 +40,7 @@ describe("resolveTenDayRowCondition", () => {
   });
 
   it("keeps daily outlook for non-today rows", () => {
-    const result = resolveTenDayRowCondition(
-      day,
-      { temperature: 68, temperatureUnit: "fahrenheit", code: 0, summary: "Clear" },
-      false,
-    );
+    const result = resolveTenDayRowCondition(day, currentSnapshot, false);
     expect(result.code).toBe(3);
     expect(result.summary).toBe("Overcast");
   });

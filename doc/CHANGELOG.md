@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Header search** with **Humor banner** on no longer pushes search action buttons or HUD toolbar controls below the top bar; the bar grows to fit and HUD panels stay clear of the header.
 - **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.
 - **New tab HUD** on wide monitors: widget columns now expand to use horizontal space instead of leaving large gutters with truncated text inside fixed-width panels.
 - **2 Lakes** buoy panel: active King County buoys still appear when water temperature is temporarily missing (shows **Live sensor (water temp missing)** with an amber status indicator and explanatory copy aligned with 2lakes.app, instead of **NO RECENT DATA** or a full error).
@@ -37,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Weather** and other privileged-fetch panels no longer show raw allowlist errors; users get reload instructions with a link to the browser extensions page instead.
 - **Weather** 10-day high/low temperatures now reliably show the 2lakes.app color scale (each value colored independently).
 - **Weather** widget location map: the pin stays centered in the map view when the panel is resized instead of drifting toward the bottom edge.
+- **Weather** Forecast tab: detail rows under the current temperature now show right-now readings (feels like, wind, humidity) instead of daily high/low and other today-wide aggregates.
 - **Weather** widget location map: lakes and rivers now appear on the map (hybrid satellite layer) instead of a pale road-only view that could omit nearby water bodies.
 - **Classic jargon** humor voice and a built-in glossary pack (**Unsuck It Classics**), embedded via the maintainer scraper workflow.
 

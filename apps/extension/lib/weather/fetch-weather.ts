@@ -7,6 +7,11 @@ export interface IWeatherSnapshot {
   temperatureUnit: TWeatherTemperatureUnit;
   code: number;
   summary: string;
+  feelsLike: number | null;
+  windSpeed: number | null;
+  windDirectionDegrees: number | null;
+  relativeHumidityPercent: number | null;
+  precipitation: number | null;
 }
 
 export interface IWeatherDayForecast {
@@ -42,7 +47,18 @@ export async function fetchOpenMeteo(
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
-  url.searchParams.set("current", "temperature_2m,weather_code");
+  url.searchParams.set(
+    "current",
+    [
+      "temperature_2m",
+      "weather_code",
+      "apparent_temperature",
+      "wind_speed_10m",
+      "wind_direction_10m",
+      "relative_humidity_2m",
+      "precipitation",
+    ].join(","),
+  );
   url.searchParams.set(
     "daily",
     [
