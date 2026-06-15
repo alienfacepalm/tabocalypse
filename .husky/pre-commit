@@ -2,4 +2,5 @@
 set -e
 pnpm exec lint-staged
 pnpm exec tsx scripts/bump-extension-version.ts
-git add apps/extension/package.json
+pnpm --filter extension generate:settings-changelog
+git add apps/extension/package.json apps/extension/lib/changelog/changelog.generated.ts
