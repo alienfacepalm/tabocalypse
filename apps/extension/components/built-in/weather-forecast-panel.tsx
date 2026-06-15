@@ -12,7 +12,6 @@ import type { IWeatherSnapshot } from "../../lib/weather/fetch-weather";
 import type { IWeatherHudEngagement } from "../../lib/weather/weather-hud-engagement";
 import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
 import { HudTip } from "../hud-tip";
-import { PrivilegedFetchUserError } from "../privileged-fetch-user-error";
 
 type TWeatherDetailRow = {
   label: string;
@@ -87,16 +86,12 @@ export function WeatherForecastPanel({
   gamificationEnabled,
   engagement,
   trivia,
-  triviaLoading,
-  triviaError,
 }: {
   current: IWeatherSnapshot;
   displayLocale: string;
   gamificationEnabled: boolean;
   engagement: IWeatherHudEngagement | null;
   trivia: IOnThisDayFact[];
-  triviaLoading: boolean;
-  triviaError: string | null;
 }): React.JSX.Element {
   const detailRows = buildCurrentDetailRows(current, displayLocale);
 
@@ -132,28 +127,27 @@ export function WeatherForecastPanel({
         ) : null}
       </div>
       <WeatherDetailGrid rows={detailRows} />
-      <section className="weather-on-this-day mt-4" aria-label="On this day">
-        <h4 className="weather-on-this-day-title">On this day</h4>
-        {triviaLoading ? <p className="muted sm mt-0">Loading trivia…</p> : null}
-        {triviaError ? <PrivilegedFetchUserError error={triviaError} /> : null}
-        {!triviaLoading && !triviaError && trivia.length === 0 ? (
-          <p className="muted sm mt-0">No facts loaded for today.</p>
-        ) : null}
-        <ul className="weather-on-this-day-list">
-          {trivia.map((fact) => (
-            <li key={`${fact.year}-${fact.text}`}>
-              {fact.year > 0 ? <span className="weather-on-this-day-year">{fact.year}</span> : null}
-              <span>{fact.text}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="weather-on-this-day-credit muted sm">
-          Facts from Wikipedia via Wikimedia.
-          {gamificationEnabled
-            ? " Read one while you check the forecast to grow your local streak."
-            : null}
-        </p>
-      </section>
+      {trivia.length > 0 ? (
+        <section className="weather-on-this-day mt-4" aria-label="On this day">
+          <h4 className="weather-on-this-day-title">On this day</h4>
+          <ul className="weather-on-this-day-list">
+            {trivia.map((fact) => (
+              <li key={`${fact.year}-${fact.text}`}>
+                {fact.year > 0 ? (
+                  <span className="weather-on-this-day-year">{fact.year}</span>
+                ) : null}
+                <span>{fact.text}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="weather-on-this-day-credit muted sm">
+            Facts from Wikipedia via Wikimedia.
+            {gamificationEnabled
+              ? " Read one while you check the forecast to grow your local streak."
+              : null}
+          </p>
+        </section>
+      ) : null}
     </div>
   );
 }

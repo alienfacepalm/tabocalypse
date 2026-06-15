@@ -308,8 +308,6 @@ export function WeatherWidget({
   const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<IWeatherHudEngagement | null>(null);
   const [trivia, setTrivia] = useState<IOnThisDayFact[]>([]);
-  const [triviaLoading, setTriviaLoading] = useState(false);
-  const [triviaError, setTriviaError] = useState<string | null>(null);
   const tenDayContainerRef = useRef<HTMLDivElement | null>(null);
   const activePanelView = resolveWeatherPanelView(panelView, lakesEmbedEnabled);
   const effectiveTenDayLayout = resolveWeatherTenDayLayout(tenDayLayout, tenDayContainerWidthPx);
@@ -368,26 +366,16 @@ export function WeatherWidget({
   useEffect(() => {
     if (activePanelView !== "forecast" || !forecast) {
       setTrivia([]);
-      setTriviaError(null);
-      setTriviaLoading(false);
       return;
     }
     let cancelled = false;
-    setTriviaLoading(true);
-    setTriviaError(null);
+    setTrivia([]);
     void fetchOnThisDayTrivia(new Date(), displayLocale.split("-")[0] ?? "en")
       .then((facts) => {
-        if (!cancelled) {
-          setTrivia(facts);
-          setTriviaLoading(false);
-        }
+        if (!cancelled) setTrivia(facts);
       })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setTrivia([]);
-          setTriviaLoading(false);
-          setTriviaError(e instanceof Error ? e.message : "Could not load on-this-day facts");
-        }
+      .catch(() => {
+        if (!cancelled) setTrivia([]);
       });
     return () => {
       cancelled = true;
@@ -586,8 +574,6 @@ export function WeatherWidget({
                 gamificationEnabled={gamificationEnabled}
                 engagement={engagement}
                 trivia={trivia}
-                triviaLoading={triviaLoading}
-                triviaError={triviaError}
               />
             ) : !err ? (
               <p className="muted">Loading…</p>

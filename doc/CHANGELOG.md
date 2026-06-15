@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Weather** widget **Forecast** tab: Wikipedia “On this day” trivia loads again (Wikimedia requires zero-padded month/day in the feed URL); the section stays hidden when trivia cannot be fetched.
 - **Header search** with **Humor banner** on no longer pushes search action buttons or HUD toolbar controls below the top bar; the bar grows to fit and HUD panels stay clear of the header.
 - **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.
 - **New tab HUD** on wide monitors: widget columns now expand to use horizontal space instead of leaving large gutters with truncated text inside fixed-width panels.

@@ -45,5 +45,7 @@ export function pickOnThisDayFacts(
 }
 
 export function buildWikimediaOnThisDayUrl(month: number, day: number, language = "en"): string {
-  return `https://api.wikimedia.org/feed/v1/wikipedia/${language}/onthisday/all/${month}/${day}`;
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `https://api.wikimedia.org/feed/v1/wikipedia/${language}/onthisday/all/${mm}/${dd}`;
 }
