@@ -1,5 +1,5 @@
 /** Weather panel location map (Yandex hybrid) — sized to panel width; overflow clips footer branding. */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   WEATHER_STATIC_MAP_DEFAULT_ZOOM,
   WEATHER_STATIC_MAP_VISIBLE_HEIGHT,
@@ -8,6 +8,12 @@ import {
   resolveWeatherStaticMapDimensions,
   type TWeatherStaticMapDimensions,
 } from "../../lib/weather/weather-static-map-url";
+import {
+  WEATHER_STATIC_MAP_MAX_LOAD_ATTEMPTS,
+  isWeatherStaticMapImageDisplayed,
+  resolveWeatherStaticMapMeasureWidth,
+  weatherStaticMapRetryDelayMs,
+} from "../../lib/weather/weather-static-map-measure";
 
 export function WeatherStaticMap({
   lat,
@@ -21,16 +27,28 @@ export function WeatherStaticMap({
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [dimensions, setDimensions] = useState<TWeatherStaticMapDimensions | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dimensions, setDimensions] = useState<TWeatherStaticMapDimensions | null>(() =>
+    resolveWeatherStaticMapDimensions(resolveWeatherStaticMapMeasureWidth(0)),
+  );
   const [loaded, setLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
-  useEffect(() => {
+  const markLoadedIfReady = useCallback((img: HTMLImageElement | null): void => {
+    if (img && isWeatherStaticMapImageDisplayed(img)) {
+      setLoaded(true);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const measure = (): void => {
-      if (el.clientWidth <= 0) return;
-      const next = resolveWeatherStaticMapDimensions(el.clientWidth);
+      const next = resolveWeatherStaticMapDimensions(
+        resolveWeatherStaticMapMeasureWidth(el.clientWidth),
+      );
       setDimensions((prev) => {
         if (
           prev &&
@@ -59,7 +77,43 @@ export function WeatherStaticMap({
 
   useEffect(() => {
     setLoaded(false);
-  }, [src]);
+    setLoadAttempt(0);
+    if (retryTimerRef.current != null) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    markLoadedIfReady(imgRef.current);
+  }, [markLoadedIfReady, src]);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current != null) {
+        clearTimeout(retryTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleImageRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      imgRef.current = node;
+      markLoadedIfReady(node);
+    },
+    [markLoadedIfReady],
+  );
+
+  const handleImageError = useCallback(() => {
+    setLoaded(false);
+    if (loadAttempt + 1 >= WEATHER_STATIC_MAP_MAX_LOAD_ATTEMPTS) {
+      return;
+    }
+    if (retryTimerRef.current != null) {
+      clearTimeout(retryTimerRef.current);
+    }
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null;
+      setLoadAttempt((attempt) => attempt + 1);
+    }, weatherStaticMapRetryDelayMs(loadAttempt));
+  }, [loadAttempt]);
 
   return (
     <div
@@ -76,12 +130,14 @@ export function WeatherStaticMap({
     >
       {src ? (
         <img
-          key={src}
+          key={`${src}-${loadAttempt}`}
+          ref={handleImageRef}
           src={src}
           alt=""
           className={loaded ? "weather-location-map-img is-loaded" : "weather-location-map-img"}
           referrerPolicy="no-referrer"
           onLoad={() => setLoaded(true)}
+          onError={handleImageError}
         />
       ) : null}
     </div>

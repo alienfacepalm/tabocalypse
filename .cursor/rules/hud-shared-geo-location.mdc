@@ -1,0 +1,38 @@
+---
+description: Geo-based HUD panels must share one location slice from settings
+globs: apps/extension/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Shared HUD geo location
+
+Tabocalypse stores **one** latitude/longitude pair for every geo-based HUD panel. Weather, Clock, Balanced News (device region), and future panels must read and write through the shared helpers — not separate per-widget coordinates.
+
+## Source of truth
+
+| Layer | Symbol |
+| --- | --- |
+| Persisted settings | `weatherLat`, `weatherLon`, `weatherGeoAdjusted`, `weatherAutoGeo` on [`ISettings`](../../apps/extension/lib/settings.ts) (historical `weather*` key names; values are HUD-wide) |
+| Read API | **`resolveHudGeoLocation`** → `IHudGeoLocation` in [`hud-geo-location.ts`](../../apps/extension/lib/hud-geo-location.ts) (`IHudGeoSettingsSlice` for the settings fields) |
+| Browser lookup | **`runOneShotHudGeolocation`** in [`hud-geolocation.ts`](../../apps/extension/lib/hud-geolocation.ts) |
+| Persist patches | **`patchHudGeoCoords`**, **`patchHudGeoManualCoord`** |
+
+## Required patterns
+
+1. **New-tab app** — memoize once: `const hudGeo = useMemo(() => resolveHudGeoLocation(s), [s.weatherLat, s.weatherLon, s.weatherGeoAdjusted, s.weatherAutoGeo])` and pass `hudGeo` (or `hudGeo.lat` / `hudGeo.lon`) into panels.
+2. **Geo panels** — accept `IHudGeoLocation` or explicit `lat`/`lon` derived from `hudGeo`; never add parallel `clockLat` / `newsLat` settings keys.
+3. **Geolocation side effects** — live in `app.tsx` (or a single hook); panels do not call `navigator.geolocation` directly.
+4. **Settings UI** — coordinate editors live under **Settings → Weather**; copy may mention Clock and other geo panels but must not imply separate stored locations.
+5. **Timezone from coords** — Clock uses **`resolveTimezoneFromCoords`** (Open-Meteo, same provider as Weather) with `timeZone` on `Intl` formatters.
+
+## Do not
+
+- Read `settings.weatherLat` directly inside widgets when `hudGeo` can be passed from the app shell.
+- Introduce per-panel geo storage or duplicate one-shot geolocation helpers.
+- Show raw `weatherLat` / `weatherLon` field names in user-facing copy.
+
+## Tests
+
+- Extend [`hud-geo-location.test.ts`](../../apps/extension/lib/hud-geo-location.test.ts) when changing patch/read helpers.
+- Extend [`resolve-timezone-from-coords.test.ts`](../../apps/extension/lib/resolve-timezone-from-coords.test.ts) for timezone resolution.
+- Region helpers (e.g. Balanced News) take `hudGeo: IHudGeoLocation` on their input types.

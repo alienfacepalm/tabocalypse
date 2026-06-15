@@ -6,6 +6,7 @@ import {
   clampHudScalar,
   computeHudDragCanvasRectPx,
   getHudDisplayLayoutKey,
+  formatHudDisplayLayoutLabel,
   getHudGridDropHighlight,
   getHudLayoutMetrics,
   getHudPanelDropCellRange,
@@ -249,6 +250,27 @@ describe("HUD layout grid", () => {
     expect(pct.topPct).toBeGreaterThanOrEqual(0);
     expect(pct.widthPct + pct.leftPct).toBeLessThanOrEqual(100.00001);
     expect(pct.heightPct + pct.topPct).toBeLessThanOrEqual(100.00001);
+  });
+});
+
+describe("formatHudDisplayLayoutLabel", () => {
+  it("describes resolution and offset in plain language", () => {
+    expect(
+      formatHudDisplayLayoutLabel({
+        availLeft: 0,
+        availTop: 0,
+        width: 1920,
+        height: 1080,
+      }),
+    ).toBe("1920×1080, primary position");
+    expect(
+      formatHudDisplayLayoutLabel({
+        availLeft: 1920,
+        availTop: 0,
+        width: 2560,
+        height: 1440,
+      }),
+    ).toBe("2560×1440, offset (1920, 0)");
   });
 });
 

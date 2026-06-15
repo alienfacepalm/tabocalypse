@@ -4,6 +4,10 @@ import {
   CLOCK_HOUR_FORMATS,
   type TClockHourFormat,
 } from "../../lib/clock-hour-format";
+import {
+  readNavigatorTimeZone,
+  resolveTimezoneFromCoords,
+} from "../../lib/resolve-timezone-from-coords";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { ClockAlarmsSection } from "./clock-alarms-section";
@@ -11,20 +15,49 @@ import { ClockAlarmsSection } from "./clock-alarms-section";
 export function ClockWidget({
   locale,
   hourFormat,
+  lat,
+  lon,
+  showGeoAccuracyHint,
+  onOpenGeoSettings,
   onSelectHourFormat,
 }: {
   locale: string;
   hourFormat: TClockHourFormat;
+  /** Shared HUD coordinates (same slice as Weather). */
+  lat: number;
+  lon: number;
+  showGeoAccuracyHint: boolean;
+  onOpenGeoSettings: () => void;
   onSelectHourFormat: (next: TClockHourFormat) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
+  const [timeZone, setTimeZone] = useState(() => readNavigatorTimeZone());
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(t);
   }, []);
 
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    void resolveTimezoneFromCoords(lat, lon, controller.signal)
+      .then((resolved) => {
+        if (cancelled) return;
+        setTimeZone(resolved ?? readNavigatorTimeZone());
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTimeZone(readNavigatorTimeZone());
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [lat, lon]);
+
   const timeOpts = useMemo(
     () =>
       ({
@@ -32,8 +65,20 @@ export function ClockWidget({
         minute: "2-digit",
         second: "2-digit",
         hour12: hourFormat === "12h",
+        timeZone,
       }) as const,
-    [hourFormat],
+    [hourFormat, timeZone],
+  );
+  const dateOpts = useMemo(
+    () =>
+      ({
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone,
+      }) as const,
+    [timeZone],
   );
 
   return (
@@ -65,15 +110,25 @@ export function ClockWidget({
       </div>
       <HudPanelBody>
         <div className="clock-time">{now.toLocaleTimeString(locale, timeOpts)}</div>
-        <div className="clock-date muted">
-          {now.toLocaleDateString(locale, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </div>
-        <div className="clock-tz muted">{tz}</div>
+        <div className="clock-date muted">{now.toLocaleDateString(locale, dateOpts)}</div>
+        <div className="clock-tz muted">{timeZone}</div>
+        {showGeoAccuracyHint ? (
+          <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
+            Default GEO location still active. Open{" "}
+            <HudTip tip="Open Settings and jump to the Weather section">
+              <button
+                type="button"
+                className="linkish p-0 text-xs"
+                onClick={onOpenGeoSettings}
+                aria-label="Open Settings and jump to the Weather section"
+              >
+                Settings &gt; Weather
+              </button>
+            </HudTip>{" "}
+            from the gear button in the top bar, then update the coordinates so the clock matches
+            your area.
+          </p>
+        ) : null}
         <ClockAlarmsSection locale={locale} hourFormat={hourFormat} />
       </HudPanelBody>
     </section>

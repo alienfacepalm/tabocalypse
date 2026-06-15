@@ -28,23 +28,23 @@ Donate/support links open third-party sites only; the extension does not process
 
 ## Permission justifications (for reviewer notes)
 
-| Permission / host                 | Why Tabocalypse needs it                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------- |
-| `storage`                         | Save settings, todos, notes, imported packs, and widget toggles on device             |
-| `alarms`                          | User-scheduled reminders and notifications                                            |
-| `notifications`                   | Show alarm/reminder notifications the user configured                                 |
-| `bookmarks` (optional)            | Bookmark search widget — only when the user enables it                                |
-| `topSites` (optional)             | Frequent sites widget — only when the user enables it                                 |
-| `tabs` (optional)                 | Open search results and assist handoffs in a new tab                                  |
-| `api.open-meteo.com`              | Weather widget coordinates → forecast (no publisher API key)                          |
-| `api.coingecko.com`               | Crypto prices widget (public market data)                                             |
-| `peapix.com` / `img.peapix.com`   | Optional Bing spotlight background imagery                                            |
-| `duckduckgo.com`                  | Live search suggestions when Search widget is enabled and DuckDuckGo is selected      |
-| `suggestqueries.google.com`       | Live search suggestions when Search widget is enabled and Google is selected          |
-| `api.bing.com`                    | Live search suggestions when Search widget is enabled and Bing is selected            |
-| `green2.kingcounty.gov`           | Optional Pacific Northwest lake buoy weather data                                     |
-| `speed.cloudflare.com`            | Optional network speed test widget                                                    |
-| OpenAI-compatible host (optional) | BYO AI settings test and optional AI chat widget — user-supplied URL and API key only |
+| Permission / host                 | Why Tabocalypse needs it                                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                         | Save settings, todos, notes, imported packs, widget toggles (including per-monitor overrides), and shared HUD location on device |
+| `alarms`                          | User-scheduled reminders and notifications                                                                                       |
+| `notifications`                   | Show alarm/reminder notifications the user configured                                                                            |
+| `bookmarks` (optional)            | Bookmark search widget — only when the user enables it                                                                           |
+| `topSites` (optional)             | Frequent sites widget — only when the user enables it                                                                            |
+| `tabs` (optional)                 | Open search results and assist handoffs in a new tab                                                                             |
+| `api.open-meteo.com`              | Weather widget coordinates → forecast (no publisher API key)                                                                     |
+| `api.coingecko.com`               | Crypto prices widget (public market data)                                                                                        |
+| `peapix.com` / `img.peapix.com`   | Optional Bing spotlight background imagery                                                                                       |
+| `duckduckgo.com`                  | Live search suggestions when Search widget is enabled and DuckDuckGo is selected                                                 |
+| `suggestqueries.google.com`       | Live search suggestions when Search widget is enabled and Google is selected                                                     |
+| `api.bing.com`                    | Live search suggestions when Search widget is enabled and Bing is selected                                                       |
+| `green2.kingcounty.gov`           | Optional Pacific Northwest lake buoy weather data                                                                                |
+| `speed.cloudflare.com`            | Optional network speed test widget                                                                                               |
+| OpenAI-compatible host (optional) | BYO AI settings test and optional AI chat widget — user-supplied URL and API key only                                            |
 
 **Remote code:** Tabocalypse does not execute remote code. Declarative plugins are JSON interpreted by the app; no user-supplied JavaScript.
 
@@ -53,7 +53,7 @@ Donate/support links open third-party sites only; the extension does not process
 Capture at least:
 
 - Default new tab (widgets visible)
-- **Settings** open — widget toggles and Chaos / import section
+- **Settings** open — widget toggles (per monitor), **Chaos** personality, and import section
 - Import flow or BYO AI disclaimer if shown in your build
 
 Typical store sizes: **1280×800** and/or **440×280** — confirm each portal’s current spec before upload.

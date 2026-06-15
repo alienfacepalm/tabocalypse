@@ -180,13 +180,13 @@
     @apply text-muted;
   }
 
-  .tagline-false {
+  .tagline-false-balanced {
     @apply text-accent2;
-    animation: tagline-false-pulse 5s steps(3, end) infinite;
+    animation: tagline-false-balanced 7s ease-in-out infinite;
   }
 
   .tagline-false-chaos {
-    @apply relative inline-block;
+    @apply relative inline-block text-accent2;
     animation: tagline-false-chaos 0.48s steps(7, end) infinite;
   }
 
@@ -231,23 +231,25 @@
     animation-delay: -2.75s;
   }
 
-  @keyframes tagline-false-pulse {
+  @keyframes tagline-false-balanced {
     0%,
-    88%,
+    84%,
     100% {
       opacity: 1;
+      transform: translateY(0);
       text-shadow: none;
     }
 
-    92% {
-      opacity: 0.72;
-      text-shadow:
-        1px 0 var(--color-accent),
-        -1px 0 var(--color-accent2);
+    90% {
+      opacity: 0.84;
+      transform: translateY(1px);
+      text-shadow: 0 0 6px color-mix(in srgb, var(--color-accent2) 45%, transparent);
     }
 
-    96% {
+    95% {
       opacity: 1;
+      transform: translateY(0);
+      text-shadow: none;
     }
   }
 

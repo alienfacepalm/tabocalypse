@@ -1,10 +1,9 @@
-import type { THumorIntensity, TWidgetKey } from "./settings";
+import type { THumorIntensity, TPresetKey, TWidgetKey } from "./settings";
 import { timeBucketSeed } from "./humor/engine";
 
 export interface ISystemStatusContext {
-  /** Settings > Personality > Focus — static status only, no motion or rotating telemetry. */
-  focusMode: boolean;
-  chaotic: boolean;
+  /** Settings > Personality preset — drives header status line behavior. */
+  preset: TPresetKey;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   enabledWidgetCount: number;
@@ -75,7 +74,7 @@ export function buildSystemStatusTelemetryPool(ctx: ISystemStatusContext): strin
 function contextualTelemetry(ctx: ISystemStatusContext): string[] {
   const out: string[] = [];
 
-  if (ctx.chaotic) out.push(...CHAOTIC_TELEMETRY);
+  if (ctx.preset === "chaos") out.push(...CHAOTIC_TELEMETRY);
   if (!ctx.humorEnabled || ctx.humorIntensity === "off") out.push(...HUMOR_OFF_TELEMETRY);
   if (ctx.lightTheme) out.push(...LIGHT_THEME_TELEMETRY);
 
@@ -93,11 +92,11 @@ function contextualTelemetry(ctx: ISystemStatusContext): string[] {
   return out;
 }
 
-/** Rotating HUD telemetry beside the fixed SYSTEM_STABLE: FALSE anchor. */
+/** Rotating HUD telemetry beside the fixed SYSTEM_STABLE: FALSE anchor (Chaos preset only). */
 export function resolveSystemStatusTelemetry(ctx: ISystemStatusContext): string {
-  if (ctx.focusMode) return "";
+  if (ctx.preset !== "chaos") return "";
   const pool = buildSystemStatusTelemetryPool(ctx);
-  const idx = hashString(`${timeBucketSeed(3)}|${pool.length}|${ctx.chaotic}`) % pool.length;
+  const idx = hashString(`${timeBucketSeed(3)}|${pool.length}|chaos`) % pool.length;
   return pool[idx] ?? GENERIC_TELEMETRY[0]!;
 }
 
@@ -108,6 +107,12 @@ const GLITCH_FALSE_VARIANTS: readonly string[] = [
   "F@LSE",
   "FALSE?",
   "FAL5E",
+  "FA|SE",
+  "F4L$E",
+  "UNSTABLE",
+  "FAL—E",
+  "F∆LSE",
+  "NOT_OK",
 ];
 
 /** Brief corrupted spellings for chaotic scramble animation. */

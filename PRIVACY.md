@@ -5,11 +5,12 @@
 ## Data stored on your device
 
 - Preferences, widget toggles, and **notes** (text and which note panels are open) may sync via the browser’s extension storage sync (if you use browser sync), controlled by Mozilla/Google/Microsoft/Apple — not by us.
-- API keys (OpenAI-compatible, OpenWeather), imported packs/plugins, todos, note panel **screen positions**, and optional background images stay in **local** extension storage on your device.
+- **Per-monitor** widget toggles and note panel **screen positions** stay in **local** extension storage on each device (they are not part of browser sync).
+- API keys (OpenAI-compatible, OpenWeather), imported packs/plugins, todos, a single saved **HUD location** (latitude/longitude used by Weather, Clock timezone, Balanced News device region, and related panels), and optional background images stay in **local** extension storage on your device.
 
 ## Network requests (only when you use a feature)
 
-- **Open-Meteo** (`api.open-meteo.com`) when the Weather widget is enabled — approximate location from coordinates you set (or from the browser geolocation prompt if you click “Use my location”).
+- **Open-Meteo** (`api.open-meteo.com`) when Weather, Clock, or other geo-based HUD panels are enabled — forecast and timezone lookup from the **shared HUD coordinates** you set under **Settings > Weather** (or from the browser geolocation prompt if you click **Use my location**). The same saved coordinates drive Weather, Clock local time/timezone, and Balanced News device region when those features are on.
 - **Wikimedia** (`api.wikimedia.org`) when you open the Weather **Forecast** view — fetches public “on this day” facts for the current calendar date (English Wikipedia feed by default). No Tabocalypse account; facts are attributed to Wikipedia in the panel.
 - **CoinGecko** (`api.coingecko.com`) when the Crypto prices widget is enabled — public USD spot and chart samples for BTC and ETH (no Tabocalypse account; no API key shipped by the publisher).
 - **FreeQuickNews** (`freequicknews.com`) when the **Balanced news** widget is enabled — bias-labeled headline metadata for your chosen region and category (optional API key you supply stays in local storage; headlines open the original publisher in a new tab). **Open-Meteo Geocoding** (`geocoding-api.open-meteo.com`) may be used when device location is enabled for region — reverse lookup only, no Tabocalypse account.

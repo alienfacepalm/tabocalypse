@@ -7,14 +7,13 @@ import {
   type TBalancedNewsCountry,
 } from "./balanced-news-country";
 import type { TPeapixBingCountry } from "../bing-wallpaper-country";
+import type { IHudGeoLocation } from "../hud-geo-location";
 
 export interface IResolveBalancedNewsRegionInput {
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: TPeapixBingCountry;
   balancedNewsUseDeviceGeo: boolean;
-  weatherGeoAdjusted: boolean;
-  weatherLat: number;
-  weatherLon: number;
+  hudGeo: IHudGeoLocation;
 }
 
 interface IOpenMeteoReverseGeocodeRow {
@@ -55,10 +54,10 @@ export async function resolveBalancedNewsCountry(
     );
   }
 
-  if (input.balancedNewsUseDeviceGeo && input.weatherGeoAdjusted) {
+  if (input.balancedNewsUseDeviceGeo && input.hudGeo.geoAdjusted) {
     const fromCoords = await reverseGeocodeCountryFromCoords(
-      input.weatherLat,
-      input.weatherLon,
+      input.hudGeo.lat,
+      input.hudGeo.lon,
       signal,
     );
     if (fromCoords) return fromCoords;

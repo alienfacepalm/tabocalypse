@@ -477,6 +477,17 @@ export function getHudDisplayLayoutKey(
   return `${screenLike.availLeft},${screenLike.availTop},${screenLike.width},${screenLike.height}`;
 }
 
+/** Plain-language monitor label for settings copy (resolution + desktop offset). */
+export function formatHudDisplayLayoutLabel(
+  screenLike: IHudDisplayScreenMetrics = readHudDisplayScreenMetrics(),
+): string {
+  const offsetLabel =
+    screenLike.availLeft === 0 && screenLike.availTop === 0
+      ? "primary position"
+      : `offset (${screenLike.availLeft}, ${screenLike.availTop})`;
+  return `${screenLike.width}×${screenLike.height}, ${offsetLabel}`;
+}
+
 /** Merges legacy/base positions with overrides for the active display. */
 export function resolveHudPanelPositionsForDisplay(
   base: Record<THudPanelId, IHudPanelPosition>,

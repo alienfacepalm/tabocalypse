@@ -6,22 +6,21 @@ import {
 } from "../lib/system-status-line";
 
 const TELEMETRY_REFRESH_MS = 3 * 60_000;
-const CHAOS_SCRAMBLE_MS = 8_000;
-const CHAOS_SCRAMBLE_HOLD_MS = 2_800;
-const CHAOS_SCRAMBLE_FLICKER_MS = 90;
+const CHAOS_SCRAMBLE_MS = 5_500;
+const CHAOS_SCRAMBLE_HOLD_MS = 3_200;
+const CHAOS_SCRAMBLE_FLICKER_MS = 70;
 
 export function SystemStatusTagline({ ctx }: { ctx: ISystemStatusContext }) {
   const [telemetry, setTelemetry] = useState(() => resolveSystemStatusTelemetry(ctx));
   const [falseLabel, setFalseLabel] = useState("FALSE");
   const [scrambleTick, setScrambleTick] = useState(0);
 
-  const chaosActive = ctx.chaotic && !ctx.focusMode;
+  const chaosActive = ctx.preset === "chaos";
 
   const ctxKey = useMemo(
     () =>
       [
-        ctx.focusMode,
-        ctx.chaotic,
+        ctx.preset,
         ctx.humorEnabled,
         ctx.humorIntensity,
         ctx.enabledWidgetCount,
@@ -33,7 +32,7 @@ export function SystemStatusTagline({ ctx }: { ctx: ISystemStatusContext }) {
   );
 
   useEffect(() => {
-    if (ctx.focusMode) {
+    if (!chaosActive) {
       setTelemetry("");
       return;
     }
@@ -43,7 +42,7 @@ export function SystemStatusTagline({ ctx }: { ctx: ISystemStatusContext }) {
     refresh();
     const t = window.setInterval(refresh, TELEMETRY_REFRESH_MS);
     return () => window.clearInterval(t);
-  }, [ctx, ctxKey]);
+  }, [chaosActive, ctx, ctxKey]);
 
   useEffect(() => {
     if (!chaosActive) {
@@ -60,7 +59,7 @@ export function SystemStatusTagline({ ctx }: { ctx: ISystemStatusContext }) {
       flickerTimer = window.setInterval(() => {
         setFalseLabel(pickGlitchFalseVariant(Date.now() + flickerCount));
         flickerCount += 1;
-        if (flickerCount > 14) {
+        if (flickerCount > 22) {
           window.clearInterval(flickerTimer);
           flickerTimer = undefined;
         }
@@ -84,25 +83,22 @@ export function SystemStatusTagline({ ctx }: { ctx: ISystemStatusContext }) {
     };
   }, [chaosActive]);
 
-  if (ctx.focusMode) {
+  if (ctx.preset === "focus") {
+    return null;
+  }
+
+  if (ctx.preset === "balanced") {
     return (
-      <p className="tagline tagline-focus" aria-hidden>
-        SYSTEM_STABLE: FALSE
+      <p className="tagline tagline-balanced" aria-hidden>
+        SYSTEM_STABLE: <span className="tagline-false-balanced">FALSE</span>
       </p>
     );
   }
 
   return (
-    <p
-      className={chaosActive ? "tagline tagline-chaos" : "tagline"}
-      aria-hidden
-      data-scramble={chaosActive ? scrambleTick : undefined}
-    >
+    <p className="tagline tagline-chaos" aria-hidden data-scramble={scrambleTick}>
       SYSTEM_STABLE:{" "}
-      <span
-        className={chaosActive ? "tagline-false tagline-false-chaos" : "tagline-false"}
-        data-text={falseLabel}
-      >
+      <span className="tagline-false-chaos" data-text={falseLabel}>
         {falseLabel}
       </span>
       {telemetry ? <span className="tagline-telemetry"> · {telemetry}</span> : null}

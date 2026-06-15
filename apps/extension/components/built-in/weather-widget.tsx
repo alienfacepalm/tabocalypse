@@ -14,7 +14,7 @@ import {
   Wind,
   type LucideIcon,
 } from "lucide-react";
-import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
@@ -54,10 +54,6 @@ import {
   resolveWeatherPanelView,
   type TWeatherPanelView,
 } from "../../lib/weather/weather-panel-view";
-import {
-  resolveWeatherTenDayLayout,
-  type TWeatherTenDayLayout,
-} from "../../lib/weather/weather-ten-day-layout";
 import {
   WEATHER_TEMPERATURE_UNITS,
   WEATHER_UNIT_LABELS,
@@ -120,7 +116,6 @@ function WeatherTenDayRow({
   conditionSummary,
   temperatureUnit,
   displayLocale,
-  layout,
   isExpanded,
   onToggle,
 }: {
@@ -129,16 +124,11 @@ function WeatherTenDayRow({
   conditionSummary: string;
   temperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
-  layout: TWeatherTenDayLayout;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
   const detailsId = useId();
-  const dayLabel = formatWeatherDayLabel(
-    day.date,
-    displayLocale,
-    layout === "row" ? "short" : "long",
-  );
+  const dayLabel = formatWeatherDayLabel(day.date, displayLocale, "long");
   const dayTooltip = formatWeatherDayTooltip(day.date, displayLocale, day.summary);
   const detailRows = buildWeatherTenDayDetailRows(day, temperatureUnit, displayLocale);
   const ariaLabel = `${dayLabel}, high ${formatTemperatureValue(day.high, temperatureUnit, displayLocale)}, low ${formatTemperatureValue(day.low, temperatureUnit, displayLocale)}, ${conditionSummary}`;
@@ -150,105 +140,46 @@ function WeatherTenDayRow({
     <ChevronDown size={16} strokeWidth={2} aria-hidden />
   );
 
-  if (layout === "stack") {
-    return (
-      <div
-        className={
-          isExpanded
-            ? "weather-ten-day-item weather-ten-day-item--stack weather-ten-day-item--expanded"
-            : "weather-ten-day-item weather-ten-day-item--stack"
-        }
-      >
-        <button
-          type="button"
-          className="weather-ten-day-trigger weather-ten-day-trigger--stack"
-          onClick={onToggle}
-          aria-expanded={isExpanded}
-          aria-controls={detailsId}
-          aria-label={`${ariaLabel}. ${toggleTip}.`}
-        >
-          <div className="weather-ten-day-stack-main">
-            <WeatherConditionIcon code={conditionCode} size={28} />
-            <div className="min-w-0">
-              <HudTip tip={dayTooltip}>
-                <p className="weather-ten-day-day">{dayLabel}</p>
-              </HudTip>
-              <p className="weather-ten-day-summary">{conditionSummary}</p>
-            </div>
-          </div>
-          <div className="weather-ten-day-trigger-end">
-            <p className="weather-ten-day-temps">
-              <TemperatureHighLowRange
-                high={day.high}
-                low={day.low}
-                unit={temperatureUnit}
-                locale={displayLocale}
-              />
-            </p>
-            <HudTip tip={toggleTip}>
-              <span className="weather-ten-day-chevron" aria-hidden>
-                {chevron}
-              </span>
-            </HudTip>
-          </div>
-        </button>
-        {isExpanded ? (
-          <div id={detailsId} className="weather-ten-day-details">
-            <dl className="weather-ten-day-detail-grid">
-              {detailRows.map((row) => (
-                <React.Fragment key={row.label}>
-                  <dt className="weather-ten-day-detail-label">
-                    <row.Icon
-                      size={14}
-                      strokeWidth={2}
-                      className="weather-ten-day-detail-icon"
-                      aria-hidden
-                    />
-                    <span>{row.label}</span>
-                  </dt>
-                  <dd>{row.value}</dd>
-                </React.Fragment>
-              ))}
-            </dl>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
     <div
       className={
         isExpanded
-          ? "weather-ten-day-item weather-ten-day-item--row weather-ten-day-item--expanded"
-          : "weather-ten-day-item weather-ten-day-item--row"
+          ? "weather-ten-day-item weather-ten-day-item--stack weather-ten-day-item--expanded"
+          : "weather-ten-day-item weather-ten-day-item--stack"
       }
     >
       <button
         type="button"
-        className="weather-ten-day-trigger weather-ten-day-trigger--row"
+        className="weather-ten-day-trigger weather-ten-day-trigger--stack"
         onClick={onToggle}
         aria-expanded={isExpanded}
         aria-controls={detailsId}
         aria-label={`${ariaLabel}. ${toggleTip}.`}
       >
-        <HudTip tip={dayTooltip}>
-          <p className="weather-ten-day-day">{dayLabel}</p>
-        </HudTip>
-        <WeatherConditionIcon code={conditionCode} size={24} />
-        <p className="weather-ten-day-temps">
-          <TemperatureHighLowRange
-            high={day.high}
-            low={day.low}
-            unit={temperatureUnit}
-            locale={displayLocale}
-          />
-        </p>
-        <HudTip tip={toggleTip}>
-          <span className="weather-ten-day-chevron" aria-hidden>
-            {chevron}
-          </span>
-        </HudTip>
+        <div className="weather-ten-day-stack-main">
+          <WeatherConditionIcon code={conditionCode} size={28} />
+          <div className="min-w-0">
+            <HudTip tip={dayTooltip}>
+              <p className="weather-ten-day-day">{dayLabel}</p>
+            </HudTip>
+            <p className="weather-ten-day-summary">{conditionSummary}</p>
+          </div>
+        </div>
+        <div className="weather-ten-day-trigger-end">
+          <p className="weather-ten-day-temps">
+            <TemperatureHighLowRange
+              high={day.high}
+              low={day.low}
+              unit={temperatureUnit}
+              locale={displayLocale}
+            />
+          </p>
+          <HudTip tip={toggleTip}>
+            <span className="weather-ten-day-chevron" aria-hidden>
+              {chevron}
+            </span>
+          </HudTip>
+        </div>
       </button>
       {isExpanded ? (
         <div id={detailsId} className="weather-ten-day-details">
@@ -284,7 +215,6 @@ export function WeatherWidget({
   gamificationEnabled,
   lakesEmbedEnabled,
   panelView,
-  tenDayLayout,
   onSelectPanelView,
   onSelectExplicitTemperatureUnit,
 }: {
@@ -299,7 +229,6 @@ export function WeatherWidget({
   /** When true, adds a Forecast / 2 Lakes switch with King County buoy data (Settings → Weather). */
   lakesEmbedEnabled: boolean;
   panelView: TWeatherPanelView;
-  tenDayLayout: TWeatherTenDayLayout;
   onSelectPanelView: (next: TWeatherPanelView) => void;
   onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
 }) {
@@ -308,13 +237,10 @@ export function WeatherWidget({
   const [forecastFetchedAt, setForecastFetchedAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
-  const [tenDayContainerWidthPx, setTenDayContainerWidthPx] = useState<number | null>(null);
   const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<IWeatherHudEngagement | null>(null);
   const [trivia, setTrivia] = useState<IOnThisDayFact[]>([]);
-  const tenDayContainerRef = useRef<HTMLDivElement | null>(null);
   const activePanelView = resolveWeatherPanelView(panelView, lakesEmbedEnabled);
-  const effectiveTenDayLayout = resolveWeatherTenDayLayout(tenDayLayout, tenDayContainerWidthPx);
 
   const loadForecast = useCallback(() => {
     let cancelled = false;
@@ -388,24 +314,9 @@ export function WeatherWidget({
 
   useEffect(() => {
     if (activePanelView !== "tenDay") {
-      setTenDayContainerWidthPx(null);
       setExpandedDayDate(null);
-      return;
     }
-    const el = tenDayContainerRef.current;
-    if (!el) return;
-
-    const measure = (): void => {
-      setTenDayContainerWidthPx(el.clientWidth);
-    };
-    measure();
-
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-    };
-  }, [activePanelView, forecast, err]);
+  }, [activePanelView]);
 
   const retryForecast = (): void => {
     setReloadToken((n) => n + 1);
@@ -458,8 +369,8 @@ export function WeatherWidget({
                 Settings &gt; Weather
               </button>
             </HudTip>{" "}
-            from the gear button in the top bar, then update the coordinates so the forecast targets
-            your actual area.
+            from the gear button in the top bar, then update the shared coordinates so Weather,
+            Clock, and related panels target your actual area.
           </p>
         ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -520,15 +431,7 @@ export function WeatherWidget({
               />
             ) : null}
             {forecast ? (
-              <div
-                ref={tenDayContainerRef}
-                className={
-                  effectiveTenDayLayout === "stack"
-                    ? "weather-ten-day-stack"
-                    : "weather-ten-day-row"
-                }
-                aria-label="10-day forecast"
-              >
+              <div className="weather-ten-day-stack" aria-label="10-day forecast">
                 {forecast.daily.map((day) => {
                   const isToday = isWeatherDateToday(day.date);
                   const condition = resolveTenDayRowCondition(day, forecast.current, isToday);
@@ -541,7 +444,6 @@ export function WeatherWidget({
                       conditionSummary={conditionSummary}
                       temperatureUnit={effectiveTemperatureUnit}
                       displayLocale={displayLocale}
-                      layout={effectiveTenDayLayout}
                       isExpanded={expandedDayDate === day.date}
                       onToggle={() => {
                         setExpandedDayDate((prev) => (prev === day.date ? null : day.date));

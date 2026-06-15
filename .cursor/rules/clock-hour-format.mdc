@@ -24,7 +24,7 @@ Tabocalypse has a **global** 12-hour / 24-hour preference (`clockHourFormat`, op
 | Surface | Helper / pattern |
 |--------|-------------------|
 | Scheduled alarms list | **`formatAlarmScheduledLabel`** in [`apps/extension/lib/alarm-datetime.ts`](../../apps/extension/lib/alarm-datetime.ts) |
-| Live clock widget | **`toLocaleTimeString(locale, { hour12: hourFormat === "12h", … })`** — see [`clock-widget.tsx`](../../apps/extension/components/built-in/clock-widget.tsx) |
+| Live clock widget | **`toLocaleTimeString(locale, { hour12: hourFormat === "12h", timeZone, … })`** — see [`clock-widget.tsx`](../../apps/extension/components/built-in/clock-widget.tsx); `timeZone` comes from shared HUD coordinates via [`resolveTimezoneFromCoords`](../../apps/extension/lib/resolve-timezone-from-coords.ts) (see [hud-shared-geo-location.mdc](hud-shared-geo-location.mdc)) |
 
 When adding a **new** user-visible timestamp, add or extend a colocated helper in `lib/` (and a `*.test.ts` case) instead of inlining another one-off `toLocaleString`.
 

@@ -597,9 +597,11 @@ export interface ISettings {
   searchEngine: "ddg" | "google" | "bing";
   /** When true, Enter in the HUD search field opens the assist destination instead of classic web search. */
   searchAssistActive: boolean;
+  /** Shared HUD latitude (Weather, Clock, Balanced News, …). Storage key keeps the `weather*` prefix. */
   weatherLat: number;
+  /** Shared HUD longitude. Storage key keeps the `weather*` prefix. */
   weatherLon: number;
-  /** Clears the default-location warning once the user updates Weather coordinates or enables auto geo. */
+  /** Clears the default-location warning once the user updates HUD coordinates or enables auto geo. */
   weatherGeoAdjusted: boolean;
   weatherTemperatureUnit: TWeatherTemperatureUnit;
   /** When true, temperature units follow the browser locale; when false, `weatherTemperatureUnit` is fixed. */
@@ -608,12 +610,13 @@ export interface ISettings {
   clockHourFormat: TClockHourFormat;
   /** When true, clock hour cycle follows the browser locale; when false, `clockHourFormat` is fixed. */
   clockHourFormatAuto: boolean;
+  /** When true, shared HUD coordinates update via one browser lookup per new tab (Settings → Weather / Optional permissions). */
   weatherAutoGeo: boolean;
   /** When true, the Weather HUD panel can switch to 2 Lakes buoy readings (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
   /** Last Forecast / 10 Day / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
-  /** Row vs vertical stack for the 10-day forecast cells. */
+  /** Legacy 10-day layout preference (always stacked vertically). */
   weatherTenDayLayout: TWeatherTenDayLayout;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
@@ -621,7 +624,7 @@ export interface ISettings {
   balancedNewsCountryAuto: boolean;
   /** Peapix-style lowercase country code when {@link balancedNewsCountryAuto} is false. */
   balancedNewsCountry: TPeapixBingCountry;
-  /** When true with auto region, prefer device coordinates (weather geo) for country resolution. */
+  /** When true with auto region, prefer shared HUD coordinates for country resolution. */
   balancedNewsUseDeviceGeo: boolean;
   /** FreeQuickNews category filter for the Balanced news widget. */
   balancedNewsCategory: TBalancedNewsCategory;
@@ -707,6 +710,11 @@ export interface ISettings {
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
   /** Per-monitor overrides for {@link hudPanelPositions}; keyed by {@link getHudDisplayLayoutKey}. */
   hudPanelPositionsByDisplay: THudPanelPositionsByDisplay;
+  /**
+   * Per-monitor widget toggles layered on {@link widgets}; keyed by {@link getHudDisplayLayoutKey}.
+   * Stored locally because monitor fingerprints differ per machine.
+   */
+  widgetsByDisplay: TWidgetsByDisplay;
   /**
    * After first-run settings intro is finished, stays true so the welcome callout does not repeat.
    * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
@@ -939,6 +947,7 @@ export interface ILocalSlice {
   hudPanelPositions?: Partial<Record<THudPanelId, IHudPanelPosition>>;
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
   notePanelsByDisplay?: TNotePanelsByDisplay;
+  widgetsByDisplay?: TWidgetsByDisplay;
   /** @deprecated Migrated to {@link notePanelsByDisplay} on load. */
   notePanelPositionsByDisplay?: unknown;
 }
@@ -1081,6 +1090,78 @@ export function mergeWidgets(
   return base;
 }
 
+/** Per-monitor widget overrides keyed by {@link getHudDisplayLayoutKey}. */
+export type TWidgetsByDisplay = Record<string, Partial<Record<TWidgetKey, boolean>>>;
+
+function coerceWidgetTogglePartial(raw: unknown): Partial<Record<TWidgetKey, boolean>> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Partial<Record<TWidgetKey, boolean>> = {};
+  for (const key of Object.keys(DEFAULT_WIDGETS) as TWidgetKey[]) {
+    const v = (raw as Record<string, unknown>)[key];
+    if (typeof v === "boolean") out[key] = v;
+  }
+  return out;
+}
+
+export function coerceWidgetsByDisplay(raw: unknown): TWidgetsByDisplay {
+  if (!raw || typeof raw !== "object") return {};
+  const out: TWidgetsByDisplay = {};
+  for (const [displayKey, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof displayKey !== "string") continue;
+    const partial = coerceWidgetTogglePartial(value);
+    if (Object.keys(partial).length > 0) out[displayKey] = partial;
+  }
+  return out;
+}
+
+/** Merges synced {@link widgets} with per-monitor overrides for the active display. */
+export function resolveWidgetsForDisplay(
+  base: Record<TWidgetKey, boolean>,
+  byDisplay: TWidgetsByDisplay | undefined,
+  displayKey: string,
+): Record<TWidgetKey, boolean> {
+  const displayPartial = byDisplay?.[displayKey];
+  if (!displayPartial || Object.keys(displayPartial).length === 0) {
+    return { ...base };
+  }
+  const merged = { ...base };
+  for (const key of Object.keys(merged) as TWidgetKey[]) {
+    const v = displayPartial[key];
+    if (typeof v === "boolean") merged[key] = v;
+  }
+  return merged;
+}
+
+export function patchWidgetsForDisplay(
+  byDisplay: TWidgetsByDisplay | undefined,
+  displayKey: string,
+  updates: Partial<Record<TWidgetKey, boolean>>,
+): TWidgetsByDisplay {
+  const prev = byDisplay?.[displayKey] ?? {};
+  return {
+    ...(byDisplay ?? {}),
+    [displayKey]: { ...prev, ...updates },
+  };
+}
+
+export function resetWidgetsForDisplay(
+  byDisplay: TWidgetsByDisplay | undefined,
+  displayKey: string,
+): TWidgetsByDisplay {
+  if (!byDisplay || !(displayKey in byDisplay)) return byDisplay ?? {};
+  const next = { ...byDisplay };
+  delete next[displayKey];
+  return next;
+}
+
+export function hasWidgetsDisplayOverride(
+  byDisplay: TWidgetsByDisplay | undefined,
+  displayKey: string,
+): boolean {
+  const partial = byDisplay?.[displayKey];
+  return partial != null && Object.keys(partial).length > 0;
+}
+
 /** User-visible names for the Widgets settings list (storage keys stay `TWidgetKey`). */
 export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   search: "Search",
@@ -1210,6 +1291,7 @@ export function defaultSettings(): ISettings {
     hudLayoutAdaptiveWhileLocked: true,
     hudPanelPositions: mergeHudPanelPositions(undefined),
     hudPanelPositionsByDisplay: {},
+    widgetsByDisplay: {},
     hasSeenSettingsIntro: false,
     experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
   };
@@ -1304,6 +1386,7 @@ function toLocal(s: ISettings): ILocalSlice {
     hudPanelPositions: s.hudPanelPositions,
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
     notePanelsByDisplay: s.notePanelsByDisplay,
+    widgetsByDisplay: s.widgetsByDisplay,
   };
 }
 
@@ -1551,6 +1634,7 @@ function mergeSettings(
         : d.hudLayoutAdaptiveWhileLocked,
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
+    widgetsByDisplay: coerceWidgetsByDisplay(local?.widgetsByDisplay),
     notePanelsByDisplay: (() => {
       const validNoteIds = new Set(mergedNotes.map((n) => n.id));
       const direct = coerceNotePanelsByDisplay(local?.notePanelsByDisplay, validNoteIds);

@@ -35,6 +35,11 @@ const {
   DEFAULT_WIDGETS,
   DEFAULT_EXPERIMENTAL_FEATURES,
   mergeWidgets,
+  coerceWidgetsByDisplay,
+  hasWidgetsDisplayOverride,
+  patchWidgetsForDisplay,
+  resetWidgetsForDisplay,
+  resolveWidgetsForDisplay,
   resolveWeatherGeoAdjusted,
   WIDGET_LABELS,
   TABOCALYPSE_SETTINGS_LOCAL_KEYS,
@@ -114,6 +119,61 @@ describe("mergeWidgets", () => {
     expect(m.clock).toBe(false);
     expect(m.humorBanner).toBe(true);
     expect(Object.keys(m).sort()).toEqual(Object.keys(DEFAULT_WIDGETS).sort());
+  });
+});
+
+describe("per-display widget toggles", () => {
+  const displayA = "0,0,1920,1080";
+  const displayB = "1920,0,2560,1440";
+  const base = { ...DEFAULT_WIDGETS, weather: true, clock: true, crypto: false };
+
+  it("resolveWidgetsForDisplay falls back to synced base when no override", () => {
+    expect(resolveWidgetsForDisplay(base, {}, displayA).weather).toBe(true);
+    expect(resolveWidgetsForDisplay(base, undefined, displayA).clock).toBe(true);
+  });
+
+  it("resolveWidgetsForDisplay merges partial per-monitor overrides", () => {
+    const byDisplay = {
+      [displayB]: { crypto: true, weather: false },
+    };
+    const resolved = resolveWidgetsForDisplay(base, byDisplay, displayB);
+    expect(resolved.crypto).toBe(true);
+    expect(resolved.weather).toBe(false);
+    expect(resolved.clock).toBe(true);
+  });
+
+  it("patchWidgetsForDisplay layers updates without clobbering other monitors", () => {
+    const patched = patchWidgetsForDisplay({ [displayA]: { todo: false } }, displayB, {
+      bookmarksStrip: true,
+    });
+    expect(patched[displayA]?.todo).toBe(false);
+    expect(patched[displayB]?.bookmarksStrip).toBe(true);
+  });
+
+  it("resetWidgetsForDisplay removes overrides for one monitor only", () => {
+    const byDisplay = {
+      [displayA]: { clock: false },
+      [displayB]: { weather: false },
+    };
+    const next = resetWidgetsForDisplay(byDisplay, displayA);
+    expect(next[displayA]).toBeUndefined();
+    expect(next[displayB]?.weather).toBe(false);
+  });
+
+  it("coerceWidgetsByDisplay drops invalid keys and empty partials", () => {
+    expect(
+      coerceWidgetsByDisplay({
+        [displayA]: { clock: false, evilWidget: true },
+        bad: "nope",
+        [displayB]: {},
+      }),
+    ).toEqual({ [displayA]: { clock: false } });
+  });
+
+  it("hasWidgetsDisplayOverride is false until a monitor has toggles", () => {
+    expect(hasWidgetsDisplayOverride(undefined, displayA)).toBe(false);
+    expect(hasWidgetsDisplayOverride({ [displayA]: {} }, displayA)).toBe(false);
+    expect(hasWidgetsDisplayOverride({ [displayA]: { clock: true } }, displayA)).toBe(true);
   });
 });
 

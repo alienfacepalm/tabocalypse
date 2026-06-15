@@ -72,7 +72,12 @@ import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widg
 import { PluginDeck } from "../../components/plugin-views";
 import { SettingsChangelogPanel } from "../../components/settings-changelog-panel";
 import { SettingsFeedbackForm } from "../../components/settings-feedback-form";
-import { runOneShotWeatherGeolocation } from "../../lib/weather-geolocation";
+import { runOneShotHudGeolocation } from "../../lib/hud-geolocation";
+import {
+  patchHudGeoCoords,
+  patchHudGeoManualCoord,
+  resolveHudGeoLocation,
+} from "../../lib/hud-geo-location";
 import { coerceWeatherPanelView } from "../../lib/weather/weather-panel-view";
 import { coerceWeatherTenDayLayout } from "../../lib/weather/weather-ten-day-layout";
 import {
@@ -116,9 +121,13 @@ import {
   mergeWidgets,
   mergeExperimentalFeatures,
   mergeNotesPreferNewerBaseline,
+  patchWidgetsForDisplay,
+  resetWidgetsForDisplay,
   resolveNotesListPanelVisible,
   resolveWeatherGeoAdjusted,
   resolveUserBackgroundImage,
+  resolveWidgetsForDisplay,
+  hasWidgetsDisplayOverride,
   saveSettings,
   type THumorIntensity,
   type THudPanelId,
@@ -176,6 +185,7 @@ import {
 } from "../../lib/humor/humor-content-cache";
 import { privilegedExtensionFetchBytes } from "../../lib/privileged-extension-fetch";
 import {
+  formatHudDisplayLayoutLabel,
   getHudDisplayLayoutKey,
   measureHudCanvasSize,
   patchHudPanelPositionsForDisplay,
@@ -218,6 +228,7 @@ type TSettingsSectionJump =
   | "weather"
   | "balancedNews"
   | "widgets"
+  | "chaos"
   | "byoAi"
   | "optionalPermissions"
   | "topSitesPermission"
@@ -225,7 +236,6 @@ type TSettingsSectionJump =
   | "tabsPermission";
 
 type TSettingsAccordionSection =
-  | "presets"
   | "appearance"
   | "widgets"
   | "panelLayout"
@@ -417,7 +427,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   /** Survives closing the settings dialog until the new-tab session ends. */
   const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
     Partial<Record<TSettingsAccordionSection, boolean>>
-  >(() => ({ presets: true }));
+  >(() => ({ chaos: true }));
   const [byoAiApiKeyVisible, setByoAiApiKeyVisible] = useState(false);
   const [humorContentRevision, setHumorContentRevision] = useState(0);
   const [humorRefreshBusy, setHumorRefreshBusy] = useState(false);
@@ -428,6 +438,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const chaosSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabsPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -965,9 +976,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           ? balancedNewsSettingsSectionRef.current
           : pendingSettingsSectionJump === "widgets"
             ? widgetsSettingsSectionRef.current
-            : pendingSettingsSectionJump === "byoAi"
-              ? byoAiSettingsSectionRef.current
-              : optionalPermissionsSettingsSectionRef.current;
+            : pendingSettingsSectionJump === "chaos"
+              ? chaosSettingsSectionRef.current
+              : pendingSettingsSectionJump === "byoAi"
+                ? byoAiSettingsSectionRef.current
+                : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -1006,6 +1019,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
+  const openChaosSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("chaos");
+    setPendingSettingsSectionJump("chaos");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
   const openByoAiSettingsSection = useCallback(() => {
     openSettingsAccordionSection("byoAi");
     setPendingSettingsSectionJump("byoAi");
@@ -1036,7 +1055,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
-  const fetchWeatherLocationOnce = useCallback(() => {
+  const fetchHudLocationOnce = useCallback(() => {
     if (latestSettingsRef.current.weatherAutoGeo) return;
 
     weatherManualGeoEpochRef.current += 1;
@@ -1048,7 +1067,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
 
     setGeoStatus("detecting");
-    runOneShotWeatherGeolocation(navigator.geolocation, (outcome) => {
+    runOneShotHudGeolocation(navigator.geolocation, (outcome) => {
       if (epoch !== weatherManualGeoEpochRef.current) return;
       if (latestSettingsRef.current.weatherAutoGeo) {
         return;
@@ -1057,9 +1076,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         setGeoStatus(null);
         void persist((cur) => ({
           ...cur,
-          weatherLat: outcome.latitude,
-          weatherLon: outcome.longitude,
-          weatherGeoAdjusted: true,
+          ...patchHudGeoCoords(outcome.latitude, outcome.longitude),
         }));
         return;
       }
@@ -1078,15 +1095,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     }
     let cancelled = false;
     setGeoStatus("detecting");
-    runOneShotWeatherGeolocation(navigator.geolocation, (outcome) => {
+    runOneShotHudGeolocation(navigator.geolocation, (outcome) => {
       if (cancelled) return;
       if (outcome.kind === "ok") {
         setGeoStatus(null);
         void persist((cur) => ({
           ...cur,
-          weatherLat: outcome.latitude,
-          weatherLon: outcome.longitude,
-          weatherGeoAdjusted: true,
+          ...patchHudGeoCoords(outcome.latitude, outcome.longitude),
         }));
         return;
       }
@@ -1134,6 +1149,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       ),
     [settings.notePanels, settings.notePanelsByDisplay, displayLayoutKey],
   );
+
+  const effectiveWidgets = useMemo(
+    () => resolveWidgetsForDisplay(settings.widgets, settings.widgetsByDisplay, displayLayoutKey),
+    [settings.widgets, settings.widgetsByDisplay, displayLayoutKey],
+  );
+
+  const displayLayoutLabel = useMemo(() => formatHudDisplayLayoutLabel(), [displayLayoutKey]);
 
   const commitHudPanel = useCallback(
     (id: THudPanelId, pos: IHudPanelPosition) => {
@@ -1195,7 +1217,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     );
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
     const planInput = {
-      widgets: snap.widgets,
+      widgets: resolveWidgetsForDisplay(snap.widgets, snap.widgetsByDisplay, displayKey),
       hudPanelPositions: effectiveHud,
       pluginDeckVisible: snap.importedPlugins.some((p) => p.enabled),
       notesListPanelVisible: resolveNotesListPanelVisible(
@@ -1433,16 +1455,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const systemStatusCtx = useMemo(
     () => ({
-      focusMode: settings.preset === "focus",
-      chaotic: settings.hudLayoutChaotic,
+      preset: settings.preset,
       humorEnabled: settings.humorEnabled,
       humorIntensity: settings.humorIntensity,
-      enabledWidgetCount: countEnabledWidgets(settings.widgets),
+      enabledWidgetCount: countEnabledWidgets(effectiveWidgets),
       noteCount: settings.notes.length,
       openTodoCount: settings.todos.filter((item) => !item.done).length,
       lightTheme: settings.themeMode === "light",
     }),
-    [settings],
+    [settings, effectiveWidgets],
   );
 
   const backgroundPositionStr = useMemo(() => {
@@ -1503,7 +1524,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
   }, [shellStyle]);
 
-  const humorBannerWidgetOn = settings.widgets.humorBanner;
+  const humorBannerWidgetOn = effectiveWidgets.humorBanner;
   const [bannerLine, setBannerLine] = useState<string | null>(null);
   useEffect(() => {
     if (!humorBannerWidgetOn) {
@@ -1534,6 +1555,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const effectiveClockHourFormat = useMemo(
     () => resolveEffectiveClockHourFormat(s),
     [s.clockHourFormat, s.clockHourFormatAuto],
+  );
+  const hudGeo = useMemo(
+    () => resolveHudGeoLocation(s),
+    [s.weatherLat, s.weatherLon, s.weatherGeoAdjusted, s.weatherAutoGeo],
   );
   /** WebKit/Safari often emits `input` while the system color panel is open; `change` alone can leave the inline swatch stale. */
   const onBackgroundSolidColorChange = useCallback(
@@ -1634,7 +1659,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   };
 
   const toggleWidget = (k: TWidgetKey, on: boolean) => {
-    void persist((cur) => ({ ...cur, widgets: { ...cur.widgets, [k]: on } }));
+    void persist((cur) => ({
+      ...cur,
+      widgetsByDisplay: patchWidgetsForDisplay(cur.widgetsByDisplay, displayLayoutKeyRef.current, {
+        [k]: on,
+      }),
+    }));
   };
 
   const togglePack = (id: string, on: boolean) => {
@@ -2002,12 +2032,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   >
                     <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
                     <p className="settings-welcome-lead">
-                      This new tab is a small HUD you control: turn widgets on or off, pick a theme
-                      and background, tune the humor strip, import plugins, and more—all in this
-                      dialog.
+                      This new tab is a HUD you control—widgets, theme, humor, plugins, and more.
+                      Tabocalypse ships in <strong>Chaotic</strong> mode (spicy jokes on).
                     </p>
                     <p className="settings-welcome-note">
-                      Start with{" "}
+                      Need a quieter HUD? Open{" "}
+                      <HudTip tip="Jump to the Chaos section">
+                        <button
+                          type="button"
+                          className="linkish p-0"
+                          onClick={openChaosSettingsSection}
+                          aria-label="Open Settings and jump to the Chaos section"
+                        >
+                          Settings &gt; Chaos
+                        </button>
+                      </HudTip>{" "}
+                      and pick <strong>Focus</strong> for productivity. Turn panels on under{" "}
                       <HudTip tip="Jump to the Widgets section">
                         <button
                           type="button"
@@ -2017,8 +2057,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         >
                           Settings &gt; Widgets
                         </button>
-                      </HudTip>{" "}
-                      to turn panels on, then{" "}
+                      </HudTip>
+                      , then grant{" "}
                       <HudTip tip="Jump to Optional permissions">
                         <button
                           type="button"
@@ -2055,16 +2095,39 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <span className="acc-title">Widgets</span>
                     </summary>
                     <div className="acc-body">
-                      {(Object.keys(s.widgets) as TWidgetKey[]).map((k) => (
+                      <p className="muted sm mb-2 mt-0">
+                        Choose which HUD panels appear on this monitor ({displayLayoutLabel}). Each
+                        screen keeps its own list; synced defaults apply until you change a toggle
+                        here.
+                      </p>
+                      {(Object.keys(effectiveWidgets) as TWidgetKey[]).map((k) => (
                         <label key={k} className="check-row">
                           <input
                             type="checkbox"
-                            checked={s.widgets[k]}
+                            checked={effectiveWidgets[k]}
                             onChange={(e) => toggleWidget(k, e.target.checked)}
                           />
                           <span>{WIDGET_LABELS[k]}</span>
                         </label>
                       ))}
+                      {hasWidgetsDisplayOverride(s.widgetsByDisplay, displayLayoutKey) ? (
+                        <button
+                          type="button"
+                          className="btn has-icon mt-3"
+                          onClick={() =>
+                            void persist((cur) => ({
+                              ...cur,
+                              widgetsByDisplay: resetWidgetsForDisplay(
+                                cur.widgetsByDisplay,
+                                displayLayoutKeyRef.current,
+                              ),
+                            }))
+                          }
+                        >
+                          <LayoutGrid size={18} strokeWidth={2} aria-hidden />
+                          <span>Reset widgets on this monitor</span>
+                        </button>
+                      ) : null}
                     </div>
                   </details>
 
@@ -2703,8 +2766,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </summary>
                     <div className="acc-body">
                       <p className="muted sm mb-2 mt-0">
-                        Location and units for the Weather widget. Turn Weather on under Widgets if
-                        you use it.
+                        Shared latitude and longitude for Weather, Clock, and other geo-based HUD
+                        panels. Turn Weather on under Widgets if you use it.
                       </p>
                       {s.weatherAutoGeo ? (
                         <p className="muted sm mb-2">
@@ -2721,8 +2784,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       )}
                       {!s.weatherGeoAdjusted ? (
                         <p className="mb-3 mt-0 text-xs leading-tight text-[var(--color-accent2)]">
-                          Weather is still using the default GEO location. Update the coordinates or
-                          run a browser location lookup so the forecast matches your area.
+                          HUD location is still using the default GEO coordinates. Update them or
+                          run a browser location lookup so Weather, Clock, and related panels match
+                          your area.
                         </p>
                       ) : null}
                       <div className="row">
@@ -2737,8 +2801,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               const v = Number(e.target.value);
                               void persist((cur) => ({
                                 ...cur,
-                                weatherLat: v,
-                                weatherGeoAdjusted: true,
+                                ...patchHudGeoManualCoord("lat", v),
                               }));
                             }}
                           />
@@ -2754,8 +2817,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               const v = Number(e.target.value);
                               void persist((cur) => ({
                                 ...cur,
-                                weatherLon: v,
-                                weatherGeoAdjusted: true,
+                                ...patchHudGeoManualCoord("lon", v),
                               }));
                             }}
                           />
@@ -2769,9 +2831,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                 type="button"
                                 className="btn primary has-icon"
                                 disabled={geoStatus === "detecting"}
-                                aria-label="Use my location once to set latitude and longitude for weather"
+                                aria-label="Use my location once to set shared HUD latitude and longitude"
                                 onClick={() => {
-                                  fetchWeatherLocationOnce();
+                                  fetchHudLocationOnce();
                                 }}
                               >
                                 <LocateFixed size={18} strokeWidth={2} aria-hidden />
@@ -2945,10 +3007,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       )}
                       <p className="muted sm mb-2 mt-4">Device location for region</p>
                       <p className="muted text-xs mb-2 mt-0">
-                        When on, auto region prefers coordinates from Weather (after a location
+                        When on, auto region prefers the shared HUD coordinates (after a location
                         lookup). Does not enable continuous tracking.
                       </p>
-                      <HudTip tip="Use saved weather coordinates or a one-time browser lookup for country">
+                      <HudTip tip="Use shared HUD coordinates or a one-time browser lookup for country">
                         <button
                           type="button"
                           className={s.balancedNewsUseDeviceGeo ? "btn primary" : "btn"}
@@ -3022,15 +3084,64 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </details>
 
                   <details
+                    ref={chaosSettingsSectionRef}
                     className="acc-item"
-                    open={settingsAccordionIsOpen("chaos")}
-                    onToggle={onSettingsAccordionToggle("chaos")}
+                    open={settingsAccordionIsOpen("chaos", true)}
+                    onToggle={onSettingsAccordionToggle("chaos", true)}
                   >
                     <summary className="acc-summary">
                       <span className="acc-title">Chaos</span>
                     </summary>
                     <div className="acc-body">
-                      <label className="check-row">
+                      <fieldset className="m-0 min-w-0 border-0 p-0">
+                        <legend className="text-sm font-medium">Personality</legend>
+                        <p className="muted sm mb-2 mt-1">
+                          Chaotic is the default hook. Pick Focus for jokes off and a quieter HUD.
+                        </p>
+                        <div className="row wrap">
+                          <button
+                            type="button"
+                            className={
+                              s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"
+                            }
+                            aria-pressed={s.preset === "chaos"}
+                            onClick={() => void persist((cur) => applyPreset("chaos", cur))}
+                          >
+                            <Flame size={18} strokeWidth={2} aria-hidden />
+                            <span>Chaotic</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={
+                              s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
+                            }
+                            aria-pressed={s.preset === "balanced"}
+                            onClick={() => void persist((cur) => applyPreset("balanced", cur))}
+                          >
+                            <Scale size={18} strokeWidth={2} aria-hidden />
+                            <span>Balanced</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={
+                              s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"
+                            }
+                            aria-pressed={s.preset === "focus"}
+                            onClick={() => void persist((cur) => applyPreset("focus", cur))}
+                          >
+                            <Target size={18} strokeWidth={2} aria-hidden />
+                            <span>Focus</span>
+                          </button>
+                        </div>
+                        <p className="muted sm mt-2 mb-0" role="status">
+                          {s.preset === "focus"
+                            ? "Focus — jokes off; Search and Clock on."
+                            : s.preset === "balanced"
+                              ? "Balanced — mild jokes and the humor strip on."
+                              : "Chaotic — spicy jokes and the humor strip on."}
+                        </p>
+                      </fieldset>
+                      <label className="check-row mt-3">
                         <input
                           type="checkbox"
                           checked={s.humorEnabled}
@@ -3041,12 +3152,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         />
                         <span>Humor on</span>
                       </label>
-                      <fieldset className="m-0 min-w-0 border-0 p-0">
+                      <fieldset className="m-0 min-w-0 border-0 p-0 mt-2">
                         <legend className="text-sm font-medium">Built-in voice</legend>
                         <p className="muted sm mb-2 mt-1">
-                          Pick one specialty voice, or default to mix the built-in packs you toggle
-                          below. Your lines and imported packs still mix in. Use “Include Classic
-                          jargon” to blend glossary-style lines with Gen-Z or your pack mix.
+                          Specialty voice or pack mix. Your lines and imports still blend in.
                         </p>
                         <div className="flex flex-col gap-1">
                           <label className="check-row">
@@ -3102,7 +3211,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </label>
                       ) : null}
                       <p className="muted sm -mt-1 mb-2">
-                        Classic jargon uses satirical business-term definitions (the same spirit as{" "}
+                        Classic jargon: satirical business terms (
                         <HudTip tip="Open Unsuck It Classics in a new browser tab">
                           <button
                             type="button"
@@ -3112,7 +3221,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             Unsuck It — Classics
                           </button>
                         </HudTip>
-                        ). Specialty voices ignore the built-in pack toggles below.
+                        ). Specialty voices skip pack toggles below.
                       </p>
                       <label className="block">
                         Intensity
@@ -3128,9 +3237,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       </label>
                       <div className="mt-3 flex flex-col gap-2">
                         <p className="muted sm m-0">
-                          Built-in humor lines refresh from the web about once a week (Classic
-                          jargon from Unsuck It; optional pack JSON when configured at build time).
-                          Bundled copy is used if a refresh fails.
+                          Built-in lines refresh weekly from the web; bundled copy if refresh fails.
                         </p>
                         {humorRefreshStatus ? (
                           <p className="muted sm m-0" role="status">
@@ -3184,7 +3291,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           </button>
                         </HudTip>
                       </div>
-                      <p className="muted sm">Builtin packs (filtered for built-in lines only):</p>
+                      <p className="muted sm">Built-in packs:</p>
                       {BUILTIN_PACKS.map((p) => (
                         <label key={p.id} className="check-row">
                           <input
@@ -3199,8 +3306,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </label>
                       ))}
                       <p className="muted sm mt-3">
-                        Your own lines (one per line) are mixed with the packs you enable — same
-                        pool as the banner and the clock roast. Saved locally as you type.
+                        One line per row. Mixed with enabled packs for the banner and clock roast.
                       </p>
                       <label htmlFor="tabocalypse-my-lines" className="block mt-2">
                         <span className="muted sm">Your lines</span>
@@ -3213,76 +3319,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           onChange={(e) => scheduleMyLinesPersist(e.target.value.split("\n"))}
                         />
                       </label>
-                    </div>
-                  </details>
-
-                  <details
-                    className="acc-item"
-                    open={settingsAccordionIsOpen("presets")}
-                    onToggle={onSettingsAccordionToggle("presets")}
-                  >
-                    <summary className="acc-summary">
-                      <span className="acc-title">Presets</span>
-                    </summary>
-                    <div className="acc-body">
-                      <p className="muted sm mb-2">
-                        Applies right away. Adjusts jokes, the humor strip, and some widget toggles.
-                        Panel snap vs chaotic layout stays under Panel layout and the header shuffle
-                        button. New installs default to Chaos. Theme, background, and the rest of
-                        Appearance are unchanged.
-                      </p>
-                      <div className="row wrap">
-                        <button
-                          type="button"
-                          className={s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"}
-                          aria-pressed={s.preset === "chaos"}
-                          onClick={() => void persist((cur) => applyPreset("chaos", cur))}
-                        >
-                          <Flame size={18} strokeWidth={2} aria-hidden />
-                          <span>Chaos</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={
-                            s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
-                          }
-                          aria-pressed={s.preset === "balanced"}
-                          onClick={() => void persist((cur) => applyPreset("balanced", cur))}
-                        >
-                          <Scale size={18} strokeWidth={2} aria-hidden />
-                          <span>Balanced</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"}
-                          aria-pressed={s.preset === "focus"}
-                          onClick={() => void persist((cur) => applyPreset("focus", cur))}
-                        >
-                          <Target size={18} strokeWidth={2} aria-hidden />
-                          <span>Focus</span>
-                        </button>
-                      </div>
-                      <div className="muted sm mt-3 flex flex-col gap-1.5">
-                        <p className="m-0">
-                          <span className="text-text">Chaos</span>
-                          {" — "}
-                          Default personality for Tabocalypse: spicier jokes and the humor strip on;
-                          other widgets stay as they are. Snap vs chaotic HUD is independent—use
-                          Panel layout or the header shuffle control.
-                        </p>
-                        <p className="m-0">
-                          <span className="text-text">Balanced</span>
-                          {" — "}
-                          Mild jokes and the humor strip on. Widget toggles merge defaults with
-                          yours.
-                        </p>
-                        <p className="m-0">
-                          <span className="text-text">Focus</span>
-                          {" — "}
-                          Turns jokes off, hides the humor strip, and switches Search and Clock on.
-                          Other widgets keep their current toggles.
-                        </p>
-                      </div>
                     </div>
                   </details>
 
@@ -3379,6 +3415,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           </p>
                         </>
                       ) : null}
+                      <p className="muted sm mb-2">
+                        Panel positions are saved per monitor. Reset applies to the screen where
+                        this settings window is open ({displayLayoutLabel}).
+                      </p>
                       <button
                         type="button"
                         className="btn has-icon mt-3"
@@ -3432,7 +3472,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, topSites: false },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { topSites: false },
+                                  ),
                                 }));
                               }
                             } else {
@@ -3442,7 +3486,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, topSites: true },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { topSites: true },
+                                  ),
                                 }));
                               }
                             }
@@ -3471,7 +3519,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, bookmarksStrip: false },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { bookmarksStrip: false },
+                                  ),
                                 }));
                               }
                             } else {
@@ -3481,7 +3533,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, bookmarksStrip: true },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { bookmarksStrip: true },
+                                  ),
                                 }));
                               }
                             }
@@ -3510,7 +3566,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, tabGuilt: false },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { tabGuilt: false },
+                                  ),
                                 }));
                               }
                             } else {
@@ -3520,7 +3580,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               if (ok) {
                                 await persist((cur) => ({
                                   ...cur,
-                                  widgets: { ...cur.widgets, tabGuilt: true },
+                                  widgetsByDisplay: patchWidgetsForDisplay(
+                                    cur.widgetsByDisplay,
+                                    displayLayoutKeyRef.current,
+                                    { tabGuilt: true },
+                                  ),
                                 }));
                               }
                             }
@@ -3534,15 +3598,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               : "Enable Tab guilt (tabs)"}
                           </span>
                         </button>
-                        <HudTip tip="When on, saves latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
+                        <HudTip tip="When on, saves shared HUD latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
                           <button
                             type="button"
                             className="btn has-icon"
                             disabled={geoStatus === "detecting"}
                             aria-label={
                               s.weatherAutoGeo
-                                ? "Turn off automatic weather location on each tab"
-                                : "Turn on automatic weather location each new Tabocalypse tab"
+                                ? "Turn off automatic HUD location on each tab"
+                                : "Turn on automatic HUD location each new Tabocalypse tab"
                             }
                             onClick={() => {
                               if (s.weatherAutoGeo) {
@@ -3559,8 +3623,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               {geoStatus === "detecting"
                                 ? "Updating location…"
                                 : s.weatherAutoGeo
-                                  ? "Turn off automatic weather location"
-                                  : "Turn on automatic weather location"}
+                                  ? "Turn off automatic HUD location"
+                                  : "Turn on automatic HUD location"}
                             </span>
                           </button>
                         </HudTip>
@@ -4117,18 +4181,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             <div>
               <h1 className="title">Tabocalypse</h1>
               <SystemStatusTagline ctx={systemStatusCtx} />
-              {s.widgets.humorBanner && bannerLine && !s.widgets.search ? (
+              {effectiveWidgets.humorBanner && bannerLine && !effectiveWidgets.search ? (
                 <p className="humor-banner-snark mt-1" role="note">
                   {bannerLine}
                 </p>
-              ) : s.widgets.humorBanner && bannerLine && s.widgets.search ? (
+              ) : effectiveWidgets.humorBanner && bannerLine && effectiveWidgets.search ? (
                 <p className="humor-banner-snark mt-1 lg:hidden" role="note">
                   {bannerLine}
                 </p>
               ) : null}
             </div>
           </div>
-          {s.widgets.search ? (
+          {effectiveWidgets.search ? (
             <SearchWidget
               engine={s.searchEngine}
               assistActive={s.searchAssistActive}
@@ -4137,7 +4201,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               }}
               humorEnabled={s.humorEnabled}
               humorIntensity={s.humorIntensity}
-              humorBannerLine={s.widgets.humorBanner ? bannerLine : null}
+              humorBannerLine={effectiveWidgets.humorBanner ? bannerLine : null}
               variant="header"
             />
           ) : null}
@@ -4353,7 +4417,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               <HudAutoRepositionSync
                 canvasRef={hudCanvasRef}
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
-                widgets={s.widgets}
+                widgets={effectiveWidgets}
                 hudPanelPositions={effectiveHudPanelPositions}
                 notePanels={effectiveNotePanels}
                 pluginDeckVisible={s.importedPlugins.some((p) => p.enabled)}
@@ -4361,7 +4425,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 onLayout={applyAutoHudLayout}
               />
               <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
-              {s.widgets.todo ? (
+              {effectiveWidgets.todo ? (
                 <DraggableHudPanel
                   key="todo"
                   panelId="todo"
@@ -4377,7 +4441,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.clock ? (
+              {effectiveWidgets.clock ? (
                 <DraggableHudPanel
                   key="clock"
                   panelId="clock"
@@ -4390,13 +4454,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <ClockWidget
                     locale={hudNumberLocale}
                     hourFormat={effectiveClockHourFormat}
+                    lat={hudGeo.lat}
+                    lon={hudGeo.lon}
+                    showGeoAccuracyHint={!hudGeo.geoAdjusted}
+                    onOpenGeoSettings={openWeatherSettingsSection}
                     onSelectHourFormat={(clockHourFormat) =>
                       void persist((cur) => ({ ...cur, clockHourFormat }))
                     }
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.tabGuilt ? (
+              {effectiveWidgets.tabGuilt ? (
                 <DraggableHudPanel
                   key="tabGuilt"
                   panelId="tabGuilt"
@@ -4412,7 +4480,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.weather ? (
+              {effectiveWidgets.weather ? (
                 <DraggableHudPanel
                   key="weather"
                   panelId="weather"
@@ -4423,9 +4491,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   onCommit={(pos) => commitHudPanel("weather", pos)}
                 >
                   <WeatherWidget
-                    lat={s.weatherLat}
-                    lon={s.weatherLon}
-                    showGeoAccuracyHint={!s.weatherGeoAdjusted}
+                    lat={hudGeo.lat}
+                    lon={hudGeo.lon}
+                    showGeoAccuracyHint={!hudGeo.geoAdjusted}
                     onOpenWeatherSettings={openWeatherSettingsSection}
                     effectiveTemperatureUnit={effectiveWeatherTemperatureUnit}
                     displayLocale={hudNumberLocale}
@@ -4442,14 +4510,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     }
                     lakesEmbedEnabled={s.weatherLakesEmbedEnabled}
                     panelView={s.weatherPanelView}
-                    tenDayLayout={s.weatherTenDayLayout}
                     onSelectPanelView={(weatherPanelView) =>
                       void persist((cur) => ({ ...cur, weatherPanelView }))
                     }
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.balancedNews ? (
+              {effectiveWidgets.balancedNews ? (
                 <DraggableHudPanel
                   key="balancedNews"
                   panelId="balancedNews"
@@ -4466,9 +4533,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     balancedNewsCategory={s.balancedNewsCategory}
                     balancedNewsTopicCount={s.balancedNewsTopicCount}
                     balancedNewsApiKey={s.balancedNewsApiKey}
-                    weatherGeoAdjusted={s.weatherGeoAdjusted}
-                    weatherLat={s.weatherLat}
-                    weatherLon={s.weatherLon}
+                    hudGeo={hudGeo}
                     displayLocale={hudNumberLocale}
                     onOpenBalancedNewsSettings={openBalancedNewsSettingsSection}
                     onSelectCategory={(balancedNewsCategory) =>
@@ -4477,7 +4542,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.crypto ? (
+              {effectiveWidgets.crypto ? (
                 <DraggableHudPanel
                   key="crypto"
                   panelId="crypto"
@@ -4498,7 +4563,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.speedTest ? (
+              {effectiveWidgets.speedTest ? (
                 <DraggableHudPanel
                   key="speedTest"
                   panelId="speedTest"
@@ -4511,7 +4576,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <SpeedTestWidget displayLocale={hudNumberLocale} />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.aiChat ? (
+              {effectiveWidgets.aiChat ? (
                 <DraggableHudPanel
                   key="aiChat"
                   panelId="aiChat"
@@ -4538,7 +4603,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.topSites ? (
+              {effectiveWidgets.topSites ? (
                 <DraggableHudPanel
                   key="topSites"
                   panelId="topSites"
@@ -4554,7 +4619,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.bookmarksStrip ? (
+              {effectiveWidgets.bookmarksStrip ? (
                 <DraggableHudPanel
                   key="bookmarksStrip"
                   panelId="bookmarksStrip"
@@ -4583,7 +4648,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   <PluginDeck plugins={s.importedPlugins} debug={s.debugPluginSource} />
                 </DraggableHudPanel>
               ) : null}
-              {s.widgets.notes ? (
+              {effectiveWidgets.notes ? (
                 <>
                   <StickyNoteLayer
                     canvasRef={hudCanvasRef}

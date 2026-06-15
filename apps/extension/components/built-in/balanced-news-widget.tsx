@@ -36,6 +36,7 @@ import {
 } from "../../lib/news/resolve-topic-preview-placement";
 import { normalizeNewsTopicRoundup } from "../../lib/news/normalize-balanced-news-snapshot";
 import { resolveBalancedNewsCountry } from "../../lib/news/resolve-balanced-news-region";
+import type { IHudGeoLocation } from "../../lib/hud-geo-location";
 import type { TPeapixBingCountry } from "../../lib/bing-wallpaper-country";
 
 const TOPIC_PREVIEW_WIDTH_PX = 320;
@@ -378,9 +379,7 @@ export function BalancedNewsWidget({
   balancedNewsCategory,
   balancedNewsTopicCount,
   balancedNewsApiKey,
-  weatherGeoAdjusted,
-  weatherLat,
-  weatherLon,
+  hudGeo,
   displayLocale,
   onOpenBalancedNewsSettings,
   onSelectCategory,
@@ -391,9 +390,7 @@ export function BalancedNewsWidget({
   balancedNewsCategory: TBalancedNewsCategory;
   balancedNewsTopicCount: number;
   balancedNewsApiKey: string;
-  weatherGeoAdjusted: boolean;
-  weatherLat: number;
-  weatherLon: number;
+  hudGeo: IHudGeoLocation;
   displayLocale: string;
   onOpenBalancedNewsSettings: () => void;
   onSelectCategory: (category: TBalancedNewsCategory) => void;
@@ -509,9 +506,7 @@ export function BalancedNewsWidget({
               balancedNewsCountryAuto,
               balancedNewsCountry,
               balancedNewsUseDeviceGeo,
-              weatherGeoAdjusted,
-              weatherLat,
-              weatherLon,
+              hudGeo,
             },
             undefined,
           );
@@ -564,9 +559,7 @@ export function BalancedNewsWidget({
       balancedNewsCountryAuto,
       balancedNewsTopicCount,
       balancedNewsUseDeviceGeo,
-      weatherGeoAdjusted,
-      weatherLat,
-      weatherLon,
+      hudGeo,
     ],
   );
 

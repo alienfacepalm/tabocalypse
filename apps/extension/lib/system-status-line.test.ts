@@ -31,8 +31,7 @@ function sampleWidgets(
 
 function baseCtx(over: Partial<ISystemStatusContext> = {}): ISystemStatusContext {
   return {
-    focusMode: false,
-    chaotic: false,
+    preset: "chaos",
     humorEnabled: true,
     humorIntensity: "mild",
     enabledWidgetCount: 5,
@@ -51,12 +50,16 @@ describe("countEnabledWidgets", () => {
 });
 
 describe("resolveSystemStatusTelemetry", () => {
-  it("returns a non-empty telemetry string", () => {
-    expect(resolveSystemStatusTelemetry(baseCtx())).toMatch(/^[A-Z0-9_]+: .+/);
+  it("returns a non-empty telemetry string in chaos preset", () => {
+    expect(resolveSystemStatusTelemetry(baseCtx({ preset: "chaos" }))).toMatch(/^[A-Z0-9_]+: .+/);
   });
 
-  it("adds chaotic layout lines to the pool when chaotic is on", () => {
-    const pool = buildSystemStatusTelemetryPool(baseCtx({ chaotic: true }));
+  it("returns empty telemetry in balanced preset", () => {
+    expect(resolveSystemStatusTelemetry(baseCtx({ preset: "balanced" }))).toBe("");
+  });
+
+  it("adds chaos personality lines to the pool when preset is chaos", () => {
+    const pool = buildSystemStatusTelemetryPool(baseCtx({ preset: "chaos" }));
     expect(pool).toContain("LAYOUT: CHAOTIC");
     expect(pool).toContain("GRID_SNAP: DISABLED");
   });
@@ -71,8 +74,8 @@ describe("resolveSystemStatusTelemetry", () => {
     expect(pool).toContain("HUMOR_SUBSYSTEM: OFFLINE");
   });
 
-  it("returns empty telemetry in focus mode", () => {
-    expect(resolveSystemStatusTelemetry(baseCtx({ focusMode: true }))).toBe("");
+  it("returns empty telemetry in focus preset", () => {
+    expect(resolveSystemStatusTelemetry(baseCtx({ preset: "focus" }))).toBe("");
   });
 });
 

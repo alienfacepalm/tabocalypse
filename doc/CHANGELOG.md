@@ -12,13 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
-
-- **Header status line** under the Tabocalypse title rotates HUD telemetry every few minutes; **Chaotic layout** adds heavier glitch animations. **Focus** personality keeps the line static with no motion.
-- **Weather** widget **10 Day** stacked layout shows full weekday names (for example **Sunday**); narrow horizontal columns still use short labels (for example **Sun**).
-
 ### Added
 
+- **Settings > Widgets** — widget toggles apply per monitor; each screen keeps its own panel list layered on synced defaults, with **Reset widgets on this monitor** when you have local overrides.
 - **Speed test** widget: **Last run** in the panel header shows your most recent completed down/up result and updates after each successful test (saved on this device).
 - **Weather** widget: Open-Meteo forecast and **2 Lakes** buoy readings are saved on this device after a successful load; when a service is down, the last saved data is shown with a clear “saved / not live” notice instead of an empty panel (when no saved data exists, the existing error and retry UI still appears).
 - **Settings > Experimental** — opt-in checkboxes for in-development features (all off by default). Weather HUD streak and points are behind **Weather HUD streak & points** until you enable it.
@@ -32,26 +28,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Weather** and **2 Lakes** panels: temperature values use the 2lakes.app color scale (cold indigo/blue through hot red); hover a 10-day weekday label for the full date and condition.
 - **Weather** 10-day expanded rows: small icons beside precip, wind, feels-like, UV, and sunrise/sunset metrics.
 - **2 Lakes** buoy panel: when no active buoy data is returned, a link to 2lakes.app opens in a new tab so you can verify readings on the source site.
-
-### Fixed
-
-- **Bing wallpaper** attribution appears in the bottom-left of the page footer instead of floating over HUD panels.
-- **Weather** widget **Forecast** tab: Wikipedia “On this day” trivia loads again (Wikimedia requires zero-padded month/day in the feed URL); the section stays hidden when trivia cannot be fetched.
-- **Header search** with **Humor banner** on no longer pushes search action buttons or HUD toolbar controls below the top bar; the bar grows to fit and HUD panels stay clear of the header.
-- **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.
-- **New tab HUD** on wide monitors: widget columns now expand to use horizontal space instead of leaving large gutters with truncated text inside fixed-width panels.
-- **2 Lakes** buoy panel: active King County buoys still appear when water temperature is temporarily missing (shows **Live sensor (water temp missing)** with an amber status indicator and explanatory copy aligned with 2lakes.app, instead of **NO RECENT DATA** or a full error).
-- **Settings > Import pack** — disclaimer under **Choose file** has clearer spacing from the section border.
-- **Settings > Feedback** — **Use email app** mailto links now use `%20` for spaces instead of `+`, so subject and body text open correctly in Mail for Windows and other clients.
-- **Weather** and other privileged-fetch panels no longer show raw allowlist errors; users get reload instructions with a link to the browser extensions page instead.
-- **Weather** 10-day high/low temperatures now reliably show the 2lakes.app color scale (each value colored independently).
-- **Weather** widget location map: the pin stays centered in the map view when the panel is resized instead of drifting toward the bottom edge.
-- **Weather** Forecast tab: detail rows under the current temperature now show right-now readings (feels like, wind, humidity) instead of daily high/low and other today-wide aggregates.
-- **Weather** widget location map: lakes and rivers now appear on the map (hybrid satellite layer) instead of a pale road-only view that could omit nearby water bodies.
 - **Classic jargon** humor voice and a built-in glossary pack (**Unsuck It Classics**), embedded via the maintainer scraper workflow.
 
 ### Changed
 
+- **Clock** and **Weather** (and other geo-based HUD panels) share one saved latitude/longitude; the Clock shows time and timezone for those coordinates instead of the browser’s default timezone alone.
+- **Settings > Weather** — coordinate controls apply to all geo-based panels (Clock, Weather, Balanced News device region, …); optional-permissions copy refers to shared HUD location.
+- **Settings > Chaos** — personality modes (Chaotic, Balanced, Focus) live in one section instead of a separate Presets panel; copy is shorter so lines do not wrap as much. First-run welcome points to Focus for productivity.
+- **Header status line** under the Tabocalypse title follows personality preset: **Balanced** shows `SYSTEM_STABLE: FALSE` with a slow pulse on **FALSE**; **Chaos** adds rotating telemetry and aggressive glitch animations; **Focus** hides the line entirely.
+- **Weather** widget **10 Day** view always stacks days vertically with full weekday names, even when the panel is wide.
 - **Weather** widget location map: requests tiles sized to the panel width (height follows) so the pin-centered view fills the available space.
 - **Weather** widget: daily streak counter and points in Forecast are hidden until you turn on **Settings > Experimental > Weather HUD streak & points**; On this day trivia stays available either way.
 - Settings: removed the standalone **Debug** section (the plugin widget-type overlay was a maintainer-only aid and is no longer exposed in the dialog).
@@ -67,6 +52,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Weather** location map loads reliably after a fresh new-tab reload instead of staying blank when layout or the image cache completes before the panel measures.
+- **Weather** widget **10 Day** no longer switches to a horizontal scrolling row when the panel is resized wider.
+- **Bing wallpaper** attribution appears in the bottom-left of the page footer instead of floating over HUD panels.
+- **Weather** widget **Forecast** tab: Wikipedia “On this day” trivia loads again (Wikimedia requires zero-padded month/day in the feed URL); the section stays hidden when trivia cannot be fetched.
+- **Header search** with **Humor banner** on no longer pushes search action buttons or HUD toolbar controls below the top bar; the bar grows to fit and HUD panels stay clear of the header.
+- **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.
+- **New tab HUD** on wide monitors: widget columns now expand to use horizontal space instead of leaving large gutters with truncated text inside fixed-width panels.
+- **2 Lakes** buoy panel: active King County buoys still appear when water temperature is temporarily missing (shows **Live sensor (water temp missing)** with an amber status indicator and explanatory copy aligned with 2lakes.app, instead of **NO RECENT DATA** or a full error).
+- **Settings > Import pack** — disclaimer under **Choose file** has clearer spacing from the section border.
+- **Settings > Feedback** — **Use email app** mailto links now use `%20` for spaces instead of `+`, so subject and body text open correctly in Mail for Windows and other clients.
+- **Weather** and other privileged-fetch panels no longer show raw allowlist errors; users get reload instructions with a link to the browser extensions page instead.
+- **Weather** 10-day high/low temperatures now reliably show the 2lakes.app color scale (each value colored independently).
+- **Weather** widget location map: the pin stays centered in the map view when the panel is resized instead of drifting toward the bottom edge.
+- **Weather** Forecast tab: detail rows under the current temperature now show right-now readings (feels like, wind, humidity) instead of daily high/low and other today-wide aggregates.
+- **Weather** widget location map: lakes and rivers now appear on the map (hybrid satellite layer) instead of a pale road-only view that could omit nearby water bodies.
 - **Clock** alarms: fired reminders and test notifications show the reminder text you typed (as the primary OS toast line on Windows); test notifications use the Message field when it is filled in.
 - Link HUD widgets (**Top Sites** and **Bookmarks**) refetch when optional host permissions change, so granting access no longer leaves stale error placeholders until a full new-tab reload.
 - Restored regressed defaults for **background rotate**, **HUD layout chaotic**, Chaotic labeling, and balanced default HUD widget toggles; **background rotate** defaults to on when settings are absent or invalid.
