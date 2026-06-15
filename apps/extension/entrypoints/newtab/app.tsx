@@ -43,6 +43,7 @@ import {
   matchByoAiProviderPreset,
 } from "../../lib/byo-ai-provider-options";
 import { testOpenAiCompatible } from "../../lib/openai-compatible-chat";
+import { BingWallpaperFooterAttribution } from "../../components/bing-wallpaper-caption";
 import { DraggableHudPanel } from "../../components/draggable-hud-panel";
 import { HudCanvasGrid } from "../../components/hud-canvas-grid";
 import {
@@ -140,6 +141,8 @@ import {
 import { BALANCED_NEWS_CATEGORY_LABELS } from "../../lib/news/balanced-news-labels";
 import type { IHumorContext } from "../../lib/humor/engine";
 import { resolveHumorBannerLine } from "../../lib/humor/engine";
+import { countEnabledWidgets } from "../../lib/system-status-line";
+import { SystemStatusTagline } from "../../components/system-status-tagline";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
 import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
 import { getSupportActions, openExternal } from "../../lib/support-links";
@@ -1424,6 +1427,20 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       importedPacks: settings.importedPacks,
       myLines: settings.myLines,
       locale: navigator.language,
+    }),
+    [settings],
+  );
+
+  const systemStatusCtx = useMemo(
+    () => ({
+      focusMode: settings.preset === "focus",
+      chaotic: settings.hudLayoutChaotic,
+      humorEnabled: settings.humorEnabled,
+      humorIntensity: settings.humorIntensity,
+      enabledWidgetCount: countEnabledWidgets(settings.widgets),
+      noteCount: settings.notes.length,
+      openTodoCount: settings.todos.filter((item) => !item.done).length,
+      lightTheme: settings.themeMode === "light",
     }),
     [settings],
   );
@@ -4099,7 +4116,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           <div className="flex items-center gap-4">
             <div>
               <h1 className="title">Tabocalypse</h1>
-              <p className="tagline">SYSTEM_STABLE: FALSE</p>
+              <SystemStatusTagline ctx={systemStatusCtx} />
               {s.widgets.humorBanner && bannerLine && !s.widgets.search ? (
                 <p className="humor-banner-snark mt-1" role="note">
                   {bannerLine}
@@ -4713,18 +4730,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           </div>
         </main>
 
-        {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
-          <p
-            className="bing-wallpaper-caption pointer-events-none fixed right-4 z-[42] max-w-[min(28rem,calc(100vw-2rem))] text-right text-sm leading-snug"
-            style={{ bottom: "calc(var(--hud-footer-reserve) + 0.5rem)" }}
-            aria-live="polite"
-          >
-            {bingWallpaperCaption}
-          </p>
-        ) : null}
-
         <footer className="footer muted sm">
-          <div className="row wrap gap-3">
+          {s.backgroundKind === "bing" && bingPaintUrl && bingWallpaperCaption ? (
+            <BingWallpaperFooterAttribution caption={bingWallpaperCaption} />
+          ) : null}
+          <div className="footer-actions row wrap gap-3">
             {supportActions.map((action) => (
               <button
                 key={`${action.url}-${action.label}`}

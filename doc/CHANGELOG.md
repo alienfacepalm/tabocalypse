@@ -12,8 +12,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Header status line** under the Tabocalypse title rotates HUD telemetry every few minutes; **Chaotic layout** adds heavier glitch animations. **Focus** personality keeps the line static with no motion.
+- **Weather** widget **10 Day** stacked layout shows full weekday names (for example **Sunday**); narrow horizontal columns still use short labels (for example **Sun**).
+
 ### Added
 
+- **Speed test** widget: **Last run** in the panel header shows your most recent completed down/up result and updates after each successful test (saved on this device).
 - **Weather** widget: Open-Meteo forecast and **2 Lakes** buoy readings are saved on this device after a successful load; when a service is down, the last saved data is shown with a clear “saved / not live” notice instead of an empty panel (when no saved data exists, the existing error and retry UI still appears).
 - **Settings > Experimental** — opt-in checkboxes for in-development features (all off by default). Weather HUD streak and points are behind **Weather HUD streak & points** until you enable it.
 - **Settings > Changelog** — full release history embedded from the project changelog, updated when the extension version bumps.
@@ -29,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Bing wallpaper** attribution appears in the bottom-left of the page footer instead of floating over HUD panels.
 - **Weather** widget **Forecast** tab: Wikipedia “On this day” trivia loads again (Wikimedia requires zero-padded month/day in the feed URL); the section stays hidden when trivia cannot be fetched.
 - **Header search** with **Humor banner** on no longer pushes search action buttons or HUD toolbar controls below the top bar; the bar grows to fit and HUD panels stay clear of the header.
 - **Humor banner** shows again as a compact snark line above the header search field (no HUD canvas space); it works when **Settings > Widgets > Humor banner** is on even if master humor is off or intensity is set to off.

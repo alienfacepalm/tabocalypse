@@ -134,7 +134,11 @@ function WeatherTenDayRow({
   onToggle: () => void;
 }) {
   const detailsId = useId();
-  const dayLabel = formatWeatherDayLabel(day.date, displayLocale);
+  const dayLabel = formatWeatherDayLabel(
+    day.date,
+    displayLocale,
+    layout === "row" ? "short" : "long",
+  );
   const dayTooltip = formatWeatherDayTooltip(day.date, displayLocale, day.summary);
   const detailRows = buildWeatherTenDayDetailRows(day, temperatureUnit, displayLocale);
   const ariaLabel = `${dayLabel}, high ${formatTemperatureValue(day.high, temperatureUnit, displayLocale)}, low ${formatTemperatureValue(day.low, temperatureUnit, displayLocale)}, ${conditionSummary}`;

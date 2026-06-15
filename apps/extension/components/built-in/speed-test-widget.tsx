@@ -4,6 +4,11 @@
 import { Gauge } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  readSpeedTestLastRun,
+  writeSpeedTestLastRun,
+  type ISpeedTestLastRun,
+} from "../../lib/speed-test/speed-test-last-run-cache";
+import {
   runCloudflareSpeedTest,
   type ISpeedTestProgress,
   type TCloudflareSpeedPhase,
@@ -40,6 +45,7 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
   const [upLive, setUpLive] = useState<number | null>(null);
   const [runProgress, setRunProgress] = useState<ISpeedTestProgress | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [lastRun, setLastRun] = useState<ISpeedTestLastRun | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const mbpsFmt = useMemo(
@@ -54,12 +60,16 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
   const running = phase === "running";
   const progressPct = phaseProgressPct(runProgress);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    let cancelled = false;
+    void readSpeedTestLastRun().then((entry) => {
+      if (!cancelled) setLastRun(entry);
+    });
+    return () => {
+      cancelled = true;
       abortRef.current?.abort();
-    },
-    [],
-  );
+    };
+  }, []);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -94,6 +104,11 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
       setUpMbps(result.uploadMbps);
       setDownLive(result.downloadMbps);
       setUpLive(result.uploadMbps);
+      const cached = await writeSpeedTestLastRun({
+        downloadMbps: result.downloadMbps,
+        uploadMbps: result.uploadMbps,
+      });
+      setLastRun(cached);
       setPhase("done");
       setRunProgress(null);
     } catch (e) {
@@ -118,6 +133,24 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
             <Gauge size={20} strokeWidth={2} className="shrink-0 text-accent" aria-hidden />
             <HudPanelTitleInline>Speed test</HudPanelTitleInline>
           </div>
+          {lastRun ? (
+            <div
+              className="text-right font-mono text-xs leading-tight"
+              aria-label={`Last run: download ${mbpsFmt.format(lastRun.downloadMbps)} megabits per second, upload ${mbpsFmt.format(lastRun.uploadMbps)} megabits per second`}
+            >
+              <div className="font-display text-[10px] font-bold uppercase tracking-widest text-muted">
+                Last run
+              </div>
+              <div className="tabular-nums">
+                <span className="text-accent">{mbpsFmt.format(lastRun.downloadMbps)}</span>
+                <span className="text-muted"> ↓ · </span>
+                <span className="text-[var(--color-accent2)]">
+                  {mbpsFmt.format(lastRun.uploadMbps)}
+                </span>
+                <span className="text-muted"> ↑ Mbps</span>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
       <HudPanelBody>
