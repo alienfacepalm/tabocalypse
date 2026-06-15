@@ -123,7 +123,7 @@
   }
 
   .top-bar {
-    @apply fixed left-0 right-0 top-0 z-40 flex min-h-16 items-end justify-between gap-4 overflow-visible border-b-2 border-accent px-4 pb-2 pt-2;
+    @apply fixed left-0 right-0 top-0 z-40 flex min-h-[4.5rem] items-center justify-between gap-4 overflow-visible border-b-2 border-accent px-4 pb-3 pt-3.5;
     background:
       linear-gradient(
         168deg,
@@ -141,7 +141,7 @@
 
   .header-search {
     /* min-w-0: allow this flex item to shrink so extra toolbar buttons do not overflow the top bar */
-    @apply hidden min-w-0 flex-1 flex-col justify-end gap-1 overflow-visible px-8 lg:flex;
+    @apply hidden min-w-0 flex-1 flex-col justify-center gap-1 overflow-visible px-8 lg:flex;
   }
 
   .search-field-anchor {
