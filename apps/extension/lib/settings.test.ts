@@ -31,6 +31,7 @@ const {
   defaultSettings,
   applyPreset,
   applyChaosPresetHumorHarmony,
+  applyFocusPresetHarmony,
   coercePreset,
   DEFAULT_WIDGETS,
   DEFAULT_EXPERIMENTAL_FEATURES,
@@ -64,7 +65,7 @@ describe("isHudAutoRepositionEnabled", () => {
     ).toBe(false);
   });
 
-  it("allows auto-reposition in chaotic mode when enabled and unlocked", () => {
+  it("allows auto-reposition when enabled and unlocked", () => {
     const base = defaultSettings();
     expect(
       isHudAutoRepositionEnabled({
@@ -210,6 +211,29 @@ describe("coercePreset", () => {
   });
 });
 
+describe("applyFocusPresetHarmony", () => {
+  it("forces humor off and humor banner off", () => {
+    const base = {
+      ...defaultSettings(),
+      preset: "focus" as const,
+      humorEnabled: true,
+      humorIntensity: "spicy" as const,
+      widgets: { ...defaultSettings().widgets, humorBanner: true },
+      widgetsByDisplay: { "1920x1080": { humorBanner: true } },
+    };
+    const next = applyFocusPresetHarmony(base);
+    expect(next.humorEnabled).toBe(false);
+    expect(next.humorIntensity).toBe("off");
+    expect(next.widgets.humorBanner).toBe(false);
+    expect(next.widgetsByDisplay["1920x1080"]?.humorBanner).toBeUndefined();
+  });
+
+  it("does not change non-focus profiles", () => {
+    const base = defaultSettings();
+    expect(applyFocusPresetHarmony(base)).toBe(base);
+  });
+});
+
 describe("applyChaosPresetHumorHarmony", () => {
   it("elevates mild/off to spicy while preserving unhinged", () => {
     const spicy = applyChaosPresetHumorHarmony({
@@ -301,7 +325,6 @@ describe("defaultSettings", () => {
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);
     expect(s.backgroundKind).toBe("bing");
-    expect(s.hudLayoutChaotic).toBe(true);
     expect(s.hudLayoutAutoReposition).toBe(true);
     expect(s.hudLayoutAdaptiveWhileLocked).toBe(true);
     expect(s.humorIntensity).toBe("spicy");
@@ -369,14 +392,26 @@ describe("applyPreset", () => {
     expect(next.widgets.search).toBe(true);
   });
 
-  it("chaos preset enables spicy intensity and humor banner without overriding HUD snap mode", () => {
+  it("chaos preset enables spicy intensity and humor banner", () => {
     const base = defaultSettings();
-    const snapped = { ...base, hudLayoutChaotic: false };
-    const s = applyPreset("chaos", snapped);
+    const s = applyPreset("chaos", base);
     expect(s.preset).toBe("chaos");
     expect(s.humorIntensity).toBe("spicy");
     expect(s.widgets.humorBanner).toBe(true);
-    expect(s.hudLayoutChaotic).toBe(false);
+  });
+
+  it("balanced preset enables mild humor", () => {
+    const base = defaultSettings();
+    const s = applyPreset("balanced", base);
+    expect(s.preset).toBe("balanced");
+    expect(s.humorIntensity).toBe("mild");
+  });
+
+  it("focus preset disables humor", () => {
+    const base = defaultSettings();
+    const s = applyPreset("focus", base);
+    expect(s.preset).toBe("focus");
+    expect(s.humorEnabled).toBe(false);
   });
 });
 
@@ -585,6 +620,50 @@ describe("loadSettings", () => {
     expect(s.themeMode).toBe("light");
     expect(s.themePalette).toBe("ocean");
     expect(s.hasSeenSettingsIntro).toBe(true);
+  });
+
+  it("reconciles stale humor flags when preset is focus", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "focus",
+        humorEnabled: true,
+        humorIntensity: "spicy",
+        humorBuiltinPackIds: [],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "google",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
+        backgroundKind: "solid",
+        backgroundSolid: "#000",
+        debugPluginSource: false,
+        themeMode: "dark",
+        themePalette: "glitch",
+      },
+    });
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+    });
+    const s = await loadSettings();
+    expect(s.preset).toBe("focus");
+    expect(s.humorEnabled).toBe(false);
+    expect(s.humorIntensity).toBe("off");
+    expect(s.widgets.humorBanner).toBe(false);
   });
 
   it("infers weatherGeoAdjusted for upgraded profiles with custom coordinates", async () => {

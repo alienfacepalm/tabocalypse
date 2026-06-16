@@ -34,8 +34,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Clock** and **Weather** (and other geo-based HUD panels) share one saved latitude/longitude; the Clock shows time and timezone for those coordinates instead of the browser’s default timezone alone.
 - **Settings > Weather** — coordinate controls apply to all geo-based panels (Clock, Weather, Balanced News device region, …); optional-permissions copy refers to shared HUD location.
-- **Settings > Chaos** — personality modes (Chaotic, Balanced, Focus) live in one section instead of a separate Presets panel; copy is shorter so lines do not wrap as much. First-run welcome points to Focus for productivity.
+- **Settings > Chaos** — personality modes (Chaotic, Balanced, Focus) live in one section instead of a separate Presets panel; copy is shorter so lines do not wrap as much. First-run welcome points to Focus for productivity. **Chaotic** shuffles HUD panels to random positions; **Balanced** and **Focus** repack panels in aligned columns (and snap to the grid when you drag).
+- HUD panels always use masonry/grid auto-layout with snap-to-grid drag; removed **Chaotic layout** (random scatter) from Settings and the header toolbar.
 - **Header status line** under the Tabocalypse title follows personality preset: **Balanced** shows `SYSTEM_STABLE: FALSE` with a slow pulse on **FALSE**; **Chaos** adds rotating telemetry and aggressive glitch animations; **Focus** hides the line entirely.
+- **Header title** shows the Chaos personality icons (Chaotic, Balanced, Focus) beside **Tabocalypse** with the active preset highlighted; click them to open **Settings > Chaos** and change personality.
 - **Weather** widget **10 Day** view always stacks days vertically with full weekday names, even when the panel is wide.
 - **Weather** widget location map: requests tiles sized to the panel width (height follows) so the pin-centered view fills the available space.
 - **Weather** widget: daily streak counter and points in Forecast are hidden until you turn on **Settings > Experimental > Weather HUD streak & points**; On this day trivia stays available either way.
@@ -52,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Focus personality** — enforces hard rules: no humor, humor banner, or chaos header chrome (status line and flame icons). Stale humor flags reconcile on load and save.
 - **Weather** location map loads reliably after a fresh new-tab reload instead of staying blank when layout or the image cache completes before the panel measures.
 - **Weather** widget **10 Day** no longer switches to a horizontal scrolling row when the panel is resized wider.
 - **Bing wallpaper** attribution appears in the bottom-left of the page footer instead of floating over HUD panels.

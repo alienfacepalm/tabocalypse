@@ -23,7 +23,6 @@ import {
   Scale,
   Sun,
   Settings as SettingsIcon,
-  Shuffle,
   Sparkles,
   Square,
   Target,
@@ -94,6 +93,7 @@ import {
 import { settingsBackgroundGradientCss } from "../../lib/background-gradient-css";
 import {
   applyChaosPresetHumorHarmony,
+  applyPersonalityPresetHarmony,
   applyNotePersistPatch,
   applyPreset,
   coerceNotes,
@@ -151,6 +151,7 @@ import { BALANCED_NEWS_CATEGORY_LABELS } from "../../lib/news/balanced-news-labe
 import type { IHumorContext } from "../../lib/humor/engine";
 import { resolveHumorBannerLine } from "../../lib/humor/engine";
 import { countEnabledWidgets } from "../../lib/system-status-line";
+import { PresetPersonalityIcons } from "../../components/preset-personality-icons";
 import { SystemStatusTagline } from "../../components/system-status-tagline";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
 import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
@@ -797,9 +798,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         const noteLayoutChanged =
           raw.notePanels !== current.notePanels ||
           raw.notePanelsByDisplay !== current.notePanelsByDisplay;
-        const resolved: ISettings = noteLayoutChanged
+        const rawResolved: ISettings = noteLayoutChanged
           ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
           : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
+        const resolved = applyPersonalityPresetHarmony(rawResolved);
         latestSettingsRef.current = resolved;
         setSettings(resolved);
         try {
@@ -1267,6 +1269,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const arrangeHudPanelsNowRef = useRef(arrangeHudPanelsNow);
   arrangeHudPanelsNowRef.current = arrangeHudPanelsNow;
 
+  const applyPersonalityPreset = useCallback(
+    (preset: ISettings["preset"]) => {
+      void persist((cur) => applyPreset(preset, cur)).then((ok) => {
+        if (ok) arrangeHudPanelsNowRef.current();
+      });
+    },
+    [persist],
+  );
+
   useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.code !== "F10" && ev.key !== HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT) return;
@@ -1524,7 +1535,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
   }, [shellStyle]);
 
-  const humorBannerWidgetOn = effectiveWidgets.humorBanner;
+  const s = settings;
+  const humorBannerWidgetOn = s.preset !== "focus" && effectiveWidgets.humorBanner;
   const [bannerLine, setBannerLine] = useState<string | null>(null);
   useEffect(() => {
     if (!humorBannerWidgetOn) {
@@ -1539,7 +1551,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     return () => window.clearInterval(t);
   }, [humorBannerWidgetOn, humorCtx, humorContentRevision]);
 
-  const s = settings;
+  const humorActive = s.preset !== "focus" && s.humorEnabled;
 
   const notesListPanelEffectiveVisible = useMemo(
     () => resolveNotesListPanelVisible(effectiveNotePanels, s.notesListPanelVisible),
@@ -2105,6 +2117,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           <input
                             type="checkbox"
                             checked={effectiveWidgets[k]}
+                            disabled={s.preset === "focus" && k === "humorBanner"}
                             onChange={(e) => toggleWidget(k, e.target.checked)}
                           />
                           <span>{WIDGET_LABELS[k]}</span>
@@ -3105,7 +3118,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               s.preset === "chaos" ? "btn primary has-icon" : "btn has-icon"
                             }
                             aria-pressed={s.preset === "chaos"}
-                            onClick={() => void persist((cur) => applyPreset("chaos", cur))}
+                            onClick={() => applyPersonalityPreset("chaos")}
                           >
                             <Flame size={18} strokeWidth={2} aria-hidden />
                             <span>Chaotic</span>
@@ -3116,7 +3129,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               s.preset === "balanced" ? "btn primary has-icon" : "btn has-icon"
                             }
                             aria-pressed={s.preset === "balanced"}
-                            onClick={() => void persist((cur) => applyPreset("balanced", cur))}
+                            onClick={() => applyPersonalityPreset("balanced")}
                           >
                             <Scale size={18} strokeWidth={2} aria-hidden />
                             <span>Balanced</span>
@@ -3127,7 +3140,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               s.preset === "focus" ? "btn primary has-icon" : "btn has-icon"
                             }
                             aria-pressed={s.preset === "focus"}
-                            onClick={() => void persist((cur) => applyPreset("focus", cur))}
+                            onClick={() => applyPersonalityPreset("focus")}
                           >
                             <Target size={18} strokeWidth={2} aria-hidden />
                             <span>Focus</span>
@@ -3145,6 +3158,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <input
                           type="checkbox"
                           checked={s.humorEnabled}
+                          disabled={s.preset === "focus"}
                           onChange={(e) => {
                             const v = e.target.checked;
                             void persist((cur) => ({ ...cur, humorEnabled: v }));
@@ -3227,6 +3241,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         Intensity
                         <select
                           value={s.humorIntensity}
+                          disabled={s.preset === "focus"}
                           onChange={(e) => requestIntensity(e.target.value as THumorIntensity)}
                         >
                           <option value="off">off</option>
@@ -3343,10 +3358,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <span>Auto-reposition panels when the window is resized</span>
                       </label>
                       <p className="muted sm mb-2">
-                        Priority control: when this is on, panels reflow on resize in both grid and
-                        chaotic modes (overriding lock/chaotic for resize only). When it is off,
-                        positions stay put on resize; chaotic, lock, and manual drag below take
-                        over.
+                        Priority control: when this is on, panels reflow on resize. When it is off,
+                        positions stay put on resize; lock and manual drag below take over.
                       </p>
                       <button
                         type="button"
@@ -3364,23 +3377,11 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         unpinned stickies reflow when the window resizes.
                       </p>
                       <p className="muted sm mb-2">
-                        Drag panels by the grip in each header. In grid mode (not chaotic), a
-                        12-column dashed overlay fills the HUD while layout is unlocked; drop
-                        targets highlight the cells the panel will snap into. Use the top bar for
-                        chaotic mode, rearrange ({HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}), and layout
-                        lock.
+                        Drag panels by the grip in each header. A 12-column dashed overlay fills the
+                        HUD while layout is unlocked; drop targets highlight the cells the panel
+                        will snap into. Use the top bar for rearrange (
+                        {HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}) and layout lock.
                       </p>
-                      <label className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={s.hudLayoutChaotic}
-                          onChange={(e) => {
-                            const v = e.target.checked;
-                            void persist((cur) => ({ ...cur, hudLayoutChaotic: v }));
-                          }}
-                        />
-                        <span>Chaotic layout (no snap to grid)</span>
-                      </label>
                       <label className="check-row">
                         <input
                           type="checkbox"
@@ -4179,13 +4180,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         <header className="top-bar">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="title">Tabocalypse</h1>
+              <div className="title-row">
+                <PresetPersonalityIcons
+                  preset={s.preset}
+                  onOpenSettings={openChaosSettingsSection}
+                />
+                <h1 className="title">Tabocalypse</h1>
+              </div>
               <SystemStatusTagline ctx={systemStatusCtx} />
-              {effectiveWidgets.humorBanner && bannerLine && !effectiveWidgets.search ? (
+              {humorBannerWidgetOn && bannerLine && !effectiveWidgets.search ? (
                 <p className="humor-banner-snark mt-1" role="note">
                   {bannerLine}
                 </p>
-              ) : effectiveWidgets.humorBanner && bannerLine && effectiveWidgets.search ? (
+              ) : humorBannerWidgetOn && bannerLine && effectiveWidgets.search ? (
                 <p className="humor-banner-snark mt-1 lg:hidden" role="note">
                   {bannerLine}
                 </p>
@@ -4199,40 +4206,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               onAssistActiveChange={(active) => {
                 void persist((cur) => ({ ...cur, searchAssistActive: active }));
               }}
-              humorEnabled={s.humorEnabled}
+              humorEnabled={humorActive}
               humorIntensity={s.humorIntensity}
-              humorBannerLine={effectiveWidgets.humorBanner ? bannerLine : null}
+              humorBannerLine={humorBannerWidgetOn ? bannerLine : null}
               variant="header"
             />
           ) : null}
           <div className="flex shrink-0 items-center gap-2">
-            <HudTip
-              tip={
-                s.hudLayoutChaotic
-                  ? "Turn on grid snap so panels align to the layout grid and show the dashed overlay"
-                  : "Turn on Chaotic layout so panels ignore the snap grid and hide the overlay"
-              }
-            >
-              <button
-                type="button"
-                className={s.hudLayoutChaotic ? "btn primary icon-only" : "btn ghost icon-only"}
-                aria-pressed={s.hudLayoutChaotic}
-                aria-label={
-                  s.hudLayoutChaotic
-                    ? "Chaotic layout on; press to snap panels to a grid"
-                    : "Snap to grid on; press for Chaotic layout"
-                }
-                onClick={() =>
-                  void persist((cur) => ({ ...cur, hudLayoutChaotic: !cur.hudLayoutChaotic }))
-                }
-              >
-                {s.hudLayoutChaotic ? (
-                  <Shuffle size={20} strokeWidth={2} aria-hidden />
-                ) : (
-                  <LayoutGrid size={20} strokeWidth={2} aria-hidden />
-                )}
-              </button>
-            </HudTip>
             <HudTip
               tip={`Repack HUD panels into a multi-column layout and fill the fold (${HUD_ARRANGE_PANELS_KEYBOARD_SHORTCUT}). Pinned stickies stay put`}
             >
@@ -4413,7 +4393,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 onDoubleClick={onBackgroundPanDoubleClick}
                 onContextMenu={onUserBackgroundContextMenu}
               />
-              <HudLayoutMetricsSync canvasRef={hudCanvasRef} enabled={!s.hudLayoutChaotic} />
+              <HudLayoutMetricsSync canvasRef={hudCanvasRef} enabled />
               <HudAutoRepositionSync
                 canvasRef={hudCanvasRef}
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
@@ -4424,14 +4404,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 notesListPanelVisible={notesListPanelEffectiveVisible}
                 onLayout={applyAutoHudLayout}
               />
-              <HudCanvasGrid visible={!s.hudLayoutChaotic && !s.hudLayoutLocked} />
+              <HudCanvasGrid visible={!s.hudLayoutLocked} />
               {effectiveWidgets.todo ? (
                 <DraggableHudPanel
                   key="todo"
                   panelId="todo"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.todo}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("todo", pos)}
                 >
@@ -4447,7 +4426,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="clock"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.clock}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("clock", pos)}
                 >
@@ -4470,7 +4448,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="tabGuilt"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.tabGuilt}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("tabGuilt", pos)}
                 >
@@ -4486,7 +4463,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="weather"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.weather}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("weather", pos)}
                 >
@@ -4522,7 +4498,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="balancedNews"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.balancedNews}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("balancedNews", pos)}
                 >
@@ -4548,13 +4523,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="crypto"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.crypto}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("crypto", pos)}
                 >
                   <CryptoPricesWidget
                     chartDays={s.cryptoChartDays}
-                    humorEnabled={s.humorEnabled}
+                    humorEnabled={humorActive}
                     humorIntensity={s.humorIntensity}
                     displayLocale={hudNumberLocale}
                     onSelectChartDays={(cryptoChartDays) =>
@@ -4569,7 +4543,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="speedTest"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.speedTest}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("speedTest", pos)}
                 >
@@ -4582,7 +4555,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="aiChat"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.aiChat}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("aiChat", pos)}
                 >
@@ -4609,7 +4581,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="topSites"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.topSites}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("topSites", pos)}
                 >
@@ -4625,7 +4596,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="bookmarksStrip"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.bookmarksStrip}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("bookmarksStrip", pos)}
                 >
@@ -4641,7 +4611,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   panelId="pluginDeck"
                   canvasRef={hudCanvasRef}
                   position={effectiveHudPanelPositions.pluginDeck}
-                  chaotic={s.hudLayoutChaotic}
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("pluginDeck", pos)}
                 >
@@ -4720,7 +4689,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       panelId="notes"
                       canvasRef={hudCanvasRef}
                       position={effectiveHudPanelPositions.notes}
-                      chaotic={s.hudLayoutChaotic}
                       locked={s.hudLayoutLocked}
                       zIndexBase={10}
                       onCommit={(pos) => commitHudPanel("notes", pos)}

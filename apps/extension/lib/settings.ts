@@ -692,13 +692,11 @@ export interface ISettings {
   /** When false and at least one sticky is on the canvas, the notes list panel is hidden. */
   notesListPanelVisible: boolean;
   todos: ITodoItem[];
-  /** When true, panels are not snapped to the HUD grid on drop. */
-  hudLayoutChaotic: boolean;
   /** When true, panel drag handles are disabled until unlocked. */
   hudLayoutLocked: boolean;
   /**
-   * Priority-1 layout control: when true, visible panels reflow on window resize (grid or chaotic).
-   * When false, positions stay fixed on resize unless changed manually; chaotic/lock apply normally.
+   * Priority-1 layout control: when true, visible panels reflow on window resize.
+   * When false, positions stay fixed on resize unless changed manually; lock applies normally.
    */
   hudLayoutAutoReposition: boolean;
   /**
@@ -940,6 +938,7 @@ export interface ILocalSlice {
   /** @deprecated Migrated to `storage.sync` — read only when upgrading from older local-only storage. */
   notePanelsEpoch?: number;
   todos: ITodoItem[];
+  /** @deprecated Chaotic panel layout removed — ignored on load. */
   hudLayoutChaotic?: boolean;
   hudLayoutLocked?: boolean;
   hudLayoutAutoReposition?: boolean;
@@ -1046,8 +1045,8 @@ function coerceHudPanelPositionsByDisplay(raw: unknown): THudPanelPositionsByDis
 
 /**
  * Whether auto-reposition on resize should run.
- * Priority 1: {@link hudLayoutAutoReposition} — when off, chaotic/lock rules apply and panels are not auto-reflowed.
- * When on, works in grid and chaotic modes; if layout is locked, {@link hudLayoutAdaptiveWhileLocked} must also be on.
+ * Priority 1: {@link hudLayoutAutoReposition} — when off, lock rules apply and panels are not auto-reflowed.
+ * When on, if layout is locked, {@link hudLayoutAdaptiveWhileLocked} must also be on.
  */
 export function isHudAutoRepositionEnabled(
   s: Pick<
@@ -1285,7 +1284,6 @@ export function defaultSettings(): ISettings {
     notePanelsEpoch: 0,
     notesListPanelVisible: true,
     todos: [],
-    hudLayoutChaotic: true,
     hudLayoutLocked: false,
     hudLayoutAutoReposition: true,
     hudLayoutAdaptiveWhileLocked: true,
@@ -1379,7 +1377,6 @@ function toLocal(s: ISettings): ILocalSlice {
     importedPlugins: s.importedPlugins,
     notesText: s.notesText,
     todos: s.todos,
-    hudLayoutChaotic: s.hudLayoutChaotic,
     hudLayoutLocked: s.hudLayoutLocked,
     hudLayoutAutoReposition: s.hudLayoutAutoReposition,
     hudLayoutAdaptiveWhileLocked: s.hudLayoutAdaptiveWhileLocked,
@@ -1410,6 +1407,42 @@ function buildUserBackgroundImagesFromLocal(
   }));
 }
 
+/** Strip per-display widget overrides for one key so the base widgets map wins. */
+function clearWidgetDisplayOverrides(
+  byDisplay: TWidgetsByDisplay | undefined,
+  key: TWidgetKey,
+): TWidgetsByDisplay {
+  if (!byDisplay) return {};
+  const next: TWidgetsByDisplay = { ...byDisplay };
+  let touched = false;
+  for (const [displayKey, partial] of Object.entries(next)) {
+    if (!partial || !(key in partial)) continue;
+    const { [key]: _removed, ...rest } = partial;
+    touched = true;
+    if (Object.keys(rest).length === 0) {
+      delete next[displayKey];
+    } else {
+      next[displayKey] = rest;
+    }
+  }
+  return touched ? next : byDisplay;
+}
+
+/** Focus preset hard rules: no humor, no humor banner. */
+export function applyFocusPresetHarmony(s: ISettings): ISettings {
+  if (s.preset !== "focus") return s;
+  return {
+    ...s,
+    humorEnabled: false,
+    humorIntensity: "off",
+    widgets: {
+      ...s.widgets,
+      humorBanner: false,
+    },
+    widgetsByDisplay: clearWidgetDisplayOverrides(s.widgetsByDisplay, "humorBanner"),
+  };
+}
+
 /** Chaos preset: keep joke intensity at least spicy (parity with {@link applyPreset} chaos branch). */
 export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
   if (s.preset !== "chaos") return s;
@@ -1422,6 +1455,11 @@ export function applyChaosPresetHumorHarmony(s: ISettings): ISettings {
     humorEnabled: true,
     humorIntensity,
   };
+}
+
+/** Enforce personality-preset invariants after merge, import, or user edits. */
+export function applyPersonalityPresetHarmony(s: ISettings): ISettings {
+  return applyChaosPresetHumorHarmony(applyFocusPresetHarmony(s));
 }
 
 function mergeSettings(
@@ -1622,7 +1660,6 @@ function mergeSettings(
     notePanelsEpoch,
     notesListPanelVisible,
     todos: local?.todos ?? d.todos,
-    hudLayoutChaotic: local?.hudLayoutChaotic ?? d.hudLayoutChaotic,
     hudLayoutLocked: local?.hudLayoutLocked ?? d.hudLayoutLocked,
     hudLayoutAutoReposition:
       typeof local?.hudLayoutAutoReposition === "boolean"
@@ -1646,7 +1683,7 @@ function mergeSettings(
       );
     })(),
   };
-  return applyChaosPresetHumorHarmony(mergedBase);
+  return applyPersonalityPresetHarmony(mergedBase);
 }
 
 export async function loadSettings(): Promise<ISettings> {
@@ -1672,11 +1709,12 @@ function isSyncQuotaError(err: unknown): boolean {
 }
 
 export async function saveSettings(s: ISettings): Promise<void> {
-  const syncPayload = toSync(s);
-  const notesPayload = toNotesSync(s);
+  const normalized = applyPersonalityPresetHarmony(s);
+  const syncPayload = toSync(normalized);
+  const notesPayload = toNotesSync(normalized);
   const writes: Promise<unknown>[] = [
     browser.storage.local.set({
-      [LOCAL_KEY]: toLocal(s),
+      [LOCAL_KEY]: toLocal(normalized),
       [SYNC_LOCAL_MIRROR_KEY]: syncPayload,
       [NOTES_SYNC_LOCAL_MIRROR_KEY]: notesPayload,
     }),

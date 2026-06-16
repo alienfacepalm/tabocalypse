@@ -26,7 +26,6 @@ export function DraggableHudPanel({
   panelId,
   canvasRef,
   position,
-  chaotic,
   locked,
   zIndexBase,
   onCommit,
@@ -35,7 +34,6 @@ export function DraggableHudPanel({
   panelId: THudPanelId;
   canvasRef: React.RefObject<HTMLElement | null>;
   position: IHudPanelPosition;
-  chaotic: boolean;
   locked: boolean;
   /** Resting stack order; lift on drag/resize adds `HUD_DRAG_Z_LIFT`. Default 10. */
   zIndexBase?: number;
@@ -86,7 +84,7 @@ export function DraggableHudPanel({
   const useDefaultWidth = effectiveW == null;
 
   const responsiveLayout = useMemo(() => {
-    if (chaotic || effectiveW != null || livePct != null) return null;
+    if (effectiveW != null || livePct != null) return null;
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const { widthPx: canvasW, heightPx: canvasH } = measureHudCanvasSize(canvas);
@@ -96,7 +94,7 @@ export function DraggableHudPanel({
       leftPct: (rect.leftPx / metrics.canvasW) * 100,
       widthPx: rect.widthPx,
     };
-  }, [canvasRef, chaotic, display, effectiveW, hudPlacement?.layoutMetrics, livePct, panelId]);
+  }, [canvasRef, display, effectiveW, hudPlacement?.layoutMetrics, livePct, panelId]);
 
   const computeFromPointer = useCallback(
     (clientX: number, clientY: number, snap: boolean): IHudPanelPosition | null => {
@@ -112,7 +110,7 @@ export function DraggableHudPanel({
       const metrics = resolveLayoutMetrics(canvas);
       const maxLeft = Math.max(0, metrics.canvasW - panelRect.width);
       const maxTop = hudCanvasMaxPanelTopPx(metrics.canvasH, panelRect.height);
-      if (snap && !chaotic) {
+      if (snap) {
         const snapped = snapPanelOriginToLayoutGrid(nextLeft, nextTop, metrics);
         nextLeft = snapped.leftPx;
         nextTop = snapped.topPx;
@@ -124,7 +122,7 @@ export function DraggableHudPanel({
         yPct: (nextTop / metrics.canvasH) * 100,
       };
     },
-    [canvasRef, chaotic, resolveLayoutMetrics],
+    [canvasRef, resolveLayoutMetrics],
   );
 
   const clearDropHighlight = useCallback(() => {
@@ -226,13 +224,13 @@ export function DraggableHudPanel({
       panelWidthPx: number,
       panelHeightPx: number,
     ) => {
-      if (chaotic || locked || !hudPlacement) return;
+      if (locked || !hudPlacement) return;
       const metrics = resolveLayoutMetrics(canvas);
       hudPlacement.setDropHighlight(
         getHudGridDropHighlight(leftPx, topPx, panelWidthPx, panelHeightPx, metrics),
       );
     },
-    [chaotic, hudPlacement, locked, resolveLayoutMetrics],
+    [hudPlacement, locked, resolveLayoutMetrics],
   );
 
   const onPanelPointerDown = useCallback(
@@ -271,12 +269,12 @@ export function DraggableHudPanel({
     (e: React.PointerEvent<HTMLElement>) => {
       const start = dragRef.current;
       if (start === null || e.pointerId !== start.pointerId) return;
-      const snapLive = !chaotic;
+      const snapLive = true;
       const next = computeFromPointer(e.clientX, e.clientY, snapLive);
       if (next) setLivePct(next);
       const canvas = canvasRef.current;
       const panel = rootRef.current;
-      if (!canvas || !panel || chaotic) return;
+      if (!canvas || !panel) return;
       const panelRect = panel.getBoundingClientRect();
       const metrics = resolveLayoutMetrics(canvas);
       const rect = computeHudDragCanvasRectPx(
@@ -291,7 +289,7 @@ export function DraggableHudPanel({
       );
       publishDropHighlight(canvas, rect.leftPx, rect.topPx, panelRect.width, panelRect.height);
     },
-    [canvasRef, chaotic, computeFromPointer, publishDropHighlight, resolveLayoutMetrics],
+    [canvasRef, computeFromPointer, publishDropHighlight, resolveLayoutMetrics],
   );
 
   const onPanelPointerUp = useCallback(
