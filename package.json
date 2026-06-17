@@ -25,7 +25,21 @@
     "check": "pnpm format:check && pnpm lint && pnpm test && pnpm check:sdk && pnpm check:extension",
     "scrape:unsuck-classics": "pnpm --filter extension scrape:unsuck-classics",
     "generate:settings-changelog": "pnpm --filter extension generate:settings-changelog",
-    "prepare": "husky"
+    "prepare": "husky",
+    "projocalypse:dev": "pnpm --filter projocalypse dev",
+    "pm:board": "node scripts/projocalypse-board-dev.mjs",
+    "pm:setup": "node scripts/pm-setup.mjs",
+    "pm:roadmap:plan": "node packages/projocalypse/packages/cli/dist/index.js plan parse --package tabocalypse-roadmap",
+    "pm:roadmap:bridge": "node scripts/pm-roadmap-bridge.mjs",
+    "pm:roadmap:gap": "node packages/projocalypse/packages/cli/dist/index.js gap --package tabocalypse-roadmap",
+    "pm:roadmap:sync": "node scripts/pm-roadmap-bridge.mjs",
+    "pm:stale": "node scripts/pm-stale-check.mjs",
+    "pm:roadmap:status": "node packages/projocalypse/packages/cli/dist/index.js status --package tabocalypse-roadmap",
+    "pm:init": "node packages/projocalypse/packages/cli/dist/index.js init",
+    "pm:doctor": "node packages/projocalypse/packages/cli/dist/index.js doctor",
+    "pm:gap": "node packages/projocalypse/packages/cli/dist/index.js gap --all",
+    "pm:sync": "node scripts/pm-roadmap-bridge.mjs",
+    "pm:status": "node packages/projocalypse/packages/cli/dist/index.js status --all"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs,cjs}": [
@@ -35,6 +49,12 @@
     "*.{json,md,css}": "prettier --write"
   },
   "devDependencies": {
+    "@projocalypse/cli": "workspace:*",
+    "@projocalypse/core": "workspace:*",
+    "@projocalypse/plan": "workspace:*",
+    "@tailwindcss/vite": "^4.1.11",
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^8.0.12",
     "@eslint/js": "^9.19.0",
     "eslint": "^9.19.0",
     "eslint-config-prettier": "^10.0.1",

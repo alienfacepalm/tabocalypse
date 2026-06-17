@@ -1,0 +1,50 @@
+---
+description: Tabocalypse roadmap PM board — sync pending JSON on plan changes; stale checks
+alwaysApply: false
+globs:
+  - doc/PLAN/**
+  - .projocalypse/**
+---
+
+# Tabocalypse PM board (Projocalypse)
+
+Submodule: `packages/projocalypse`. **Package key:** `tabocalypse-roadmap` in `.projocalypse/workspace.json`.
+
+## Source of truth (git on `master`)
+
+| What | Path |
+|------|------|
+| Plan checkboxes | `doc/PLAN/ROADMAP-PM-BOARD.md` (`pm:PM-T###` ids) |
+| Candidate options (pre-approval) | `doc/PLAN/ROADMAP.md` |
+| Team sync JSON | `.projocalypse/pending/tabocalypse-roadmap.json` — **commit when changed** |
+| Registry + column names | `.projocalypse/workspace.json` |
+
+## Mandatory sync when task status changes
+
+Whenever a roadmap task moves open ↔ done, changes priority column, or is added/removed:
+
+1. Update `ROADMAP-PM-BOARD.md` (`[x]` / `[ ]`, `pm:section=…`, `pm:section=Done` when complete).
+2. Run **`pnpm pm:sync`**.
+3. Commit plan + pending JSON in the same PR as the status change.
+
+## Daily / after pull
+
+```bash
+git pull origin master
+pnpm pm:sync
+pnpm pm:stale
+pnpm pm:board
+```
+
+## First-time
+
+```bash
+pnpm pm:setup
+pnpm pm:board
+```
+
+See [doc/PLAN/PROJOCALYPSE.md](../../doc/PLAN/PROJOCALYPSE.md).
+
+## Agents
+
+- **`tabocalypse-pm-board`** skill — full sync loop

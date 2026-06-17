@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "packageName": "tabocalypse-roadmap",
+  "hostProjectId": null,
+  "generatedAt": "2026-06-17T19:47:53.283Z",
+  "seedPolicy": "merge-new-only",
+  "sections": [
+    "Backlog",
+    "W1 · Ship blockers",
+    "W2 · Chrome launch",
+    "W3 · Multi-store rollout",
+    "W4 · New tab essentials",
+    "W5 · News & productivity",
+    "W6 · AI & HUD layout",
+    "W7 · Settings & data trust",
+    "W8 · Plugins & packs",
+    "W9 · Accessibility & performance",
+    "W10 · Stretch & backlog",
+    "Done"
+  ],
+  "projectName": "tabocalypse-roadmap",
+  "projectColor": "#4573D2",
+  "upserts": [
+    {
+      "planItemId": "PM-T001",
+      "title": "Firefox Gecko add-on ID in `.env`",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:11"
+    },
+    {
+      "planItemId": "PM-T002",
+      "title": "Privacy policy at public HTTPS URL",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:12"
+    },
+    {
+      "planItemId": "PM-T003",
+      "title": "Store screenshots (1280×800 / 440×280)",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:13"
+    },
+    {
+      "planItemId": "PM-T004",
+      "title": "Permission justification copy for store reviewers",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:14"
+    },
+    {
+      "planItemId": "PM-T005",
+      "title": "Support URL (GitHub Issues or contact page)",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:15"
+    },
+    {
+      "planItemId": "PM-T006",
+      "title": "Safari converter smoke test on macOS",
+      "completed": false,
+      "sectionName": "W1 · Ship blockers",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:16"
+    },
+    {
+      "planItemId": "PM-T014",
+      "title": "Release CI — tagged build + store zips",
+      "completed": false,
+      "sectionName": "W2 · Chrome launch",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:20"
+    },
+    {
+      "planItemId": "PM-T015",
+      "title": "STORE-LISTING.md copy finalized per portal",
+      "completed": false,
+      "sectionName": "W2 · Chrome launch",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:21"
+    },
+    {
+      "planItemId": "PM-T010",
+      "title": "Chrome Web Store first publish",
+      "completed": false,
+      "sectionName": "W2 · Chrome launch",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:22"
+    },
+    {
+      "planItemId": "PM-T011",
+      "title": "Microsoft Edge Add-ons listing",
+      "completed": false,
+      "sectionName": "W3 · Multi-store rollout",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:26"
+    },
+    {
+      "planItemId": "PM-T012",
+      "title": "Firefox AMO submit with sources zip",
+      "completed": false,
+      "sectionName": "W3 · Multi-store rollout",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:27"
+    },
+    {
+      "planItemId": "PM-T013",
+      "title": "Safari Mac App Store path",
+      "completed": false,
+      "sectionName": "W3 · Multi-store rollout",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:28"
+    },
+    {
+      "planItemId": "PM-T025",
+      "title": "Pinned quick links grid (user-curated)",
+      "completed": false,
+      "sectionName": "W4 · New tab essentials",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:32"
+    },
+    {
+      "planItemId": "PM-T020",
+      "title": "Graduate Speed test to on-by-default",
+      "completed": false,
+      "sectionName": "W4 · New tab essentials",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:33"
+    },
+    {
+      "planItemId": "PM-T041",
+      "title": "Per-widget settings deep links from HUD errors",
+      "completed": false,
+      "sectionName": "W4 · New tab essentials",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:34"
+    },
+    {
+      "planItemId": "PM-T054",
+      "title": "Offline-first indicator in footer for cached data",
+      "completed": false,
+      "sectionName": "W4 · New tab essentials",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:35"
+    },
+    {
+      "planItemId": "PM-T021",
+      "title": "Graduate Balanced news default-on for new installs",
+      "completed": false,
+      "sectionName": "W5 · News & productivity",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:39"
+    },
+    {
+      "planItemId": "PM-T023",
+      "title": "Calendar / agenda widget (local-only)",
+      "completed": false,
+      "sectionName": "W5 · News & productivity",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:40"
+    },
+    {
+      "planItemId": "PM-T024",
+      "title": "RSS / feed reader widget (user URLs)",
+      "completed": false,
+      "sectionName": "W5 · News & productivity",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:41"
+    },
+    {
+      "planItemId": "PM-T044",
+      "title": "Onboarding tour (widgets + personality presets)",
+      "completed": false,
+      "sectionName": "W5 · News & productivity",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:42"
+    },
+    {
+      "planItemId": "PM-T022",
+      "title": "AI chat widget polish + safer defaults",
+      "completed": false,
+      "sectionName": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:46"
+    },
+    {
+      "planItemId": "PM-T027",
+      "title": "Weather HUD streak & points graduate from Experimental",
+      "completed": false,
+      "sectionName": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:47"
+    },
+    {
+      "planItemId": "PM-T026",
+      "title": "Multi-monitor HUD presets export/import",
+      "completed": false,
+      "sectionName": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:48"
+    },
+    {
+      "planItemId": "PM-T040",
+      "title": "Full settings backup/restore (encrypted optional)",
+      "completed": false,
+      "sectionName": "W7 · Settings & data trust",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:52"
+    },
+    {
+      "planItemId": "PM-T042",
+      "title": "Sync conflict UI when storage.sync diverges",
+      "completed": false,
+      "sectionName": "W7 · Settings & data trust",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:53"
+    },
+    {
+      "planItemId": "PM-T043",
+      "title": "Import pack from user-pasted HTTPS URL",
+      "completed": false,
+      "sectionName": "W7 · Settings & data trust",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:54"
+    },
+    {
+      "planItemId": "PM-T034",
+      "title": "Settings export includes pack manifests",
+      "completed": false,
+      "sectionName": "W7 · Settings & data trust",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:55"
+    },
+    {
+      "planItemId": "PM-T030",
+      "title": "Plugin marketplace (curated static index, link-out install)",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:59"
+    },
+    {
+      "planItemId": "PM-T031",
+      "title": "Pack authoring CLI in plugin-sdk",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:60"
+    },
+    {
+      "planItemId": "PM-T032",
+      "title": "More built-in humor packs (scrape workflow)",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:61"
+    },
+    {
+      "planItemId": "PM-T050",
+      "title": "Keyboard navigation audit (HUD + Settings)",
+      "completed": false,
+      "sectionName": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:65"
+    },
+    {
+      "planItemId": "PM-T051",
+      "title": "Reduced motion respects prefers-reduced-motion globally",
+      "completed": false,
+      "sectionName": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:66"
+    },
+    {
+      "planItemId": "PM-T052",
+      "title": "High-contrast theme variant",
+      "completed": false,
+      "sectionName": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:67"
+    },
+    {
+      "planItemId": "PM-T055",
+      "title": "Performance budget for new-tab cold load",
+      "completed": false,
+      "sectionName": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:68"
+    },
+    {
+      "planItemId": "PM-T033",
+      "title": "Widget type external iframe (strict CSP)",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:72"
+    },
+    {
+      "planItemId": "PM-T053",
+      "title": "i18n / locale strings extraction",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:73"
+    },
+    {
+      "planItemId": "PM-T060",
+      "title": "P2P settings sync (WebRTC)",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:74"
+    },
+    {
+      "planItemId": "PM-T061",
+      "title": "Custom search engines (user URL template)",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:75"
+    },
+    {
+      "planItemId": "PM-T062",
+      "title": "Tab groups summary widget",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:76"
+    },
+    {
+      "planItemId": "PM-T063",
+      "title": "Pomodoro / focus timer tied to Clock alarms",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:77"
+    },
+    {
+      "planItemId": "PM-T064",
+      "title": "Wallpaper rotation from user folder",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:78"
+    },
+    {
+      "planItemId": "PM-T065",
+      "title": "HUD layout templates (productivity vs news-heavy)",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "low",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:79"
+    }
+  ]
+}

@@ -1,0 +1,474 @@
+{
+  "packageName": "tabocalypse-roadmap",
+  "generatedAt": "2026-06-17T19:47:53.285Z",
+  "files": ["doc/PLAN/ROADMAP-PM-BOARD.md"],
+  "items": [
+    {
+      "id": "PM-T001",
+      "title": "Firefox Gecko add-on ID in `.env`",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 11
+      }
+    },
+    {
+      "id": "PM-T002",
+      "title": "Privacy policy at public HTTPS URL",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 12
+      }
+    },
+    {
+      "id": "PM-T003",
+      "title": "Store screenshots (1280×800 / 440×280)",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 13
+      }
+    },
+    {
+      "id": "PM-T004",
+      "title": "Permission justification copy for store reviewers",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 14
+      }
+    },
+    {
+      "id": "PM-T005",
+      "title": "Support URL (GitHub Issues or contact page)",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 15
+      }
+    },
+    {
+      "id": "PM-T006",
+      "title": "Safari converter smoke test on macOS",
+      "done": false,
+      "section": "W1 · Ship blockers",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 16
+      }
+    },
+    {
+      "id": "PM-T014",
+      "title": "Release CI — tagged build + store zips",
+      "done": false,
+      "section": "W2 · Chrome launch",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 20
+      }
+    },
+    {
+      "id": "PM-T015",
+      "title": "STORE-LISTING.md copy finalized per portal",
+      "done": false,
+      "section": "W2 · Chrome launch",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 21
+      }
+    },
+    {
+      "id": "PM-T010",
+      "title": "Chrome Web Store first publish",
+      "done": false,
+      "section": "W2 · Chrome launch",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 22
+      }
+    },
+    {
+      "id": "PM-T011",
+      "title": "Microsoft Edge Add-ons listing",
+      "done": false,
+      "section": "W3 · Multi-store rollout",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 26
+      }
+    },
+    {
+      "id": "PM-T012",
+      "title": "Firefox AMO submit with sources zip",
+      "done": false,
+      "section": "W3 · Multi-store rollout",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 27
+      }
+    },
+    {
+      "id": "PM-T013",
+      "title": "Safari Mac App Store path",
+      "done": false,
+      "section": "W3 · Multi-store rollout",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 28
+      }
+    },
+    {
+      "id": "PM-T025",
+      "title": "Pinned quick links grid (user-curated)",
+      "done": false,
+      "section": "W4 · New tab essentials",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 32
+      }
+    },
+    {
+      "id": "PM-T020",
+      "title": "Graduate Speed test to on-by-default",
+      "done": false,
+      "section": "W4 · New tab essentials",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 33
+      }
+    },
+    {
+      "id": "PM-T041",
+      "title": "Per-widget settings deep links from HUD errors",
+      "done": false,
+      "section": "W4 · New tab essentials",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 34
+      }
+    },
+    {
+      "id": "PM-T054",
+      "title": "Offline-first indicator in footer for cached data",
+      "done": false,
+      "section": "W4 · New tab essentials",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 35
+      }
+    },
+    {
+      "id": "PM-T021",
+      "title": "Graduate Balanced news default-on for new installs",
+      "done": false,
+      "section": "W5 · News & productivity",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 39
+      }
+    },
+    {
+      "id": "PM-T023",
+      "title": "Calendar / agenda widget (local-only)",
+      "done": false,
+      "section": "W5 · News & productivity",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 40
+      }
+    },
+    {
+      "id": "PM-T024",
+      "title": "RSS / feed reader widget (user URLs)",
+      "done": false,
+      "section": "W5 · News & productivity",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 41
+      }
+    },
+    {
+      "id": "PM-T044",
+      "title": "Onboarding tour (widgets + personality presets)",
+      "done": false,
+      "section": "W5 · News & productivity",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 42
+      }
+    },
+    {
+      "id": "PM-T022",
+      "title": "AI chat widget polish + safer defaults",
+      "done": false,
+      "section": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 46
+      }
+    },
+    {
+      "id": "PM-T027",
+      "title": "Weather HUD streak & points graduate from Experimental",
+      "done": false,
+      "section": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 47
+      }
+    },
+    {
+      "id": "PM-T026",
+      "title": "Multi-monitor HUD presets export/import",
+      "done": false,
+      "section": "W6 · AI & HUD layout",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 48
+      }
+    },
+    {
+      "id": "PM-T040",
+      "title": "Full settings backup/restore (encrypted optional)",
+      "done": false,
+      "section": "W7 · Settings & data trust",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 52
+      }
+    },
+    {
+      "id": "PM-T042",
+      "title": "Sync conflict UI when storage.sync diverges",
+      "done": false,
+      "section": "W7 · Settings & data trust",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 53
+      }
+    },
+    {
+      "id": "PM-T043",
+      "title": "Import pack from user-pasted HTTPS URL",
+      "done": false,
+      "section": "W7 · Settings & data trust",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 54
+      }
+    },
+    {
+      "id": "PM-T034",
+      "title": "Settings export includes pack manifests",
+      "done": false,
+      "section": "W7 · Settings & data trust",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 55
+      }
+    },
+    {
+      "id": "PM-T030",
+      "title": "Plugin marketplace (curated static index, link-out install)",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 59
+      }
+    },
+    {
+      "id": "PM-T031",
+      "title": "Pack authoring CLI in plugin-sdk",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 60
+      }
+    },
+    {
+      "id": "PM-T032",
+      "title": "More built-in humor packs (scrape workflow)",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 61
+      }
+    },
+    {
+      "id": "PM-T050",
+      "title": "Keyboard navigation audit (HUD + Settings)",
+      "done": false,
+      "section": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 65
+      }
+    },
+    {
+      "id": "PM-T051",
+      "title": "Reduced motion respects prefers-reduced-motion globally",
+      "done": false,
+      "section": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 66
+      }
+    },
+    {
+      "id": "PM-T052",
+      "title": "High-contrast theme variant",
+      "done": false,
+      "section": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 67
+      }
+    },
+    {
+      "id": "PM-T055",
+      "title": "Performance budget for new-tab cold load",
+      "done": false,
+      "section": "W9 · Accessibility & performance",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 68
+      }
+    },
+    {
+      "id": "PM-T033",
+      "title": "Widget type external iframe (strict CSP)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 72
+      }
+    },
+    {
+      "id": "PM-T053",
+      "title": "i18n / locale strings extraction",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 73
+      }
+    },
+    {
+      "id": "PM-T060",
+      "title": "P2P settings sync (WebRTC)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 74
+      }
+    },
+    {
+      "id": "PM-T061",
+      "title": "Custom search engines (user URL template)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 75
+      }
+    },
+    {
+      "id": "PM-T062",
+      "title": "Tab groups summary widget",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 76
+      }
+    },
+    {
+      "id": "PM-T063",
+      "title": "Pomodoro / focus timer tied to Clock alarms",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 77
+      }
+    },
+    {
+      "id": "PM-T064",
+      "title": "Wallpaper rotation from user folder",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 78
+      }
+    },
+    {
+      "id": "PM-T065",
+      "title": "HUD layout templates (productivity vs news-heavy)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 79
+      }
+    }
+  ],
+  "summary": {
+    "total": 42,
+    "done": 0,
+    "open": 42
+  }
+}

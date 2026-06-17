@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/node_modules/**",
+      "packages/projocalypse/**",
       "apps/extension/output/**",
       "**/.output/**",
       "**/.wxt/**",
@@ -60,6 +61,24 @@ export default tseslint.config(
           ignore: [/^wxt\.config\.ts$/, /\.test\.tsx?$/, /\.spec\.tsx?$/],
         },
       ],
+    },
+  },
+  {
+    files: ["scripts/**/*.{mjs,cjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+  },
+  {
+    files: ["scripts/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/naming-convention": "off",
+      "unicorn/filename-case": "off",
     },
   },
   eslintConfigPrettier,

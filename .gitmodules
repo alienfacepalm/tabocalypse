@@ -1,0 +1,3 @@
+[submodule "packages/projocalypse"]
+	path = packages/projocalypse
+	url = https://github.com/alienfacepalm/projocalypse

@@ -32,13 +32,16 @@ Contributor workflow, env vars, and day-to-day commands: [doc/DEVELOPMENT.md](do
 
 ## Monorepo layout
 
-| Path                                                 | Purpose                                                           |
-| ---------------------------------------------------- | ----------------------------------------------------------------- |
-| [`apps/extension`](apps/extension)                   | WXT browser extension (new tab app)                               |
-| [`packages/plugin-sdk`](packages/plugin-sdk)         | `@tabocalypse/plugin-sdk` — declarative plugin types + validation |
-| [`packages/example-plugin`](packages/example-plugin) | Sample `tabocalypse-plugin.json`                                  |
+| Path                                                 | Purpose                                                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [`apps/extension`](apps/extension)                   | WXT browser extension (new tab app)                                                     |
+| [`packages/plugin-sdk`](packages/plugin-sdk)         | `@tabocalypse/plugin-sdk` — declarative plugin types + validation                       |
+| [`packages/example-plugin`](packages/example-plugin) | Sample `tabocalypse-plugin.json`                                                        |
+| [`packages/projocalypse`](packages/projocalypse)     | Git submodule — roadmap PM board ([doc/PLAN/PROJOCALYPSE.md](doc/PLAN/PROJOCALYPSE.md)) |
 
 Pack and plugin formats: [doc/PLUGIN-SCHEMA.md](doc/PLUGIN-SCHEMA.md), [`examples/pack-starter.json`](examples/pack-starter.json).
+
+**Maintainers — roadmap PM board:** `pnpm pm:setup` then `pnpm pm:board` (port 5173). Sync plan checkboxes with `pnpm pm:sync`.
 
 ## Documentation
 
@@ -62,6 +65,8 @@ Index by audience: [doc/README.md](doc/README.md).
 
 - [doc/PUBLISHING-EXTENSION-STORES.md](doc/PUBLISHING-EXTENSION-STORES.md) — Chrome, Edge, Firefox, Safari
 - [doc/CROSS-BROWSER-PUBLISHING-PLAN.md](doc/CROSS-BROWSER-PUBLISHING-PLAN.md) — phased rollout
+- [doc/PLAN/ROADMAP.md](doc/PLAN/ROADMAP.md) — future enhancements (candidate backlog)
+- [doc/PLAN/PROJOCALYPSE.md](doc/PLAN/PROJOCALYPSE.md) — Projocalypse PM submodule and `pnpm pm:board`
 - [doc/STORE-LISTING.md](doc/STORE-LISTING.md) — listing checklist
 - [doc/GITHUB-ACTIONS.md](doc/GITHUB-ACTIONS.md) — CI and release packaging
 - [doc/CHANGELOG.md](doc/CHANGELOG.md) — user-facing change summary

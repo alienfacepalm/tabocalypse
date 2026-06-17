@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "packages": {
+    "tabocalypse-roadmap": {
+      "planGlobs": ["doc/PLAN/ROADMAP-PM-BOARD.md"],
+      "defaultSection": "Backlog",
+      "doneSection": "Done",
+      "sections": [
+        "Backlog",
+        "W1 · Ship blockers",
+        "W2 · Chrome launch",
+        "W3 · Multi-store rollout",
+        "W4 · New tab essentials",
+        "W5 · News & productivity",
+        "W6 · AI & HUD layout",
+        "W7 · Settings & data trust",
+        "W8 · Plugins & packs",
+        "W9 · Accessibility & performance",
+        "W10 · Stretch & backlog",
+        "Done"
+      ]
+    },
+    "extension": {
+      "planGlobs": ["apps/extension/doc/PLAN/**/*.md"],
+      "defaultSection": "Backlog",
+      "doneSection": "Done",
+      "sections": ["Backlog", "Sprint", "In Review", "Done"]
+    }
+  }
+}
