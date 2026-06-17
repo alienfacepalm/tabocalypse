@@ -321,6 +321,18 @@ describe("defaultSettings", () => {
     expect(s.weatherGeoAdjusted).toBe(false);
     expect(s.clockHourFormatAuto).toBe(false);
     expect(s.cryptoChartDays).toBe(1);
+    expect(s.cryptoWatchlist).toEqual([
+      {
+        coinId: "bitcoin",
+        symbol: "BTC",
+        iconUrl: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
+      },
+      {
+        coinId: "ethereum",
+        symbol: "ETH",
+        iconUrl: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+      },
+    ]);
     expect(s.userBackgroundImages).toEqual([]);
     expect(s.backgroundRotateMinutesBing).toBeGreaterThanOrEqual(1);
     expect(s.backgroundRotate).toBe(true);

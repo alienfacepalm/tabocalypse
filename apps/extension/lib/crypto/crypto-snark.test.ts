@@ -22,8 +22,8 @@ describe("pickCryptoSnark", () => {
         humorEnabled: false,
         humorIntensity: "spicy",
         chartDays: 1,
-        btcChangePct: 2,
-        ethChangePct: 2,
+        primaryChangePct: 2,
+        secondaryChangePct: 2,
         locale: "en-US",
       }),
     ).toBeNull();
@@ -32,8 +32,8 @@ describe("pickCryptoSnark", () => {
         humorEnabled: true,
         humorIntensity: "off",
         chartDays: 1,
-        btcChangePct: 2,
-        ethChangePct: 2,
+        primaryChangePct: 2,
+        secondaryChangePct: 2,
         locale: "en-US",
       }),
     ).toBeNull();
@@ -44,8 +44,8 @@ describe("pickCryptoSnark", () => {
       humorEnabled: true,
       humorIntensity: "spicy",
       chartDays: 30,
-      btcChangePct: 2,
-      ethChangePct: 2,
+      primaryChangePct: 2,
+      secondaryChangePct: 2,
       locale: "en-US",
     });
     expect(line).toBeTruthy();
@@ -57,8 +57,8 @@ describe("pickCryptoSnark", () => {
       humorEnabled: true,
       humorIntensity: "mild",
       chartDays: 7,
-      btcChangePct: 4,
-      ethChangePct: -4,
+      primaryChangePct: 4,
+      secondaryChangePct: -4,
       locale: "en-US",
     });
     expect(line).toBeTruthy();

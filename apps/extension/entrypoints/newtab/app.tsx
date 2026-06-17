@@ -4527,12 +4527,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   onCommit={(pos) => commitHudPanel("crypto", pos)}
                 >
                   <CryptoPricesWidget
+                    watchlist={s.cryptoWatchlist}
                     chartDays={s.cryptoChartDays}
                     humorEnabled={humorActive}
                     humorIntensity={s.humorIntensity}
                     displayLocale={hudNumberLocale}
                     onSelectChartDays={(cryptoChartDays) =>
                       void persist((cur) => ({ ...cur, cryptoChartDays }))
+                    }
+                    onWatchlistChange={(cryptoWatchlist) =>
+                      void persist((cur) => ({ ...cur, cryptoWatchlist }))
                     }
                   />
                 </DraggableHudPanel>

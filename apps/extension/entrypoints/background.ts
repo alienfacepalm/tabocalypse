@@ -1,8 +1,10 @@
 import { defineBackground } from "wxt/sandbox";
 import browser from "webextension-polyfill";
-import { coerceCryptoChartDays } from "../lib/crypto/crypto-chart-days";
+import {
+  parseCryptoCoingeckoMarketRowMessage,
+  TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
+} from "../lib/crypto/crypto-coingecko-message";
 import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coingecko-background";
-import { TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW } from "../lib/crypto/crypto-coingecko-message";
 import {
   TABOCALYPSE_PRIV_FETCH_BYTES,
   TABOCALYPSE_PRIV_FETCH_JSON,
@@ -62,19 +64,9 @@ export default defineBackground(() => {
       return sendTabocalypseTestNotificationFromBackground();
     }
     if (m.type === TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW) {
-      const coinId = m.coinId;
-      const ticker = m.ticker;
-      const daysRaw = m.days;
-      const pairOk =
-        (coinId === "bitcoin" && ticker === "BTC") || (coinId === "ethereum" && ticker === "ETH");
-      if (pairOk && typeof daysRaw === "number") {
-        const days = coerceCryptoChartDays(daysRaw, 7);
-        return handleCryptoCoingeckoMarketRowRequest({
-          type: TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
-          coinId,
-          ticker,
-          days,
-        });
+      const req = parseCryptoCoingeckoMarketRowMessage(m);
+      if (req) {
+        return handleCryptoCoingeckoMarketRowRequest(req);
       }
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_JSON && typeof m.url === "string") {

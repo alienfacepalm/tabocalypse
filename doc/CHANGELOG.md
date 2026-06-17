@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Weather** and **2 Lakes** panels: temperature values use the 2lakes.app color scale (cold indigo/blue through hot red); hover a 10-day weekday label for the full date and condition.
 - **Weather** 10-day expanded rows: small icons beside precip, wind, feels-like, UV, and sunrise/sunset metrics.
 - **2 Lakes** buoy panel: when no active buoy data is returned, a link to 2lakes.app opens in a new tab so you can verify readings on the source site.
+- **Crypto** widget: add or remove coins from your watchlist in the panel with CoinGecko name/symbol search (autocomplete like the HUD search bar); coin logos appear beside each symbol; defaults stay BTC and ETH, synced across browsers.
 - **Classic jargon** humor voice and a built-in glossary pack (**Unsuck It Classics**), embedded via the maintainer scraper workflow.
 
 ### Changed
@@ -54,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Crypto** widget: adding watchlist coins other than BTC or ETH (for example XMR) no longer fails with “Tabocalypse background did not respond” — the background worker now accepts any valid CoinGecko coin from your list.
 - **Focus personality** — enforces hard rules: no humor, humor banner, or chaos header chrome (status line and flame icons). Stale humor flags reconcile on load and save.
 - **Weather** location map loads reliably after a fresh new-tab reload instead of staying blank when layout or the image cache completes before the panel measures.
 - **Weather** widget **10 Day** no longer switches to a horizontal scrolling row when the panel is resized wider.

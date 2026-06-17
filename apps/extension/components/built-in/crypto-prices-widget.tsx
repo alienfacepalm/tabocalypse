@@ -1,6 +1,7 @@
 /**
- * Built-in crypto spot + sparkline panel (BTC, ETH via CoinGecko; no API key).
+ * Built-in crypto spot + sparkline panel (CoinGecko; no API key).
  */
+import { X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
@@ -12,10 +13,21 @@ import {
 } from "../../lib/crypto/crypto-chart-days";
 import { pickCryptoSnark } from "../../lib/crypto/crypto-snark";
 import {
+  canRemoveCryptoWatchlistEntry,
+  type ICryptoWatchlistEntry,
+} from "../../lib/crypto/crypto-watchlist";
+import {
   fetchCoinGeckoMarketRow,
   type ICryptoMarketRow,
 } from "../../lib/crypto/fetch-crypto-market";
 import type { THumorIntensity } from "../../lib/settings";
+import { CryptoCoinIcon } from "./crypto-coin-icon";
+import { CryptoWatchlistAddField } from "./crypto-watchlist-add-field";
+
+type TCryptoRowState =
+  | { status: "loading" }
+  | { status: "ok"; row: ICryptoMarketRow; stale: boolean }
+  | { status: "err"; message: string };
 
 function Sparkline({ values, toneClass }: { values: readonly number[]; toneClass: string }) {
   if (values.length < 2) {
@@ -72,78 +84,167 @@ function rowTone(changePct: number): { pct: string; spark: string } {
   return { pct: "text-muted", spark: "crypto-trend-flat" };
 }
 
-function AssetRow({ row, locale }: { row: ICryptoMarketRow; locale: string }) {
-  const tone = rowTone(row.changePct);
+function AssetRow({
+  entry,
+  state,
+  locale,
+  canRemove,
+  onRemove,
+}: {
+  entry: ICryptoWatchlistEntry;
+  state: TCryptoRowState;
+  locale: string;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3 first:mt-0 first:border-t-0 first:pt-0">
-      <span className="w-10 shrink-0 font-display text-xs font-bold uppercase tracking-wider text-text">
-        {row.ticker}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-mono text-sm leading-none">
-          {formatUsd(locale, row.lastPriceUsd)}
-        </p>
-        <p className={`mt-0.5 font-mono text-xs ${tone.pct}`}>{formatPct(locale, row.changePct)}</p>
+      <div className="flex w-[4.5rem] shrink-0 items-center gap-1.5">
+        <CryptoCoinIcon entry={entry} size="sm" />
+        <span className="font-display text-xs font-bold uppercase tracking-wider text-text">
+          {entry.symbol}
+        </span>
       </div>
-      <Sparkline values={row.prices} toneClass={tone.spark} />
+      <div className="min-w-0 flex-1">
+        {state.status === "loading" ? (
+          <p className="muted font-mono text-sm leading-none">Loading…</p>
+        ) : null}
+        {state.status === "err" ? (
+          <p className="err font-mono text-xs leading-snug">{state.message}</p>
+        ) : null}
+        {state.status === "ok" ? (
+          <>
+            <p className="truncate font-mono text-sm leading-none">
+              {formatUsd(locale, state.row.lastPriceUsd)}
+            </p>
+            <p className={`mt-0.5 font-mono text-xs ${rowTone(state.row.changePct).pct}`}>
+              {formatPct(locale, state.row.changePct)}
+            </p>
+          </>
+        ) : null}
+      </div>
+      {state.status === "ok" ? (
+        <Sparkline values={state.row.prices} toneClass={rowTone(state.row.changePct).spark} />
+      ) : (
+        <span className="h-9 w-20 shrink-0" aria-hidden />
+      )}
+      {canRemove ? (
+        <HudTip tip={`Remove ${entry.symbol} from your watchlist`}>
+          <button
+            type="button"
+            className="btn ghost icon-only shrink-0"
+            aria-label={`Remove ${entry.symbol}`}
+            onClick={onRemove}
+          >
+            <X size={14} strokeWidth={2} aria-hidden />
+          </button>
+        </HudTip>
+      ) : (
+        <span className="w-8 shrink-0" aria-hidden />
+      )}
     </div>
   );
 }
 
 export function CryptoPricesWidget({
+  watchlist,
   chartDays,
   humorEnabled,
   humorIntensity,
   displayLocale,
   onSelectChartDays,
+  onWatchlistChange,
 }: {
+  watchlist: ICryptoWatchlistEntry[];
   chartDays: TCryptoChartDays;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   displayLocale: string;
   onSelectChartDays: (next: TCryptoChartDays) => void;
+  onWatchlistChange: (next: ICryptoWatchlistEntry[]) => void;
 }) {
-  const [btc, setBtc] = useState<ICryptoMarketRow | null>(null);
-  const [eth, setEth] = useState<ICryptoMarketRow | null>(null);
-  const [pricesStale, setPricesStale] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [rowStates, setRowStates] = useState<Record<string, TCryptoRowState>>({});
 
   useEffect(() => {
     let cancelled = false;
-    setErr(null);
-    setBtc(null);
-    setEth(null);
-    setPricesStale(false);
-    void Promise.all([
-      fetchCoinGeckoMarketRow("bitcoin", "BTC", chartDays),
-      fetchCoinGeckoMarketRow("ethereum", "ETH", chartDays),
-    ])
-      .then(([b, e]) => {
-        if (!cancelled) {
-          setBtc(b.row);
-          setEth(e.row);
-          setPricesStale(b.stale || e.stale);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setErr(error instanceof Error ? error.message : "Could not load prices");
-      });
+    const nextStates: Record<string, TCryptoRowState> = {};
+    for (const entry of watchlist) {
+      nextStates[entry.coinId] = { status: "loading" };
+    }
+    setRowStates(nextStates);
+
+    for (const entry of watchlist) {
+      void fetchCoinGeckoMarketRow(entry.coinId, entry.symbol, chartDays)
+        .then((result) => {
+          if (cancelled) return;
+          setRowStates((prev) => ({
+            ...prev,
+            [entry.coinId]: { status: "ok", row: result.row, stale: result.stale },
+          }));
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          const message = error instanceof Error ? error.message : "Could not load prices";
+          setRowStates((prev) => ({
+            ...prev,
+            [entry.coinId]: { status: "err", message },
+          }));
+        });
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [chartDays]);
+  }, [watchlist, chartDays]);
+
+  const loadedRows = useMemo(
+    () =>
+      watchlist
+        .map((entry) => {
+          const state = rowStates[entry.coinId];
+          return state?.status === "ok" ? state.row : null;
+        })
+        .filter((row): row is ICryptoMarketRow => row !== null),
+    [rowStates, watchlist],
+  );
+
+  const anyStale = useMemo(
+    () =>
+      watchlist.some((entry) => {
+        const state = rowStates[entry.coinId];
+        return state?.status === "ok" && state.stale;
+      }),
+    [rowStates, watchlist],
+  );
+
+  const allSettled = watchlist.every((entry) => {
+    const state = rowStates[entry.coinId];
+    return state && state.status !== "loading";
+  });
 
   const snark = useMemo(() => {
-    if (!btc || !eth) return null;
+    if (loadedRows.length < 2) return null;
     return pickCryptoSnark({
       humorEnabled,
       humorIntensity,
       chartDays,
-      btcChangePct: btc.changePct,
-      ethChangePct: eth.changePct,
+      primaryChangePct: loadedRows[0]!.changePct,
+      secondaryChangePct: loadedRows[1]!.changePct,
       locale: displayLocale,
     });
-  }, [btc, eth, humorEnabled, humorIntensity, chartDays, displayLocale]);
+  }, [loadedRows, humorEnabled, humorIntensity, chartDays, displayLocale]);
+
+  const removable = canRemoveCryptoWatchlistEntry(watchlist);
+
+  const addEntry = (entry: ICryptoWatchlistEntry) => {
+    if (watchlist.some((w) => w.coinId === entry.coinId)) return;
+    onWatchlistChange([...watchlist, entry]);
+  };
+
+  const removeEntry = (coinId: string) => {
+    if (!removable) return;
+    onWatchlistChange(watchlist.filter((e) => e.coinId !== coinId));
+  };
 
   return (
     <section className="card flex flex-col gap-4">
@@ -166,22 +267,30 @@ export function CryptoPricesWidget({
         </div>
       </div>
       <HudPanelBody>
-        {err ? <p className="err">{err}</p> : null}
-        {!err && btc && eth ? (
-          <>
-            {pricesStale ? (
-              <p className="muted text-xs leading-tight" role="status">
-                Cached prices — live CoinGecko data is temporarily unavailable.
-              </p>
-            ) : null}
-            <AssetRow row={btc} locale={displayLocale} />
-            <AssetRow row={eth} locale={displayLocale} />
-            {snark ? (
-              <p className="muted mt-3 border-t border-border pt-2 text-xs leading-snug">{snark}</p>
-            ) : null}
-          </>
+        {anyStale ? (
+          <p className="muted text-xs leading-tight" role="status">
+            Cached prices — live CoinGecko data is temporarily unavailable.
+          </p>
         ) : null}
-        {!err && (!btc || !eth) ? <p className="muted">Loading…</p> : null}
+        {watchlist.map((entry) => (
+          <AssetRow
+            key={entry.coinId}
+            entry={entry}
+            state={rowStates[entry.coinId] ?? { status: "loading" }}
+            locale={displayLocale}
+            canRemove={removable}
+            onRemove={() => removeEntry(entry.coinId)}
+          />
+        ))}
+        {!allSettled && watchlist.length > 0 ? (
+          <p className="muted sr-only" role="status">
+            Loading crypto prices
+          </p>
+        ) : null}
+        {snark ? (
+          <p className="muted mt-3 border-t border-border pt-2 text-xs leading-snug">{snark}</p>
+        ) : null}
+        <CryptoWatchlistAddField watchlist={watchlist} onAdd={addEntry} />
       </HudPanelBody>
     </section>
   );

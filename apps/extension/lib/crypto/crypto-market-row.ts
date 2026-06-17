@@ -1,8 +1,8 @@
 import type { TCryptoChartDays } from "./crypto-chart-days";
 
-export type TCryptoTicker = "BTC" | "ETH";
+export type TCryptoTicker = string;
 
-export type TCryptoCoinId = "bitcoin" | "ethereum";
+export type TCryptoCoinId = string;
 
 export interface ICryptoMarketRow {
   ticker: TCryptoTicker;

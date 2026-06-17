@@ -32,6 +32,11 @@ import {
   type TWeatherTemperatureUnit,
 } from "./weather/weather-units";
 import { coerceCryptoChartDays, type TCryptoChartDays } from "./crypto/crypto-chart-days";
+import {
+  coerceCryptoWatchlist,
+  DEFAULT_CRYPTO_WATCHLIST,
+  type ICryptoWatchlistEntry,
+} from "./crypto/crypto-watchlist";
 import type { TBalancedNewsCategory } from "./news/balanced-news-types";
 import {
   coerceBalancedNewsCategory,
@@ -620,6 +625,8 @@ export interface ISettings {
   weatherTenDayLayout: TWeatherTenDayLayout;
   /** Crypto widget: CoinGecko chart window (days param). */
   cryptoChartDays: TCryptoChartDays;
+  /** Coins shown in the Crypto panel (CoinGecko ids + display symbols). */
+  cryptoWatchlist: ICryptoWatchlistEntry[];
   /** When true, Balanced news region follows locale or device geo; when false, {@link balancedNewsCountry} is used. */
   balancedNewsCountryAuto: boolean;
   /** Peapix-style lowercase country code when {@link balancedNewsCountryAuto} is false. */
@@ -890,6 +897,7 @@ export interface ISyncSlice {
   weatherPanelView: TWeatherPanelView;
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
+  cryptoWatchlist: ICryptoWatchlistEntry[];
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: ISettings["balancedNewsCountry"];
   balancedNewsUseDeviceGeo: boolean;
@@ -1243,6 +1251,7 @@ export function defaultSettings(): ISettings {
     weatherPanelView: "forecast",
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
+    cryptoWatchlist: [...DEFAULT_CRYPTO_WATCHLIST],
     balancedNewsCountryAuto: true,
     balancedNewsCountry: "us",
     balancedNewsUseDeviceGeo: false,
@@ -1325,6 +1334,7 @@ function toSync(s: ISettings): ISyncSlice {
     weatherPanelView: s.weatherPanelView,
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
+    cryptoWatchlist: s.cryptoWatchlist,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
     balancedNewsCountry: s.balancedNewsCountry,
     balancedNewsUseDeviceGeo: s.balancedNewsUseDeviceGeo,
@@ -1576,6 +1586,7 @@ function mergeSettings(
       d.weatherTenDayLayout,
     ),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
+    cryptoWatchlist: coerceCryptoWatchlist(sync?.cryptoWatchlist, d.cryptoWatchlist),
     balancedNewsCountryAuto:
       typeof sync?.balancedNewsCountryAuto === "boolean"
         ? sync.balancedNewsCountryAuto

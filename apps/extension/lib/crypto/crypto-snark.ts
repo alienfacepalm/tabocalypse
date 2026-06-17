@@ -100,18 +100,18 @@ export function pickCryptoSnark(input: {
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   chartDays: TCryptoChartDays;
-  btcChangePct: number;
-  ethChangePct: number;
+  primaryChangePct: number;
+  secondaryChangePct: number;
   locale: string;
 }): string | null {
   if (!input.humorEnabled || input.humorIntensity === "off") return null;
   const pool = LINES[input.humorIntensity];
-  const mix = classifyMix(input.btcChangePct, input.ethChangePct);
+  const mix = classifyMix(input.primaryChangePct, input.secondaryChangePct);
   const lines = input.chartDays === 365 ? [...pool[mix], ...pool.range365] : [...pool[mix]];
   if (lines.length === 0) return null;
   const idx =
     hashString(
-      `${timeBucketSeed(7)}|${input.locale}|${mix}|${input.chartDays}|${lines.length}|${input.btcChangePct.toFixed(2)}|${input.ethChangePct.toFixed(2)}`,
+      `${timeBucketSeed(7)}|${input.locale}|${mix}|${input.chartDays}|${lines.length}|${input.primaryChangePct.toFixed(2)}|${input.secondaryChangePct.toFixed(2)}`,
     ) % lines.length;
   return lines[idx] ?? null;
 }
