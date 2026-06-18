@@ -61,6 +61,7 @@ import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
 import { SpeedTestWidget } from "../../components/built-in/speed-test-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/built-in/links-widget";
+import { BookmarksSettingsSection } from "../../components/bookmarks-settings-section";
 import { NotesMasterList } from "../../components/built-in/notes-master-list";
 import { StickyNoteLayer } from "../../components/built-in/sticky-note-layer";
 import { SearchWidget } from "../../components/built-in/search-widget";
@@ -138,6 +139,7 @@ import {
   isExperimentalFeatureEnabled,
   WIDGET_LABELS,
 } from "../../lib/settings";
+import { hideBookmarksStripBookmark } from "../../lib/bookmarks-strip-preferences";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import {
   BALANCED_NEWS_CATEGORY_OPTIONS,
@@ -232,6 +234,7 @@ type TSettingsSectionJump =
   | "chaos"
   | "byoAi"
   | "optionalPermissions"
+  | "bookmarks"
   | "topSitesPermission"
   | "bookmarksPermission"
   | "tabsPermission";
@@ -245,6 +248,7 @@ type TSettingsAccordionSection =
   | "background"
   | "weather"
   | "balancedNews"
+  | "bookmarks"
   | "optionalPermissions"
   | "byoAi"
   | "importPack"
@@ -439,6 +443,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const bookmarksSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const chaosSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -982,7 +987,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               ? chaosSettingsSectionRef.current
               : pendingSettingsSectionJump === "byoAi"
                 ? byoAiSettingsSectionRef.current
-                : optionalPermissionsSettingsSectionRef.current;
+                : pendingSettingsSectionJump === "bookmarks"
+                  ? bookmarksSettingsSectionRef.current
+                  : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -1046,6 +1053,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [openSettingsAccordionSection]);
 
   const openBookmarksSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("bookmarks");
+    setPendingSettingsSectionJump("bookmarks");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openBookmarksPermissionSettingsSection = useCallback(() => {
     openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("bookmarksPermission");
     setOpenSettings(true);
@@ -3440,6 +3453,31 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   </details>
 
                   <details
+                    ref={bookmarksSettingsSectionRef}
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("bookmarks")}
+                    onToggle={onSettingsAccordionToggle("bookmarks")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Bookmarks</span>
+                    </summary>
+                    <div className="acc-body">
+                      <BookmarksSettingsSection
+                        hidden={s.bookmarksStripHidden}
+                        orderIds={s.bookmarksStripOrder}
+                        permissionsEpoch={permissionsEpoch}
+                        onHiddenChange={(next) =>
+                          void persist((cur) => ({ ...cur, bookmarksStripHidden: next }))
+                        }
+                        onOrderIdsChange={(next) =>
+                          void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
+                        }
+                        onOpenOptionalPermissions={openOptionalPermissionsSettingsSection}
+                      />
+                    </div>
+                  </details>
+
+                  <details
                     ref={optionalPermissionsSettingsSectionRef}
                     className="acc-item"
                     open={settingsAccordionIsOpen("optionalPermissions")}
@@ -4550,7 +4588,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("speedTest", pos)}
                 >
-                  <SpeedTestWidget displayLocale={hudNumberLocale} />
+                  <SpeedTestWidget
+                    displayLocale={hudNumberLocale}
+                    hourFormat={effectiveClockHourFormat}
+                  />
                 </DraggableHudPanel>
               ) : null}
               {effectiveWidgets.aiChat ? (
@@ -4605,7 +4646,27 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 >
                   <BookmarksWidget
                     permissionsEpoch={permissionsEpoch}
-                    onOpenBookmarksSettings={openBookmarksSettingsSection}
+                    hidden={s.bookmarksStripHidden}
+                    orderIds={s.bookmarksStripOrder}
+                    onHideBookmark={(bookmark) =>
+                      void persist((cur) => {
+                        const next = hideBookmarksStripBookmark(
+                          cur.bookmarksStripHidden,
+                          cur.bookmarksStripOrder,
+                          bookmark,
+                        );
+                        return {
+                          ...cur,
+                          bookmarksStripHidden: next.hidden,
+                          bookmarksStripOrder: next.orderIds,
+                        };
+                      })
+                    }
+                    onOrderIdsChange={(next) =>
+                      void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
+                    }
+                    onOpenBookmarksPermissionSettings={openBookmarksPermissionSettingsSection}
+                    onOpenBookmarksPanelSettings={openBookmarksSettingsSection}
                   />
                 </DraggableHudPanel>
               ) : null}

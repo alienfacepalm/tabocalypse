@@ -18,11 +18,12 @@ import {
 import { withResolvedCryptoCoinIcon } from "../../lib/crypto/crypto-coin-icon-url";
 import type { ICryptoWatchlistEntry } from "../../lib/crypto/crypto-watchlist";
 import { MAX_CRYPTO_WATCHLIST } from "../../lib/crypto/crypto-watchlist";
+import { resolvePrivilegedFetchUserMessage } from "../../lib/privileged-fetch-user-message";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
 import { HudTip } from "../hud-tip";
 import { CryptoCoinIcon } from "./crypto-coin-icon";
 
-type TSuggestionsPanelState = "closed" | "loading" | "open" | "empty";
+type TSuggestionsPanelState = "closed" | "loading" | "open" | "empty" | "error";
 
 interface ISuggestionsPanelLayout {
   top: number;
@@ -41,6 +42,7 @@ export function CryptoWatchlistAddField({
   const [hits, setHits] = useState<ICryptoSearchHit[]>([]);
   const [panelState, setPanelState] = useState<TSuggestionsPanelState>("closed");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [panelLayout, setPanelLayout] = useState<ISuggestionsPanelLayout | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -54,6 +56,7 @@ export function CryptoWatchlistAddField({
     setHits([]);
     setPanelState("closed");
     setActiveIndex(-1);
+    setSearchError(null);
     setPanelLayout(null);
   }, []);
 
@@ -76,13 +79,24 @@ export function CryptoWatchlistAddField({
       setPanelState("loading");
       setHits([]);
       setActiveIndex(-1);
+      setSearchError(null);
       syncPanelLayout();
-      const items = await fetchCryptoSearchHits(q, ac.signal);
-      if (ac.signal.aborted) return;
-      const filtered = items.filter((hit) => !existingIds.has(hit.coinId));
-      setHits(filtered);
-      setPanelState(filtered.length > 0 ? "open" : "empty");
-      syncPanelLayout();
+      try {
+        const items = await fetchCryptoSearchHits(q, ac.signal);
+        if (ac.signal.aborted) return;
+        const filtered = items.filter((hit) => !existingIds.has(hit.coinId));
+        setHits(filtered);
+        setPanelState(filtered.length > 0 ? "open" : "empty");
+        syncPanelLayout();
+      } catch (error: unknown) {
+        if (ac.signal.aborted) return;
+        const raw = error instanceof Error ? error.message : "Could not search coins";
+        const { userMessage } = resolvePrivilegedFetchUserMessage(raw);
+        setSearchError(userMessage);
+        setHits([]);
+        setPanelState("error");
+        syncPanelLayout();
+      }
     },
     [existingIds, syncPanelLayout],
   );
@@ -116,7 +130,11 @@ export function CryptoWatchlistAddField({
     [debouncedFetch],
   );
 
-  const panelVisible = panelState === "loading" || panelState === "open" || panelState === "empty";
+  const panelVisible =
+    panelState === "loading" ||
+    panelState === "open" ||
+    panelState === "empty" ||
+    panelState === "error";
 
   useLayoutEffect(() => {
     if (!panelVisible) return;
@@ -188,6 +206,11 @@ export function CryptoWatchlistAddField({
                 No matches for this query
               </li>
             ) : null}
+            {panelState === "error" && searchError ? (
+              <li className="search-suggestion-status" role="presentation">
+                {searchError}
+              </li>
+            ) : null}
             {panelState === "open"
               ? hits.map((hit, index) => (
                   <li key={hit.coinId} role="presentation">
@@ -204,7 +227,14 @@ export function CryptoWatchlistAddField({
                         commitHit(hit);
                       }}
                     >
-                      <CryptoCoinIcon iconUrl={hit.iconUrl} symbol={hit.symbol} size="sm" />
+                      <CryptoCoinIcon
+                        entry={{
+                          coinId: hit.coinId,
+                          symbol: hit.symbol,
+                          iconUrl: hit.iconUrl,
+                        }}
+                        size="sm"
+                      />
                       <span className="font-display text-xs font-bold uppercase tracking-wider text-accent">
                         {hit.symbol}
                       </span>

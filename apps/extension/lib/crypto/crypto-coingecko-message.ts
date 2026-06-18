@@ -46,3 +46,10 @@ export type TCryptoCoingeckoMarketRowErr = {
 export type TCryptoCoingeckoMarketRowResponse =
   | TCryptoCoingeckoMarketRowOk
   | TCryptoCoingeckoMarketRowErr;
+
+export const CRYPTO_COINGECKO_INVALID_MARKET_ROW_ERROR = "Invalid crypto coin request." as const;
+
+/** Always return this from the background listener so `sendMessage` never hangs. */
+export function invalidCryptoCoingeckoMarketRowResponse(): TCryptoCoingeckoMarketRowErr {
+  return { ok: false, error: CRYPTO_COINGECKO_INVALID_MARKET_ROW_ERROR };
+}

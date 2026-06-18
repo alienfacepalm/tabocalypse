@@ -10,6 +10,11 @@ describe("crypto-coin-icon-url", () => {
     expect(
       isAllowedCryptoCoinIconUrl("https://assets.coingecko.com/coins/images/1/thumb/bitcoin.png"),
     ).toBe(true);
+    expect(
+      isAllowedCryptoCoinIconUrl(
+        "https://coin-images.coingecko.com/coins/images/975/thumb/cardano.png",
+      ),
+    ).toBe(true);
     expect(isAllowedCryptoCoinIconUrl("https://evil.example/coin.png")).toBe(false);
   });
 
@@ -19,6 +24,11 @@ describe("crypto-coin-icon-url", () => {
         " https://assets.coingecko.com/coins/images/279/thumb/ethereum.png ",
       ),
     ).toBe("https://assets.coingecko.com/coins/images/279/thumb/ethereum.png");
+    expect(
+      normalizeCryptoCoinIconUrl(
+        "https://coin-images.coingecko.com/coins/images/6319/thumb/USDC.png",
+      ),
+    ).toBe("https://coin-images.coingecko.com/coins/images/6319/thumb/USDC.png");
     expect(normalizeCryptoCoinIconUrl("not-a-url")).toBeUndefined();
   });
 

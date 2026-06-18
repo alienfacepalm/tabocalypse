@@ -11,6 +11,7 @@ import {
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import { ClockAlarmsSection } from "./clock-alarms-section";
+import { ClockAnalogFace } from "./clock-analog-face";
 
 export function ClockWidget({
   locale,
@@ -109,9 +110,14 @@ export function ClockWidget({
         </div>
       </div>
       <HudPanelBody>
-        <div className="clock-time">{now.toLocaleTimeString(locale, timeOpts)}</div>
-        <div className="clock-date muted">{now.toLocaleDateString(locale, dateOpts)}</div>
-        <div className="clock-tz muted">{timeZone}</div>
+        <div className="clock-display-row">
+          <div className="clock-digital">
+            <div className="clock-time">{now.toLocaleTimeString(locale, timeOpts)}</div>
+            <div className="clock-date muted">{now.toLocaleDateString(locale, dateOpts)}</div>
+            <div className="clock-tz muted">{timeZone}</div>
+          </div>
+          <ClockAnalogFace timeZone={timeZone} />
+        </div>
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
             Default GEO location still active. Open{" "}

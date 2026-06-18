@@ -16,6 +16,7 @@ export default defineConfig({
       "https://geocoding-api.open-meteo.com/*",
       "https://freequicknews.com/*",
       "https://api.coingecko.com/*",
+      "https://coin-images.coingecko.com/*",
       "https://speed.cloudflare.com/*",
       "https://peapix.com/*",
       "https://img.peapix.com/*",

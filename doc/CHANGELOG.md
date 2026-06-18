@@ -12,8 +12,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Crypto** widget — coin logos (for example ADA and USDC) load again from CoinGecko’s current image CDN in the watchlist and add-coin search results; watchlist entries missing a saved logo are backfilled automatically.
+- **Bookmarks** — hidden bookmarks now appear under **Settings > Bookmarks** immediately after you hide them from the panel.
+
+### Changed
+
+- **Settings > Bookmarks** — panel order and hidden bookmarks are grouped in collapsible sub-sections so the page stays easier to scan.
+- **Speed test** — hover the **Last run** header to see when that result was recorded (respects your 12h / 24h clock setting).
+
 ### Added
 
+- **Bookmarks** strip — hide bookmarks from the HUD panel without changing your browser bookmarks (unhide under **Settings > Bookmarks**); reorder favorites with the panel arrows or in **Settings > Bookmarks**.
 - **Settings > Widgets** — widget toggles apply per monitor; each screen keeps its own panel list layered on synced defaults, with **Reset widgets on this monitor** when you have local overrides.
 - **Speed test** widget: **Last run** in the panel header shows your most recent completed down/up result and updates after each successful test (saved on this device).
 - **Weather** widget: Open-Meteo forecast and **2 Lakes** buoy readings are saved on this device after a successful load; when a service is down, the last saved data is shown with a clear “saved / not live” notice instead of an empty panel (when no saved data exists, the existing error and retry UI still appears).

@@ -6,10 +6,12 @@ export const CRYPTO_DEFAULT_ICON_URLS: Readonly<Record<string, string>> = {
   ethereum: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
 };
 
+const COINGECKO_COIN_ICON_HOSTS = new Set(["assets.coingecko.com", "coin-images.coingecko.com"]);
+
 export function isAllowedCryptoCoinIconUrl(url: string): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname === "assets.coingecko.com";
+    return u.protocol === "https:" && COINGECKO_COIN_ICON_HOSTS.has(u.hostname);
   } catch {
     return false;
   }

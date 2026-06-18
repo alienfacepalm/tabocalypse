@@ -16,7 +16,14 @@ describe("fetch-crypto-search", () => {
           thumb: "https://assets.coingecko.com/coins/images/1/thumb/bitcoin.png",
         },
         { id: "ethereum", symbol: "eth", name: "Ethereum" },
+        {
+          id: "cardano",
+          symbol: "ada",
+          name: "Cardano",
+          thumb: "https://coin-images.coingecko.com/coins/images/975/thumb/cardano.png",
+        },
         { id: "", symbol: "x", name: "Bad" },
+        { id: "not valid", symbol: "BAD", name: "Bad id" },
       ],
     });
     expect(hits).toEqual([
@@ -26,7 +33,18 @@ describe("fetch-crypto-search", () => {
         name: "Bitcoin",
         iconUrl: "https://assets.coingecko.com/coins/images/1/thumb/bitcoin.png",
       },
-      { coinId: "ethereum", symbol: "ETH", name: "Ethereum" },
+      {
+        coinId: "ethereum",
+        symbol: "ETH",
+        name: "Ethereum",
+        iconUrl: expect.stringContaining("ethereum"),
+      },
+      {
+        coinId: "cardano",
+        symbol: "ADA",
+        name: "Cardano",
+        iconUrl: "https://coin-images.coingecko.com/coins/images/975/thumb/cardano.png",
+      },
     ]);
   });
 });

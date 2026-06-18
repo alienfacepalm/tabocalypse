@@ -8,7 +8,8 @@ export interface ICryptoSearchHit {
   iconUrl?: string;
 }
 
-import { normalizeCryptoCoinIconUrl } from "./crypto-coin-icon-url";
+import { normalizeCryptoCoinIconUrl, withResolvedCryptoCoinIcon } from "./crypto-coin-icon-url";
+import { normalizeCryptoWatchlistEntry } from "./crypto-watchlist";
 
 export function coinGeckoSearchUrl(query: string): string {
   return `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query.trim())}`;
@@ -25,15 +26,24 @@ export function parseCoinGeckoSearchPayload(raw: unknown, limit = 8): ICryptoSea
     const id = (row as { id?: unknown }).id;
     const symbol = (row as { symbol?: unknown }).symbol;
     const name = (row as { name?: unknown }).name;
-    const thumb = normalizeCryptoCoinIconUrl((row as { thumb?: unknown }).thumb);
+    const thumb =
+      normalizeCryptoCoinIconUrl((row as { thumb?: unknown }).thumb) ??
+      normalizeCryptoCoinIconUrl((row as { large?: unknown }).large);
     if (typeof id !== "string" || !id.trim()) continue;
     if (typeof symbol !== "string" || !symbol.trim()) continue;
     if (typeof name !== "string" || !name.trim()) continue;
-    out.push({
-      coinId: id.trim().toLowerCase(),
-      symbol: symbol.trim().toUpperCase(),
-      name: name.trim(),
+    const normalized = normalizeCryptoWatchlistEntry({
+      coinId: id,
+      symbol,
       ...(thumb ? { iconUrl: thumb } : {}),
+    });
+    if (!normalized) continue;
+    const entry = withResolvedCryptoCoinIcon(normalized);
+    out.push({
+      coinId: entry.coinId,
+      symbol: entry.symbol,
+      name: name.trim(),
+      ...(entry.iconUrl ? { iconUrl: entry.iconUrl } : {}),
     });
     if (out.length >= limit) break;
   }

@@ -37,6 +37,11 @@ import {
   DEFAULT_CRYPTO_WATCHLIST,
   type ICryptoWatchlistEntry,
 } from "./crypto/crypto-watchlist";
+import {
+  coerceBookmarksStripHidden,
+  coerceBookmarksStripIdList,
+  type TBookmarksStripItem,
+} from "./bookmarks-strip-preferences";
 import type { TBalancedNewsCategory } from "./news/balanced-news-types";
 import {
   coerceBalancedNewsCategory,
@@ -727,6 +732,10 @@ export interface ISettings {
   hasSeenSettingsIntro: boolean;
   /** Opt-in experimental features (Settings > Experimental); synced across devices. */
   experimentalFeatures: Record<TExperimentalFeatureFlag, boolean>;
+  /** Extension-only hidden bookmarks (metadata saved when the user hides from the HUD strip). */
+  bookmarksStripHidden: TBookmarksStripItem[];
+  /** Custom top-to-bottom order for bookmarks in the HUD strip (extension-only; local). */
+  bookmarksStripOrder: string[];
 }
 
 const SYNC_KEY = "tabocalypseSync";
@@ -955,6 +964,10 @@ export interface ILocalSlice {
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
   notePanelsByDisplay?: TNotePanelsByDisplay;
   widgetsByDisplay?: TWidgetsByDisplay;
+  bookmarksStripHidden?: TBookmarksStripItem[];
+  /** @deprecated Migrated to {@link bookmarksStripHidden} on load. */
+  bookmarksStripHiddenIds?: string[];
+  bookmarksStripOrder?: string[];
   /** @deprecated Migrated to {@link notePanelsByDisplay} on load. */
   notePanelPositionsByDisplay?: unknown;
 }
@@ -1301,6 +1314,8 @@ export function defaultSettings(): ISettings {
     widgetsByDisplay: {},
     hasSeenSettingsIntro: false,
     experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
+    bookmarksStripHidden: [],
+    bookmarksStripOrder: [],
   };
 }
 
@@ -1394,6 +1409,8 @@ function toLocal(s: ISettings): ILocalSlice {
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
     notePanelsByDisplay: s.notePanelsByDisplay,
     widgetsByDisplay: s.widgetsByDisplay,
+    bookmarksStripHidden: s.bookmarksStripHidden,
+    bookmarksStripOrder: s.bookmarksStripOrder,
   };
 }
 
@@ -1683,6 +1700,11 @@ function mergeSettings(
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
     widgetsByDisplay: coerceWidgetsByDisplay(local?.widgetsByDisplay),
+    bookmarksStripHidden: coerceBookmarksStripHidden(
+      local?.bookmarksStripHidden,
+      local?.bookmarksStripHiddenIds,
+    ),
+    bookmarksStripOrder: coerceBookmarksStripIdList(local?.bookmarksStripOrder),
     notePanelsByDisplay: (() => {
       const validNoteIds = new Set(mergedNotes.map((n) => n.id));
       const direct = coerceNotePanelsByDisplay(local?.notePanelsByDisplay, validNoteIds);
