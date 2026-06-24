@@ -235,6 +235,7 @@ type TSettingsSectionJump =
   | "byoAi"
   | "optionalPermissions"
   | "bookmarks"
+  | "bookmarksHidden"
   | "topSitesPermission"
   | "bookmarksPermission"
   | "tabsPermission";
@@ -429,6 +430,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
   const [pendingSettingsSectionJump, setPendingSettingsSectionJump] =
     useState<TSettingsSectionJump | null>(null);
+  const [bookmarksHiddenSubSectionOpen, setBookmarksHiddenSubSectionOpen] = useState(false);
   /** Survives closing the settings dialog until the new-tab session ends. */
   const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
     Partial<Record<TSettingsAccordionSection, boolean>>
@@ -444,6 +446,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const bookmarksSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const bookmarksHiddenSubSectionRef = useRef<HTMLDetailsElement | null>(null);
   const chaosSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -976,8 +979,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!openSettings || !pendingSettingsSectionJump) {
       return;
     }
-    const section =
-      pendingSettingsSectionJump === "weather"
+    const isBookmarksHiddenJump = pendingSettingsSectionJump === "bookmarksHidden";
+    const section = isBookmarksHiddenJump
+      ? (bookmarksHiddenSubSectionRef.current ?? bookmarksSettingsSectionRef.current)
+      : pendingSettingsSectionJump === "weather"
         ? weatherSettingsSectionRef.current
         : pendingSettingsSectionJump === "balancedNews"
           ? balancedNewsSettingsSectionRef.current
@@ -993,8 +998,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!section) {
       return;
     }
-    const focusTarget =
-      pendingSettingsSectionJump === "topSitesPermission"
+    const focusTarget = isBookmarksHiddenJump
+      ? (bookmarksHiddenSubSectionRef.current?.querySelector("summary") ??
+        bookmarksSettingsSectionRef.current?.querySelector("summary"))
+      : pendingSettingsSectionJump === "topSitesPermission"
         ? topSitesPermissionButtonRef.current
         : pendingSettingsSectionJump === "bookmarksPermission"
           ? bookmarksPermissionButtonRef.current
@@ -1052,9 +1059,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
-  const openBookmarksSettingsSection = useCallback(() => {
+  const openBookmarksHiddenSettingsSection = useCallback(() => {
     openSettingsAccordionSection("bookmarks");
-    setPendingSettingsSectionJump("bookmarks");
+    setBookmarksHiddenSubSectionOpen(true);
+    setPendingSettingsSectionJump("bookmarksHidden");
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
@@ -3473,6 +3481,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
                         }
                         onOpenOptionalPermissions={openOptionalPermissionsSettingsSection}
+                        hiddenSubSectionRef={bookmarksHiddenSubSectionRef}
+                        openHiddenSubSection={bookmarksHiddenSubSectionOpen}
+                        onHiddenSubSectionOpenChange={setBookmarksHiddenSubSectionOpen}
                       />
                     </div>
                   </details>
@@ -4666,7 +4677,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
                     }
                     onOpenBookmarksPermissionSettings={openBookmarksPermissionSettingsSection}
-                    onOpenBookmarksPanelSettings={openBookmarksSettingsSection}
+                    onOpenBookmarksHiddenSettings={openBookmarksHiddenSettingsSection}
                   />
                 </DraggableHudPanel>
               ) : null}

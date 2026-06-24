@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Bookmarks** panel — the hidden-bookmarks link in the panel now opens **Settings > Bookmarks > Hidden from panel** directly instead of only the Bookmarks section.
 - **Settings > Bookmarks** — panel order and hidden bookmarks are grouped in collapsible sub-sections so the page stays easier to scan.
 - **Speed test** — hover the **Last run** header to see when that result was recorded (respects your 12h / 24h clock setting).
 

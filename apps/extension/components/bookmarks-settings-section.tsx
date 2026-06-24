@@ -40,15 +40,26 @@ function BookmarksSettingsSubAccordion({
   title,
   count,
   children,
+  detailsRef,
+  open,
+  onToggle,
 }: {
   title: string;
   count: number;
   children: React.ReactNode;
+  detailsRef?: React.Ref<HTMLDetailsElement>;
+  open?: boolean;
+  onToggle?: (nextOpen: boolean) => void;
 }) {
   const summaryLabel = count > 0 ? `${title} (${count})` : title;
 
   return (
-    <details className="acc-sub-item">
+    <details
+      ref={detailsRef}
+      className="acc-sub-item"
+      open={open}
+      onToggle={(event) => onToggle?.(event.currentTarget.open)}
+    >
       <summary className="acc-sub-summary">
         <span className="acc-sub-title">{summaryLabel}</span>
       </summary>
@@ -95,6 +106,9 @@ export function BookmarksSettingsSection({
   onHiddenChange,
   onOrderIdsChange,
   onOpenOptionalPermissions,
+  hiddenSubSectionRef,
+  openHiddenSubSection = false,
+  onHiddenSubSectionOpenChange,
 }: {
   hidden: TBookmarksStripItem[];
   orderIds: string[];
@@ -102,6 +116,9 @@ export function BookmarksSettingsSection({
   onHiddenChange: (next: TBookmarksStripItem[]) => void;
   onOrderIdsChange: (next: string[]) => void;
   onOpenOptionalPermissions: () => void;
+  hiddenSubSectionRef?: React.Ref<HTMLDetailsElement>;
+  openHiddenSubSection?: boolean;
+  onHiddenSubSectionOpenChange?: (nextOpen: boolean) => void;
 }) {
   const [hasBookmarkPermission, setHasBookmarkPermission] = React.useState<boolean | null>(null);
   const [orderedItems, setOrderedItems] = React.useState<TBookmarksStripItem[]>([]);
@@ -254,7 +271,13 @@ export function BookmarksSettingsSection({
           ) : null}
         </BookmarksSettingsSubAccordion>
 
-        <BookmarksSettingsSubAccordion title="Hidden from panel" count={hidden.length}>
+        <BookmarksSettingsSubAccordion
+          title="Hidden from panel"
+          count={hidden.length}
+          detailsRef={hiddenSubSectionRef}
+          open={openHiddenSubSection}
+          onToggle={onHiddenSubSectionOpenChange}
+        >
           {hidden.length === 0 ? (
             <p className="muted sm m-0">
               No hidden bookmarks. Use the hide control in the Bookmarks panel.

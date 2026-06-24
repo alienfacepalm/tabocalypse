@@ -90,8 +90,8 @@ export function BookmarksWidget({
   orderIds,
   onHideBookmark,
   onOrderIdsChange,
+  onOpenBookmarksHiddenSettings,
   onOpenBookmarksPermissionSettings,
-  onOpenBookmarksPanelSettings,
 }: {
   permissionsEpoch: number;
   hidden: TBookmarksStripItem[];
@@ -99,7 +99,7 @@ export function BookmarksWidget({
   onHideBookmark: (bookmark: TBookmarksStripItem) => void;
   onOrderIdsChange: (nextOrderIds: string[]) => void;
   onOpenBookmarksPermissionSettings: () => void;
-  onOpenBookmarksPanelSettings: () => void;
+  onOpenBookmarksHiddenSettings: () => void;
 }) {
   const [marks, setMarks] = React.useState<{ id: string; title?: string; url?: string }[]>([]);
   const [query, setQuery] = React.useState("");
@@ -196,14 +196,14 @@ export function BookmarksWidget({
         {hidden.length > 0 ? (
           <p className="muted sm mb-2 mt-0">
             {hidden.length} hidden.{" "}
-            <HudTip tip="Open Settings and jump to Bookmarks">
+            <HudTip tip="Open Settings and jump to Hidden from panel">
               <button
                 type="button"
                 className="linkish p-0"
-                onClick={onOpenBookmarksPanelSettings}
-                aria-label="Open Settings and jump to Bookmarks to manage hidden bookmarks"
+                onClick={onOpenBookmarksHiddenSettings}
+                aria-label="Open Settings and jump to Hidden from panel to manage hidden bookmarks"
               >
-                Settings &gt; Bookmarks
+                Settings &gt; Bookmarks &gt; Hidden from panel
               </button>
             </HudTip>
           </p>
