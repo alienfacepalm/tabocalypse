@@ -2,7 +2,7 @@
  * Built-in crypto spot + sparkline panel (CoinGecko; no API key).
  */
 import { X } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
 import {
@@ -14,12 +14,14 @@ import {
 import { pickCryptoSnark } from "../../lib/crypto/crypto-snark";
 import {
   canRemoveCryptoWatchlistEntry,
+  normalizeCryptoWatchlistEntry,
   type ICryptoWatchlistEntry,
 } from "../../lib/crypto/crypto-watchlist";
 import {
   fetchCoinGeckoMarketRow,
   type ICryptoMarketRow,
 } from "../../lib/crypto/fetch-crypto-market";
+import { fetchCryptoWatchlistIconUrls } from "../../lib/crypto/fetch-crypto-watchlist-icons";
 import type { THumorIntensity } from "../../lib/settings";
 import { CryptoCoinIcon } from "./crypto-coin-icon";
 import { CryptoWatchlistAddField } from "./crypto-watchlist-add-field";
@@ -164,6 +166,46 @@ export function CryptoPricesWidget({
   onWatchlistChange: (next: ICryptoWatchlistEntry[]) => void;
 }) {
   const [rowStates, setRowStates] = useState<Record<string, TCryptoRowState>>({});
+  const onWatchlistChangeRef = useRef(onWatchlistChange);
+  onWatchlistChangeRef.current = onWatchlistChange;
+
+  const missingIconCoinIdsKey = useMemo(
+    () =>
+      watchlist
+        .filter((entry) => !entry.iconUrl)
+        .map((entry) => entry.coinId)
+        .sort()
+        .join(","),
+    [watchlist],
+  );
+
+  useEffect(() => {
+    if (!missingIconCoinIdsKey) return;
+    let cancelled = false;
+    const ac = new AbortController();
+    const missingIds = missingIconCoinIdsKey.split(",");
+    void fetchCryptoWatchlistIconUrls(missingIds, ac.signal)
+      .then((icons) => {
+        if (cancelled) return;
+        let changed = false;
+        const next = watchlist.map((entry) => {
+          const iconUrl = icons[entry.coinId];
+          if (!entry.iconUrl && iconUrl) {
+            changed = true;
+            return { ...entry, iconUrl };
+          }
+          return entry;
+        });
+        if (changed) onWatchlistChangeRef.current(next);
+      })
+      .catch(() => {
+        // Icons are cosmetic; price rows still load without them.
+      });
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [missingIconCoinIdsKey, watchlist]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,8 +279,10 @@ export function CryptoPricesWidget({
   const removable = canRemoveCryptoWatchlistEntry(watchlist);
 
   const addEntry = (entry: ICryptoWatchlistEntry) => {
-    if (watchlist.some((w) => w.coinId === entry.coinId)) return;
-    onWatchlistChange([...watchlist, entry]);
+    const normalized = normalizeCryptoWatchlistEntry(entry);
+    if (!normalized) return;
+    if (watchlist.some((w) => w.coinId === normalized.coinId)) return;
+    onWatchlistChange([...watchlist, normalized]);
   };
 
   const removeEntry = (coinId: string) => {

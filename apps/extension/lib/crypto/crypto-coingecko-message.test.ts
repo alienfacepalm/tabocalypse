@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  invalidCryptoCoingeckoMarketRowResponse,
   parseCryptoCoingeckoMarketRowMessage,
   TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
 } from "./crypto-coingecko-message";
@@ -46,5 +47,12 @@ describe("parseCryptoCoingeckoMarketRowMessage", () => {
         ticker: "XMR",
       }),
     ).toBeNull();
+  });
+
+  it("returns a structured error when the background rejects a payload", () => {
+    expect(invalidCryptoCoingeckoMarketRowResponse()).toEqual({
+      ok: false,
+      error: "Invalid crypto coin request.",
+    });
   });
 });

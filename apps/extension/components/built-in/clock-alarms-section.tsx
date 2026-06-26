@@ -13,12 +13,16 @@ import {
   scheduleTabocalypseAlarmViaBackground,
 } from "../../lib/tabocalypse-alarm-client";
 import {
+  getTabocalypseAlarmTestSuccessMessage,
+  getTabocalypseNotificationDeniedMessage,
+} from "../../lib/tabocalypse-alarm-mac-hints";
+import {
   getTabocalypseNotificationPermissionLevel,
   hasNativeExtensionNotificationsApi,
   sendTabocalypseTestNotification,
-  TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE,
   type TNotificationPermissionLevel,
 } from "../../lib/tabocalypse-alarm-notification";
+import { ClockAlarmsMacHints } from "./clock-alarms-mac-hints";
 import {
   listTabocalypseAlarms,
   type ITabocalypsePendingAlarm,
@@ -146,7 +150,7 @@ export function ClockAlarmsSection({
     const permission = await getTabocalypseNotificationPermissionLevel();
     setNotificationPermission(permission);
     const permissionNote =
-      permission === "denied" ? ` ${TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE}` : "";
+      permission === "denied" ? ` ${getTabocalypseNotificationDeniedMessage()}` : "";
     setAlarmScheduleBanner({
       kind: permission === "denied" ? "err" : "ok",
       message: isEdit
@@ -210,8 +214,7 @@ export function ClockAlarmsSection({
       }
       setAlarmScheduleBanner({
         kind: "ok",
-        message:
-          "Test notification sent. Check your system notification center if you do not see a banner.",
+        message: getTabocalypseAlarmTestSuccessMessage(),
       });
       window.setTimeout(() => {
         setAlarmScheduleBanner((b) => (b?.kind === "ok" ? null : b));
@@ -238,9 +241,10 @@ export function ClockAlarmsSection({
           One-time reminders via system notification. The extension background tracks the time — you
           do not need to keep this tab open.
         </p>
+        <ClockAlarmsMacHints />
         {notificationPermission === "denied" ? (
           <p className="err sm m-0" role="status">
-            {TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE}
+            {getTabocalypseNotificationDeniedMessage()}
           </p>
         ) : null}
         <div className="grid gap-2">

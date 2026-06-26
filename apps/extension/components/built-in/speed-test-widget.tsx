@@ -3,6 +3,8 @@
  */
 import { Gauge } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { TClockHourFormat } from "../../lib/clock-hour-format";
+import { formatSpeedTestLastRunTimestamp } from "../../lib/speed-test/format-speed-test-last-run-timestamp";
 import {
   readSpeedTestLastRun,
   writeSpeedTestLastRun,
@@ -14,6 +16,7 @@ import {
   type TCloudflareSpeedPhase,
 } from "../../lib/speed-test/run-cloudflare-speed-test";
 import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
+import { HudTip } from "../hud-tip";
 
 type TSpeedPhase = "idle" | "running" | "done" | "error";
 
@@ -37,7 +40,13 @@ function phaseProgressPct(progress: ISpeedTestProgress | null): number {
   return Math.min(100, (progress.elapsedInPhaseMs / progress.phaseTargetMs) * 100);
 }
 
-export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
+export function SpeedTestWidget({
+  displayLocale,
+  hourFormat,
+}: {
+  displayLocale: string;
+  hourFormat: TClockHourFormat;
+}) {
   const [phase, setPhase] = useState<TSpeedPhase>("idle");
   const [downMbps, setDownMbps] = useState<number | null>(null);
   const [upMbps, setUpMbps] = useState<number | null>(null);
@@ -59,6 +68,10 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
 
   const running = phase === "running";
   const progressPct = phaseProgressPct(runProgress);
+  const lastRunTimestamp =
+    lastRun != null
+      ? formatSpeedTestLastRunTimestamp(lastRun.completedAt, displayLocale, hourFormat)
+      : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -133,23 +146,25 @@ export function SpeedTestWidget({ displayLocale }: { displayLocale: string }) {
             <Gauge size={20} strokeWidth={2} className="shrink-0 text-accent" aria-hidden />
             <HudPanelTitleInline>Speed test</HudPanelTitleInline>
           </div>
-          {lastRun ? (
-            <div
-              className="text-right font-mono text-xs leading-tight"
-              aria-label={`Last run: download ${mbpsFmt.format(lastRun.downloadMbps)} megabits per second, upload ${mbpsFmt.format(lastRun.uploadMbps)} megabits per second`}
-            >
-              <div className="font-display text-[10px] font-bold uppercase tracking-widest text-muted">
-                Last run
+          {lastRun && lastRunTimestamp ? (
+            <HudTip tip={lastRunTimestamp} wrapClassName="text-right">
+              <div
+                className="text-right font-mono text-xs leading-tight"
+                aria-label={`Last run ${lastRunTimestamp}: download ${mbpsFmt.format(lastRun.downloadMbps)} megabits per second, upload ${mbpsFmt.format(lastRun.uploadMbps)} megabits per second`}
+              >
+                <div className="font-display text-[10px] font-bold uppercase tracking-widest text-muted">
+                  Last run
+                </div>
+                <div className="tabular-nums">
+                  <span className="text-accent">{mbpsFmt.format(lastRun.downloadMbps)}</span>
+                  <span className="text-muted"> ↓ · </span>
+                  <span className="text-[var(--color-accent2)]">
+                    {mbpsFmt.format(lastRun.uploadMbps)}
+                  </span>
+                  <span className="text-muted"> ↑ Mbps</span>
+                </div>
               </div>
-              <div className="tabular-nums">
-                <span className="text-accent">{mbpsFmt.format(lastRun.downloadMbps)}</span>
-                <span className="text-muted"> ↓ · </span>
-                <span className="text-[var(--color-accent2)]">
-                  {mbpsFmt.format(lastRun.uploadMbps)}
-                </span>
-                <span className="text-muted"> ↑ Mbps</span>
-              </div>
-            </div>
+            </HudTip>
           ) : null}
         </div>
       </div>

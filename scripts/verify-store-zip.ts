@@ -23,12 +23,29 @@ function runTar(args: string[]): { stdout: string; status: number | null } {
   return { stdout: result.stdout?.trim() ?? "", status: result.status };
 }
 
+function runUnzip(args: string[]): { stdout: string; status: number | null } {
+  const result = spawnSync("unzip", args, { encoding: "utf8" });
+  return { stdout: result.stdout?.trim() ?? "", status: result.status };
+}
+
 function normalizeZipEntry(entry: string): string {
   return entry.replace(/^\.\//, "");
 }
 
-/** Lists paths inside a zip archive (requires `tar` with zip support). */
+/** Lists paths inside a zip archive (uses `unzip` on Linux, `tar` elsewhere). */
 export function listZipEntries(zipPath: string): string[] {
+  if (process.platform === "linux") {
+    const { stdout, status } = runUnzip(["-Z1", zipPath]);
+    if (status !== 0) {
+      throw new Error(`unzip -Z1 failed for ${zipPath}`);
+    }
+    return stdout
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map(normalizeZipEntry)
+      .filter((entry) => entry !== "." && entry !== "");
+  }
+
   const { stdout, status } = runTar(["-tf", zipPath]);
   if (status !== 0) {
     throw new Error(`tar -tf failed for ${zipPath}`);
@@ -46,6 +63,14 @@ export function hasManifestAtZipRoot(entries: string[]): boolean {
 }
 
 export function readManifestFromZip(zipPath: string): Record<string, unknown> {
+  if (process.platform === "linux") {
+    const { stdout, status } = runUnzip(["-p", zipPath, "manifest.json"]);
+    if (status !== 0) {
+      throw new Error(`Could not read manifest.json from ${zipPath}`);
+    }
+    return JSON.parse(stdout) as Record<string, unknown>;
+  }
+
   const { stdout, status } = runTar(["-xOf", zipPath, "manifest.json"]);
   if (status !== 0) {
     throw new Error(`Could not read manifest.json from ${zipPath}`);

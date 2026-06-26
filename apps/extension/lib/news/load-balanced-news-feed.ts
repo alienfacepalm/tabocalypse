@@ -7,6 +7,7 @@ import {
   recordBalancedNewsRateLimit,
   writeBalancedNewsCache,
 } from "./balanced-news-cache";
+import { isNewsFeedSnapshotContentStale } from "./balanced-news-staleness";
 import { clusterNewsTopics } from "./cluster-news-topics";
 import { enrichNewsArticlesWithKnownThumbnails } from "./enrich-news-articles-with-thumbnails";
 import { fetchBalancedNewsArticles } from "./fetch-balanced-news";
@@ -45,7 +46,10 @@ export async function loadBalancedNewsFeed(
   const now = Date.now();
   const cacheRead = await readBalancedNewsCache(input.country, input.category, now);
 
-  if (!input.forceRefresh && cacheRead.snapshot && !cacheRead.staleOnly) {
+  const contentStale =
+    cacheRead.snapshot != null && isNewsFeedSnapshotContentStale(cacheRead.snapshot, now);
+
+  if (!input.forceRefresh && cacheRead.snapshot && !cacheRead.staleOnly && !contentStale) {
     return { kind: "cached", snapshot: cacheRead.snapshot };
   }
 

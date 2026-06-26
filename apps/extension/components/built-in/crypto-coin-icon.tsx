@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { resolveCryptoCoinIconUrl } from "../../lib/crypto/crypto-coin-icon-url";
 import type { ICryptoWatchlistEntry } from "../../lib/crypto/crypto-watchlist";
 
@@ -20,6 +20,10 @@ export function CryptoCoinIcon({
   const [failed, setFailed] = useState(false);
   const sizeClass = size === "md" ? "h-6 w-6" : "h-5 w-5";
   const px = size === "md" ? 24 : 20;
+
+  useEffect(() => {
+    setFailed(false);
+  }, [resolvedUrl]);
 
   if (!resolvedUrl || failed) {
     return (

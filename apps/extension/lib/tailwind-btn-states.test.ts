@@ -54,6 +54,19 @@ describe("tailwind.css shared button states", () => {
     }
   });
 
+  it("dims bookmark row actions until the row is hovered or focused", () => {
+    const css = readFileSync(tailwindCssPath, "utf8");
+    for (const needle of [
+      ".link-grid-row-actions",
+      "opacity-[0.12]",
+      ".link-grid-row:hover .link-grid-row-actions",
+      ".link-grid-row:focus-within .link-grid-row-actions",
+      ".link-grid-row:not(:hover):not(:focus-within) .link-grid-row-actions .btn.ghost",
+    ]) {
+      expect(css, `missing ${needle}`).toContain(needle);
+    }
+  });
+
   it("defines .hud-scrollbar theme + webkit/fallback pieces", () => {
     const css = readFileSync(tailwindCssPath, "utf8");
     for (const needle of [

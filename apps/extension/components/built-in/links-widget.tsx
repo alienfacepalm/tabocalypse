@@ -1,6 +1,12 @@
+import { ChevronDown, ChevronUp, EyeOff } from "lucide-react";
 import React from "react";
 import browser from "webextension-polyfill";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
+import {
+  applyBookmarksStripPreferences,
+  reorderBookmarksStripVisibleIds,
+  type TBookmarksStripItem,
+} from "../../lib/bookmarks-strip-preferences";
 import { rankBookmarksBySearchRelevance } from "../../lib/bookmark-search-relevance";
 import { faviconUrl } from "../../lib/favicon-url";
 import { HudTip } from "../hud-tip";
@@ -80,14 +86,27 @@ export function TopSitesWidget({
 
 export function BookmarksWidget({
   permissionsEpoch,
-  onOpenBookmarksSettings,
+  hidden,
+  orderIds,
+  onHideBookmark,
+  onOrderIdsChange,
+  onOpenBookmarksHiddenSettings,
+  onOpenBookmarksPermissionSettings,
 }: {
   permissionsEpoch: number;
-  onOpenBookmarksSettings: () => void;
+  hidden: TBookmarksStripItem[];
+  orderIds: string[];
+  onHideBookmark: (bookmark: TBookmarksStripItem) => void;
+  onOrderIdsChange: (nextOrderIds: string[]) => void;
+  onOpenBookmarksPermissionSettings: () => void;
+  onOpenBookmarksHiddenSettings: () => void;
 }) {
   const [marks, setMarks] = React.useState<{ id: string; title?: string; url?: string }[]>([]);
   const [query, setQuery] = React.useState("");
   const [err, setErr] = React.useState<"permission" | null>(null);
+
+  const trimmedQuery = query.trim();
+  const searchActive = trimmedQuery.length > 0;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -98,12 +117,11 @@ export function BookmarksWidget({
       setMarks([]);
       return;
     }
-    const trimmed = query.trim();
-    const load = trimmed
-      ? api.search(trimmed).then((results) =>
+    const load = searchActive
+      ? api.search(trimmedQuery).then((results) =>
           rankBookmarksBySearchRelevance(
             results.filter((b) => b.url),
-            trimmed,
+            trimmedQuery,
           ).slice(0, 32),
         )
       : api.getRecent(16);
@@ -117,7 +135,26 @@ export function BookmarksWidget({
     return () => {
       cancelled = true;
     };
-  }, [permissionsEpoch, query]);
+  }, [permissionsEpoch, searchActive, trimmedQuery]);
+
+  const visibleMarks = React.useMemo(
+    () => applyBookmarksStripPreferences(marks, hidden, orderIds),
+    [hidden, marks, orderIds],
+  );
+
+  const handleReorder = React.useCallback(
+    (bookmarkId: string, direction: "up" | "down") => {
+      onOrderIdsChange(
+        reorderBookmarksStripVisibleIds(
+          visibleMarks.map((item) => item.id),
+          orderIds,
+          bookmarkId,
+          direction,
+        ),
+      );
+    },
+    [onOrderIdsChange, orderIds, visibleMarks],
+  );
 
   if (err)
     return (
@@ -130,7 +167,7 @@ export function BookmarksWidget({
               <button
                 type="button"
                 className="linkish p-0"
-                onClick={onOpenBookmarksSettings}
+                onClick={onOpenBookmarksPermissionSettings}
                 aria-label="Open Settings and jump to Optional permissions to enable Bookmarks"
               >
                 Settings &gt; Optional permissions
@@ -156,12 +193,29 @@ export function BookmarksWidget({
         />
       </div>
       <HudPanelBody>
+        {hidden.length > 0 ? (
+          <p className="muted sm mb-2 mt-0">
+            {hidden.length} hidden.{" "}
+            <HudTip tip="Open Settings and jump to Hidden from panel">
+              <button
+                type="button"
+                className="linkish p-0"
+                onClick={onOpenBookmarksHiddenSettings}
+                aria-label="Open Settings and jump to Hidden from panel to manage hidden bookmarks"
+              >
+                Settings &gt; Bookmarks &gt; Hidden from panel
+              </button>
+            </HudTip>
+          </p>
+        ) : null}
         <ul className="link-grid">
-          {marks.map((b) => {
+          {visibleMarks.map((b, index) => {
             const label = coerceAlarmMetaMessage(b.title as unknown) || b.url || "";
+            const cannotMoveUp = searchActive || index === 0;
+            const cannotMoveDown = searchActive || index >= visibleMarks.length - 1;
             return (
-              <li key={b.id}>
-                <HudTip tip={label} wrapClassName="block min-w-0 w-full">
+              <li key={b.id} className="link-grid-row">
+                <HudTip tip={label} wrapClassName="block min-w-0 flex-1">
                   <a href={b.url} target="_blank" rel="noreferrer">
                     <img
                       src={faviconUrl(b.url ?? "")}
@@ -173,6 +227,72 @@ export function BookmarksWidget({
                     <span className="min-w-0 flex-1 truncate">{label}</span>
                   </a>
                 </HudTip>
+                <div className="link-grid-row-actions">
+                  {!searchActive ? (
+                    <>
+                      <HudTip
+                        tip={
+                          cannotMoveUp
+                            ? "Already first in the list"
+                            : "Move this bookmark earlier in the list"
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="btn ghost icon-only sm disabled:pointer-events-none"
+                          aria-label={
+                            cannotMoveUp
+                              ? "Bookmark is already first in the list"
+                              : "Move bookmark earlier in the list"
+                          }
+                          title={cannotMoveUp ? "Already first in the list" : undefined}
+                          disabled={cannotMoveUp}
+                          onClick={() => handleReorder(b.id, "up")}
+                        >
+                          <ChevronUp size={14} strokeWidth={2} aria-hidden />
+                        </button>
+                      </HudTip>
+                      <HudTip
+                        tip={
+                          cannotMoveDown
+                            ? "Already last in the list"
+                            : "Move this bookmark later in the list"
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="btn ghost icon-only sm disabled:pointer-events-none"
+                          aria-label={
+                            cannotMoveDown
+                              ? "Bookmark is already last in the list"
+                              : "Move bookmark later in the list"
+                          }
+                          title={cannotMoveDown ? "Already last in the list" : undefined}
+                          disabled={cannotMoveDown}
+                          onClick={() => handleReorder(b.id, "down")}
+                        >
+                          <ChevronDown size={14} strokeWidth={2} aria-hidden />
+                        </button>
+                      </HudTip>
+                    </>
+                  ) : null}
+                  <HudTip tip="Hide this bookmark from the panel (unhide in Settings > Bookmarks)">
+                    <button
+                      type="button"
+                      className="btn ghost icon-only sm"
+                      aria-label="Hide bookmark from panel"
+                      onClick={() =>
+                        onHideBookmark({
+                          id: b.id,
+                          title: b.title,
+                          url: b.url,
+                        })
+                      }
+                    >
+                      <EyeOff size={14} strokeWidth={2} aria-hidden />
+                    </button>
+                  </HudTip>
+                </div>
               </li>
             );
           })}

@@ -1,6 +1,6 @@
 {
   "name": "extension",
-  "version": "0.1.109",
+  "version": "0.1.119",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
-    "generate:settings-changelog": "tsx scripts/generate-settings-changelog.ts",
+    "generate:settings-changelog": "tsx scripts/generate-settings-changelog.ts && prettier --write lib/changelog/changelog.generated.ts",
     "scrape:unsuck-classics": "tsx scripts/scrape-unsuck-classics.ts",
     "icons:transparent-public": "tsx scripts/generate-transparent-public-icons.ts"
   },

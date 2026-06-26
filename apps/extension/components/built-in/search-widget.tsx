@@ -25,6 +25,8 @@ import {
   SEARCH_ENGINE_LABELS,
 } from "../../lib/search-engine-options";
 import type { ISettings, THumorIntensity } from "../../lib/settings";
+import { HUD_PAGE_FOOTER_RESERVE_PX } from "../../lib/hud-layout";
+import { resolveSearchSuggestionsPlacement } from "../../lib/resolve-search-suggestions-placement";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
 import { HudPanelTitle } from "../hud-panel-drag-context";
 import { HudTip } from "../hud-tip";
@@ -37,6 +39,7 @@ interface ISuggestionsPanelLayout {
   top: number;
   left: number;
   width: number;
+  maxHeight: number;
 }
 
 export function SearchWidget({
@@ -46,6 +49,7 @@ export function SearchWidget({
   humorEnabled,
   humorIntensity,
   humorBannerLine,
+  inputRef,
   variant = "card",
 }: {
   engine: ISettings["searchEngine"];
@@ -55,6 +59,7 @@ export function SearchWidget({
   humorIntensity: THumorIntensity;
   /** Snark overlay above the field when Settings > Widgets > Humor banner is on. */
   humorBannerLine?: string | null;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   variant?: "card" | "header";
 }) {
   const [q, setQ] = useState("");
@@ -98,10 +103,19 @@ export function SearchWidget({
     const anchor = anchorRef.current;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
+    const panelHeightPx = panelRef.current?.getBoundingClientRect().height ?? 0;
+    const placement = resolveSearchSuggestionsPlacement({
+      anchorRect: rect,
+      panelHeightPx,
+      viewportWidthPx: window.innerWidth,
+      viewportHeightPx: window.innerHeight,
+      bottomInsetPx: HUD_PAGE_FOOTER_RESERVE_PX,
+    });
     setPanelLayout({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      top: placement.topPx,
+      left: placement.leftPx,
+      width: placement.widthPx,
+      maxHeight: placement.maxHeightPx,
     });
   }, []);
 
@@ -222,6 +236,7 @@ export function SearchWidget({
               top: panelLayout.top,
               left: panelLayout.left,
               width: panelLayout.width,
+              maxHeight: panelLayout.maxHeight,
             }}
           >
             {panelState === "loading" ? (
@@ -273,6 +288,7 @@ export function SearchWidget({
           USER_LOG@TAB:&gt;
         </span>
         <input
+          ref={inputRef}
           value={q}
           role="combobox"
           aria-autocomplete="list"

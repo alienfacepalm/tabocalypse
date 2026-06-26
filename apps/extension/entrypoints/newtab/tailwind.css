@@ -921,6 +921,14 @@
     @apply pointer-events-none m-0 line-clamp-2 font-display text-[0.65rem] font-bold uppercase leading-snug tracking-widest text-accent2;
   }
 
+  .clock-display-row {
+    @apply flex items-center gap-4;
+  }
+
+  .clock-digital {
+    @apply min-w-0 flex-1;
+  }
+
   .clock-time {
     @apply font-display text-[2.2rem] font-bold tracking-tight;
   }
@@ -931,6 +939,51 @@
 
   .clock-tz {
     @apply text-[0.8rem];
+  }
+
+  .clock-analog-face {
+    @apply h-[5.5rem] w-[5.5rem] shrink-0 drop-shadow-[3px_3px_0px_var(--color-accent2)];
+  }
+
+  .clock-analog-dial {
+    @apply fill-surface-weak stroke-border;
+    stroke-width: 2;
+  }
+
+  .clock-analog-tick {
+    @apply stroke-muted;
+    stroke-width: 1.5;
+    stroke-linecap: square;
+  }
+
+  .clock-analog-tick-major {
+    @apply stroke-text;
+    stroke-width: 2;
+    stroke-linecap: square;
+  }
+
+  .clock-analog-hand {
+    stroke-linecap: square;
+  }
+
+  .clock-analog-hand-hour {
+    @apply stroke-text;
+    stroke-width: 3;
+  }
+
+  .clock-analog-hand-minute {
+    @apply stroke-text;
+    stroke-width: 2;
+  }
+
+  .clock-analog-hand-second {
+    @apply stroke-accent;
+    stroke-width: 1;
+  }
+
+  .clock-analog-hub {
+    @apply fill-accent stroke-border;
+    stroke-width: 1;
   }
 
   .todo-list {
@@ -1307,7 +1360,37 @@
   }
 
   .link-grid {
-    @apply m-0 flex list-none flex-col gap-[0.35rem] p-0;
+    @apply m-0 flex list-none flex-col gap-1 p-0;
+  }
+
+  .link-grid-row {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .link-grid-row-actions {
+    @apply ml-2 flex shrink-0 items-center gap-1 opacity-[0.12] transition-opacity duration-150;
+  }
+
+  .link-grid-row:not(:hover):not(:focus-within) .link-grid-row-actions .btn.ghost {
+    border-color: color-mix(in srgb, var(--color-accent2) 20%, transparent);
+    color: color-mix(in srgb, var(--color-accent2) 65%, transparent);
+    box-shadow: none;
+  }
+
+  .link-grid-row:hover .link-grid-row-actions,
+  .link-grid-row:focus-within .link-grid-row-actions {
+    @apply opacity-100;
+  }
+
+  .link-grid-row:hover .link-grid-row-actions .btn.ghost,
+  .link-grid-row:focus-within .link-grid-row-actions .btn.ghost {
+    @apply border-accent2 text-accent2 shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  @media (hover: none) {
+    .link-grid-row-actions {
+      @apply opacity-100;
+    }
   }
 
   .link-grid a {
@@ -1409,6 +1492,33 @@
 
   .acc-body {
     @apply px-4 py-3;
+  }
+
+  .settings-sub-accordion {
+    @apply flex flex-col gap-2;
+  }
+
+  .acc-sub-item {
+    @apply relative border;
+    border-color: rgb(148 163 184 / 0.16);
+    background: rgb(0 0 0 / 0.12);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+
+  .acc-sub-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-2 border-b border-border bg-surface-weak px-3 py-2 font-display text-[0.75rem] font-bold uppercase tracking-widest text-accent shadow-[2px_2px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color] duration-100 select-none hover:bg-accent hover:text-on-accent hover:shadow-[2px_2px_0px_0px_var(--color-accent2)] open:bg-accent open:text-on-accent open:shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  .acc-sub-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .acc-sub-title {
+    @apply text-inherit;
+  }
+
+  .acc-sub-body {
+    @apply px-3 py-2;
   }
 
   .settings-changelog-h2 {
@@ -1647,6 +1757,12 @@
       ),
       rgb(255 255 255 / 0.4);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55);
+  }
+
+  [data-theme="light"] .acc-sub-item {
+    border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
+    background: rgb(255 255 255 / 0.2);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
   [data-theme="light"] .settings-welcome {

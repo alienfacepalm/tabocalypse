@@ -26,6 +26,11 @@ import {
   type TBalancedNewsCountry,
 } from "../../lib/news/balanced-news-country";
 import { markBalancedNewsManualRefresh } from "../../lib/news/balanced-news-cache";
+import {
+  formatNewsItemHoverTimestamp,
+  isNewsItemStale,
+  isNewsTopicStale,
+} from "../../lib/news/balanced-news-staleness";
 import { formatArticleSynopsis } from "../../lib/news/format-article-synopsis";
 import { loadBalancedNewsFeed } from "../../lib/news/load-balanced-news-feed";
 import { resolveNewsArticleDisplayThumbnailUrl } from "../../lib/news/resolve-news-article-display-thumbnail-url";
@@ -117,22 +122,56 @@ function TruncatedHudLabel({
   );
 }
 
+function StaleLabel() {
+  return (
+    <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-[var(--color-accent2)]">
+      Stale
+    </span>
+  );
+}
+
+function HoverTimestamp({
+  publishedAt,
+  locale,
+  fallbackFetchedAt,
+}: {
+  publishedAt: number | null;
+  locale: string;
+  fallbackFetchedAt?: number;
+}) {
+  const ts = publishedAt ?? fallbackFetchedAt ?? null;
+  return (
+    <span
+      className="pointer-events-none shrink-0 font-mono text-[9px] text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      aria-hidden
+    >
+      {formatNewsItemHoverTimestamp(ts, locale)}
+    </span>
+  );
+}
+
 function PerspectiveSlot({
   perspective,
   article,
   accentClass,
+  locale,
+  fallbackFetchedAt,
 }: {
   perspective: "left" | "center" | "right";
   article: INewsArticleRef | null;
   accentClass: string;
+  locale: string;
+  fallbackFetchedAt?: number;
 }) {
+  const stale =
+    article != null && isNewsItemStale(article.publishedAt, Date.now(), fallbackFetchedAt);
   return (
     <div className={`min-w-0 flex-1 border border-border p-2 ${accentClass}`}>
       <PerspectiveHeader perspective={perspective} />
       {article ? (
         <button
           type="button"
-          className="linkish flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
+          className="linkish group flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
           onClick={() => openArticle(article.url)}
         >
           <ArticleThumbnail article={article} />
@@ -151,6 +190,12 @@ function PerspectiveSlot({
                 text={article.source}
                 className="min-w-0 flex-1 text-[10px] text-muted"
               />
+              {stale ? <StaleLabel /> : null}
+              <HoverTimestamp
+                publishedAt={article.publishedAt}
+                locale={locale}
+                fallbackFetchedAt={fallbackFetchedAt}
+              />
             </span>
           </span>
         </button>
@@ -161,11 +206,20 @@ function PerspectiveSlot({
   );
 }
 
-function ArticleRow({ article }: { article: INewsArticleRef }) {
+function ArticleRow({
+  article,
+  locale,
+  fallbackFetchedAt,
+}: {
+  article: INewsArticleRef;
+  locale: string;
+  fallbackFetchedAt?: number;
+}) {
+  const stale = isNewsItemStale(article.publishedAt, Date.now(), fallbackFetchedAt);
   return (
     <button
       type="button"
-      className="linkish flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
+      className="linkish group flex w-full min-w-0 gap-2 text-left font-mono text-xs leading-snug"
       onClick={() => openArticle(article.url)}
     >
       <ArticleThumbnail article={article} />
@@ -185,6 +239,12 @@ function ArticleRow({ article }: { article: INewsArticleRef }) {
           <TruncatedHudLabel
             text={article.source}
             className="min-w-0 flex-1 text-[10px] text-muted"
+          />
+          {stale ? <StaleLabel /> : null}
+          <HoverTimestamp
+            publishedAt={article.publishedAt}
+            locale={locale}
+            fallbackFetchedAt={fallbackFetchedAt}
           />
         </span>
       </span>
@@ -280,11 +340,13 @@ function TopicArticleList({
   label,
   locale,
   publishedAt,
+  fallbackFetchedAt,
 }: {
   articles: readonly INewsArticleRef[];
   label: string;
   locale: string;
   publishedAt: number | null;
+  fallbackFetchedAt?: number;
 }) {
   if (articles.length === 0) {
     return <p className="mt-2 font-mono text-[10px] text-muted">No headlines for this topic.</p>;
@@ -298,7 +360,7 @@ function TopicArticleList({
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {articles.map((article) => (
           <li key={article.url} className="border-t border-border pt-2 first:border-t-0 first:pt-0">
-            <ArticleRow article={article} />
+            <ArticleRow article={article} locale={locale} fallbackFetchedAt={fallbackFetchedAt} />
           </li>
         ))}
       </ul>
@@ -311,10 +373,12 @@ function TopicDetail({
   topic,
   locale,
   previewArticle,
+  fallbackFetchedAt,
 }: {
   topic: INewsTopicRoundup;
   locale: string;
   previewArticle: INewsArticleRef | null;
+  fallbackFetchedAt?: number;
 }) {
   const normalizedTopic = normalizeNewsTopicRoundup(topic);
   const articles = normalizedTopic.articles;
@@ -337,6 +401,7 @@ function TopicDetail({
         label="More reporting"
         locale={locale}
         publishedAt={normalizedTopic.publishedAt}
+        fallbackFetchedAt={fallbackFetchedAt}
       />
     );
   }
@@ -348,16 +413,22 @@ function TopicDetail({
           perspective="left"
           article={normalizedTopic.left}
           accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.left}
+          locale={locale}
+          fallbackFetchedAt={fallbackFetchedAt}
         />
         <PerspectiveSlot
           perspective="center"
           article={normalizedTopic.center}
           accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.center}
+          locale={locale}
+          fallbackFetchedAt={fallbackFetchedAt}
         />
         <PerspectiveSlot
           perspective="right"
           article={normalizedTopic.right}
           accentClass={PERSPECTIVE_SLOT_ACCENT_CLASS.right}
+          locale={locale}
+          fallbackFetchedAt={fallbackFetchedAt}
         />
       </div>
       {related.length > 0 ? (
@@ -366,6 +437,7 @@ function TopicDetail({
           label="Related"
           locale={locale}
           publishedAt={normalizedTopic.publishedAt}
+          fallbackFetchedAt={fallbackFetchedAt}
         />
       ) : null}
     </div>
@@ -698,13 +770,16 @@ export function BalancedNewsWidget({
                 </p>
               ) : null}
               {snapshot.stale ? (
-                <p className="mb-2 font-mono text-[10px] text-muted">Showing cached headlines.</p>
+                <p className="mb-2 font-mono text-[10px] text-muted">
+                  Showing cached headlines. Refresh when rate limits allow.
+                </p>
               ) : null}
               <ul className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Headline topics">
                 {snapshot.topics.map((topic) => {
                   const active = topic.id === selectedTopicId;
                   const previewArticle = resolveTopicPreviewArticle(topic);
                   const previewPanelId = `balanced-news-preview-${topic.id}`;
+                  const topicStale = isNewsTopicStale(topic, Date.now(), snapshot.fetchedAt);
                   return (
                     <li key={topic.id}>
                       <button
@@ -715,8 +790,8 @@ export function BalancedNewsWidget({
                         }
                         className={
                           active
-                            ? "btn primary flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal ring-2 ring-primary ring-offset-2 ring-offset-surface"
-                            : "btn ghost flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal"
+                            ? "btn primary group flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal ring-2 ring-primary ring-offset-2 ring-offset-surface"
+                            : "btn ghost group flex w-full min-w-0 items-center gap-2 text-left normal-case tracking-normal"
                         }
                         aria-pressed={active}
                         onClick={() => setSelectedTopicId(topic.id)}
@@ -743,6 +818,12 @@ export function BalancedNewsWidget({
                           className="font-mono text-xs"
                           wrapClassName="min-w-0 flex-1"
                         />
+                        {topicStale ? <StaleLabel /> : null}
+                        <HoverTimestamp
+                          publishedAt={topic.publishedAt}
+                          locale={displayLocale}
+                          fallbackFetchedAt={snapshot.fetchedAt}
+                        />
                         <TopicBalanceIcons topic={topic} />
                       </button>
                     </li>
@@ -755,6 +836,7 @@ export function BalancedNewsWidget({
                   topic={selectedTopic}
                   locale={displayLocale}
                   previewArticle={resolveTopicPreviewArticle(selectedTopic)}
+                  fallbackFetchedAt={snapshot.fetchedAt}
                 />
               ) : null}
             </>

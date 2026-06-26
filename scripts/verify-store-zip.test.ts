@@ -11,11 +11,12 @@ import {
 } from "./verify-store-zip";
 
 function makeZip(dir: string, zipPath: string): void {
-  const result = spawnSync("tar", ["-a", "-cf", zipPath, "-C", dir, "."], {
-    shell: process.platform === "win32",
-  });
+  const result =
+    process.platform === "win32"
+      ? spawnSync("tar", ["-a", "-cf", zipPath, "-C", dir, "."], { shell: true })
+      : spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
   if (result.status !== 0) {
-    throw new Error(`tar zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
+    throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
   }
 }
 

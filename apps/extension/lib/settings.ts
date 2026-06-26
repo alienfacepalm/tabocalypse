@@ -22,6 +22,7 @@ import {
 } from "./theme";
 import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
+import { coerceSearchEngine, DEFAULT_SEARCH_ENGINE } from "./search-engine-options";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
   coerceWeatherTenDayLayout,
@@ -37,6 +38,11 @@ import {
   DEFAULT_CRYPTO_WATCHLIST,
   type ICryptoWatchlistEntry,
 } from "./crypto/crypto-watchlist";
+import {
+  coerceBookmarksStripHidden,
+  coerceBookmarksStripIdList,
+  type TBookmarksStripItem,
+} from "./bookmarks-strip-preferences";
 import type { TBalancedNewsCategory } from "./news/balanced-news-types";
 import {
   coerceBalancedNewsCategory,
@@ -602,6 +608,8 @@ export interface ISettings {
   searchEngine: "ddg" | "google" | "bing";
   /** When true, Enter in the HUD search field opens the assist destination instead of classic web search. */
   searchAssistActive: boolean;
+  /** When true, each new Tabocalypse tab focuses the HUD search field instead of leaving focus in the browser chrome. */
+  searchFocusOnNewTab: boolean;
   /** Shared HUD latitude (Weather, Clock, Balanced News, …). Storage key keeps the `weather*` prefix. */
   weatherLat: number;
   /** Shared HUD longitude. Storage key keeps the `weather*` prefix. */
@@ -727,6 +735,10 @@ export interface ISettings {
   hasSeenSettingsIntro: boolean;
   /** Opt-in experimental features (Settings > Experimental); synced across devices. */
   experimentalFeatures: Record<TExperimentalFeatureFlag, boolean>;
+  /** Extension-only hidden bookmarks (metadata saved when the user hides from the HUD strip). */
+  bookmarksStripHidden: TBookmarksStripItem[];
+  /** Custom top-to-bottom order for bookmarks in the HUD strip (extension-only; local). */
+  bookmarksStripOrder: string[];
 }
 
 const SYNC_KEY = "tabocalypseSync";
@@ -885,6 +897,7 @@ export interface ISyncSlice {
   widgets: Record<TWidgetKey, boolean>;
   searchEngine: ISettings["searchEngine"];
   searchAssistActive: boolean;
+  searchFocusOnNewTab: boolean;
   weatherLat: number;
   weatherLon: number;
   weatherGeoAdjusted: boolean;
@@ -955,6 +968,10 @@ export interface ILocalSlice {
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
   notePanelsByDisplay?: TNotePanelsByDisplay;
   widgetsByDisplay?: TWidgetsByDisplay;
+  bookmarksStripHidden?: TBookmarksStripItem[];
+  /** @deprecated Migrated to {@link bookmarksStripHidden} on load. */
+  bookmarksStripHiddenIds?: string[];
+  bookmarksStripOrder?: string[];
   /** @deprecated Migrated to {@link notePanelsByDisplay} on load. */
   notePanelPositionsByDisplay?: unknown;
 }
@@ -1237,8 +1254,9 @@ export function defaultSettings(): ISettings {
     ],
     spicyContentAcknowledged: false,
     widgets: { ...DEFAULT_WIDGETS },
-    searchEngine: "ddg",
+    searchEngine: DEFAULT_SEARCH_ENGINE,
     searchAssistActive: false,
+    searchFocusOnNewTab: false,
     weatherLat: 40.7128,
     weatherLon: -74.006,
     weatherGeoAdjusted: false,
@@ -1301,6 +1319,8 @@ export function defaultSettings(): ISettings {
     widgetsByDisplay: {},
     hasSeenSettingsIntro: false,
     experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
+    bookmarksStripHidden: [],
+    bookmarksStripOrder: [],
   };
 }
 
@@ -1322,6 +1342,7 @@ function toSync(s: ISettings): ISyncSlice {
     widgets: s.widgets,
     searchEngine: s.searchEngine,
     searchAssistActive: s.searchAssistActive,
+    searchFocusOnNewTab: s.searchFocusOnNewTab,
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
     weatherGeoAdjusted: s.weatherGeoAdjusted,
@@ -1394,6 +1415,8 @@ function toLocal(s: ISettings): ILocalSlice {
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
     notePanelsByDisplay: s.notePanelsByDisplay,
     widgetsByDisplay: s.widgetsByDisplay,
+    bookmarksStripHidden: s.bookmarksStripHidden,
+    bookmarksStripOrder: s.bookmarksStripOrder,
   };
 }
 
@@ -1548,11 +1571,15 @@ function mergeSettings(
           ? true
           : d.hasSeenSettingsIntro,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
-    searchEngine: sync?.searchEngine ?? d.searchEngine,
+    searchEngine: coerceSearchEngine(sync?.searchEngine, d.searchEngine),
     searchAssistActive:
       typeof sync?.searchAssistActive === "boolean"
         ? sync.searchAssistActive
         : d.searchAssistActive,
+    searchFocusOnNewTab:
+      typeof sync?.searchFocusOnNewTab === "boolean"
+        ? sync.searchFocusOnNewTab
+        : d.searchFocusOnNewTab,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
     weatherGeoAdjusted: resolveWeatherGeoAdjusted(sync ?? {}, d),
@@ -1683,6 +1710,11 @@ function mergeSettings(
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
     widgetsByDisplay: coerceWidgetsByDisplay(local?.widgetsByDisplay),
+    bookmarksStripHidden: coerceBookmarksStripHidden(
+      local?.bookmarksStripHidden,
+      local?.bookmarksStripHiddenIds,
+    ),
+    bookmarksStripOrder: coerceBookmarksStripIdList(local?.bookmarksStripOrder),
     notePanelsByDisplay: (() => {
       const validNoteIds = new Set(mergedNotes.map((n) => n.id));
       const direct = coerceNotePanelsByDisplay(local?.notePanelsByDisplay, validNoteIds);

@@ -61,6 +61,7 @@ import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
 import { SpeedTestWidget } from "../../components/built-in/speed-test-widget";
 import { BookmarksWidget, TopSitesWidget } from "../../components/built-in/links-widget";
+import { BookmarksSettingsSection } from "../../components/bookmarks-settings-section";
 import { NotesMasterList } from "../../components/built-in/notes-master-list";
 import { StickyNoteLayer } from "../../components/built-in/sticky-note-layer";
 import { SearchWidget } from "../../components/built-in/search-widget";
@@ -138,6 +139,7 @@ import {
   isExperimentalFeatureEnabled,
   WIDGET_LABELS,
 } from "../../lib/settings";
+import { hideBookmarksStripBookmark } from "../../lib/bookmarks-strip-preferences";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import {
   BALANCED_NEWS_CATEGORY_OPTIONS,
@@ -232,6 +234,8 @@ type TSettingsSectionJump =
   | "chaos"
   | "byoAi"
   | "optionalPermissions"
+  | "bookmarks"
+  | "bookmarksHidden"
   | "topSitesPermission"
   | "bookmarksPermission"
   | "tabsPermission";
@@ -245,6 +249,7 @@ type TSettingsAccordionSection =
   | "background"
   | "weather"
   | "balancedNews"
+  | "bookmarks"
   | "optionalPermissions"
   | "byoAi"
   | "importPack"
@@ -425,6 +430,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [geoStatus, setGeoStatus] = useState<"detecting" | "denied" | "unavailable" | null>(null);
   const [pendingSettingsSectionJump, setPendingSettingsSectionJump] =
     useState<TSettingsSectionJump | null>(null);
+  const [bookmarksHiddenSubSectionOpen, setBookmarksHiddenSubSectionOpen] = useState(false);
   /** Survives closing the settings dialog until the new-tab session ends. */
   const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
     Partial<Record<TSettingsAccordionSection, boolean>>
@@ -439,10 +445,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const bookmarksSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const bookmarksHiddenSubSectionRef = useRef<HTMLDetailsElement | null>(null);
   const chaosSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabsPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchFocusAppliedRef = useRef(false);
   const supportActions = useMemo(() => getSupportActions(), []);
   const extensionVersion = useMemo(() => browser.runtime.getManifest().version, []);
   const bingPaintUrlRef = useRef<string | null>(null);
@@ -971,8 +981,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     if (!openSettings || !pendingSettingsSectionJump) {
       return;
     }
-    const section =
-      pendingSettingsSectionJump === "weather"
+    const isBookmarksHiddenJump = pendingSettingsSectionJump === "bookmarksHidden";
+    const section = isBookmarksHiddenJump
+      ? (bookmarksHiddenSubSectionRef.current ?? bookmarksSettingsSectionRef.current)
+      : pendingSettingsSectionJump === "weather"
         ? weatherSettingsSectionRef.current
         : pendingSettingsSectionJump === "balancedNews"
           ? balancedNewsSettingsSectionRef.current
@@ -982,12 +994,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               ? chaosSettingsSectionRef.current
               : pendingSettingsSectionJump === "byoAi"
                 ? byoAiSettingsSectionRef.current
-                : optionalPermissionsSettingsSectionRef.current;
+                : pendingSettingsSectionJump === "bookmarks"
+                  ? bookmarksSettingsSectionRef.current
+                  : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
-    const focusTarget =
-      pendingSettingsSectionJump === "topSitesPermission"
+    const focusTarget = isBookmarksHiddenJump
+      ? (bookmarksHiddenSubSectionRef.current?.querySelector("summary") ??
+        bookmarksSettingsSectionRef.current?.querySelector("summary"))
+      : pendingSettingsSectionJump === "topSitesPermission"
         ? topSitesPermissionButtonRef.current
         : pendingSettingsSectionJump === "bookmarksPermission"
           ? bookmarksPermissionButtonRef.current
@@ -1045,7 +1061,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
-  const openBookmarksSettingsSection = useCallback(() => {
+  const openBookmarksHiddenSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("bookmarks");
+    setBookmarksHiddenSubSectionOpen(true);
+    setPendingSettingsSectionJump("bookmarksHidden");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openBookmarksPermissionSettingsSection = useCallback(() => {
     openSettingsAccordionSection("optionalPermissions");
     setPendingSettingsSectionJump("bookmarksPermission");
     setOpenSettings(true);
@@ -1156,6 +1179,23 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     () => resolveWidgetsForDisplay(settings.widgets, settings.widgetsByDisplay, displayLayoutKey),
     [settings.widgets, settings.widgetsByDisplay, displayLayoutKey],
   );
+
+  const applySearchFocusOnNewTabIfNeeded = useCallback(() => {
+    if (searchFocusAppliedRef.current) return;
+    if (!settings.searchFocusOnNewTab) return;
+    if (!effectiveWidgets.search) return;
+    if (openSettings) return;
+    const input = searchInputRef.current;
+    if (!input) return;
+    searchFocusAppliedRef.current = true;
+    requestAnimationFrame(() => {
+      input.focus();
+    });
+  }, [settings.searchFocusOnNewTab, effectiveWidgets.search, openSettings]);
+
+  useLayoutEffect(() => {
+    applySearchFocusOnNewTabIfNeeded();
+  }, [applySearchFocusOnNewTabIfNeeded]);
 
   const displayLayoutLabel = useMemo(() => formatHudDisplayLayoutLabel(), [displayLayoutKey]);
 
@@ -2042,6 +2082,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     role="region"
                     aria-label="Welcome to Tabocalypse"
                   >
+                    <div className="mb-3">
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.searchFocusOnNewTab}
+                          onChange={(e) => {
+                            void persist((cur) => ({
+                              ...cur,
+                              searchFocusOnNewTab: e.target.checked,
+                            }));
+                          }}
+                        />
+                        <span>Focus Tabocalypse search on new tab</span>
+                      </label>
+                      <p className="muted sm mt-1 mb-0 pl-6">
+                        Land in the HUD search field instead of the browser address bar when you
+                        open a new tab.
+                      </p>
+                    </div>
                     <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
                     <p className="settings-welcome-lead">
                       This new tab is a HUD you control—widgets, theme, humor, plugins, and more.
@@ -2758,6 +2817,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <span className="acc-title">Search engine</span>
                     </summary>
                     <div className="acc-body">
+                      <div className="mb-3">
+                        <label className="check-row">
+                          <input
+                            type="checkbox"
+                            checked={s.searchFocusOnNewTab}
+                            onChange={(e) => {
+                              void persist((cur) => ({
+                                ...cur,
+                                searchFocusOnNewTab: e.target.checked,
+                              }));
+                            }}
+                          />
+                          <span>Focus Tabocalypse search on new tab</span>
+                        </label>
+                        <p className="muted sm mt-1 mb-0 pl-6">
+                          Land in the HUD search field instead of the browser address bar when you
+                          open a new tab.
+                        </p>
+                      </div>
                       <SearchEngineSettingPicker
                         value={s.searchEngine}
                         onChange={(engine) =>
@@ -3436,6 +3514,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <LayoutGrid size={18} strokeWidth={2} aria-hidden />
                         <span>Reset panel positions</span>
                       </button>
+                    </div>
+                  </details>
+
+                  <details
+                    ref={bookmarksSettingsSectionRef}
+                    className="acc-item"
+                    open={settingsAccordionIsOpen("bookmarks")}
+                    onToggle={onSettingsAccordionToggle("bookmarks")}
+                  >
+                    <summary className="acc-summary">
+                      <span className="acc-title">Bookmarks</span>
+                    </summary>
+                    <div className="acc-body">
+                      <BookmarksSettingsSection
+                        hidden={s.bookmarksStripHidden}
+                        orderIds={s.bookmarksStripOrder}
+                        permissionsEpoch={permissionsEpoch}
+                        onHiddenChange={(next) =>
+                          void persist((cur) => ({ ...cur, bookmarksStripHidden: next }))
+                        }
+                        onOrderIdsChange={(next) =>
+                          void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
+                        }
+                        onOpenOptionalPermissions={openOptionalPermissionsSettingsSection}
+                        hiddenSubSectionRef={bookmarksHiddenSubSectionRef}
+                        openHiddenSubSection={bookmarksHiddenSubSectionOpen}
+                        onHiddenSubSectionOpenChange={setBookmarksHiddenSubSectionOpen}
+                      />
                     </div>
                   </details>
 
@@ -4209,6 +4315,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               humorEnabled={humorActive}
               humorIntensity={s.humorIntensity}
               humorBannerLine={humorBannerWidgetOn ? bannerLine : null}
+              inputRef={searchInputRef}
               variant="header"
             />
           ) : null}
@@ -4550,7 +4657,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                   locked={s.hudLayoutLocked}
                   onCommit={(pos) => commitHudPanel("speedTest", pos)}
                 >
-                  <SpeedTestWidget displayLocale={hudNumberLocale} />
+                  <SpeedTestWidget
+                    displayLocale={hudNumberLocale}
+                    hourFormat={effectiveClockHourFormat}
+                  />
                 </DraggableHudPanel>
               ) : null}
               {effectiveWidgets.aiChat ? (
@@ -4605,7 +4715,27 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                 >
                   <BookmarksWidget
                     permissionsEpoch={permissionsEpoch}
-                    onOpenBookmarksSettings={openBookmarksSettingsSection}
+                    hidden={s.bookmarksStripHidden}
+                    orderIds={s.bookmarksStripOrder}
+                    onHideBookmark={(bookmark) =>
+                      void persist((cur) => {
+                        const next = hideBookmarksStripBookmark(
+                          cur.bookmarksStripHidden,
+                          cur.bookmarksStripOrder,
+                          bookmark,
+                        );
+                        return {
+                          ...cur,
+                          bookmarksStripHidden: next.hidden,
+                          bookmarksStripOrder: next.orderIds,
+                        };
+                      })
+                    }
+                    onOrderIdsChange={(next) =>
+                      void persist((cur) => ({ ...cur, bookmarksStripOrder: next }))
+                    }
+                    onOpenBookmarksPermissionSettings={openBookmarksPermissionSettingsSection}
+                    onOpenBookmarksHiddenSettings={openBookmarksHiddenSettingsSection}
                   />
                 </DraggableHudPanel>
               ) : null}

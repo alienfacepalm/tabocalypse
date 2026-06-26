@@ -9,7 +9,7 @@ export interface ICryptoWatchlistEntry {
   coinId: string;
   /** Short ticker shown in the panel (e.g. `BTC`). */
   symbol: string;
-  /** CoinGecko CDN thumb URL (`assets.coingecko.com`). */
+  /** CoinGecko CDN thumb URL (`assets.coingecko.com` or `coin-images.coingecko.com`). */
   iconUrl?: string;
 }
 

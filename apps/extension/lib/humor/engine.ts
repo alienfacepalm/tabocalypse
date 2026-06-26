@@ -3,6 +3,7 @@ import type { IImportedUserPack } from "../settings";
 import { GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
 import { getResolvedBuiltinPacks } from "./resolved-builtin-packs";
 import { passesBuiltinHardFilter } from "./filter";
+import { localizeHumorLine } from "./humor-browser-line";
 
 const RANK: Record<THumorIntensity, number> = {
   off: 0,
@@ -108,7 +109,8 @@ export function pickDailyLine(ctx: IHumorContext): string | null {
 
   const idx =
     hashString(`${timeBucketSeed()}|${ctx.locale}|${candidates.length}`) % candidates.length;
-  return candidates[idx] ?? null;
+  const line = candidates[idx];
+  return line ? localizeHumorLine(line) : null;
 }
 
 export function randomRoast(ctx: IHumorContext): string {

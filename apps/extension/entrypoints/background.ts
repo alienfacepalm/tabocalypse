@@ -1,6 +1,7 @@
 import { defineBackground } from "wxt/sandbox";
 import browser from "webextension-polyfill";
 import {
+  invalidCryptoCoingeckoMarketRowResponse,
   parseCryptoCoingeckoMarketRowMessage,
   TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
 } from "../lib/crypto/crypto-coingecko-message";
@@ -68,6 +69,7 @@ export default defineBackground(() => {
       if (req) {
         return handleCryptoCoingeckoMarketRowRequest(req);
       }
+      return invalidCryptoCoingeckoMarketRowResponse();
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_JSON && typeof m.url === "string") {
       const headers =

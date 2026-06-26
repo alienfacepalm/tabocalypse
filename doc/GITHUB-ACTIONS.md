@@ -9,7 +9,7 @@ Tabocalypse uses GitHub Actions for **CI** (quality gate on pull requests) and *
 | **CI**               | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)           | Push and pull requests to `main` / `master`                                                           |
 | **Release packages** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | When a GitHub Release is **published**, or manually via **Actions → Release packages → Run workflow** |
 
-Both workflows use **Node.js 20**, **pnpm 11.1.2** (from root `package.json`), and `pnpm install --frozen-lockfile`.
+Both workflows use **Node.js 22**, **pnpm** (from root `package.json` `packageManager`), and `pnpm install --frozen-lockfile`.
 
 ## CI
 

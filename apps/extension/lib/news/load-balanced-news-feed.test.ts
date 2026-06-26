@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { INewsFeedSnapshot } from "./balanced-news-types";
+import { BALANCED_NEWS_CONTENT_STALE_MS } from "./balanced-news-staleness";
 
 const { mockBrowser, localGet, localSet } = vi.hoisted(() => {
   const localGet = vi.fn();
@@ -101,6 +102,28 @@ describe("loadBalancedNewsFeed", () => {
     expect(result.snapshot).not.toBeNull();
     expect(result.snapshot!.topics[0]?.title).toBe("From cache");
     expect(fetchBalancedNewsArticles).not.toHaveBeenCalled();
+  });
+
+  it("refreshes when cached headlines are older than 72 hours even inside the fresh window", async () => {
+    const staleSnapshot = cachedSnapshot();
+    staleSnapshot.topics[0]!.publishedAt = now - BALANCED_NEWS_CONTENT_STALE_MS - 1;
+    localGet.mockResolvedValue({
+      tabocalypseBalancedNewsCacheV1: {
+        entries: {
+          "US:politics": { snapshot: staleSnapshot, fetchedAt: now - 60_000 },
+        },
+      },
+      tabocalypseBalancedNewsRlV1: { nextAllowedAt: 0, backoffUntil: 0 },
+    });
+    fetchBalancedNewsArticles.mockResolvedValue([]);
+
+    const result = await loadBalancedNewsFeed(
+      { country: "US", category: "politics", topicCount: 5 },
+      undefined,
+    );
+
+    expect(fetchBalancedNewsArticles).toHaveBeenCalled();
+    expect(result.kind).toBe("ok");
   });
 
   it("returns cached headlines when the provider is rate limited", async () => {
