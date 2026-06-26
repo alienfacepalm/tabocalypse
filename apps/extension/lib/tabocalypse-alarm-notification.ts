@@ -11,6 +11,10 @@ import { coerceAlarmMetaMessage } from "./alarm-meta-message";
 import { TABOCALYPSE_ALARM_TEST_NOTIFICATION } from "./tabocalypse-alarm-message";
 import { TABOCALYPSE_ALARM_DEFAULT_MESSAGE } from "./tabocalypse-alarm-validation";
 import {
+  getTabocalypseNotificationDeniedMessage,
+  TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE_WINDOWS,
+} from "./tabocalypse-alarm-mac-hints";
+import {
   tabocalypseNotificationIconRelativePaths,
   tabocalypseNotificationIconUrlAttempts,
 } from "./tabocalypse-notification-icon-paths";
@@ -22,8 +26,9 @@ export const TABOCALYPSE_NOTIFICATION_KEEPALIVE_MS = 750;
 
 const NOTIFICATION_CREATE_TIMEOUT_MS = 12_000;
 
+/** Windows / generic copy; use {@link getTabocalypseNotificationDeniedMessage} when the host OS matters. */
 export const TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE =
-  "Notifications are blocked for Tabocalypse. In your browser, open the extension’s site settings and allow notifications. On Windows, also check Settings → System → Notifications for your browser (Chrome or Edge).";
+  TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE_WINDOWS;
 
 export type TTabocalypseNotificationResult = { ok: true } | { ok: false; error: string };
 
@@ -311,7 +316,7 @@ export async function showTabocalypseAlarmNotification(
       describeTabocalypseNotificationRuntime(),
     );
     if (isTabocalypseNotificationPermissionError(detail)) {
-      return { ok: false, error: TABOCALYPSE_NOTIFICATION_DENIED_MESSAGE };
+      return { ok: false, error: getTabocalypseNotificationDeniedMessage() };
     }
     return { ok: false, error: `Could not show a system notification (${detail}).` };
   }

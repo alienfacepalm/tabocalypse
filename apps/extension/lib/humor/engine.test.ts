@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BUILTIN_PACKS, GEN_Z_PACK_ID, UNSUCK_CLASSICS_PACK_ID } from "./builtin-packs";
 import { pickDailyLine, resolveHumorBannerLine, type IHumorContext } from "./engine";
+import { localizeHumorLine } from "./humor-browser-line";
 
 const genZLines = BUILTIN_PACKS.find((p) => p.id === GEN_Z_PACK_ID)?.lines ?? [];
 const unsuckLines = BUILTIN_PACKS.find((p) => p.id === UNSUCK_CLASSICS_PACK_ID)?.lines ?? [];
+
+function localizedLines(lines: readonly string[]): string[] {
+  return lines.map((line) => localizeHumorLine(line));
+}
 
 function baseCtx(over: Partial<IHumorContext>): IHumorContext {
   return {
@@ -29,7 +34,8 @@ describe("resolveHumorBannerLine", () => {
       }),
     );
     expect(line).toBeTruthy();
-    expect(genZLines).toContain(line);
+    expect(genZLines).toBeTruthy();
+    expect(localizedLines(genZLines)).toContain(line);
   });
 
   it("bumps off intensity to mild so the banner still has copy", () => {
@@ -52,7 +58,8 @@ describe("pickDailyLine", () => {
     });
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
-    expect(genZLines).toContain(line);
+    expect(genZLines).toBeTruthy();
+    expect(localizedLines(genZLines)).toContain(line);
   });
 
   it("ignores Gen-Z voice when default and uses enabled packs", () => {
@@ -63,7 +70,7 @@ describe("pickDailyLine", () => {
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
     const tabShameLines = BUILTIN_PACKS.find((p) => p.id === "tab_shame")?.lines ?? [];
-    expect(tabShameLines).toContain(line);
+    expect(localizedLines(tabShameLines)).toContain(line);
   });
 
   it("pools custom lines with Gen-Z built-ins when Gen-Z voice is on", () => {
@@ -74,7 +81,7 @@ describe("pickDailyLine", () => {
     });
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
-    expect([...genZLines, "custom-roast-abc"]).toContain(line);
+    expect([...localizedLines(genZLines), "custom-roast-abc"]).toContain(line);
   });
 
   it("uses only classic jargon built-ins when that voice is selected", () => {
@@ -84,7 +91,7 @@ describe("pickDailyLine", () => {
     });
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
-    expect(unsuckLines).toContain(line);
+    expect(localizedLines(unsuckLines)).toContain(line);
   });
 
   it("merges classic jargon into Gen-Z rotation when Include Classic jargon is on", () => {
@@ -95,7 +102,7 @@ describe("pickDailyLine", () => {
     });
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
-    expect([...genZLines, ...unsuckLines]).toContain(line);
+    expect([...localizedLines(genZLines), ...localizedLines(unsuckLines)]).toContain(line);
   });
 
   it("adds classic jargon to default pack mix when Include Classic jargon is on", () => {
@@ -107,6 +114,6 @@ describe("pickDailyLine", () => {
     const line = pickDailyLine(ctx);
     expect(line).toBeTruthy();
     const tabShameLines = BUILTIN_PACKS.find((p) => p.id === "tab_shame")?.lines ?? [];
-    expect([...tabShameLines, ...unsuckLines]).toContain(line);
+    expect([...localizedLines(tabShameLines), ...localizedLines(unsuckLines)]).toContain(line);
   });
 });

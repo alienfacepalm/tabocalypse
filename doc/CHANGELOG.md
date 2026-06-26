@@ -14,17 +14,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Crypto** watchlist add-coin search — suggestion results open above the field when the panel sits near the bottom of the screen so matches stay visible above the footer.
+- **Balanced news** — headlines older than 72 hours are marked **Stale**, trigger an automatic refresh when allowed, and show a precise published time on hover for verification.
 - **Crypto** widget — coin logos (for example ADA and USDC) load again from CoinGecko’s current image CDN in the watchlist and add-coin search results; watchlist entries missing a saved logo are backfilled automatically.
 - **Bookmarks** — hidden bookmarks now appear under **Settings > Bookmarks** immediately after you hide them from the panel.
 
 ### Changed
 
+- **Clock** alarms on Mac — opening the Alarms section shows macOS notification setup steps (System Settings, Notification Center, Focus, and keeping your browser running); Safari on Mac explains that system alarm notifications are not supported there yet.
 - **Bookmarks** panel — the hidden-bookmarks link in the panel now opens **Settings > Bookmarks > Hidden from panel** directly instead of only the Bookmarks section.
 - **Settings > Bookmarks** — panel order and hidden bookmarks are grouped in collapsible sub-sections so the page stays easier to scan.
 - **Speed test** — hover the **Last run** header to see when that result was recorded (respects your 12h / 24h clock setting).
 
 ### Added
 
+- **Search** — optional **Focus Tabocalypse search on new tab** (off by default): on first-run welcome and under **Settings > Search engine**, land in the HUD search field instead of the browser address bar when you open a new tab.
 - **Bookmarks** strip — hide bookmarks from the HUD panel without changing your browser bookmarks (unhide under **Settings > Bookmarks**); reorder favorites with the panel arrows or in **Settings > Bookmarks**.
 - **Settings > Widgets** — widget toggles apply per monitor; each screen keeps its own panel list layered on synced defaults, with **Reset widgets on this monitor** when you have local overrides.
 - **Speed test** widget: **Last run** in the panel header shows your most recent completed down/up result and updates after each successful test (saved on this device).

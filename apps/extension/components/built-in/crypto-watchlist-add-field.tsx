@@ -18,7 +18,9 @@ import {
 import { withResolvedCryptoCoinIcon } from "../../lib/crypto/crypto-coin-icon-url";
 import type { ICryptoWatchlistEntry } from "../../lib/crypto/crypto-watchlist";
 import { MAX_CRYPTO_WATCHLIST } from "../../lib/crypto/crypto-watchlist";
+import { HUD_PAGE_FOOTER_RESERVE_PX } from "../../lib/hud-layout";
 import { resolvePrivilegedFetchUserMessage } from "../../lib/privileged-fetch-user-message";
+import { resolveSearchSuggestionsPlacement } from "../../lib/resolve-search-suggestions-placement";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
 import { HudTip } from "../hud-tip";
 import { CryptoCoinIcon } from "./crypto-coin-icon";
@@ -29,6 +31,7 @@ interface ISuggestionsPanelLayout {
   top: number;
   left: number;
   width: number;
+  maxHeight: number;
 }
 
 export function CryptoWatchlistAddField({
@@ -64,10 +67,19 @@ export function CryptoWatchlistAddField({
     const anchor = anchorRef.current;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
+    const panelHeightPx = panelRef.current?.getBoundingClientRect().height ?? 0;
+    const placement = resolveSearchSuggestionsPlacement({
+      anchorRect: rect,
+      panelHeightPx,
+      viewportWidthPx: window.innerWidth,
+      viewportHeightPx: window.innerHeight,
+      bottomInsetPx: HUD_PAGE_FOOTER_RESERVE_PX,
+    });
     setPanelLayout({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      top: placement.topPx,
+      left: placement.leftPx,
+      width: placement.widthPx,
+      maxHeight: placement.maxHeightPx,
     });
   }, []);
 
@@ -194,6 +206,7 @@ export function CryptoWatchlistAddField({
               top: panelLayout.top,
               left: panelLayout.left,
               width: panelLayout.width,
+              maxHeight: panelLayout.maxHeight,
             }}
           >
             {panelState === "loading" ? (

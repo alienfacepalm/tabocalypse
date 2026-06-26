@@ -22,6 +22,7 @@ import {
 } from "./theme";
 import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
+import { coerceSearchEngine, DEFAULT_SEARCH_ENGINE } from "./search-engine-options";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
   coerceWeatherTenDayLayout,
@@ -607,6 +608,8 @@ export interface ISettings {
   searchEngine: "ddg" | "google" | "bing";
   /** When true, Enter in the HUD search field opens the assist destination instead of classic web search. */
   searchAssistActive: boolean;
+  /** When true, each new Tabocalypse tab focuses the HUD search field instead of leaving focus in the browser chrome. */
+  searchFocusOnNewTab: boolean;
   /** Shared HUD latitude (Weather, Clock, Balanced News, …). Storage key keeps the `weather*` prefix. */
   weatherLat: number;
   /** Shared HUD longitude. Storage key keeps the `weather*` prefix. */
@@ -894,6 +897,7 @@ export interface ISyncSlice {
   widgets: Record<TWidgetKey, boolean>;
   searchEngine: ISettings["searchEngine"];
   searchAssistActive: boolean;
+  searchFocusOnNewTab: boolean;
   weatherLat: number;
   weatherLon: number;
   weatherGeoAdjusted: boolean;
@@ -1250,8 +1254,9 @@ export function defaultSettings(): ISettings {
     ],
     spicyContentAcknowledged: false,
     widgets: { ...DEFAULT_WIDGETS },
-    searchEngine: "ddg",
+    searchEngine: DEFAULT_SEARCH_ENGINE,
     searchAssistActive: false,
+    searchFocusOnNewTab: false,
     weatherLat: 40.7128,
     weatherLon: -74.006,
     weatherGeoAdjusted: false,
@@ -1337,6 +1342,7 @@ function toSync(s: ISettings): ISyncSlice {
     widgets: s.widgets,
     searchEngine: s.searchEngine,
     searchAssistActive: s.searchAssistActive,
+    searchFocusOnNewTab: s.searchFocusOnNewTab,
     weatherLat: s.weatherLat,
     weatherLon: s.weatherLon,
     weatherGeoAdjusted: s.weatherGeoAdjusted,
@@ -1565,11 +1571,15 @@ function mergeSettings(
           ? true
           : d.hasSeenSettingsIntro,
     widgets: mergeWidgets(sync?.widgets as Partial<Record<string, unknown>> | undefined),
-    searchEngine: sync?.searchEngine ?? d.searchEngine,
+    searchEngine: coerceSearchEngine(sync?.searchEngine, d.searchEngine),
     searchAssistActive:
       typeof sync?.searchAssistActive === "boolean"
         ? sync.searchAssistActive
         : d.searchAssistActive,
+    searchFocusOnNewTab:
+      typeof sync?.searchFocusOnNewTab === "boolean"
+        ? sync.searchFocusOnNewTab
+        : d.searchFocusOnNewTab,
     weatherLat: sync?.weatherLat ?? d.weatherLat,
     weatherLon: sync?.weatherLon ?? d.weatherLon,
     weatherGeoAdjusted: resolveWeatherGeoAdjusted(sync ?? {}, d),

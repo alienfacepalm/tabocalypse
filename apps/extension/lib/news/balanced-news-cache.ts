@@ -1,6 +1,7 @@
 import browser from "webextension-polyfill";
 import { isRateOrQuotaLimitError } from "../format-api-error";
 import type { INewsFeedSnapshot } from "./balanced-news-types";
+import { isNewsFeedSnapshotContentStale } from "./balanced-news-staleness";
 import { normalizeNewsFeedSnapshot } from "./normalize-balanced-news-snapshot";
 
 const CACHE_STORAGE_KEY = "tabocalypseBalancedNewsCacheV1";
@@ -92,11 +93,12 @@ export async function readBalancedNewsCache(
     return { snapshot: null, canRefresh, staleOnly: false, inRateLimitBackoff };
   }
   const age = now - entry.fetchedAt;
-  const fresh = age <= BALANCED_NEWS_CACHE_FRESH_MS;
+  const contentStale = isNewsFeedSnapshotContentStale(entry.snapshot, now);
+  const fresh = age <= BALANCED_NEWS_CACHE_FRESH_MS && !contentStale;
   return {
     snapshot: normalizeNewsFeedSnapshot({ ...entry.snapshot, stale: !fresh }),
     canRefresh,
-    staleOnly: !fresh && canRefresh,
+    staleOnly: (!fresh || contentStale) && canRefresh,
     inRateLimitBackoff,
   };
 }

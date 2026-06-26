@@ -8,6 +8,7 @@ import {
   writeBalancedNewsCache,
 } from "./balanced-news-cache";
 import { RATE_OR_QUOTA_LIMIT_MESSAGE } from "../format-api-error";
+import { BALANCED_NEWS_CONTENT_STALE_MS } from "./balanced-news-staleness";
 
 const { mockBrowser, localGet, localSet } = vi.hoisted(() => {
   const localGet = vi.fn();
@@ -25,7 +26,20 @@ vi.mock("webextension-polyfill", () => ({
 }));
 
 const sampleSnapshot = (): INewsFeedSnapshot => ({
-  topics: [],
+  topics: [
+    {
+      id: "topic-1",
+      title: "Headline",
+      kind: "reporting",
+      publishedAt: 1_700_000_000_000,
+      articles: [],
+      left: null,
+      center: null,
+      right: null,
+      reporting: null,
+      balanceScore: 1,
+    },
+  ],
   fetchedAt: 1_700_000_000_000,
   country: "US",
   category: "politics",
@@ -80,6 +94,24 @@ describe("balanced news cache", () => {
             snapshot,
             fetchedAt: now - BALANCED_NEWS_CACHE_FRESH_MS - 1,
           },
+        },
+      },
+      tabocalypseBalancedNewsRlV1: { nextAllowedAt: 0, backoffUntil: 0 },
+    });
+
+    const result = await readBalancedNewsCache("US", "politics", now);
+    expect(result.snapshot?.stale).toBe(true);
+    expect(result.staleOnly).toBe(true);
+  });
+
+  it("marks snapshot stale and refreshable when headline content is older than 72 hours", async () => {
+    const now = 1_700_000_000_000;
+    const snapshot = sampleSnapshot();
+    snapshot.topics[0]!.publishedAt = now - BALANCED_NEWS_CONTENT_STALE_MS - 1;
+    localGet.mockResolvedValue({
+      tabocalypseBalancedNewsCacheV1: {
+        entries: {
+          "US:politics": { snapshot, fetchedAt: now - 5 * 60 * 1000 },
         },
       },
       tabocalypseBalancedNewsRlV1: { nextAllowedAt: 0, backoffUntil: 0 },

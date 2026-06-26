@@ -2,8 +2,23 @@ import type { ISettings } from "./settings";
 
 export type TSearchEngine = ISettings["searchEngine"];
 
+/** Fresh installs and invalid stored values resolve to DuckDuckGo. */
+export const DEFAULT_SEARCH_ENGINE: TSearchEngine = "ddg";
+
 /** Stable order for settings UI and HUD copy. */
-export const SEARCH_ENGINE_ORDER: readonly TSearchEngine[] = ["ddg", "google", "bing"];
+export const SEARCH_ENGINE_ORDER: readonly TSearchEngine[] = [
+  DEFAULT_SEARCH_ENGINE,
+  "google",
+  "bing",
+];
+
+export function coerceSearchEngine(
+  raw: unknown,
+  fallback: TSearchEngine = DEFAULT_SEARCH_ENGINE,
+): TSearchEngine {
+  if (raw === "ddg" || raw === "google" || raw === "bing") return raw;
+  return fallback;
+}
 
 export const SEARCH_ENGINE_LABELS: Record<TSearchEngine, string> = {
   ddg: "DuckDuckGo",

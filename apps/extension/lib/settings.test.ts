@@ -346,6 +346,8 @@ describe("defaultSettings", () => {
     expect(s.notePanels).toEqual([]);
     expect(s.notePanelsEpoch).toBe(0);
     expect(s.hasSeenSettingsIntro).toBe(false);
+    expect(s.searchFocusOnNewTab).toBe(false);
+    expect(s.searchEngine).toBe("ddg");
     expect(s.bookmarksStripHidden).toEqual([]);
     expect(s.bookmarksStripOrder).toEqual([]);
   });

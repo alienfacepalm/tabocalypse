@@ -1,6 +1,8 @@
 import browser from "webextension-polyfill";
+import { detectExtensionHostBrowser, type TExtensionHostBrowser } from "./extension-host-browser";
 
-export type TExtensionHostBrowser = "chrome" | "edge" | "firefox" | "safari" | "unknown";
+export type { TExtensionHostBrowser };
+export { detectExtensionHostBrowser };
 
 export interface IExtensionReloadHint {
   browser: TExtensionHostBrowser;
@@ -8,23 +10,6 @@ export interface IExtensionReloadHint {
   managementPageUrl: string | null;
   /** Link label for the extensions / add-ons page. */
   managementPageLabel: string;
-}
-
-/** Detect the host browser from the extension page environment. */
-export function detectExtensionHostBrowser(): TExtensionHostBrowser {
-  try {
-    const protocol = globalThis.location?.protocol ?? "";
-    if (protocol === "moz-extension:") return "firefox";
-    if (protocol === "safari-web-extension:") return "safari";
-    if (protocol === "chrome-extension:") {
-      const ua = navigator.userAgent;
-      if (ua.includes("Edg/")) return "edge";
-      return "chrome";
-    }
-  } catch {
-    // fall through
-  }
-  return "unknown";
 }
 
 export function getExtensionReloadHint(

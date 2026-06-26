@@ -451,6 +451,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const topSitesPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const bookmarksPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabsPermissionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchFocusAppliedRef = useRef(false);
   const supportActions = useMemo(() => getSupportActions(), []);
   const extensionVersion = useMemo(() => browser.runtime.getManifest().version, []);
   const bingPaintUrlRef = useRef<string | null>(null);
@@ -1177,6 +1179,23 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     () => resolveWidgetsForDisplay(settings.widgets, settings.widgetsByDisplay, displayLayoutKey),
     [settings.widgets, settings.widgetsByDisplay, displayLayoutKey],
   );
+
+  const applySearchFocusOnNewTabIfNeeded = useCallback(() => {
+    if (searchFocusAppliedRef.current) return;
+    if (!settings.searchFocusOnNewTab) return;
+    if (!effectiveWidgets.search) return;
+    if (openSettings) return;
+    const input = searchInputRef.current;
+    if (!input) return;
+    searchFocusAppliedRef.current = true;
+    requestAnimationFrame(() => {
+      input.focus();
+    });
+  }, [settings.searchFocusOnNewTab, effectiveWidgets.search, openSettings]);
+
+  useLayoutEffect(() => {
+    applySearchFocusOnNewTabIfNeeded();
+  }, [applySearchFocusOnNewTabIfNeeded]);
 
   const displayLayoutLabel = useMemo(() => formatHudDisplayLayoutLabel(), [displayLayoutKey]);
 
@@ -2063,6 +2082,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     role="region"
                     aria-label="Welcome to Tabocalypse"
                   >
+                    <div className="mb-3">
+                      <label className="check-row">
+                        <input
+                          type="checkbox"
+                          checked={s.searchFocusOnNewTab}
+                          onChange={(e) => {
+                            void persist((cur) => ({
+                              ...cur,
+                              searchFocusOnNewTab: e.target.checked,
+                            }));
+                          }}
+                        />
+                        <span>Focus Tabocalypse search on new tab</span>
+                      </label>
+                      <p className="muted sm mt-1 mb-0 pl-6">
+                        Land in the HUD search field instead of the browser address bar when you
+                        open a new tab.
+                      </p>
+                    </div>
                     <h3 className="settings-welcome-title">Welcome to Tabocalypse</h3>
                     <p className="settings-welcome-lead">
                       This new tab is a HUD you control—widgets, theme, humor, plugins, and more.
@@ -2779,6 +2817,25 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       <span className="acc-title">Search engine</span>
                     </summary>
                     <div className="acc-body">
+                      <div className="mb-3">
+                        <label className="check-row">
+                          <input
+                            type="checkbox"
+                            checked={s.searchFocusOnNewTab}
+                            onChange={(e) => {
+                              void persist((cur) => ({
+                                ...cur,
+                                searchFocusOnNewTab: e.target.checked,
+                              }));
+                            }}
+                          />
+                          <span>Focus Tabocalypse search on new tab</span>
+                        </label>
+                        <p className="muted sm mt-1 mb-0 pl-6">
+                          Land in the HUD search field instead of the browser address bar when you
+                          open a new tab.
+                        </p>
+                      </div>
                       <SearchEngineSettingPicker
                         value={s.searchEngine}
                         onChange={(engine) =>
@@ -4258,6 +4315,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               humorEnabled={humorActive}
               humorIntensity={s.humorIntensity}
               humorBannerLine={humorBannerWidgetOn ? bannerLine : null}
+              inputRef={searchInputRef}
               variant="header"
             />
           ) : null}
