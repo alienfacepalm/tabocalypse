@@ -1,0 +1,47 @@
+# Personal repos cannot restrict "who can merge" via branch protection users/teams.
+# This required check passes only when the repository owner re-runs the workflow
+# (or when the owner pushes to the PR branch). Collaborators may open PRs but
+# cannot satisfy this check themselves.
+
+name: Owner merge gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: owner-merge-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    if: github.event.pull_request.base.ref == 'master'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+      pull-requests: read
+
+    steps:
+      - name: Owner-only merge check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.payload.repository.owner.login;
+            const actor = context.actor;
+            const allowed = actor === owner;
+            const description = allowed
+              ? "Repository owner verified — this PR may merge to master."
+              : "Only the repository owner may merge to master. Owner: re-run this workflow from the Actions tab.";
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: allowed ? "success" : "failure",
+              context: "owner-merge-gate",
+              description,
+            });
+
+            if (!allowed) {
+              core.setFailed(description);
+            }

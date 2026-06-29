@@ -554,6 +554,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       );
       latestSettingsRef.current = merged;
       setSettings(merged);
+      setHudLayoutBootstrapToken((token) => token + 1);
     });
     void initHumorContentCache().then(() =>
       refreshHumorContentIfStale().then((result) => {
@@ -1139,6 +1140,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [persist, settings.weatherAutoGeo]);
 
   const hudCanvasRef = useRef<HTMLDivElement | null>(null);
+  /** Bumped on mount and after settings hydrate so HUD auto-repack runs with a stable canvas. */
+  const [hudLayoutBootstrapToken, setHudLayoutBootstrapToken] = useState(1);
   const displayLayoutKeyRef = useRef(getHudDisplayLayoutKey());
   const [displayLayoutKey, setDisplayLayoutKey] = useState(() => getHudDisplayLayoutKey());
   /** When opening a pinned note temporarily unlocks HUD, dragging that note prompts to re-lock. */
@@ -4504,6 +4507,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
               <HudAutoRepositionSync
                 canvasRef={hudCanvasRef}
                 hudAutoRepositionEnabled={isHudAutoRepositionEnabled(s)}
+                layoutBootstrapToken={hudLayoutBootstrapToken}
                 widgets={effectiveWidgets}
                 hudPanelPositions={effectiveHudPanelPositions}
                 notePanels={effectiveNotePanels}

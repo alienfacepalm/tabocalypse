@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **New tab HUD** — when auto-reposition is on, panels now repack into the multi-column fold layout on open (same as **Rearrange** / F10) instead of sometimes leaving large empty gaps until you click rearrange manually.
 - **Crypto** watchlist add-coin search — suggestion results open above the field when the panel sits near the bottom of the screen so matches stay visible above the footer.
 - **Balanced news** — headlines older than 72 hours are marked **Stale**, trigger an automatic refresh when allowed, and show a precise published time on hover for verification.
 - **Crypto** widget — coin logos (for example ADA and USDC) load again from CoinGecko’s current image CDN in the watchlist and add-coin search results; watchlist entries missing a saved logo are backfilled automatically.

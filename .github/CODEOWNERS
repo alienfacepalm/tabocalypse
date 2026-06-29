@@ -1,2 +1,3 @@
-# Default owner for all changes — required review before merging to master.
+# Default owner for all changes. Only @alienfacepalm may merge to master
+# (enforced by .github/workflows/owner-merge-gate.yml on personal repos).
 * @alienfacepalm
