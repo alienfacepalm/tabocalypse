@@ -30,10 +30,16 @@ export interface IHudAutoRepositionResult {
   notePanels?: INotePanel[];
 }
 
+interface IRunHudLayoutOptions {
+  /** Matches manual Rearrange — repack columns to the fold instead of honoring saved sizes. */
+  ignoreUserSizes?: boolean;
+}
+
 /** Repositions visible HUD panels when the canvas size changes and auto-reposition is enabled. */
 export function HudAutoRepositionSync({
   canvasRef,
   hudAutoRepositionEnabled,
+  layoutBootstrapToken,
   widgets,
   hudPanelPositions,
   notePanels,
@@ -44,6 +50,8 @@ export function HudAutoRepositionSync({
   canvasRef: RefObject<HTMLElement | null>;
   /** When false, HUD panels are not auto-repacked; unpinned stickies still reflow on resize. */
   hudAutoRepositionEnabled: boolean;
+  /** Bumped after settings hydrate so the first auto-repack can run with final panel state. */
+  layoutBootstrapToken: number;
   widgets: Record<TWidgetKey, boolean>;
   hudPanelPositions: Record<THudPanelId, IHudPanelPosition>;
   notePanels: readonly INotePanel[];
@@ -79,9 +87,11 @@ export function HudAutoRepositionSync({
         widthPx: number,
         heightPx: number,
         prevSize: { widthPx: number; heightPx: number } | null,
+        options?: IRunHudLayoutOptions,
       ) => void)
     | null
   >(null);
+  const scheduleBootstrapLayoutRef = useRef<((canvas: HTMLElement) => void) | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -95,6 +105,7 @@ export function HudAutoRepositionSync({
       widthPx: number,
       heightPx: number,
       prevSize: { widthPx: number; heightPx: number } | null,
+      options?: IRunHudLayoutOptions,
     ): void => {
       if (hudPlacement?.dropHighlight) return;
       const input = layoutInputRef.current;
@@ -110,6 +121,7 @@ export function HudAutoRepositionSync({
       if (input.hudAutoRepositionEnabled) {
         hudUpdates = computeHudPanelAutoLayoutUpdates(planInput, widthPx, heightPx, {
           onlyIfChanged: true,
+          ignoreUserSizes: options?.ignoreUserSizes,
           prevCanvasW: prevSize?.widthPx,
           prevCanvasH: prevSize?.heightPx,
         });
@@ -140,6 +152,18 @@ export function HudAutoRepositionSync({
     };
     runLayoutRef.current = runLayout;
 
+    const scheduleBootstrapLayout = (canvasEl: HTMLElement): void => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!layoutInputRef.current.hudAutoRepositionEnabled) return;
+          const { widthPx, heightPx } = measureHudCanvasSize(canvasEl);
+          prevCanvasSizeRef.current = { widthPx, heightPx };
+          runLayout(canvasEl, widthPx, heightPx, null, { ignoreUserSizes: true });
+        });
+      });
+    };
+    scheduleBootstrapLayoutRef.current = scheduleBootstrapLayout;
+
     const schedule = (): void => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
@@ -158,9 +182,6 @@ export function HudAutoRepositionSync({
 
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
     prevCanvasSizeRef.current = { widthPx, heightPx };
-    if (layoutInputRef.current.hudAutoRepositionEnabled) {
-      runLayout(canvas, widthPx, heightPx, null);
-    }
 
     const ro = new ResizeObserver(schedule);
     ro.observe(canvas);
@@ -175,8 +196,18 @@ export function HudAutoRepositionSync({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       prevCanvasSizeRef.current = null;
       runLayoutRef.current = null;
+      scheduleBootstrapLayoutRef.current = null;
     };
   }, [canvasRef, hudPlacement?.dropHighlight]);
+
+  const lastBootstrapTokenRef = useRef(0);
+  useEffect(() => {
+    if (!hudAutoRepositionEnabled || layoutBootstrapToken <= lastBootstrapTokenRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas || hudPlacement?.dropHighlight) return;
+    lastBootstrapTokenRef.current = layoutBootstrapToken;
+    scheduleBootstrapLayoutRef.current?.(canvas);
+  }, [canvasRef, hudAutoRepositionEnabled, hudPlacement?.dropHighlight, layoutBootstrapToken]);
 
   const prevPanelSetSignatureRef = useRef<string | null>(null);
   useEffect(() => {
@@ -191,7 +222,7 @@ export function HudAutoRepositionSync({
     const canvas = canvasRef.current;
     if (!canvas || hudPlacement?.dropHighlight) return;
     const { widthPx, heightPx } = measureHudCanvasSize(canvas);
-    runLayoutRef.current?.(canvas, widthPx, heightPx, null);
+    runLayoutRef.current?.(canvas, widthPx, heightPx, null, { ignoreUserSizes: true });
   }, [
     canvasRef,
     hudAutoRepositionEnabled,

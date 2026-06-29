@@ -341,6 +341,45 @@ describe("computeAutoHudPanelLayout", () => {
       }
     }
   });
+
+  it("repacks gapped saved column positions when ignoreUserSizes is set (new-tab bootstrap)", () => {
+    const metrics = getHudLayoutMetrics(1920, 1080);
+    const gappedColumn = {
+      ...DEFAULT_HUD_PANEL_POSITIONS,
+      clock: { xPct: 26, yPct: 4, widthPx: 420, heightPx: 160 },
+      speedTest: { xPct: 26, yPct: 42, widthPx: 420, heightPx: 220 },
+    };
+    const input = {
+      widgets: {
+        ...TEST_WIDGETS,
+        clock: true,
+        speedTest: true,
+        weather: true,
+        crypto: true,
+        bookmarksStrip: true,
+        balancedNews: true,
+        todo: false,
+        notes: false,
+        tabGuilt: false,
+      },
+      hudPanelPositions: gappedColumn,
+      pluginDeckVisible: false,
+    };
+    const withoutIgnore = computeHudPanelAutoLayoutUpdates(
+      input,
+      metrics.canvasW,
+      metrics.canvasH,
+      {
+        onlyIfChanged: true,
+      },
+    );
+    const updates = computeHudPanelAutoLayoutUpdates(input, metrics.canvasW, metrics.canvasH, {
+      onlyIfChanged: true,
+      ignoreUserSizes: true,
+    });
+    expect(Object.keys(updates).length).toBeGreaterThan(0);
+    expect(Object.keys(updates).length).toBeGreaterThanOrEqual(Object.keys(withoutIgnore).length);
+  });
 });
 
 describe("computeHudPanelAdjustLayoutUpdates", () => {
