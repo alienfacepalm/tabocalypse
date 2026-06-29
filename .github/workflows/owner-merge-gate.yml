@@ -1,47 +1,106 @@
 # Personal repos cannot restrict "who can merge" via branch protection users/teams.
-# This required check passes only when the repository owner re-runs the workflow
-# (or when the owner pushes to the PR branch). Collaborators may open PRs but
-# cannot satisfy this check themselves.
+# Required check: only identities in .github/owner-merge-policy.json may satisfy this gate.
+# Collaborators may open PRs; owner re-runs this workflow (or workflow_dispatch) to unlock merge.
 
 name: Owner merge gate
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: PR number to mark ready for owner merge to master
+        required: true
+        type: string
 
 concurrency:
-  group: owner-merge-gate-${{ github.event.pull_request.number }}
+  group: owner-merge-gate-${{ github.event.pull_request.number || github.event.inputs.pull_request_number }}
   cancel-in-progress: true
 
 jobs:
   gate:
-    if: github.event.pull_request.base.ref == 'master'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.base.ref == 'master'
     runs-on: ubuntu-latest
     permissions:
       statuses: write
       pull-requests: read
+      contents: read
 
     steps:
+      - name: Load owner merge policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref || 'master' }}
+          sparse-checkout: .github/owner-merge-policy.json
+          sparse-checkout-cone-mode: false
+
       - name: Owner-only merge check
         uses: actions/github-script@v7
         with:
           script: |
-            const owner = context.payload.repository.owner.login;
+            const fs = require("fs");
+            const policy = JSON.parse(
+              fs.readFileSync(".github/owner-merge-policy.json", "utf8"),
+            );
+            const allowedLogins = policy.githubLogins ?? [];
+            const allowedEmails = (policy.commitEmails ?? []).map((e) => e.toLowerCase());
+
             const actor = context.actor;
-            const allowed = actor === owner;
-            const description = allowed
-              ? "Repository owner verified — this PR may merge to master."
-              : "Only the repository owner may merge to master. Owner: re-run this workflow from the Actions tab.";
+            const actorAllowed = allowedLogins.includes(actor);
+
+            let pr = context.payload.pull_request;
+            if (context.eventName === "workflow_dispatch") {
+              const prNumber = Number(context.payload.inputs.pull_request_number);
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              pr = data;
+            }
+
+            if (!pr || pr.base.ref !== "master") {
+              core.info("Skipping — not a pull request targeting master.");
+              return;
+            }
+
+            if (!actorAllowed) {
+              const description =
+                "Only the repository owner may merge to master. Owner: re-run this workflow or use Actions → Owner merge gate.";
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: pr.head.sha,
+                state: "failure",
+                context: "owner-merge-gate",
+                description,
+              });
+              core.setFailed(description);
+              return;
+            }
+
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const headAuthorEmail = (
+              commits[commits.length - 1]?.commit?.author?.email ?? ""
+            ).toLowerCase();
+            const headByOwnerEmail =
+              headAuthorEmail.length > 0 && allowedEmails.includes(headAuthorEmail);
+
+            const description = headByOwnerEmail
+              ? `Owner verified (${actor}; head commit ${headAuthorEmail}).`
+              : `Owner verified (${actor}).`;
 
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
-              state: allowed ? "success" : "failure",
+              sha: pr.head.sha,
+              state: "success",
               context: "owner-merge-gate",
               description,
             });
-
-            if (!allowed) {
-              core.setFailed(description);
-            }

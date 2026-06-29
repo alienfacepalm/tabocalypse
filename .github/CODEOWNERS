@@ -1,3 +1,5 @@
 # Default owner for all changes. Only @alienfacepalm may merge to master
 # (enforced by .github/workflows/owner-merge-gate.yml on personal repos).
+# Owner commit emails: brandon.pliska@gmail.com, brandon@alienfacepalm.com, jagon@alienfacepalm.com
+# (see .github/owner-merge-policy.json).
 * @alienfacepalm
