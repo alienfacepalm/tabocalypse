@@ -37,6 +37,7 @@ Donate/support links open third-party sites only; the extension does not process
 | `topSites` (optional)             | Frequent sites widget — only when the user enables it                                                                            |
 | `tabs` (optional)                 | Open search results and assist handoffs in a new tab                                                                             |
 | `api.open-meteo.com`              | Weather widget coordinates → forecast (no publisher API key)                                                                     |
+| `static-maps.yandex.ru`           | Weather widget location map thumbnail (saved HUD coordinates; `<img>` request only — not a manifest host permission)             |
 | `api.coingecko.com`               | Crypto prices widget (public market data)                                                                                        |
 | `peapix.com` / `img.peapix.com`   | Optional Bing spotlight background imagery                                                                                       |
 | `duckduckgo.com`                  | Live search suggestions when Search widget is enabled and DuckDuckGo is selected                                                 |

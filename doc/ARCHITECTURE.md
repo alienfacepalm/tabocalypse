@@ -27,7 +27,7 @@ Generated types and dev cache live under **`.wxt/`** (gitignored); shipped brows
 
 1. **Settings** — Read/write via `webextension-polyfill` → `browser.storage.local` / sync (see `lib/settings` and related modules).
 2. **User packs / plugins** — Imported as files or JSON, validated with **`@tabocalypse/plugin-sdk`**, stored locally.
-3. **Geo-based HUD panels** — One saved latitude/longitude in settings (edited under **Settings > Weather**) drives Weather forecast, Clock local time/timezone (via Open-Meteo), Balanced News device region, and related panels. Optional browser geolocation fills those coordinates when the user opts in.
+3. **Geo-based HUD panels** — One saved latitude/longitude in settings (edited under **Settings > Weather**) drives Weather forecast, Clock local time/timezone (via Open-Meteo), Balanced News device region, and related panels. Optional browser geolocation fills those coordinates when the user opts in. The Weather panel also shows a hybrid satellite **location map** (Yandex Static Maps, image only) with a HUD pin centered on those coordinates; tile size follows panel width and **recalibrates when you move the window between monitors** (same display fingerprint as per-monitor HUD layout).
 4. **Crypto prices** — Fetches public USD market samples for **BTC** and **ETH** from **CoinGecko** when that widget is enabled (no shipped API key).
 
 ## Search widget (web vs assist)
