@@ -43,6 +43,8 @@ All commands run from the **repo root** unless noted.
 | `pnpm format`         | Prettier write on tracked file types                                                                                                                            |
 | `pnpm test`           | Vitest                                                                                                                                                          |
 
+Weather **location map** regressions: `apps/extension/lib/weather/weather-static-map-measure.test.ts`, `weather-static-map-url.test.ts`, and the network e2e in `weather-static-map-load.e2e.test.ts` (Yandex hybrid tile fetch).
+
 **Safari** ships from **`safari-mv3`** (or **`chrome_edge-mv3`**; both are MV3) with Apple’s **Safari Web Extension** converter on macOS — see [Install and test locally](INSTALL-LOCAL-TESTING.md#safari) and [Publishing](PUBLISHING-EXTENSION-STORES.md#safari-mac-app-store).
 
 ## Load the extension during development
