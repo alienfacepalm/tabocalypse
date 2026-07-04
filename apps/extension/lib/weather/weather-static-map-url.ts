@@ -51,5 +51,6 @@ export function buildWeatherStaticMapUrl(
   const z = Math.min(17, Math.max(1, Math.round(zoom)));
   const width = dimensions?.fetchWidth ?? WEATHER_STATIC_MAP_WIDTH;
   const height = dimensions?.fetchHeight ?? WEATHER_STATIC_MAP_HEIGHT;
-  return `https://static-maps.yandex.ru/1.x/?ll=${lon},${lat}&z=${z}&l=${WEATHER_STATIC_MAP_LAYER}&size=${width},${height}&pt=${lon},${lat},pm2rdm&lang=en_US`;
+  // Map center (`ll`) marks the saved coordinates; the UI draws its own centered pin overlay.
+  return `https://static-maps.yandex.ru/1.x/?ll=${lon},${lat}&z=${z}&l=${WEATHER_STATIC_MAP_LAYER}&size=${width},${height}&lang=en_US`;
 }

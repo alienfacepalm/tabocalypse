@@ -13,13 +13,13 @@ import {
 } from "./weather-static-map-url";
 
 describe("buildWeatherStaticMapUrl", () => {
-  it("builds a Yandex hybrid static map URL with pin and English labels", () => {
+  it("builds a Yandex hybrid static map URL centered on saved coordinates", () => {
     const url = buildWeatherStaticMapUrl(47.6062, -122.3321, 11);
     expect(url).toMatch(/^https:\/\/static-maps\.yandex\.ru\/1\.x\/\?/);
     expect(url).toContain("ll=-122.3321,47.6062");
     expect(url).toContain("z=11");
     expect(url).toContain(`l=${WEATHER_STATIC_MAP_LAYER}`);
-    expect(url).toContain("pt=-122.3321,47.6062,pm2rdm");
+    expect(url).not.toContain("pt=");
     expect(url).toContain("lang=en_US");
     expect(url).toContain(`size=${WEATHER_STATIC_MAP_WIDTH},${WEATHER_STATIC_MAP_HEIGHT}`);
   });

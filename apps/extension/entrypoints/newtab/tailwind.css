@@ -1138,12 +1138,21 @@
     @apply relative mt-2 w-full overflow-hidden border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-border)];
   }
 
+  .weather-location-map-crop {
+    @apply absolute inset-x-0 top-0 h-[115%];
+  }
+
   .weather-location-map-img {
-    @apply block h-auto w-full bg-input opacity-0 transition-opacity duration-500;
+    @apply h-full w-full object-cover object-top bg-input opacity-0 transition-opacity duration-500;
   }
 
   .weather-location-map-img.is-loaded {
     @apply opacity-100;
+  }
+
+  .weather-location-map-pin {
+    @apply pointer-events-none absolute left-1/2 top-1/2 z-[1] -translate-x-1/2 -translate-y-full text-[var(--color-accent2)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)];
+    fill: color-mix(in srgb, var(--color-accent2) 35%, transparent);
   }
 
   .weather-lakes-stack {

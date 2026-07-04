@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Weather** widget location map — the saved-coordinate pin recenters and refetches when you move the window to another monitor (display fingerprint, remeasured tile size, HUD overlay pin).
 - **New tab HUD** — when auto-reposition is on, panels now repack into the multi-column fold layout on open (same as **Rearrange** / F10) instead of sometimes leaving large empty gaps until you click rearrange manually.
 - **Crypto** watchlist add-coin search — suggestion results open above the field when the panel sits near the bottom of the screen so matches stay visible above the footer.
 - **Balanced news** — headlines older than 72 hours are marked **Stale**, trigger an automatic refresh when allowed, and show a precise published time on hover for verification.

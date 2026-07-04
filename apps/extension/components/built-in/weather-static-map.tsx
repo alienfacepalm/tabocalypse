@@ -1,17 +1,21 @@
-/** Weather panel location map (Yandex hybrid) — sized to panel width; overflow clips footer branding. */
+/** Weather panel location map (Yandex hybrid) — 115% crop hides footer branding; HUD pin overlay marks center. */
+import { MapPin } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { getHudDisplayLayoutKey } from "../../lib/hud-layout";
 import {
   WEATHER_STATIC_MAP_DEFAULT_ZOOM,
   WEATHER_STATIC_MAP_VISIBLE_HEIGHT,
   WEATHER_STATIC_MAP_WIDTH,
   buildWeatherStaticMapUrl,
-  resolveWeatherStaticMapDimensions,
   type TWeatherStaticMapDimensions,
 } from "../../lib/weather/weather-static-map-url";
 import {
   WEATHER_STATIC_MAP_MAX_LOAD_ATTEMPTS,
-  isWeatherStaticMapImageDisplayed,
-  resolveWeatherStaticMapMeasureWidth,
+  areWeatherStaticMapLayoutsEqual,
+  attachWeatherStaticMapRecalibrationListeners,
+  isWeatherStaticMapImageDimensionallySynced,
+  resolveWeatherStaticMapLayout,
+  type TWeatherStaticMapLayout,
   weatherStaticMapRetryDelayMs,
 } from "../../lib/weather/weather-static-map-measure";
 
@@ -29,61 +33,70 @@ export function WeatherStaticMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [dimensions, setDimensions] = useState<TWeatherStaticMapDimensions | null>(() =>
-    resolveWeatherStaticMapDimensions(resolveWeatherStaticMapMeasureWidth(0)),
-  );
+  const displayKeyRef = useRef(getHudDisplayLayoutKey());
+  const [layout, setLayout] = useState<TWeatherStaticMapLayout | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
-  const markLoadedIfReady = useCallback((img: HTMLImageElement | null): void => {
-    if (img && isWeatherStaticMapImageDisplayed(img)) {
-      setLoaded(true);
-    }
-  }, []);
+  const dimensions: TWeatherStaticMapDimensions | null = layout?.dimensions ?? null;
+
+  const markLoadedIfReady = useCallback(
+    (img: HTMLImageElement | null, activeLayout: TWeatherStaticMapLayout | null): void => {
+      if (activeLayout && isWeatherStaticMapImageDimensionallySynced(activeLayout, img)) {
+        setLoaded(true);
+      }
+    },
+    [],
+  );
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const measure = (): void => {
-      const next = resolveWeatherStaticMapDimensions(
-        resolveWeatherStaticMapMeasureWidth(el.clientWidth),
-      );
-      setDimensions((prev) => {
-        if (
-          prev &&
-          prev.fetchWidth === next.fetchWidth &&
-          prev.fetchHeight === next.fetchHeight &&
-          prev.visibleHeight === next.visibleHeight
-        ) {
-          return prev;
-        }
-        return next;
-      });
+      const nextDisplayKey = getHudDisplayLayoutKey();
+      const displayChanged = nextDisplayKey !== displayKeyRef.current;
+      if (displayChanged) {
+        displayKeyRef.current = nextDisplayKey;
+        setLoaded(false);
+      }
+
+      const next = resolveWeatherStaticMapLayout(el.clientWidth, nextDisplayKey);
+      setLayout((prev) => (areWeatherStaticMapLayoutsEqual(prev, next) ? prev : next));
     };
 
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    const detachWindowListeners = attachWeatherStaticMapRecalibrationListeners(measure);
     return () => {
       ro.disconnect();
+      detachWindowListeners();
     };
   }, []);
 
   const src = useMemo(() => {
-    if (!dimensions) return null;
-    return buildWeatherStaticMapUrl(lat, lon, zoom, dimensions);
-  }, [dimensions, lat, lon, zoom]);
+    if (!layout) return null;
+    return buildWeatherStaticMapUrl(lat, lon, zoom, layout.dimensions);
+  }, [layout, lat, lon, zoom]);
+
+  const imageSynced = layout
+    ? isWeatherStaticMapImageDimensionallySynced(layout, imgRef.current)
+    : false;
+
+  useEffect(() => {
+    setLoadAttempt(0);
+    setLoaded(false);
+  }, [lat, lon, zoom]);
 
   useEffect(() => {
     setLoaded(false);
-    setLoadAttempt(0);
     if (retryTimerRef.current != null) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    markLoadedIfReady(imgRef.current);
-  }, [markLoadedIfReady, src]);
+    markLoadedIfReady(imgRef.current, layout);
+  }, [layout, markLoadedIfReady, src]);
 
   useEffect(() => {
     return () => {
@@ -96,10 +109,16 @@ export function WeatherStaticMap({
   const handleImageRef = useCallback(
     (node: HTMLImageElement | null) => {
       imgRef.current = node;
-      markLoadedIfReady(node);
+      markLoadedIfReady(node, layout);
     },
-    [markLoadedIfReady],
+    [layout, markLoadedIfReady],
   );
+
+  const handleImageLoad = useCallback(() => {
+    if (layout && isWeatherStaticMapImageDimensionallySynced(layout, imgRef.current)) {
+      setLoaded(true);
+    }
+  }, [layout]);
 
   const handleImageError = useCallback(() => {
     setLoaded(false);
@@ -115,6 +134,11 @@ export function WeatherStaticMap({
     }, weatherStaticMapRetryDelayMs(loadAttempt));
   }, [loadAttempt]);
 
+  const showMapImage = loaded && imageSynced;
+  const mapImageKey = layout
+    ? `${layout.displayKey}-${src ?? "pending"}-${loadAttempt}`
+    : "pending";
+
   return (
     <div
       ref={containerRef}
@@ -129,17 +153,22 @@ export function WeatherStaticMap({
       aria-label="Map showing your saved weather location"
     >
       {src ? (
-        <img
-          key={`${src}-${loadAttempt}`}
-          ref={handleImageRef}
-          src={src}
-          alt=""
-          className={loaded ? "weather-location-map-img is-loaded" : "weather-location-map-img"}
-          referrerPolicy="no-referrer"
-          onLoad={() => setLoaded(true)}
-          onError={handleImageError}
-        />
+        <div className="weather-location-map-crop">
+          <img
+            key={mapImageKey}
+            ref={handleImageRef}
+            src={src}
+            alt=""
+            className={
+              showMapImage ? "weather-location-map-img is-loaded" : "weather-location-map-img"
+            }
+            referrerPolicy="no-referrer"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        </div>
       ) : null}
+      <MapPin className="weather-location-map-pin" aria-hidden size={28} strokeWidth={2} />
     </div>
   );
 }
