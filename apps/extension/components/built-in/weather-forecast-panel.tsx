@@ -11,7 +11,7 @@ import type { IOnThisDayFact } from "../../lib/weather/fetch-on-this-day-trivia"
 import type { IWeatherSnapshot } from "../../lib/weather/fetch-weather";
 import type { IWeatherHudEngagement } from "../../lib/weather/weather-hud-engagement";
 import { WeatherConditionIcon } from "../../lib/weather/weather-condition-icon";
-import { HudTip } from "../hud-tip";
+import { PanelTip } from "../panel-sdk";
 
 type TWeatherDetailRow = {
   label: string;
@@ -115,7 +115,7 @@ export function WeatherForecastPanel({
           </p>
         </div>
         {gamificationEnabled && engagement ? (
-          <HudTip tip="Local HUD streak — open Forecast daily to earn points. No account; stored on this device only.">
+          <PanelTip tip="Local HUD streak — open Forecast daily to earn points. No account; stored on this device only.">
             <p
               className="weather-hud-engagement"
               aria-label={`Weather streak ${engagement.streakDays} days, ${engagement.totalPoints} points`}
@@ -123,7 +123,7 @@ export function WeatherForecastPanel({
               <span className="weather-hud-engagement-streak">{engagement.streakDays}d streak</span>
               <span className="weather-hud-engagement-points">{engagement.totalPoints} pts</span>
             </p>
-          </HudTip>
+          </PanelTip>
         ) : null}
       </div>
       <WeatherDetailGrid rows={detailRows} />

@@ -22,7 +22,7 @@ import { HUD_PAGE_FOOTER_RESERVE_PX } from "../../lib/hud-layout";
 import { resolvePrivilegedFetchUserMessage } from "../../lib/privileged-fetch-user-message";
 import { resolveSearchSuggestionsPlacement } from "../../lib/resolve-search-suggestions-placement";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
-import { HudTip } from "../hud-tip";
+import { PanelTip as HudTip } from "../panel-sdk";
 import { CryptoCoinIcon } from "./crypto-coin-icon";
 
 type TSuggestionsPanelState = "closed" | "loading" | "open" | "empty" | "error";

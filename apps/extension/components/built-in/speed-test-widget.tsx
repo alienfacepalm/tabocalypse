@@ -15,8 +15,7 @@ import {
   type ISpeedTestProgress,
   type TCloudflareSpeedPhase,
 } from "../../lib/speed-test/run-cloudflare-speed-test";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitleInline } from "../panel-sdk";
 
 type TSpeedPhase = "idle" | "running" | "done" | "error";
 
@@ -144,10 +143,10 @@ export function SpeedTestWidget({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Gauge size={20} strokeWidth={2} className="shrink-0 text-accent" aria-hidden />
-            <HudPanelTitleInline>Speed test</HudPanelTitleInline>
+            <PanelTitleInline>Speed test</PanelTitleInline>
           </div>
           {lastRun && lastRunTimestamp ? (
-            <HudTip tip={lastRunTimestamp} wrapClassName="text-right">
+            <PanelTip tip={lastRunTimestamp} wrapClassName="text-right">
               <div
                 className="text-right font-mono text-xs leading-tight"
                 aria-label={`Last run ${lastRunTimestamp}: download ${mbpsFmt.format(lastRun.downloadMbps)} megabits per second, upload ${mbpsFmt.format(lastRun.uploadMbps)} megabits per second`}
@@ -164,11 +163,11 @@ export function SpeedTestWidget({
                   <span className="text-muted"> ↑ Mbps</span>
                 </div>
               </div>
-            </HudTip>
+            </PanelTip>
           ) : null}
         </div>
       </div>
-      <HudPanelBody>
+      <PanelBody>
         {running ? (
           <div className="mb-3">
             <div className="flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-wide text-muted">
@@ -262,7 +261,7 @@ export function SpeedTestWidget({
             {err}
           </p>
         ) : null}
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

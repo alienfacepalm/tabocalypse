@@ -87,4 +87,30 @@ For skills, MCP usage, and the full table of optional skills, see `.cursor/rules
 
 ---
 
+## 6. Multiple agents / multiple chats (avoid collisions)
+
+If you run multiple Cursor chats/agents in parallel, avoid “diff thrash” (overwrites / oscillating edits) with this workflow:
+
+- **Single writer**: choose one chat as the **Driver** that is allowed to edit the current working tree.
+- **Advisors**: other chats should be **read-only** (analysis, search, review) and provide **small, patch-shaped** proposals for the Driver to apply.
+- **Parallel coding**: if you truly need multiple writers, isolate them with **separate branches + git worktrees** (or separate clones). Do not have two writers edit the same worktree.
+- **Lock**: optionally use `.cursor/LOCK.md` (gitignored) as a lightweight lock. Start from `.cursor/LOCK.template.md`.
+
+### Ownership lanes (reduce merge conflicts)
+
+To keep parallel work additive, assign each writer an “ownership lane” and avoid overlapping edits:
+
+- **Lane 1 (UI)**: `apps/extension/components/**`
+- **Lane 2 (logic/layout)**: `apps/extension/lib/**`
+- **Lane 3 (docs)**: `doc/**`
+- **Lane 4 (tooling)**: root configs (e.g. `prettier.config.mjs`, `eslint.config.mjs`)
+
+### Advisor → Driver handoff format
+
+When an Advisor proposes changes, send:
+
+- **Paths**: exact file paths
+- **Edits**: minimal diff/snippet (smallest change that solves the task)
+- **Why**: the intent + any assumptions
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

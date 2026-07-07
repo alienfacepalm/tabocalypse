@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **HUD panels** — manually dragged panels stay where you drop them instead of snapping back to the first column after release.
+- **New tab** — Weather and AI chat panels no longer crash when loading shared settings from the HUD provider.
 - **Weather** widget location map — the saved-coordinate pin recenters and refetches when you move the window to another monitor (display fingerprint, remeasured tile size, HUD overlay pin).
 - **New tab HUD** — when auto-reposition is on, panels now repack into the multi-column fold layout on open (same as **Rearrange** / F10) instead of sometimes leaving large empty gaps until you click rearrange manually.
 - **Crypto** watchlist add-coin search — suggestion results open above the field when the panel sits near the bottom of the screen so matches stay visible above the footer.
@@ -34,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Bookmarks** strip — hide bookmarks from the HUD panel without changing your browser bookmarks (unhide under **Settings > Bookmarks**); reorder favorites with the panel arrows or in **Settings > Bookmarks**.
 - **Settings > Widgets** — widget toggles apply per monitor; each screen keeps its own panel list layered on synced defaults, with **Reset widgets on this monitor** when you have local overrides.
 - **Speed test** widget: **Last run** in the panel header shows your most recent completed down/up result and updates after each successful test (saved on this device).
+- **Weather** widget: **Use location once** sits apart from the Celsius/Fahrenheit unit toggles in the panel header so the controls are easier to tell apart.
 - **Weather** widget: Open-Meteo forecast and **2 Lakes** buoy readings are saved on this device after a successful load; when a service is down, the last saved data is shown with a clear “saved / not live” notice instead of an empty panel (when no saved data exists, the existing error and retry UI still appears).
 - **Settings > Experimental** — opt-in checkboxes for in-development features (all off by default). Weather HUD streak and points are behind **Weather HUD streak & points** until you enable it.
 - **Settings > Changelog** — full release history embedded from the project changelog, updated when the extension version bumps.

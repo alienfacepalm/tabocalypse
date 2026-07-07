@@ -14,32 +14,27 @@ import {
   type IOpenAiChatMessage,
 } from "../../lib/openai-compatible-chat";
 import { ByoAiProviderToggle } from "../byo-ai-provider-toggle";
-import { useHudToast } from "../hud-toast";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitleInline, usePanelToast } from "../panel-sdk";
+import {
+  useTabocalypsePersist as usePanelPersist,
+  useTabocalypseSettings as usePanelSettings,
+} from "../tabocalypse-settings-context";
 
 type TSendPhase = "idle" | "sending";
 
-export function AiChatPanel({
-  baseUrl,
-  model,
-  openaiApiKey,
-  geminiApiKey,
-  onSelectProvider,
-  onOpenByoAiSettings,
-}: {
-  baseUrl: string;
-  model: string;
-  openaiApiKey: string;
-  geminiApiKey: string;
-  onSelectProvider: (preset: TByoAiProviderPreset) => void;
-  onOpenByoAiSettings: () => void;
-}) {
+export function AiChatPanel({ onOpenByoAiSettings }: { onOpenByoAiSettings: () => void }) {
+  const s = usePanelSettings();
+  const persist = usePanelPersist();
   const [messages, setMessages] = useState<IOpenAiChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState<TSendPhase>("idle");
-  const { showToast } = useHudToast();
+  const { showToast } = usePanelToast();
   const listRef = useRef<HTMLDivElement | null>(null);
+
+  const baseUrl = s.openaiBaseUrl;
+  const model = s.openaiModel;
+  const openaiApiKey = s.openaiApiKey;
+  const geminiApiKey = s.geminiApiKey;
 
   const activePreset = matchByoAiProviderPreset(baseUrl, model);
   const apiKey = byoAiApiKeyForPreset(activePreset, { openai: openaiApiKey, gemini: geminiApiKey });
@@ -58,7 +53,12 @@ export function AiChatPanel({
     if (activePreset === preset) return;
     setMessages([]);
     setDraft("");
-    onSelectProvider(preset);
+    const next = BYO_AI_PROVIDER_PRESETS[preset];
+    void persist((cur) => ({
+      ...cur,
+      openaiBaseUrl: next.baseUrl,
+      openaiModel: next.model,
+    }));
   };
 
   const send = async () => {
@@ -123,10 +123,10 @@ export function AiChatPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Bot size={20} strokeWidth={2} className="shrink-0 text-accent" aria-hidden />
-            <HudPanelTitleInline>AI chat</HudPanelTitleInline>
+            <PanelTitleInline>AI chat</PanelTitleInline>
           </div>
           {messages.length > 0 ? (
-            <HudTip tip="Clear this conversation">
+            <PanelTip tip="Clear this conversation">
               <button
                 type="button"
                 className="btn ghost sm icon-only"
@@ -136,7 +136,7 @@ export function AiChatPanel({
               >
                 <Eraser size={16} strokeWidth={2} aria-hidden />
               </button>
-            </HudTip>
+            </PanelTip>
           ) : null}
         </div>
         <div className="mt-2">
@@ -148,7 +148,7 @@ export function AiChatPanel({
           />
         </div>
       </div>
-      <HudPanelBody className="flex min-h-0 flex-1 flex-col gap-2">
+      <PanelBody className="flex min-h-0 flex-1 flex-col gap-2">
         {!hasKey ? (
           <p className="muted text-xs leading-relaxed">
             Add your {providerLabel} API key in{" "}
@@ -214,7 +214,7 @@ export function AiChatPanel({
             onChange={(e) => setDraft(e.target.value)}
             autoComplete="off"
           />
-          <HudTip tip={`Send message to ${providerLabel}`}>
+          <PanelTip tip={`Send message to ${providerLabel}`}>
             <button
               type="submit"
               className="btn primary icon-only shrink-0"
@@ -223,9 +223,9 @@ export function AiChatPanel({
             >
               <Send size={18} strokeWidth={2} aria-hidden />
             </button>
-          </HudTip>
+          </PanelTip>
         </form>
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

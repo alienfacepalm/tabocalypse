@@ -23,11 +23,19 @@ export function WeatherStaticMap({
   lat,
   lon,
   zoom = WEATHER_STATIC_MAP_DEFAULT_ZOOM,
+  scrollZoomEnabled = false,
+  doubleClickZoomEnabled = false,
+  onZoomIn,
+  onZoomOut,
   className = "",
 }: {
   lat: number;
   lon: number;
   zoom?: number;
+  scrollZoomEnabled?: boolean;
+  doubleClickZoomEnabled?: boolean;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -139,10 +147,30 @@ export function WeatherStaticMap({
     ? `${layout.displayKey}-${src ?? "pending"}-${loadAttempt}`
     : "pending";
 
+  const interactive = scrollZoomEnabled || doubleClickZoomEnabled;
+  const canZoom = typeof onZoomIn === "function" && typeof onZoomOut === "function";
+
   return (
     <div
       ref={containerRef}
       className={`weather-location-map ${className}`.trim()}
+      onWheel={
+        interactive && scrollZoomEnabled && canZoom
+          ? (e) => {
+              e.preventDefault();
+              if (e.deltaY < 0) onZoomIn();
+              else if (e.deltaY > 0) onZoomOut();
+            }
+          : undefined
+      }
+      onDoubleClick={
+        interactive && doubleClickZoomEnabled && canZoom
+          ? (e) => {
+              e.preventDefault();
+              onZoomIn();
+            }
+          : undefined
+      }
       style={
         dimensions
           ? { height: dimensions.visibleHeight }

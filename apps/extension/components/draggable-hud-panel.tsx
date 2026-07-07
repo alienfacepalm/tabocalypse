@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  HudPanelDragContext,
-  isHudPanelDragExcluded,
-  type IHudPanelDragContextValue,
-} from "./hud-panel-drag-context";
+  PanelDragContext as HudPanelDragContext,
+  isPanelDragExcluded as isHudPanelDragExcluded,
+  type TPanelDragContextValue as IHudPanelDragContextValue,
+} from "./panel-sdk";
 import { useHudPlacementOptional } from "./hud-placement-context";
 import { HudCornerResize } from "./hud-corner-resize";
 import { resolveHudPanelResponsiveRect } from "../lib/hud-auto-layout";
@@ -91,7 +91,6 @@ export function DraggableHudPanel({
     const metrics = hudPlacement?.layoutMetrics ?? getHudLayoutMetrics(canvasW, canvasH);
     const rect = resolveHudPanelResponsiveRect(panelId, display, metrics);
     return {
-      leftPct: (rect.leftPx / metrics.canvasW) * 100,
       widthPx: rect.widthPx,
     };
   }, [canvasRef, display, effectiveW, hudPlacement?.layoutMetrics, livePct, panelId]);
@@ -385,7 +384,7 @@ export function DraggableHudPanel({
         .filter(Boolean)
         .join(" ")}
       style={{
-        left: responsiveLayout ? `${responsiveLayout.leftPct}%` : `${display.xPct}%`,
+        left: `${display.xPct}%`,
         top: `${display.yPct}%`,
         zIndex: (zIndexBase ?? 10) + (zLift ? HUD_DRAG_Z_LIFT : 0),
         ...(effectiveW != null

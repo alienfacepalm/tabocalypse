@@ -7,6 +7,7 @@ export type THudPanelId =
   | "tabGuilt"
   | "weather"
   | "crypto"
+  | "steamCharts"
   | "speedTest"
   | "aiChat"
   | "topSites"
@@ -35,6 +36,7 @@ export const HUD_PANEL_IDS: THudPanelId[] = [
   "tabGuilt",
   "weather",
   "crypto",
+  "steamCharts",
   "speedTest",
   "aiChat",
   "topSites",
@@ -51,6 +53,7 @@ export const DEFAULT_HUD_PANEL_POSITIONS: Record<THudPanelId, IHudPanelPosition>
   tabGuilt: { xPct: 2, yPct: 56 },
   weather: { xPct: 34, yPct: 2 },
   crypto: { xPct: 70, yPct: 32 },
+  steamCharts: { xPct: 70, yPct: 46 },
   speedTest: { xPct: 70, yPct: 58 },
   aiChat: { xPct: 70, yPct: 78 },
   topSites: { xPct: 34, yPct: 22 },
@@ -68,6 +71,7 @@ export const HUD_PANEL_DEFAULT_SIZE_PX: Record<THudPanelId, { widthPx: number; h
     tabGuilt: { widthPx: 352, heightPx: 180 },
     weather: { widthPx: 576, heightPx: 280 },
     crypto: { widthPx: 448, heightPx: 240 },
+    steamCharts: { widthPx: 576, heightPx: 280 },
     speedTest: { widthPx: 352, heightPx: 220 },
     aiChat: { widthPx: 384, heightPx: 320 },
     topSites: { widthPx: 576, heightPx: 240 },
@@ -123,6 +127,7 @@ export const HUD_PANEL_WIDTH_CLASSES: Record<THudPanelId, string> = {
   tabGuilt: "w-[min(22rem,calc(100vw-2rem))]",
   weather: "w-[min(36rem,calc(100vw-2rem))]",
   crypto: "w-[min(28rem,calc(100vw-2rem))]",
+  steamCharts: "w-[min(36rem,calc(100vw-2rem))]",
   speedTest: "w-[min(22rem,calc(100vw-2rem))]",
   aiChat: "w-[min(24rem,calc(100vw-2rem))]",
   topSites: "w-[min(36rem,calc(100vw-2rem))]",
@@ -142,6 +147,7 @@ export const HUD_PANEL_SIZE_LIMITS: Record<
   tabGuilt: { minW: 260, maxW: 1200, minH: 120, maxH: 1200 },
   weather: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },
   crypto: { minW: 280, maxW: 1200, minH: 160, maxH: 1600 },
+  steamCharts: { minW: 300, maxW: 1200, minH: 160, maxH: 1600 },
   speedTest: { minW: 260, maxW: 1200, minH: 160, maxH: 1600 },
   aiChat: { minW: 280, maxW: 1200, minH: 220, maxH: 1600 },
   topSites: { minW: 300, maxW: 1200, minH: 140, maxH: 1600 },

@@ -3,8 +3,7 @@
  */
 import { X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitleInline } from "../panel-sdk";
 import {
   CRYPTO_CHART_DAY_OPTIONS,
   cryptoChartRangeShortLabel,
@@ -131,7 +130,7 @@ function AssetRow({
         <span className="h-9 w-20 shrink-0" aria-hidden />
       )}
       {canRemove ? (
-        <HudTip tip={`Remove ${entry.symbol} from your watchlist`}>
+        <PanelTip tip={`Remove ${entry.symbol} from your watchlist`}>
           <button
             type="button"
             className="btn ghost icon-only shrink-0"
@@ -140,7 +139,7 @@ function AssetRow({
           >
             <X size={14} strokeWidth={2} aria-hidden />
           </button>
-        </HudTip>
+        </PanelTip>
       ) : (
         <span className="w-8 shrink-0" aria-hidden />
       )}
@@ -294,10 +293,10 @@ export function CryptoPricesWidget({
     <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <HudPanelTitleInline>Crypto</HudPanelTitleInline>
+          <PanelTitleInline>Crypto</PanelTitleInline>
           <div className="row wrap gap-1" role="group" aria-label="Chart range">
             {CRYPTO_CHART_DAY_OPTIONS.map((d) => (
-              <HudTip key={d} tip={cryptoChartRangeTip(d)}>
+              <PanelTip key={d} tip={cryptoChartRangeTip(d)}>
                 <button
                   type="button"
                   className={chartDays === d ? "btn primary sm" : "btn sm"}
@@ -305,12 +304,12 @@ export function CryptoPricesWidget({
                 >
                   {cryptoChartRangeShortLabel(d)}
                 </button>
-              </HudTip>
+              </PanelTip>
             ))}
           </div>
         </div>
       </div>
-      <HudPanelBody>
+      <PanelBody>
         {anyStale ? (
           <p className="muted text-xs leading-tight" role="status">
             Cached prices — live CoinGecko data is temporarily unavailable.
@@ -335,7 +334,7 @@ export function CryptoPricesWidget({
           <p className="muted mt-3 border-t border-border pt-2 text-xs leading-snug">{snark}</p>
         ) : null}
         <CryptoWatchlistAddField watchlist={watchlist} onAdd={addEntry} />
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

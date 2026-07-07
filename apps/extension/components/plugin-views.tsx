@@ -2,7 +2,7 @@ import React from "react";
 import type { IImportedPlugin, IPluginWidget } from "@tabocalypse/plugin-sdk";
 import { coerceAlarmMetaMessage } from "../lib/alarm-meta-message";
 import { faviconUrl } from "../lib/favicon-url";
-import { HudPanelBody, HudPanelTitle } from "./hud-panel-drag-context";
+import { PanelBody as HudPanelBody, PanelTitle as HudPanelTitle } from "./panel-sdk";
 
 function StaticText({ props }: { props: { text: string } }) {
   return <p className="plugin-static">{coerceAlarmMetaMessage(props.text as unknown)}</p>;

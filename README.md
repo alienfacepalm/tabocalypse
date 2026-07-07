@@ -60,6 +60,7 @@ Index by audience: [doc/README.md](doc/README.md).
 - [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md) — packages and extension surfaces
 - [doc/PLUGIN-SCHEMA.md](doc/PLUGIN-SCHEMA.md) — declarative plugin JSON (v1)
 - [doc/AGENT-INSTRUCTIONS.md](doc/AGENT-INSTRUCTIONS.md) — agent-agnostic rules ([AGENTS.md](AGENTS.md) for Cursor)
+- [doc/AGENT-PARALLELISM.md](doc/AGENT-PARALLELISM.md) — avoid collisions when running multiple Cursor chats
 
 **Ship prep** _(maintainers — pre-release)_
 

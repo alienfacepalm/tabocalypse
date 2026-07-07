@@ -16,6 +16,7 @@ Start here for **development**, **local testing** (including non-developers), an
 | [Troubleshooting](TROUBLESHOOTING.md)                             | Common load / build / pnpm issues                                       |
 | [Alpha setup](ALPHA-SETUP.md)                                     | Clone, build, and install in developer mode (alpha testers / devs)      |
 | [Agent instructions](AGENT-INSTRUCTIONS.md)                       | Agent-agnostic rules and sync targets                                   |
+| [Agent parallelism](AGENT-PARALLELISM.md)                         | Avoid collisions when running multiple Cursor chats/agents              |
 
 **Reference (technical):**
 

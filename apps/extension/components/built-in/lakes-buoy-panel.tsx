@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
-import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
+import { PanelFetchError } from "../panel-sdk";
 import { WeatherStaleNotice } from "../weather-stale-notice";
 import {
   LAKES_BUOY_NO_ACTIVE_DATA_ERROR,
@@ -95,7 +95,7 @@ export function LakesBuoyPanel({
     const showTwoLakesVerifyLink = panelState.message === LAKES_BUOY_NO_ACTIVE_DATA_ERROR;
 
     return (
-      <PrivilegedFetchErrorPanel
+      <PanelFetchError
         message={panelState.message}
         onRetry={retryBuoyFetch}
         retryTip="Try fetching King County lake buoy readings again"

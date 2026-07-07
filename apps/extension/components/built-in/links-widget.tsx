@@ -9,8 +9,7 @@ import {
 } from "../../lib/bookmarks-strip-preferences";
 import { rankBookmarksBySearchRelevance } from "../../lib/bookmark-search-relevance";
 import { faviconUrl } from "../../lib/favicon-url";
-import { HudTip } from "../hud-tip";
-import { HudPanelBody, HudPanelTitle, HudPanelTitleInline } from "../hud-panel-drag-context";
+import { PanelBody, PanelTip, PanelTitle, PanelTitleInline } from "../panel-sdk";
 
 export function TopSitesWidget({
   permissionsEpoch,
@@ -39,11 +38,11 @@ export function TopSitesWidget({
   if (err)
     return (
       <section className="card">
-        <HudPanelTitle>Top sites</HudPanelTitle>
-        <HudPanelBody>
+        <PanelTitle>Top sites</PanelTitle>
+        <PanelBody>
           <p className="err">
             Top sites needs browser permission. Open{" "}
-            <HudTip tip="Open Settings and jump to Optional permissions">
+            <PanelTip tip="Open Settings and jump to Optional permissions">
               <button
                 type="button"
                 className="linkish p-0"
@@ -52,17 +51,17 @@ export function TopSitesWidget({
               >
                 Settings &gt; Optional permissions
               </button>
-            </HudTip>{" "}
+            </PanelTip>{" "}
             and enable Top sites.
           </p>
-        </HudPanelBody>
+        </PanelBody>
       </section>
     );
 
   return (
     <section className="card">
-      <HudPanelTitle>Top sites</HudPanelTitle>
-      <HudPanelBody>
+      <PanelTitle>Top sites</PanelTitle>
+      <PanelBody>
         <ul className="link-grid">
           {sites.map((s, i) => (
             <li key={i}>
@@ -79,7 +78,7 @@ export function TopSitesWidget({
             </li>
           ))}
         </ul>
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }
@@ -159,11 +158,11 @@ export function BookmarksWidget({
   if (err)
     return (
       <section className="card">
-        <HudPanelTitle>Bookmarks</HudPanelTitle>
-        <HudPanelBody>
+        <PanelTitle>Bookmarks</PanelTitle>
+        <PanelBody>
           <p className="err">
             Bookmarks need browser permission. Open{" "}
-            <HudTip tip="Open Settings and jump to Optional permissions">
+            <PanelTip tip="Open Settings and jump to Optional permissions">
               <button
                 type="button"
                 className="linkish p-0"
@@ -172,17 +171,17 @@ export function BookmarksWidget({
               >
                 Settings &gt; Optional permissions
               </button>
-            </HudTip>{" "}
+            </PanelTip>{" "}
             and enable Bookmarks.
           </p>
-        </HudPanelBody>
+        </PanelBody>
       </section>
     );
 
   return (
     <section className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <HudPanelTitleInline>Bookmarks</HudPanelTitleInline>
+        <PanelTitleInline>Bookmarks</PanelTitleInline>
         <input
           type="search"
           className="w-[8.5rem] max-w-[min(42%,12rem)] shrink-0 rounded-full border border-solid border-accent/30 bg-black/40 px-3 py-1 text-xs text-text normal-case tracking-normal backdrop-blur-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent2/60"
@@ -192,11 +191,11 @@ export function BookmarksWidget({
           aria-label="Search bookmarks"
         />
       </div>
-      <HudPanelBody>
+      <PanelBody>
         {hidden.length > 0 ? (
           <p className="muted sm mb-2 mt-0">
             {hidden.length} hidden.{" "}
-            <HudTip tip="Open Settings and jump to Hidden from panel">
+            <PanelTip tip="Open Settings and jump to Hidden from panel">
               <button
                 type="button"
                 className="linkish p-0"
@@ -205,7 +204,7 @@ export function BookmarksWidget({
               >
                 Settings &gt; Bookmarks &gt; Hidden from panel
               </button>
-            </HudTip>
+            </PanelTip>
           </p>
         ) : null}
         <ul className="link-grid">
@@ -215,7 +214,7 @@ export function BookmarksWidget({
             const cannotMoveDown = searchActive || index >= visibleMarks.length - 1;
             return (
               <li key={b.id} className="link-grid-row">
-                <HudTip tip={label} wrapClassName="block min-w-0 flex-1">
+                <PanelTip tip={label} wrapClassName="block min-w-0 flex-1">
                   <a href={b.url} target="_blank" rel="noreferrer">
                     <img
                       src={faviconUrl(b.url ?? "")}
@@ -226,11 +225,11 @@ export function BookmarksWidget({
                     />
                     <span className="min-w-0 flex-1 truncate">{label}</span>
                   </a>
-                </HudTip>
+                </PanelTip>
                 <div className="link-grid-row-actions">
                   {!searchActive ? (
                     <>
-                      <HudTip
+                      <PanelTip
                         tip={
                           cannotMoveUp
                             ? "Already first in the list"
@@ -251,8 +250,8 @@ export function BookmarksWidget({
                         >
                           <ChevronUp size={14} strokeWidth={2} aria-hidden />
                         </button>
-                      </HudTip>
-                      <HudTip
+                      </PanelTip>
+                      <PanelTip
                         tip={
                           cannotMoveDown
                             ? "Already last in the list"
@@ -273,10 +272,10 @@ export function BookmarksWidget({
                         >
                           <ChevronDown size={14} strokeWidth={2} aria-hidden />
                         </button>
-                      </HudTip>
+                      </PanelTip>
                     </>
                   ) : null}
-                  <HudTip tip="Hide this bookmark from the panel (unhide in Settings > Bookmarks)">
+                  <PanelTip tip="Hide this bookmark from the panel (unhide in Settings > Bookmarks)">
                     <button
                       type="button"
                       className="btn ghost icon-only sm"
@@ -291,13 +290,13 @@ export function BookmarksWidget({
                     >
                       <EyeOff size={14} strokeWidth={2} aria-hidden />
                     </button>
-                  </HudTip>
+                  </PanelTip>
                 </div>
               </li>
             );
           })}
         </ul>
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

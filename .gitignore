@@ -12,3 +12,4 @@ apps/extension/.output
 dist
 *.local
 .DS_Store
+.cursor/LOCK.md

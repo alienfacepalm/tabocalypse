@@ -2,7 +2,7 @@ import { Lock, Trash2, Unlock, X } from "lucide-react";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { deriveNoteTitle, type INote, type TNotePersistPatch } from "../../lib/settings";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
-import { HudTip } from "../hud-tip";
+import { PanelTip } from "../panel-sdk";
 
 function stopToolbarButtonDrag(e: React.PointerEvent): void {
   e.stopPropagation();
@@ -117,7 +117,7 @@ export function StickyNoteEditor({
       </div>
       <div className="sticky-note-footer sticky-note-toolbar row shrink-0 items-center justify-between gap-0.5 border-t border-solid px-1 pb-1 pt-0.5">
         <div className="row gap-0.5">
-          <HudTip
+          <PanelTip
             tip={
               note.locked
                 ? "Unlock to edit or delete (you can still mark inactive)"
@@ -138,8 +138,8 @@ export function StickyNoteEditor({
                 <Unlock size={16} strokeWidth={2} aria-hidden />
               )}
             </button>
-          </HudTip>
-          <HudTip tip={note.locked ? "Unlock to delete" : "Delete this note"}>
+          </PanelTip>
+          <PanelTip tip={note.locked ? "Unlock to delete" : "Delete this note"}>
             <button
               type="button"
               className="btn ghost icon-only sm"
@@ -150,8 +150,8 @@ export function StickyNoteEditor({
             >
               <Trash2 size={16} strokeWidth={2} aria-hidden />
             </button>
-          </HudTip>
-          <HudTip tip="Mark inactive (hide from canvas)">
+          </PanelTip>
+          <PanelTip tip="Mark inactive (hide from canvas)">
             <button
               type="button"
               className="btn ghost icon-only sm"
@@ -161,7 +161,7 @@ export function StickyNoteEditor({
             >
               <X size={16} strokeWidth={2} aria-hidden />
             </button>
-          </HudTip>
+          </PanelTip>
         </div>
       </div>
     </div>

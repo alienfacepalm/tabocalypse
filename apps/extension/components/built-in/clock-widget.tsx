@@ -8,8 +8,7 @@ import {
   readNavigatorTimeZone,
   resolveTimezoneFromCoords,
 } from "../../lib/resolve-timezone-from-coords";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitleInline } from "../panel-sdk";
 import { ClockAlarmsSection } from "./clock-alarms-section";
 import { ClockAnalogFace } from "./clock-analog-face";
 
@@ -86,10 +85,10 @@ export function ClockWidget({
     <section className="card clock-card">
       <div className="shrink-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <HudPanelTitleInline>Clock</HudPanelTitleInline>
+          <PanelTitleInline>Clock</PanelTitleInline>
           <div className="row wrap" role="group" aria-label="Clock format">
             {CLOCK_HOUR_FORMATS.map((f) => (
-              <HudTip
+              <PanelTip
                 key={f}
                 tip={
                   f === "12h"
@@ -104,12 +103,12 @@ export function ClockWidget({
                 >
                   {CLOCK_HOUR_FORMAT_LABELS[f]}
                 </button>
-              </HudTip>
+              </PanelTip>
             ))}
           </div>
         </div>
       </div>
-      <HudPanelBody>
+      <PanelBody>
         <div className="clock-display-row">
           <div className="clock-digital">
             <div className="clock-time">{now.toLocaleTimeString(locale, timeOpts)}</div>
@@ -121,7 +120,7 @@ export function ClockWidget({
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
             Default GEO location still active. Open{" "}
-            <HudTip tip="Open Settings and jump to the Weather section">
+            <PanelTip tip="Open Settings and jump to the Weather section">
               <button
                 type="button"
                 className="linkish p-0 text-xs"
@@ -130,13 +129,13 @@ export function ClockWidget({
               >
                 Settings &gt; Weather
               </button>
-            </HudTip>{" "}
+            </PanelTip>{" "}
             from the gear button in the top bar, then update the coordinates so the clock matches
             your area.
           </p>
         ) : null}
         <ClockAlarmsSection locale={locale} hourFormat={hourFormat} />
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }
