@@ -719,6 +719,8 @@ export interface ISettings {
   weatherMapDoubleClickZoomEnabled: boolean;
   /** When true, drag the Weather location map to pan the view (Settings → Weather → Map). */
   weatherMapDragEnabled: boolean;
+  /** When true, Weather map pan, zoom, and one-shot location are frozen until unlocked on the map. */
+  weatherMapLocked: boolean;
   /** Last Forecast / 10 Day / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
   /** Legacy 10-day layout preference (always stacked vertically). */
@@ -1018,6 +1020,7 @@ export interface ISyncSlice {
   weatherMapScrollZoomEnabled: boolean;
   weatherMapDoubleClickZoomEnabled: boolean;
   weatherMapDragEnabled: boolean;
+  weatherMapLocked: boolean;
   weatherPanelView: TWeatherPanelView;
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
@@ -1389,6 +1392,7 @@ export function defaultSettings(): ISettings {
     weatherMapScrollZoomEnabled: false,
     weatherMapDoubleClickZoomEnabled: false,
     weatherMapDragEnabled: true,
+    weatherMapLocked: false,
     weatherPanelView: "forecast",
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
@@ -1485,6 +1489,7 @@ function toSync(s: ISettings): ISyncSlice {
     weatherMapScrollZoomEnabled: s.weatherMapScrollZoomEnabled,
     weatherMapDoubleClickZoomEnabled: s.weatherMapDoubleClickZoomEnabled,
     weatherMapDragEnabled: s.weatherMapDragEnabled,
+    weatherMapLocked: s.weatherMapLocked,
     weatherPanelView: s.weatherPanelView,
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
@@ -1762,6 +1767,8 @@ function mergeSettings(
       typeof sync?.weatherMapDragEnabled === "boolean"
         ? sync.weatherMapDragEnabled
         : d.weatherMapDragEnabled,
+    weatherMapLocked:
+      typeof sync?.weatherMapLocked === "boolean" ? sync.weatherMapLocked : d.weatherMapLocked,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     weatherTenDayLayout: coerceWeatherTenDayLayout(
       sync?.weatherTenDayLayout,
