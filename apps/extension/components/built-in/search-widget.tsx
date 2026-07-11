@@ -28,8 +28,7 @@ import type { ISettings, THumorIntensity } from "../../lib/settings";
 import { HUD_PAGE_FOOTER_RESERVE_PX } from "../../lib/hud-layout";
 import { resolveSearchSuggestionsPlacement } from "../../lib/resolve-search-suggestions-placement";
 import { useDebouncedCallback } from "../../lib/use-debounced-callback";
-import { HudPanelTitle } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelTip, PanelTitle } from "../panel-sdk";
 
 const SEARCH_SUGGESTIONS_DEBOUNCE_MS = 300;
 
@@ -337,7 +336,7 @@ export function SearchWidget({
         />
       </div>
       <div className="flex shrink-0 items-center gap-2" role="group" aria-label="Search mode">
-        <HudTip
+        <PanelTip
           tip={
             assistActive
               ? `AI search on — opens ${assistDest} when you press Enter or click again. Uses your browser session only.`
@@ -360,8 +359,8 @@ export function SearchWidget({
           >
             <Sparkles size={20} strokeWidth={2} aria-hidden />
           </button>
-        </HudTip>
-        <HudTip
+        </PanelTip>
+        <PanelTip
           tip={
             assistActive
               ? "Switch to classic web search on your chosen engine"
@@ -384,7 +383,7 @@ export function SearchWidget({
           >
             <Search size={20} strokeWidth={2} aria-hidden />
           </button>
-        </HudTip>
+        </PanelTip>
       </div>
       {suggestionsPanel}
     </form>
@@ -405,7 +404,7 @@ export function SearchWidget({
 
   return (
     <section className="card">
-      <HudPanelTitle>Search</HudPanelTitle>
+      <PanelTitle>Search</PanelTitle>
       {form}
     </section>
   );

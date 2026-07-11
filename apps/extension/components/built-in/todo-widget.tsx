@@ -1,8 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import type { ITodoItem } from "../../lib/settings";
-import { HudPanelBody, HudPanelTitle } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitle } from "../panel-sdk";
 
 export function TodoWidget({
   items,
@@ -20,8 +19,8 @@ export function TodoWidget({
   };
   return (
     <section className="card">
-      <HudPanelTitle>Todos</HudPanelTitle>
-      <HudPanelBody>
+      <PanelTitle>Todos</PanelTitle>
+      <PanelBody>
         <ul className="todo-list">
           {items.map((it) => (
             <li key={it.id} className="todo-row">
@@ -35,7 +34,7 @@ export function TodoWidget({
                 />
                 <span className={it.done ? "done" : ""}>{it.text}</span>
               </label>
-              <HudTip tip="Remove this task from the list">
+              <PanelTip tip="Remove this task from the list">
                 <button
                   type="button"
                   className="btn ghost icon-only shrink-0"
@@ -44,11 +43,11 @@ export function TodoWidget({
                 >
                   <Trash2 size={14} strokeWidth={2} aria-hidden />
                 </button>
-              </HudTip>
+              </PanelTip>
             </li>
           ))}
         </ul>
-      </HudPanelBody>
+      </PanelBody>
       <form
         className="row mt-2 shrink-0"
         onSubmit={(e) => {
@@ -68,11 +67,11 @@ export function TodoWidget({
             aria-label="New todo"
           />
         </div>
-        <HudTip tip="Add the task in the field to your list">
+        <PanelTip tip="Add the task in the field to your list">
           <button type="submit" className="btn primary icon-only" aria-label="Add todo">
             <Plus size={20} strokeWidth={2} aria-hidden />
           </button>
-        </HudTip>
+        </PanelTip>
       </form>
     </section>
   );

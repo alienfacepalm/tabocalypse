@@ -23,6 +23,10 @@ import {
 import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 import { coerceSearchEngine, DEFAULT_SEARCH_ENGINE } from "./search-engine-options";
+import {
+  coerceWeatherMapViewByDisplay,
+  type TWeatherMapViewByDisplay,
+} from "./weather/weather-map-view";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
   coerceWeatherTenDayLayout,
@@ -113,12 +117,92 @@ export type TWidgetKey =
   | "weather"
   | "crypto"
   | "speedTest"
+  | "steamCharts"
   | "topSites"
   | "bookmarksStrip"
   | "tabGuilt"
   | "humorBanner"
   | "aiChat"
   | "balancedNews";
+
+export type TSteamChartsBoardKey =
+  | "favoritesNow"
+  | "favoritesPeak24h"
+  | "favoritesPeakAllTime"
+  | "globalNow"
+  | "globalPeak24h"
+  | "globalPeakAllTime"
+  | "globalTrendingUp";
+
+export const STEAM_CHARTS_BOARD_KEYS = [
+  "favoritesNow",
+  "favoritesPeak24h",
+  "favoritesPeakAllTime",
+  "globalNow",
+  "globalPeak24h",
+  "globalPeakAllTime",
+  "globalTrendingUp",
+] as const satisfies readonly TSteamChartsBoardKey[];
+
+export const STEAM_CHARTS_BOARD_LABELS: Record<TSteamChartsBoardKey, string> = {
+  favoritesNow: "Your favorites (now)",
+  favoritesPeak24h: "Your favorites (24h peak)",
+  favoritesPeakAllTime: "Your favorites (all-time peak)",
+  globalNow: "Steam (now)",
+  globalPeak24h: "Steam (24h peak)",
+  globalPeakAllTime: "Steam (all-time peak)",
+  globalTrendingUp: "Steam (trending up)",
+};
+
+export const STEAM_CHARTS_ROW_COUNT_MIN = 3;
+export const STEAM_CHARTS_ROW_COUNT_MAX = 50;
+export const DEFAULT_STEAM_CHARTS_ROW_COUNT = 10;
+
+export const DEFAULT_STEAM_CHARTS_BOARDS: readonly TSteamChartsBoardKey[] = [
+  "favoritesNow",
+  "globalNow",
+  "globalPeak24h",
+  "globalPeakAllTime",
+  "globalTrendingUp",
+];
+
+export function coerceSteamChartsRowCount(raw: unknown, fallback: number): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback;
+  const rounded = Math.round(raw);
+  return Math.min(STEAM_CHARTS_ROW_COUNT_MAX, Math.max(STEAM_CHARTS_ROW_COUNT_MIN, rounded));
+}
+
+export function coerceSteamChartsBoards(raw: unknown): TSteamChartsBoardKey[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_STEAM_CHARTS_BOARDS];
+  const set = new Set<TSteamChartsBoardKey>();
+  for (const v of raw) {
+    if (typeof v !== "string") continue;
+    if ((STEAM_CHARTS_BOARD_KEYS as readonly string[]).includes(v)) {
+      set.add(v as TSteamChartsBoardKey);
+    }
+  }
+  const out = [...set];
+  return out.length > 0 ? out : [...DEFAULT_STEAM_CHARTS_BOARDS];
+}
+
+export function coerceSteamChartsFavoriteAppIds(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [];
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const v of raw) {
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    const id = Math.floor(v);
+    if (id <= 0 || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+export function coerceSteamChartsSteamId(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim();
+}
 
 export interface IImportedUserPack {
   id: string;
@@ -627,6 +711,14 @@ export interface ISettings {
   weatherAutoGeo: boolean;
   /** When true, the Weather HUD panel can switch to 2 Lakes buoy readings (Settings → Weather). */
   weatherLakesEmbedEnabled: boolean;
+  /** When true, show + / - buttons on the Weather location map (Settings → Weather → Map). */
+  weatherMapZoomButtonsEnabled: boolean;
+  /** When true, mouse wheel zooms the Weather location map (Settings → Weather → Map). */
+  weatherMapScrollZoomEnabled: boolean;
+  /** When true, double-click zooms the Weather location map (Settings → Weather → Map). */
+  weatherMapDoubleClickZoomEnabled: boolean;
+  /** When true, drag the Weather location map to pan the view (Settings → Weather → Map). */
+  weatherMapDragEnabled: boolean;
   /** Last Forecast / 10 Day / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
   /** Legacy 10-day layout preference (always stacked vertically). */
@@ -635,6 +727,16 @@ export interface ISettings {
   cryptoChartDays: TCryptoChartDays;
   /** Coins shown in the Crypto panel (CoinGecko ids + display symbols). */
   cryptoWatchlist: ICryptoWatchlistEntry[];
+  /** Which Steam leaderboards are shown (order matters). */
+  steamChartsBoards: TSteamChartsBoardKey[];
+  /** Rows shown per leaderboard (3–50). */
+  steamChartsRowCount: number;
+  /** Steam app ids pinned by the user for personal-first leaderboards. */
+  steamChartsFavoriteAppIds: number[];
+  /** Optional SteamID / vanity name / profile token for library import (best-effort). */
+  steamChartsSteamId: string;
+  /** Optional Steam Web API key (local only) for more reliable library lookups. */
+  steamWebApiKey: string;
   /** When true, Balanced news region follows locale or device geo; when false, {@link balancedNewsCountry} is used. */
   balancedNewsCountryAuto: boolean;
   /** Peapix-style lowercase country code when {@link balancedNewsCountryAuto} is false. */
@@ -728,6 +830,11 @@ export interface ISettings {
    * Stored locally because monitor fingerprints differ per machine.
    */
   widgetsByDisplay: TWidgetsByDisplay;
+  /**
+   * Per-monitor Weather location-map pan/zoom; keyed by {@link getHudDisplayLayoutKey}.
+   * Local-only so each computer and screen keeps its own camera without syncing the shared pin.
+   */
+  weatherMapViewByDisplay: TWeatherMapViewByDisplay;
   /**
    * After first-run settings intro is finished, stays true so the welcome callout does not repeat.
    * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
@@ -907,10 +1014,18 @@ export interface ISyncSlice {
   clockHourFormatAuto: boolean;
   weatherAutoGeo: boolean;
   weatherLakesEmbedEnabled: boolean;
+  weatherMapZoomButtonsEnabled: boolean;
+  weatherMapScrollZoomEnabled: boolean;
+  weatherMapDoubleClickZoomEnabled: boolean;
+  weatherMapDragEnabled: boolean;
   weatherPanelView: TWeatherPanelView;
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
   cryptoWatchlist: ICryptoWatchlistEntry[];
+  steamChartsBoards: TSteamChartsBoardKey[];
+  steamChartsRowCount: number;
+  steamChartsFavoriteAppIds: number[];
+  steamChartsSteamId: string;
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: ISettings["balancedNewsCountry"];
   balancedNewsUseDeviceGeo: boolean;
@@ -948,6 +1063,7 @@ export interface ILocalSlice {
   /** OpenAI-compatible model id for BYO AI chat and tests. */
   openaiModel: string;
   balancedNewsApiKey: string;
+  steamWebApiKey?: string;
   myLines: string[];
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
@@ -968,6 +1084,7 @@ export interface ILocalSlice {
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
   notePanelsByDisplay?: TNotePanelsByDisplay;
   widgetsByDisplay?: TWidgetsByDisplay;
+  weatherMapViewByDisplay?: TWeatherMapViewByDisplay;
   bookmarksStripHidden?: TBookmarksStripItem[];
   /** @deprecated Migrated to {@link bookmarksStripHidden} on load. */
   bookmarksStripHiddenIds?: string[];
@@ -1093,6 +1210,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   weather: true,
   crypto: true,
   speedTest: false,
+  steamCharts: false,
   aiChat: false,
   topSites: false,
   bookmarksStrip: false,
@@ -1195,6 +1313,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   weather: "Weather",
   crypto: "Crypto prices",
   speedTest: "Speed test",
+  steamCharts: "Steam leaderboards",
   aiChat: "AI chat",
   topSites: "Top sites",
   bookmarksStrip: "Bookmarks strip",
@@ -1266,10 +1385,19 @@ export function defaultSettings(): ISettings {
     clockHourFormatAuto: false,
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
+    weatherMapZoomButtonsEnabled: false,
+    weatherMapScrollZoomEnabled: false,
+    weatherMapDoubleClickZoomEnabled: false,
+    weatherMapDragEnabled: true,
     weatherPanelView: "forecast",
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
     cryptoWatchlist: [...DEFAULT_CRYPTO_WATCHLIST],
+    steamChartsBoards: [...DEFAULT_STEAM_CHARTS_BOARDS],
+    steamChartsRowCount: DEFAULT_STEAM_CHARTS_ROW_COUNT,
+    steamChartsFavoriteAppIds: [],
+    steamChartsSteamId: "",
+    steamWebApiKey: "",
     balancedNewsCountryAuto: true,
     balancedNewsCountry: "us",
     balancedNewsUseDeviceGeo: false,
@@ -1317,6 +1445,7 @@ export function defaultSettings(): ISettings {
     hudPanelPositions: mergeHudPanelPositions(undefined),
     hudPanelPositionsByDisplay: {},
     widgetsByDisplay: {},
+    weatherMapViewByDisplay: {},
     hasSeenSettingsIntro: false,
     experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
     bookmarksStripHidden: [],
@@ -1352,10 +1481,18 @@ function toSync(s: ISettings): ISyncSlice {
     clockHourFormatAuto: s.clockHourFormatAuto,
     weatherAutoGeo: s.weatherAutoGeo,
     weatherLakesEmbedEnabled: s.weatherLakesEmbedEnabled,
+    weatherMapZoomButtonsEnabled: s.weatherMapZoomButtonsEnabled,
+    weatherMapScrollZoomEnabled: s.weatherMapScrollZoomEnabled,
+    weatherMapDoubleClickZoomEnabled: s.weatherMapDoubleClickZoomEnabled,
+    weatherMapDragEnabled: s.weatherMapDragEnabled,
     weatherPanelView: s.weatherPanelView,
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
     cryptoWatchlist: s.cryptoWatchlist,
+    steamChartsBoards: s.steamChartsBoards,
+    steamChartsRowCount: s.steamChartsRowCount,
+    steamChartsFavoriteAppIds: s.steamChartsFavoriteAppIds,
+    steamChartsSteamId: s.steamChartsSteamId,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
     balancedNewsCountry: s.balancedNewsCountry,
     balancedNewsUseDeviceGeo: s.balancedNewsUseDeviceGeo,
@@ -1403,6 +1540,7 @@ function toLocal(s: ISettings): ILocalSlice {
     openaiBaseUrl: s.openaiBaseUrl,
     openaiModel: s.openaiModel,
     balancedNewsApiKey: s.balancedNewsApiKey,
+    steamWebApiKey: s.steamWebApiKey,
     myLines: s.myLines,
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
@@ -1415,6 +1553,7 @@ function toLocal(s: ISettings): ILocalSlice {
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
     notePanelsByDisplay: s.notePanelsByDisplay,
     widgetsByDisplay: s.widgetsByDisplay,
+    weatherMapViewByDisplay: s.weatherMapViewByDisplay,
     bookmarksStripHidden: s.bookmarksStripHidden,
     bookmarksStripOrder: s.bookmarksStripOrder,
   };
@@ -1607,6 +1746,22 @@ function mergeSettings(
         : sync === undefined
           ? d.weatherLakesEmbedEnabled
           : false,
+    weatherMapZoomButtonsEnabled:
+      typeof sync?.weatherMapZoomButtonsEnabled === "boolean"
+        ? sync.weatherMapZoomButtonsEnabled
+        : d.weatherMapZoomButtonsEnabled,
+    weatherMapScrollZoomEnabled:
+      typeof sync?.weatherMapScrollZoomEnabled === "boolean"
+        ? sync.weatherMapScrollZoomEnabled
+        : d.weatherMapScrollZoomEnabled,
+    weatherMapDoubleClickZoomEnabled:
+      typeof sync?.weatherMapDoubleClickZoomEnabled === "boolean"
+        ? sync.weatherMapDoubleClickZoomEnabled
+        : d.weatherMapDoubleClickZoomEnabled,
+    weatherMapDragEnabled:
+      typeof sync?.weatherMapDragEnabled === "boolean"
+        ? sync.weatherMapDragEnabled
+        : d.weatherMapDragEnabled,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     weatherTenDayLayout: coerceWeatherTenDayLayout(
       sync?.weatherTenDayLayout,
@@ -1614,6 +1769,13 @@ function mergeSettings(
     ),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     cryptoWatchlist: coerceCryptoWatchlist(sync?.cryptoWatchlist, d.cryptoWatchlist),
+    steamChartsBoards: coerceSteamChartsBoards(sync?.steamChartsBoards),
+    steamChartsRowCount: coerceSteamChartsRowCount(
+      sync?.steamChartsRowCount,
+      d.steamChartsRowCount,
+    ),
+    steamChartsFavoriteAppIds: coerceSteamChartsFavoriteAppIds(sync?.steamChartsFavoriteAppIds),
+    steamChartsSteamId: coerceSteamChartsSteamId(sync?.steamChartsSteamId),
     balancedNewsCountryAuto:
       typeof sync?.balancedNewsCountryAuto === "boolean"
         ? sync.balancedNewsCountryAuto
@@ -1689,6 +1851,8 @@ function mergeSettings(
       typeof local?.balancedNewsApiKey === "string"
         ? local.balancedNewsApiKey
         : d.balancedNewsApiKey,
+    steamWebApiKey:
+      typeof local?.steamWebApiKey === "string" ? local.steamWebApiKey : d.steamWebApiKey,
     myLines: local?.myLines ?? d.myLines,
     importedPacks: local?.importedPacks ?? d.importedPacks,
     importedPlugins: local?.importedPlugins ?? d.importedPlugins,
@@ -1710,6 +1874,7 @@ function mergeSettings(
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
     widgetsByDisplay: coerceWidgetsByDisplay(local?.widgetsByDisplay),
+    weatherMapViewByDisplay: coerceWeatherMapViewByDisplay(local?.weatherMapViewByDisplay),
     bookmarksStripHidden: coerceBookmarksStripHidden(
       local?.bookmarksStripHidden,
       local?.bookmarksStripHiddenIds,

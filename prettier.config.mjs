@@ -7,7 +7,7 @@ const config = {
   tabWidth: 2,
   useTabs: false,
   arrowParens: "always",
-  endOfLine: "lf",
+  endOfLine: "auto",
 };
 
 export default config;

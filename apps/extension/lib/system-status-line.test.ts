@@ -19,6 +19,7 @@ function sampleWidgets(
     weather: false,
     crypto: false,
     speedTest: false,
+    steamCharts: false,
     topSites: false,
     bookmarksStrip: false,
     tabGuilt: false,

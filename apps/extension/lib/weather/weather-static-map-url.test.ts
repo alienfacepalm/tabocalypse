@@ -9,6 +9,7 @@ import {
   WEATHER_STATIC_MAP_LAYER,
   WEATHER_STATIC_MAP_WIDTH,
   buildWeatherStaticMapUrl,
+  offsetWeatherStaticMapCenter,
   resolveWeatherStaticMapDimensions,
 } from "./weather-static-map-url";
 
@@ -50,6 +51,28 @@ describe("buildWeatherStaticMapUrl", () => {
 
   it("defaults to a tight zoom around the saved pin", () => {
     expect(WEATHER_STATIC_MAP_DEFAULT_ZOOM).toBeGreaterThanOrEqual(13);
+  });
+});
+
+describe("offsetWeatherStaticMapCenter", () => {
+  it("moves the center west when the map is dragged right", () => {
+    const next = offsetWeatherStaticMapCenter(47.6062, -122.3321, 14, 100, 0);
+    expect(next.lon).toBeLessThan(-122.3321);
+    expect(next.lat).toBeCloseTo(47.6062, 2);
+  });
+
+  it("moves the center north when the map is dragged down", () => {
+    const next = offsetWeatherStaticMapCenter(47.6062, -122.3321, 14, 0, 100);
+    expect(next.lat).toBeGreaterThan(47.6062);
+    expect(next.lon).toBeCloseTo(-122.3321, 2);
+  });
+
+  it("round-trips a pixel offset at the same zoom", () => {
+    const start = { lat: 40.7128, lon: -74.006 };
+    const shifted = offsetWeatherStaticMapCenter(start.lat, start.lon, 12, 48, -32);
+    const back = offsetWeatherStaticMapCenter(shifted.lat, shifted.lon, 12, -48, 32);
+    expect(back.lat).toBeCloseTo(start.lat, 4);
+    expect(back.lon).toBeCloseTo(start.lon, 4);
   });
 });
 

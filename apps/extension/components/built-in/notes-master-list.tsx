@@ -8,8 +8,7 @@ import {
   type INotePanel,
   type TNotePersistPatch,
 } from "../../lib/settings";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
+import { PanelBody, PanelTip, PanelTitleInline } from "../panel-sdk";
 
 function stopTitleControlPropagation(e: React.PointerEvent): void {
   e.stopPropagation();
@@ -53,9 +52,9 @@ export function NotesMasterList({
   return (
     <section className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <HudPanelTitleInline>Notes</HudPanelTitleInline>
+        <PanelTitleInline>Notes</PanelTitleInline>
         <span className="row shrink-0 gap-1" onPointerDown={stopTitleControlPropagation}>
-          <HudTip tip="New note">
+          <PanelTip tip="New note">
             <button
               type="button"
               className="btn ghost icon-only sm"
@@ -64,9 +63,9 @@ export function NotesMasterList({
             >
               <Plus size={16} strokeWidth={2} aria-hidden />
             </button>
-          </HudTip>
+          </PanelTip>
           {canHideListPanel ? (
-            <HudTip tip="Hide the notes list (active stickies stay on the canvas)">
+            <PanelTip tip="Hide the notes list (active stickies stay on the canvas)">
               <button
                 type="button"
                 className="btn ghost icon-only sm"
@@ -75,11 +74,11 @@ export function NotesMasterList({
               >
                 <EyeOff size={16} strokeWidth={2} aria-hidden />
               </button>
-            </HudTip>
+            </PanelTip>
           ) : null}
         </span>
       </div>
-      <HudPanelBody bodyOverflow={false} className="flex min-h-0 flex-col">
+      <PanelBody bodyOverflow={false} className="flex min-h-0 flex-col">
         <div className="hud-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
           {sortedNotes.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center py-4">
@@ -95,7 +94,7 @@ export function NotesMasterList({
                 return (
                   <li key={n.id}>
                     <div className="row min-h-[2.5rem] gap-2 rounded border border-solid border-accent/35 bg-black/25 px-2 py-1">
-                      <HudTip
+                      <PanelTip
                         tip={
                           active
                             ? "Mark inactive (hide sticky from canvas)"
@@ -117,8 +116,8 @@ export function NotesMasterList({
                             <EyeOff size={18} strokeWidth={2} aria-hidden />
                           )}
                         </button>
-                      </HudTip>
-                      <HudTip
+                      </PanelTip>
+                      <PanelTip
                         tip={
                           n.locked
                             ? "Unlock to edit or delete (you can still mark inactive)"
@@ -143,7 +142,7 @@ export function NotesMasterList({
                             <Unlock size={18} strokeWidth={2} aria-hidden />
                           )}
                         </button>
-                      </HudTip>
+                      </PanelTip>
                       <div className="min-w-0 flex-1 self-center">
                         <div className="truncate text-sm font-semibold" title={title}>
                           {title}
@@ -152,7 +151,7 @@ export function NotesMasterList({
                           {active ? "Active" : "Inactive"}
                         </div>
                       </div>
-                      <HudTip tip={n.locked ? "Unlock to delete" : "Delete this note"}>
+                      <PanelTip tip={n.locked ? "Unlock to delete" : "Delete this note"}>
                         <button
                           type="button"
                           className="btn ghost icon-only sm"
@@ -162,7 +161,7 @@ export function NotesMasterList({
                         >
                           <Trash2 size={18} strokeWidth={2} aria-hidden />
                         </button>
-                      </HudTip>
+                      </PanelTip>
                     </div>
                   </li>
                 );
@@ -170,7 +169,7 @@ export function NotesMasterList({
             </ul>
           )}
         </div>
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

@@ -28,7 +28,7 @@ import {
   type ITabocalypsePendingAlarm,
 } from "../../lib/tabocalypse-alarm-service";
 import { TABOCALYPSE_ALARM_DEFAULT_MESSAGE } from "../../lib/tabocalypse-alarm-validation";
-import { HudTip } from "../hud-tip";
+import { PanelTip as HudTip } from "../panel-sdk";
 
 type TAlarmScheduleBanner = { kind: "ok" | "err"; message: string };
 

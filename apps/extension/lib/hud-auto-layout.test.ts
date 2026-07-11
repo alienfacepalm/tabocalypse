@@ -27,6 +27,7 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
   weather: true,
   crypto: true,
   speedTest: false,
+  steamCharts: false,
   aiChat: false,
   topSites: false,
   bookmarksStrip: false,
@@ -36,16 +37,16 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
 };
 
 describe("resolveHudPanelResponsiveRect", () => {
-  function threeColumnWidth(canvasW: number): number {
+  function roomyBandWidth(canvasW: number): number {
     const gap = 20;
     const margin = 16;
-    const cols = 3;
+    const cols = resolveHudSpreadColumnCount(canvasW, 4);
     return Math.floor((canvasW - margin * 2 - gap * (cols - 1)) / cols);
   }
 
   it("expands default-width panels to their column band on wide canvases", () => {
     const metrics = getHudLayoutMetrics(2560, 1200);
-    const colWidth = threeColumnWidth(metrics.canvasW);
+    const colWidth = roomyBandWidth(metrics.canvasW);
     const weather = resolveHudPanelResponsiveRect(
       "weather",
       DEFAULT_HUD_PANEL_POSITIONS.weather,
@@ -711,5 +712,71 @@ describe("computeHudPanelAutoLayoutUpdates", () => {
       onlyIfChanged: false,
     });
     expect(Object.keys(updates).length).toBe(placed.size);
+  });
+
+  it("omits fill widthPx so live column expansion can grow with the canvas", () => {
+    const small = getHudLayoutMetrics(1280, 800);
+    const large = getHudLayoutMetrics(2560, 1200);
+    const fourPanelWidgets = {
+      ...TEST_WIDGETS,
+      clock: true,
+      weather: true,
+      crypto: true,
+      speedTest: true,
+      notes: false,
+      todo: false,
+      tabGuilt: false,
+      bookmarksStrip: false,
+      balancedNews: false,
+    };
+    const smallUpdates = computeHudPanelAutoLayoutUpdates(
+      {
+        widgets: fourPanelWidgets,
+        hudPanelPositions: DEFAULT_HUD_PANEL_POSITIONS,
+        pluginDeckVisible: false,
+      },
+      small.canvasW,
+      small.canvasH,
+      { ignoreUserSizes: true, onlyIfChanged: false },
+    );
+    expect(smallUpdates.weather?.widthPx).toBeUndefined();
+    expect(smallUpdates.weather?.heightPx).toBeDefined();
+
+    const staleNarrow = {
+      ...DEFAULT_HUD_PANEL_POSITIONS,
+      ...Object.fromEntries(
+        Object.entries(smallUpdates).map(([id, pos]) => [id, { ...pos, widthPx: 320 }]),
+      ),
+    } as typeof DEFAULT_HUD_PANEL_POSITIONS;
+
+    const largeUpdates = computeHudPanelAutoLayoutUpdates(
+      {
+        widgets: fourPanelWidgets,
+        hudPanelPositions: staleNarrow,
+        pluginDeckVisible: false,
+      },
+      large.canvasW,
+      large.canvasH,
+      { ignoreUserSizes: true, onlyIfChanged: false },
+    );
+    expect(largeUpdates.weather?.widthPx).toBeUndefined();
+
+    const mergedWeather = {
+      ...staleNarrow.weather,
+      ...largeUpdates.weather,
+    };
+    // Simulate patch replace: auto-layout update without widthPx clears the stale stamp.
+    const persistedWeather = {
+      xPct: mergedWeather.xPct,
+      yPct: mergedWeather.yPct,
+      ...(largeUpdates.weather?.heightPx != null
+        ? { heightPx: largeUpdates.weather.heightPx }
+        : {}),
+    };
+    const live = resolveHudPanelResponsiveRect("weather", persistedWeather, large);
+    const cols = resolveHudSpreadColumnCount(large.canvasW, 4);
+    const colWidth = Math.floor((large.canvasW - 16 * 2 - 20 * (cols - 1)) / cols);
+    expect(live.widthPx).toBeGreaterThanOrEqual(colWidth - 1);
+    expect(live.widthPx).toBeGreaterThan(500);
   });
 });

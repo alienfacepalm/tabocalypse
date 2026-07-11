@@ -5,6 +5,11 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
   outDir: "output",
+  vite: () => ({
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
+  }),
   manifest: () => ({
     name: "Tabocalypse",
     description:

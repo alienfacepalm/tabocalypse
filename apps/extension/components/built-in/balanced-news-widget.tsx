@@ -5,9 +5,7 @@ import browser from "webextension-polyfill";
 import { RefreshCw, Settings2 } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
-import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
+import { PanelBody, PanelFetchError, PanelTip, PanelTitleInline } from "../panel-sdk";
 import type {
   INewsArticleRef,
   INewsFeedSnapshot,
@@ -691,9 +689,9 @@ export function BalancedNewsWidget({
       >
         <div className="shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <HudPanelTitleInline>Balanced news</HudPanelTitleInline>
+            <PanelTitleInline>Balanced news</PanelTitleInline>
             <div className="flex flex-wrap items-center gap-1">
-              <HudTip tip="Refresh headlines (respects cache and rate limits)">
+              <PanelTip tip="Refresh headlines (respects cache and rate limits)">
                 <button
                   type="button"
                   className="btn ghost icon-only sm"
@@ -703,8 +701,8 @@ export function BalancedNewsWidget({
                 >
                   <RefreshCw size={18} strokeWidth={2} aria-hidden />
                 </button>
-              </HudTip>
-              <HudTip tip="Open Settings, Balanced news section">
+              </PanelTip>
+              <PanelTip tip="Open Settings, Balanced news section">
                 <button
                   type="button"
                   className="btn ghost icon-only sm"
@@ -713,13 +711,13 @@ export function BalancedNewsWidget({
                 >
                   <Settings2 size={18} strokeWidth={2} aria-hidden />
                 </button>
-              </HudTip>
+              </PanelTip>
             </div>
           </div>
           <p className="mt-1 font-mono text-[10px] text-muted">{regionLabel}</p>
           <div className="row wrap mt-2 gap-1" role="group" aria-label="News category">
             {BALANCED_NEWS_CATEGORY_OPTIONS.map((category) => (
-              <HudTip
+              <PanelTip
                 key={category}
                 tip={`Show latest ${BALANCED_NEWS_CATEGORY_LABELS[category].toLowerCase()} headlines`}
               >
@@ -735,17 +733,17 @@ export function BalancedNewsWidget({
                 >
                   {BALANCED_NEWS_CATEGORY_LABELS[category]}
                 </button>
-              </HudTip>
+              </PanelTip>
             ))}
           </div>
         </div>
 
-        <HudPanelBody className="min-h-0 flex-1 overflow-y-auto">
+        <PanelBody className="min-h-0 flex-1 overflow-y-auto">
           {loading && !snapshot ? (
             <p className="muted font-mono text-xs">Loading headlines…</p>
           ) : err ? (
             <div className="flex flex-col gap-3">
-              <PrivilegedFetchErrorPanel
+              <PanelFetchError
                 message={err}
                 onRetry={() => setReloadToken((n) => n + 1)}
                 retryTip="Try fetching balanced news headlines again"
@@ -841,7 +839,7 @@ export function BalancedNewsWidget({
               ) : null}
             </>
           ) : null}
-        </HudPanelBody>
+        </PanelBody>
       </section>
       {hoverPreview != null && previewPlacement != null && typeof document !== "undefined"
         ? createPortal(

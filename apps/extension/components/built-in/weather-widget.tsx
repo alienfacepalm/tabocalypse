@@ -15,9 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import React, { useCallback, useEffect, useId, useState } from "react";
-import { HudPanelBody, HudPanelTitleInline } from "../hud-panel-drag-context";
-import { HudTip } from "../hud-tip";
-import { PrivilegedFetchErrorPanel } from "../privileged-fetch-error-panel";
+import { PanelBody, PanelFetchError, PanelTip, PanelTitleInline } from "../panel-sdk";
 import {
   formatPrecipChancePercent,
   formatPrecipSum,
@@ -36,6 +34,14 @@ import { WeatherStaleNotice } from "../weather-stale-notice";
 import { LakesBuoyPanel } from "./lakes-buoy-panel";
 import { WeatherForecastPanel } from "./weather-forecast-panel";
 import { WeatherStaticMap } from "./weather-static-map";
+import { getHudDisplayLayoutKey } from "../../lib/hud-layout";
+import {
+  defaultWeatherMapView,
+  patchWeatherMapViewForDisplay,
+  resetWeatherMapViewForDisplay,
+  resolveWeatherMapViewForDisplay,
+} from "../../lib/weather/weather-map-view";
+import { attachWeatherStaticMapRecalibrationListeners } from "../../lib/weather/weather-static-map-measure";
 import {
   fetchOnThisDayTrivia,
   type IOnThisDayFact,
@@ -50,15 +56,20 @@ import {
   recordWeatherHudDailyCheckIn,
   type IWeatherHudEngagement,
 } from "../../lib/weather/weather-hud-engagement";
-import {
-  resolveWeatherPanelView,
-  type TWeatherPanelView,
-} from "../../lib/weather/weather-panel-view";
+import { resolveWeatherPanelView } from "../../lib/weather/weather-panel-view";
 import {
   WEATHER_TEMPERATURE_UNITS,
   WEATHER_UNIT_LABELS,
   type TWeatherTemperatureUnit,
 } from "../../lib/weather/weather-units";
+import {
+  useTabocalypsePersist as usePanelPersist,
+  useTabocalypseSettings as usePanelSettings,
+} from "../tabocalypse-settings-context";
+
+function clampWeatherMapZoom(zoom: number): number {
+  return Math.min(17, Math.max(1, Math.round(zoom)));
+}
 
 type TWeatherTenDayDetailRow = {
   label: string;
@@ -159,9 +170,9 @@ function WeatherTenDayRow({
         <div className="weather-ten-day-stack-main">
           <WeatherConditionIcon code={conditionCode} size={28} />
           <div className="min-w-0">
-            <HudTip tip={dayTooltip}>
+            <PanelTip tip={dayTooltip}>
               <p className="weather-ten-day-day">{dayLabel}</p>
-            </HudTip>
+            </PanelTip>
             <p className="weather-ten-day-summary">{conditionSummary}</p>
           </div>
         </div>
@@ -174,11 +185,11 @@ function WeatherTenDayRow({
               locale={displayLocale}
             />
           </p>
-          <HudTip tip={toggleTip}>
+          <PanelTip tip={toggleTip}>
             <span className="weather-ten-day-chevron" aria-hidden>
               {chevron}
             </span>
-          </HudTip>
+          </PanelTip>
         </div>
       </button>
       {isExpanded ? (
@@ -210,28 +221,30 @@ export function WeatherWidget({
   lon,
   showGeoAccuracyHint,
   onOpenWeatherSettings,
+  geoStatus,
+  onUseMyLocationOnce,
   effectiveTemperatureUnit,
   displayLocale,
   gamificationEnabled,
-  lakesEmbedEnabled,
-  panelView,
-  onSelectPanelView,
-  onSelectExplicitTemperatureUnit,
 }: {
   lat: number;
   lon: number;
   showGeoAccuracyHint: boolean;
   onOpenWeatherSettings: () => void;
+  geoStatus: "detecting" | "denied" | "unavailable" | null;
+  onUseMyLocationOnce: () => void;
   effectiveTemperatureUnit: TWeatherTemperatureUnit;
   displayLocale: string;
   /** When true, Weather → Forecast shows streak/points and records daily check-ins. */
   gamificationEnabled: boolean;
-  /** When true, adds a Forecast / 2 Lakes switch with King County buoy data (Settings → Weather). */
-  lakesEmbedEnabled: boolean;
-  panelView: TWeatherPanelView;
-  onSelectPanelView: (next: TWeatherPanelView) => void;
-  onSelectExplicitTemperatureUnit: (next: TWeatherTemperatureUnit) => void;
 }) {
+  const s = usePanelSettings();
+  const persist = usePanelPersist();
+  const autoGeoEnabled = s.weatherAutoGeo;
+  const lakesEmbedEnabled = s.weatherLakesEmbedEnabled;
+  const mapScrollZoomEnabled = s.weatherMapScrollZoomEnabled;
+  const mapDoubleClickZoomEnabled = s.weatherMapDoubleClickZoomEnabled;
+  const panelView = s.weatherPanelView;
   const [forecast, setForecast] = useState<IWeatherForecast | null>(null);
   const [forecastStale, setForecastStale] = useState(false);
   const [forecastFetchedAt, setForecastFetchedAt] = useState<number | null>(null);
@@ -240,7 +253,76 @@ export function WeatherWidget({
   const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<IWeatherHudEngagement | null>(null);
   const [trivia, setTrivia] = useState<IOnThisDayFact[]>([]);
+  const [displayLayoutKey, setDisplayLayoutKey] = useState(() => getHudDisplayLayoutKey());
+  const initialMapView = resolveWeatherMapViewForDisplay(
+    s.weatherMapViewByDisplay,
+    displayLayoutKey,
+    lat,
+    lon,
+  );
+  const [mapZoom, setMapZoom] = useState<number>(initialMapView.zoom);
+  const [mapCenterLat, setMapCenterLat] = useState(initialMapView.centerLat);
+  const [mapCenterLon, setMapCenterLon] = useState(initialMapView.centerLon);
   const activePanelView = resolveWeatherPanelView(panelView, lakesEmbedEnabled);
+
+  useEffect(() => {
+    const syncDisplayKey = (): void => {
+      const next = getHudDisplayLayoutKey();
+      setDisplayLayoutKey((prev) => (prev === next ? prev : next));
+    };
+    syncDisplayKey();
+    return attachWeatherStaticMapRecalibrationListeners(syncDisplayKey);
+  }, []);
+
+  useEffect(() => {
+    const view = resolveWeatherMapViewForDisplay(
+      s.weatherMapViewByDisplay,
+      displayLayoutKey,
+      lat,
+      lon,
+    );
+    setMapZoom(view.zoom);
+    setMapCenterLat(view.centerLat);
+    setMapCenterLon(view.centerLon);
+  }, [lat, lon, displayLayoutKey, s.weatherMapViewByDisplay]);
+
+  const commitMapView = useCallback(
+    (centerLat: number, centerLon: number, zoom: number) => {
+      const nextZoom = clampWeatherMapZoom(zoom);
+      setMapCenterLat(centerLat);
+      setMapCenterLon(centerLon);
+      setMapZoom(nextZoom);
+      void persist((cur) => ({
+        ...cur,
+        weatherMapViewByDisplay: patchWeatherMapViewForDisplay(
+          cur.weatherMapViewByDisplay,
+          getHudDisplayLayoutKey(),
+          {
+            centerLat,
+            centerLon,
+            zoom: nextZoom,
+            anchorLat: lat,
+            anchorLon: lon,
+          },
+        ),
+      }));
+    },
+    [lat, lon, persist],
+  );
+
+  const recenterMapView = useCallback(() => {
+    const defaults = defaultWeatherMapView(lat, lon);
+    setMapCenterLat(defaults.centerLat);
+    setMapCenterLon(defaults.centerLon);
+    setMapZoom(defaults.zoom);
+    void persist((cur) => ({
+      ...cur,
+      weatherMapViewByDisplay: resetWeatherMapViewForDisplay(
+        cur.weatherMapViewByDisplay,
+        getHudDisplayLayoutKey(),
+      ),
+    }));
+  }, [lat, lon, persist]);
 
   const loadForecast = useCallback(() => {
     let cancelled = false;
@@ -329,37 +411,61 @@ export function WeatherWidget({
     <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <HudPanelTitleInline>Weather</HudPanelTitleInline>
-          {activePanelView === "forecast" ||
-          activePanelView === "tenDay" ||
-          activePanelView === "lakes" ? (
-            <div className="row wrap gap-1" role="group" aria-label="Temperature units">
-              {WEATHER_TEMPERATURE_UNITS.map((u) => (
-                <HudTip
-                  key={u}
-                  tip={
-                    u === "celsius"
-                      ? "Always show forecast and readings in Celsius"
-                      : "Always show forecast and readings in Fahrenheit"
-                  }
-                >
-                  <button
-                    type="button"
-                    className={effectiveTemperatureUnit === u ? "btn primary sm" : "btn sm"}
-                    onClick={() => onSelectExplicitTemperatureUnit(u)}
+          <PanelTitleInline>Weather</PanelTitleInline>
+          <div className="row wrap items-center gap-2">
+            {activePanelView === "forecast" ||
+            activePanelView === "tenDay" ||
+            activePanelView === "lakes" ? (
+              <div className="row wrap gap-1" role="group" aria-label="Temperature units">
+                {WEATHER_TEMPERATURE_UNITS.map((u) => (
+                  <PanelTip
+                    key={u}
+                    tip={
+                      u === "celsius"
+                        ? "Always show forecast and readings in Celsius"
+                        : "Always show forecast and readings in Fahrenheit"
+                    }
                   >
-                    {WEATHER_UNIT_LABELS[u]}
-                  </button>
-                </HudTip>
-              ))}
-            </div>
-          ) : null}
+                    <button
+                      type="button"
+                      className={effectiveTemperatureUnit === u ? "btn primary sm" : "btn sm"}
+                      onClick={() =>
+                        void persist((cur) => ({
+                          ...cur,
+                          weatherTemperatureUnitAuto: false,
+                          weatherTemperatureUnit: u,
+                        }))
+                      }
+                    >
+                      {WEATHER_UNIT_LABELS[u]}
+                    </button>
+                  </PanelTip>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
-        <WeatherStaticMap lat={lat} lon={lon} />
+        <WeatherStaticMap
+          lat={mapCenterLat}
+          lon={mapCenterLon}
+          zoom={mapZoom}
+          anchorLat={lat}
+          anchorLon={lon}
+          scrollZoomEnabled={mapScrollZoomEnabled}
+          doubleClickZoomEnabled={mapDoubleClickZoomEnabled}
+          onCenterChange={(nextLat, nextLon) => {
+            commitMapView(nextLat, nextLon, mapZoom);
+          }}
+          onRecenter={recenterMapView}
+          onUseMyLocationOnce={!autoGeoEnabled ? onUseMyLocationOnce : undefined}
+          useMyLocationDetecting={geoStatus === "detecting"}
+          onZoomIn={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom + 1)}
+          onZoomOut={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom - 1)}
+        />
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
             Default GEO location still active. Open{" "}
-            <HudTip tip="Open Settings and jump to the Weather section">
+            <PanelTip tip="Open Settings and jump to the Weather section">
               <button
                 type="button"
                 className="linkish p-0 text-xs"
@@ -368,46 +474,58 @@ export function WeatherWidget({
               >
                 Settings &gt; Weather
               </button>
-            </HudTip>{" "}
+            </PanelTip>{" "}
             from the gear button in the top bar, then update the shared coordinates so Weather,
             Clock, and related panels target your actual area.
           </p>
         ) : null}
+        {!autoGeoEnabled && geoStatus === "denied" ? (
+          <p className="muted sm mt-2" style={{ color: "var(--color-danger)" }}>
+            Location permission denied. Allow location in your browser settings and try again, or
+            update coordinates under <span className="font-bold">Settings &gt; Weather</span>.
+          </p>
+        ) : null}
+        {!autoGeoEnabled && geoStatus === "unavailable" ? (
+          <p className="muted sm mt-2" style={{ color: "var(--color-danger)" }}>
+            Location is not available in this browser. Update coordinates under{" "}
+            <span className="font-bold">Settings &gt; Weather</span>.
+          </p>
+        ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <div className="row wrap gap-1" role="group" aria-label="Weather panel view">
-            <HudTip tip="Show current conditions for your saved coordinates">
+            <PanelTip tip="Show current conditions for your saved coordinates">
               <button
                 type="button"
                 className={activePanelView === "forecast" ? "btn primary sm" : "btn sm"}
-                onClick={() => onSelectPanelView("forecast")}
+                onClick={() => void persist((cur) => ({ ...cur, weatherPanelView: "forecast" }))}
               >
                 Forecast
               </button>
-            </HudTip>
-            <HudTip tip="Show a 10-day high/low outlook from Open-Meteo">
+            </PanelTip>
+            <PanelTip tip="Show a 10-day high/low outlook from Open-Meteo">
               <button
                 type="button"
                 className={activePanelView === "tenDay" ? "btn primary sm" : "btn sm"}
-                onClick={() => onSelectPanelView("tenDay")}
+                onClick={() => void persist((cur) => ({ ...cur, weatherPanelView: "tenDay" }))}
               >
                 10 Day
               </button>
-            </HudTip>
+            </PanelTip>
             {lakesEmbedEnabled ? (
-              <HudTip tip="Show Lake Sammamish and Lake Washington buoy readings">
+              <PanelTip tip="Show Lake Sammamish and Lake Washington buoy readings">
                 <button
                   type="button"
                   className={activePanelView === "lakes" ? "btn primary sm" : "btn sm"}
-                  onClick={() => onSelectPanelView("lakes")}
+                  onClick={() => void persist((cur) => ({ ...cur, weatherPanelView: "lakes" }))}
                 >
                   2 Lakes
                 </button>
-              </HudTip>
+              </PanelTip>
             ) : null}
           </div>
         </div>
       </div>
-      <HudPanelBody>
+      <PanelBody>
         {activePanelView === "lakes" ? (
           <LakesBuoyPanel
             temperatureUnit={effectiveTemperatureUnit}
@@ -416,7 +534,7 @@ export function WeatherWidget({
         ) : activePanelView === "tenDay" ? (
           <>
             {err ? (
-              <PrivilegedFetchErrorPanel
+              <PanelFetchError
                 message={err}
                 onRetry={retryForecast}
                 retryTip="Try fetching the Open-Meteo forecast again"
@@ -459,7 +577,7 @@ export function WeatherWidget({
         ) : (
           <>
             {err ? (
-              <PrivilegedFetchErrorPanel
+              <PanelFetchError
                 message={err}
                 onRetry={retryForecast}
                 retryTip="Try fetching the Open-Meteo forecast again"
@@ -486,7 +604,7 @@ export function WeatherWidget({
             ) : null}
           </>
         )}
-      </HudPanelBody>
+      </PanelBody>
     </section>
   );
 }

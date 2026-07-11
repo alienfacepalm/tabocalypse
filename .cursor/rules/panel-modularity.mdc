@@ -1,0 +1,30 @@
+---
+description: Keep UI panels modular; duplication is acceptable
+alwaysApply: true
+---
+
+# Panel modularity (Tabocalypse + Projocalypse)
+
+When working on **panels** (HUD panels in `apps/extension`, sheets/drawers/panels in `packages/projocalypse`, and any future “panel-like” UI surfaces), optimize for **modularity and local ownership** over DRY.
+
+## Core rule
+
+- Panels should be **self-contained**: each panel owns the logic it needs to render and behave correctly.
+- **Redundant code is fine** if it keeps panels independent (including duplicated hook usage like `useLocation`, `useParams`, etc.).
+
+## What to prefer
+
+- **Local hooks and helpers** inside the panel file (or a panel-local `./<panel>-*.ts` helper) even if another panel has something similar.
+- **Panel-local state** and side effects: fetching, debouncing, derived UI state, and per-panel formatting rules belong with the panel.
+- **Explicit props** only for true external dependencies (e.g. “open settings section”, “close panel”, “host-provided IDs”), not for threading unrelated shared state through multiple layers.
+
+## What to avoid
+
+- Cross-panel abstraction layers that make one panel depend on another panel’s internal helpers/state.
+- “Shared” hooks/utilities that exist only to dedupe two panels but introduce coupling (e.g. a single `useWhateverPanelLogic` consumed by multiple independent panels).
+- Central “god” containers that compute most panel behavior and then pass dozens of props to many panels.
+
+## Notes
+
+- Shared **UI primitives** are still good (buttons, layout primitives, drag/resize infrastructure, error panels).
+- Shared **domain libraries** are still good when they are not panel-specific (e.g. weather fetch/format libs, storage helpers, validation).
