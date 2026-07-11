@@ -7,7 +7,6 @@ import {
   ChevronUp,
   CloudRain,
   Droplets,
-  LocateFixed,
   Sun,
   Sunrise,
   Sunset,
@@ -414,29 +413,6 @@ export function WeatherWidget({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitleInline>Weather</PanelTitleInline>
           <div className="row wrap items-center gap-2">
-            {!autoGeoEnabled ? (
-              <div role="group" aria-label="Weather location">
-                <PanelTip tip="Use your current location once (does not enable automatic location on future tabs).">
-                  <button
-                    type="button"
-                    className="btn primary sm icon-only"
-                    disabled={geoStatus === "detecting"}
-                    aria-label="Use location once to set shared HUD coordinates"
-                    onClick={onUseMyLocationOnce}
-                  >
-                    <LocateFixed size={18} strokeWidth={2} aria-hidden />
-                  </button>
-                </PanelTip>
-              </div>
-            ) : null}
-
-            {!autoGeoEnabled &&
-            (activePanelView === "forecast" ||
-              activePanelView === "tenDay" ||
-              activePanelView === "lakes") ? (
-              <span className="h-5 w-px bg-border" aria-hidden />
-            ) : null}
-
             {activePanelView === "forecast" ||
             activePanelView === "tenDay" ||
             activePanelView === "lakes" ? (
@@ -481,6 +457,8 @@ export function WeatherWidget({
             commitMapView(nextLat, nextLon, mapZoom);
           }}
           onRecenter={recenterMapView}
+          onUseMyLocationOnce={!autoGeoEnabled ? onUseMyLocationOnce : undefined}
+          useMyLocationDetecting={geoStatus === "detecting"}
           onZoomIn={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom + 1)}
           onZoomOut={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom - 1)}
         />

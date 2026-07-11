@@ -1164,7 +1164,11 @@
   }
 
   .weather-location-map-controls {
-    @apply pointer-events-none absolute top-1 right-1 z-[2] flex flex-col gap-px;
+    @apply pointer-events-none absolute top-1 right-1 z-[2] flex flex-col items-end gap-1;
+  }
+
+  .weather-location-map-zoom {
+    @apply flex flex-col gap-px;
   }
 
   .weather-location-map-control-btn {

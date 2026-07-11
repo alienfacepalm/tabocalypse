@@ -256,8 +256,11 @@ function hudPanelHasUserWidth(position: IHudPanelPosition): boolean {
   return position.widthPx != null && Number.isFinite(position.widthPx) && position.widthPx > 0;
 }
 
-/** Classic HUD uses three vertical bands on wide canvases (see DEFAULT_HUD_PANEL_POSITIONS). */
-const HUD_RESPONSIVE_COLUMN_CAP = 3;
+/**
+ * Live column-band expansion matches {@link resolveHudSpreadColumnCount}'s wide-canvas cap
+ * so default-width panels fill the same bands auto-layout uses (not a narrower 3-col remnant).
+ */
+const HUD_RESPONSIVE_COLUMN_CAP = 4;
 
 export interface IHudPanelResponsiveRect {
   leftPx: number;
@@ -671,8 +674,21 @@ export function computeHudPanelAutoLayoutUpdates(
   for (const [key, pos] of placed) {
     const panelId = key as THudPanelId;
     const prev = input.hudPanelPositions[panelId];
-    if (onlyIfChanged && prev != null && hudPanelPositionsEqual(prev, pos)) continue;
-    hudUpdates[panelId] = pos;
+    /**
+     * Persist origin + height from masonry, but not fill widths. Stamping `widthPx` from
+     * auto-layout disables live {@link resolveHudPanelResponsiveRect} expansion, so panels
+     * kept a smaller window's column width after the canvas grew (large gutters).
+     * Manual corner-resize still saves `widthPx` via drag commit.
+     */
+    const next: IHudPanelPosition = {
+      xPct: pos.xPct,
+      yPct: pos.yPct,
+      ...(typeof pos.heightPx === "number" && Number.isFinite(pos.heightPx) && pos.heightPx > 0
+        ? { heightPx: pos.heightPx }
+        : {}),
+    };
+    if (onlyIfChanged && prev != null && hudPanelPositionsEqual(prev, next)) continue;
+    hudUpdates[panelId] = next;
   }
   return hudUpdates;
 }

@@ -174,7 +174,9 @@ export function HudAutoRepositionSync({
           const dw = Math.abs(prev.widthPx - widthPx);
           const dh = Math.abs(prev.heightPx - heightPx);
           if (dw < SIZE_EPSILON_PX && dh < SIZE_EPSILON_PX) return;
-          runLayout(canvas, widthPx, heightPx, prev);
+          // Repack to current column land (same as bootstrap / Rearrange) so widths grow
+          // with the canvas instead of leaving gutters from a prior smaller window.
+          runLayout(canvas, widthPx, heightPx, prev, { ignoreUserSizes: true });
         }
         prevCanvasSizeRef.current = { widthPx, heightPx };
       }, RESIZE_DEBOUNCE_MS);

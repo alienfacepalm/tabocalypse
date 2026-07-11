@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Weather** widget — the one-shot “use my location” control sits on the location map above the zoom buttons (instead of in the panel header).
 - **Weather** widget location map — pan and zoom are saved per monitor on this computer (same display fingerprint as panel layout); the shared forecast pin still comes from **Settings > Weather**.
 - **Weather** widget location map — compact +/− controls sit on the map (no settings toggle); drag-to-pan is always available.
 
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **New tab HUD** — widget columns expand again to fill horizontal space on wide monitors (auto-layout no longer freezes a smaller window’s panel widths, which left large gutters between columns).
 - **HUD panels** — manually dragged panels stay where you drop them instead of snapping back to the first column after release.
 - **New tab** — Weather and AI chat panels no longer crash when loading shared settings from the HUD provider.
 - **Weather** widget location map — the saved-coordinate pin recenters and refetches when you move the window to another monitor (display fingerprint, remeasured tile size, HUD overlay pin).

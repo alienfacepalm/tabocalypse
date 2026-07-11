@@ -1,5 +1,5 @@
 /** Weather panel location map (Yandex hybrid) — 115% crop hides footer branding; HUD pin overlay marks center. */
-import { LocateFixed, MapPin, Minus, Plus } from "lucide-react";
+import { Crosshair, LocateFixed, MapPin, Minus, Plus } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PanelTip } from "../panel-sdk";
 import { getHudDisplayLayoutKey } from "../../lib/hud-layout";
@@ -58,6 +58,8 @@ export function WeatherStaticMap({
   onZoomOut,
   onCenterChange,
   onRecenter,
+  onUseMyLocationOnce,
+  useMyLocationDetecting = false,
   className = "",
 }: {
   lat: number;
@@ -73,6 +75,8 @@ export function WeatherStaticMap({
   onZoomOut?: () => void;
   onCenterChange?: (lat: number, lon: number) => void;
   onRecenter?: () => void;
+  onUseMyLocationOnce?: () => void;
+  useMyLocationDetecting?: boolean;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -267,6 +271,7 @@ export function WeatherStaticMap({
     : "pending";
 
   const canZoom = typeof onZoomIn === "function" && typeof onZoomOut === "function";
+  const showUseMyLocation = typeof onUseMyLocationOnce === "function";
   const showRecenter =
     typeof onRecenter === "function" &&
     typeof anchorLat === "number" &&
@@ -342,11 +347,11 @@ export function WeatherStaticMap({
           />
         </div>
       ) : null}
-      {showZoomControls && canZoom ? (
+      {(showZoomControls && canZoom) || showRecenter || showUseMyLocation ? (
         <div
           className="weather-location-map-controls"
           role="group"
-          aria-label="Map zoom"
+          aria-label="Map controls"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {showRecenter ? (
@@ -357,30 +362,47 @@ export function WeatherStaticMap({
                 aria-label="Recenter map on saved weather location"
                 onClick={onRecenter}
               >
+                <Crosshair size={14} strokeWidth={2} aria-hidden />
+              </button>
+            </PanelTip>
+          ) : null}
+          {showUseMyLocation ? (
+            <PanelTip tip="Use your current location once (does not enable automatic location on future tabs).">
+              <button
+                type="button"
+                className="weather-location-map-control-btn"
+                disabled={useMyLocationDetecting}
+                aria-label="Use location once to set shared HUD coordinates"
+                onClick={onUseMyLocationOnce}
+              >
                 <LocateFixed size={14} strokeWidth={2} aria-hidden />
               </button>
             </PanelTip>
           ) : null}
-          <PanelTip tip="Zoom in">
-            <button
-              type="button"
-              className="weather-location-map-control-btn"
-              aria-label="Zoom in on the weather location map"
-              onClick={onZoomIn}
-            >
-              <Plus size={14} strokeWidth={2} aria-hidden />
-            </button>
-          </PanelTip>
-          <PanelTip tip="Zoom out">
-            <button
-              type="button"
-              className="weather-location-map-control-btn"
-              aria-label="Zoom out on the weather location map"
-              onClick={onZoomOut}
-            >
-              <Minus size={14} strokeWidth={2} aria-hidden />
-            </button>
-          </PanelTip>
+          {showZoomControls && canZoom ? (
+            <div className="weather-location-map-zoom" role="group" aria-label="Map zoom">
+              <PanelTip tip="Zoom in">
+                <button
+                  type="button"
+                  className="weather-location-map-control-btn"
+                  aria-label="Zoom in on the weather location map"
+                  onClick={onZoomIn}
+                >
+                  <Plus size={14} strokeWidth={2} aria-hidden />
+                </button>
+              </PanelTip>
+              <PanelTip tip="Zoom out">
+                <button
+                  type="button"
+                  className="weather-location-map-control-btn"
+                  aria-label="Zoom out on the weather location map"
+                  onClick={onZoomOut}
+                >
+                  <Minus size={14} strokeWidth={2} aria-hidden />
+                </button>
+              </PanelTip>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <MapPin className="weather-location-map-pin" aria-hidden size={28} strokeWidth={2} />
