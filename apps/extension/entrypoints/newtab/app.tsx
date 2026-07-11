@@ -3026,30 +3026,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </div>
                         <p className="muted sm mb-2 mt-4">Map</p>
                         <p className="muted text-xs mb-2 mt-0">
-                          Optional interactions for the location map in the Weather panel (all off
-                          by default).
+                          Drag the map to pan and use the +/− buttons on the map to zoom. Pan and
+                          zoom are saved per monitor on this computer. Optional scroll-wheel and
+                          double-click zoom below (off by default).
                         </p>
                         <div
                           className="row wrap gap-2"
                           role="group"
                           aria-label="Weather map options"
                         >
-                          <HudTip tip="Show a small zoom control next to the Weather title">
-                            <button
-                              type="button"
-                              className={s.weatherMapZoomButtonsEnabled ? "btn primary" : "btn"}
-                              onClick={() =>
-                                void persist((cur) => ({
-                                  ...cur,
-                                  weatherMapZoomButtonsEnabled: !cur.weatherMapZoomButtonsEnabled,
-                                }))
-                              }
-                            >
-                              {s.weatherMapZoomButtonsEnabled
-                                ? "Zoom control on"
-                                : "Zoom control off"}
-                            </button>
-                          </HudTip>
                           <HudTip tip="Zoom the map with your mouse wheel">
                             <button
                               type="button"

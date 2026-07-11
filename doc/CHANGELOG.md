@@ -12,6 +12,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Weather** widget location map — pan and zoom are saved per monitor on this computer (same display fingerprint as panel layout); the shared forecast pin still comes from **Settings > Weather**.
+- **Weather** widget location map — compact +/− controls sit on the map (no settings toggle); drag-to-pan is always available.
+
+### Added
+
+- **Weather** widget location map — drag to pan and compact +/− zoom on the map; optional scroll-wheel and double-click zoom in **Settings > Weather > Map**.
+
 ### Fixed
 
 - **HUD panels** — manually dragged panels stay where you drop them instead of snapping back to the first column after release.

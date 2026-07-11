@@ -23,6 +23,10 @@ import {
 import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 import { coerceSearchEngine, DEFAULT_SEARCH_ENGINE } from "./search-engine-options";
+import {
+  coerceWeatherMapViewByDisplay,
+  type TWeatherMapViewByDisplay,
+} from "./weather/weather-map-view";
 import { coerceWeatherPanelView, type TWeatherPanelView } from "./weather/weather-panel-view";
 import {
   coerceWeatherTenDayLayout,
@@ -713,6 +717,8 @@ export interface ISettings {
   weatherMapScrollZoomEnabled: boolean;
   /** When true, double-click zooms the Weather location map (Settings → Weather → Map). */
   weatherMapDoubleClickZoomEnabled: boolean;
+  /** When true, drag the Weather location map to pan the view (Settings → Weather → Map). */
+  weatherMapDragEnabled: boolean;
   /** Last Forecast / 10 Day / 2 Lakes choice in the Weather panel (2 Lakes only when lakes view is enabled). */
   weatherPanelView: TWeatherPanelView;
   /** Legacy 10-day layout preference (always stacked vertically). */
@@ -824,6 +830,11 @@ export interface ISettings {
    * Stored locally because monitor fingerprints differ per machine.
    */
   widgetsByDisplay: TWidgetsByDisplay;
+  /**
+   * Per-monitor Weather location-map pan/zoom; keyed by {@link getHudDisplayLayoutKey}.
+   * Local-only so each computer and screen keeps its own camera without syncing the shared pin.
+   */
+  weatherMapViewByDisplay: TWeatherMapViewByDisplay;
   /**
    * After first-run settings intro is finished, stays true so the welcome callout does not repeat.
    * Fresh installs default to false; upgraded profiles without stored value stay “seen”.
@@ -1006,6 +1017,7 @@ export interface ISyncSlice {
   weatherMapZoomButtonsEnabled: boolean;
   weatherMapScrollZoomEnabled: boolean;
   weatherMapDoubleClickZoomEnabled: boolean;
+  weatherMapDragEnabled: boolean;
   weatherPanelView: TWeatherPanelView;
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
@@ -1072,6 +1084,7 @@ export interface ILocalSlice {
   hudPanelPositionsByDisplay?: THudPanelPositionsByDisplay;
   notePanelsByDisplay?: TNotePanelsByDisplay;
   widgetsByDisplay?: TWidgetsByDisplay;
+  weatherMapViewByDisplay?: TWeatherMapViewByDisplay;
   bookmarksStripHidden?: TBookmarksStripItem[];
   /** @deprecated Migrated to {@link bookmarksStripHidden} on load. */
   bookmarksStripHiddenIds?: string[];
@@ -1375,6 +1388,7 @@ export function defaultSettings(): ISettings {
     weatherMapZoomButtonsEnabled: false,
     weatherMapScrollZoomEnabled: false,
     weatherMapDoubleClickZoomEnabled: false,
+    weatherMapDragEnabled: true,
     weatherPanelView: "forecast",
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
@@ -1431,6 +1445,7 @@ export function defaultSettings(): ISettings {
     hudPanelPositions: mergeHudPanelPositions(undefined),
     hudPanelPositionsByDisplay: {},
     widgetsByDisplay: {},
+    weatherMapViewByDisplay: {},
     hasSeenSettingsIntro: false,
     experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES },
     bookmarksStripHidden: [],
@@ -1469,6 +1484,7 @@ function toSync(s: ISettings): ISyncSlice {
     weatherMapZoomButtonsEnabled: s.weatherMapZoomButtonsEnabled,
     weatherMapScrollZoomEnabled: s.weatherMapScrollZoomEnabled,
     weatherMapDoubleClickZoomEnabled: s.weatherMapDoubleClickZoomEnabled,
+    weatherMapDragEnabled: s.weatherMapDragEnabled,
     weatherPanelView: s.weatherPanelView,
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
@@ -1537,6 +1553,7 @@ function toLocal(s: ISettings): ILocalSlice {
     hudPanelPositionsByDisplay: s.hudPanelPositionsByDisplay,
     notePanelsByDisplay: s.notePanelsByDisplay,
     widgetsByDisplay: s.widgetsByDisplay,
+    weatherMapViewByDisplay: s.weatherMapViewByDisplay,
     bookmarksStripHidden: s.bookmarksStripHidden,
     bookmarksStripOrder: s.bookmarksStripOrder,
   };
@@ -1741,6 +1758,10 @@ function mergeSettings(
       typeof sync?.weatherMapDoubleClickZoomEnabled === "boolean"
         ? sync.weatherMapDoubleClickZoomEnabled
         : d.weatherMapDoubleClickZoomEnabled,
+    weatherMapDragEnabled:
+      typeof sync?.weatherMapDragEnabled === "boolean"
+        ? sync.weatherMapDragEnabled
+        : d.weatherMapDragEnabled,
     weatherPanelView: coerceWeatherPanelView(sync?.weatherPanelView, d.weatherPanelView),
     weatherTenDayLayout: coerceWeatherTenDayLayout(
       sync?.weatherTenDayLayout,
@@ -1853,6 +1874,7 @@ function mergeSettings(
     hudPanelPositions: mergeHudPanelPositions(local?.hudPanelPositions),
     hudPanelPositionsByDisplay: coerceHudPanelPositionsByDisplay(local?.hudPanelPositionsByDisplay),
     widgetsByDisplay: coerceWidgetsByDisplay(local?.widgetsByDisplay),
+    weatherMapViewByDisplay: coerceWeatherMapViewByDisplay(local?.weatherMapViewByDisplay),
     bookmarksStripHidden: coerceBookmarksStripHidden(
       local?.bookmarksStripHidden,
       local?.bookmarksStripHiddenIds,

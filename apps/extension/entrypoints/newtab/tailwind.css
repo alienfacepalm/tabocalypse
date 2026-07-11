@@ -1138,6 +1138,14 @@
     @apply relative mt-2 w-full overflow-hidden border border-border bg-surface-weak shadow-[3px_3px_0px_0px_var(--color-border)];
   }
 
+  .weather-location-map--draggable {
+    @apply cursor-grab touch-none select-none;
+  }
+
+  .weather-location-map--panning {
+    @apply cursor-grabbing;
+  }
+
   .weather-location-map-crop {
     @apply absolute inset-x-0 top-0 h-[115%];
   }
@@ -1153,6 +1161,22 @@
   .weather-location-map-pin {
     @apply pointer-events-none absolute left-1/2 top-1/2 z-[1] -translate-x-1/2 -translate-y-full text-[var(--color-accent2)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)];
     fill: color-mix(in srgb, var(--color-accent2) 35%, transparent);
+  }
+
+  .weather-location-map-controls {
+    @apply pointer-events-none absolute top-1 right-1 z-[2] flex flex-col gap-px;
+  }
+
+  .weather-location-map-control-btn {
+    @apply btn ghost icon-only pointer-events-auto min-h-[1.35rem] min-w-[1.35rem] border-border bg-surface-weak p-0 text-muted shadow-[2px_2px_0px_0px_var(--color-border)];
+  }
+
+  .weather-location-map-control-btn:hover {
+    @apply border-accent2 text-accent2 brightness-110 shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  .weather-location-map-control-btn:active {
+    @apply translate-x-px translate-y-px brightness-[0.97] shadow-[1px_1px_0px_0px_var(--color-accent2)];
   }
 
   .weather-lakes-stack {

@@ -8,14 +8,11 @@ import {
   CloudRain,
   Droplets,
   LocateFixed,
-  Minus,
-  Plus,
   Sun,
   Sunrise,
   Sunset,
   Thermometer,
   Wind,
-  ZoomIn,
   type LucideIcon,
 } from "lucide-react";
 import React, { useCallback, useEffect, useId, useState } from "react";
@@ -38,7 +35,14 @@ import { WeatherStaleNotice } from "../weather-stale-notice";
 import { LakesBuoyPanel } from "./lakes-buoy-panel";
 import { WeatherForecastPanel } from "./weather-forecast-panel";
 import { WeatherStaticMap } from "./weather-static-map";
-import { WEATHER_STATIC_MAP_DEFAULT_ZOOM } from "../../lib/weather/weather-static-map-url";
+import { getHudDisplayLayoutKey } from "../../lib/hud-layout";
+import {
+  defaultWeatherMapView,
+  patchWeatherMapViewForDisplay,
+  resetWeatherMapViewForDisplay,
+  resolveWeatherMapViewForDisplay,
+} from "../../lib/weather/weather-map-view";
+import { attachWeatherStaticMapRecalibrationListeners } from "../../lib/weather/weather-static-map-measure";
 import {
   fetchOnThisDayTrivia,
   type IOnThisDayFact,
@@ -63,6 +67,10 @@ import {
   useTabocalypsePersist as usePanelPersist,
   useTabocalypseSettings as usePanelSettings,
 } from "../tabocalypse-settings-context";
+
+function clampWeatherMapZoom(zoom: number): number {
+  return Math.min(17, Math.max(1, Math.round(zoom)));
+}
 
 type TWeatherTenDayDetailRow = {
   label: string;
@@ -235,7 +243,6 @@ export function WeatherWidget({
   const persist = usePanelPersist();
   const autoGeoEnabled = s.weatherAutoGeo;
   const lakesEmbedEnabled = s.weatherLakesEmbedEnabled;
-  const mapZoomButtonsEnabled = s.weatherMapZoomButtonsEnabled;
   const mapScrollZoomEnabled = s.weatherMapScrollZoomEnabled;
   const mapDoubleClickZoomEnabled = s.weatherMapDoubleClickZoomEnabled;
   const panelView = s.weatherPanelView;
@@ -247,19 +254,76 @@ export function WeatherWidget({
   const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<IWeatherHudEngagement | null>(null);
   const [trivia, setTrivia] = useState<IOnThisDayFact[]>([]);
-  const [mapZoom, setMapZoom] = useState<number>(WEATHER_STATIC_MAP_DEFAULT_ZOOM);
-  const [mapZoomControlsOpen, setMapZoomControlsOpen] = useState(false);
+  const [displayLayoutKey, setDisplayLayoutKey] = useState(() => getHudDisplayLayoutKey());
+  const initialMapView = resolveWeatherMapViewForDisplay(
+    s.weatherMapViewByDisplay,
+    displayLayoutKey,
+    lat,
+    lon,
+  );
+  const [mapZoom, setMapZoom] = useState<number>(initialMapView.zoom);
+  const [mapCenterLat, setMapCenterLat] = useState(initialMapView.centerLat);
+  const [mapCenterLon, setMapCenterLon] = useState(initialMapView.centerLon);
   const activePanelView = resolveWeatherPanelView(panelView, lakesEmbedEnabled);
 
   useEffect(() => {
-    setMapZoom(WEATHER_STATIC_MAP_DEFAULT_ZOOM);
-  }, [lat, lon]);
+    const syncDisplayKey = (): void => {
+      const next = getHudDisplayLayoutKey();
+      setDisplayLayoutKey((prev) => (prev === next ? prev : next));
+    };
+    syncDisplayKey();
+    return attachWeatherStaticMapRecalibrationListeners(syncDisplayKey);
+  }, []);
 
   useEffect(() => {
-    if (!mapZoomButtonsEnabled) {
-      setMapZoomControlsOpen(false);
-    }
-  }, [mapZoomButtonsEnabled]);
+    const view = resolveWeatherMapViewForDisplay(
+      s.weatherMapViewByDisplay,
+      displayLayoutKey,
+      lat,
+      lon,
+    );
+    setMapZoom(view.zoom);
+    setMapCenterLat(view.centerLat);
+    setMapCenterLon(view.centerLon);
+  }, [lat, lon, displayLayoutKey, s.weatherMapViewByDisplay]);
+
+  const commitMapView = useCallback(
+    (centerLat: number, centerLon: number, zoom: number) => {
+      const nextZoom = clampWeatherMapZoom(zoom);
+      setMapCenterLat(centerLat);
+      setMapCenterLon(centerLon);
+      setMapZoom(nextZoom);
+      void persist((cur) => ({
+        ...cur,
+        weatherMapViewByDisplay: patchWeatherMapViewForDisplay(
+          cur.weatherMapViewByDisplay,
+          getHudDisplayLayoutKey(),
+          {
+            centerLat,
+            centerLon,
+            zoom: nextZoom,
+            anchorLat: lat,
+            anchorLon: lon,
+          },
+        ),
+      }));
+    },
+    [lat, lon, persist],
+  );
+
+  const recenterMapView = useCallback(() => {
+    const defaults = defaultWeatherMapView(lat, lon);
+    setMapCenterLat(defaults.centerLat);
+    setMapCenterLon(defaults.centerLon);
+    setMapZoom(defaults.zoom);
+    void persist((cur) => ({
+      ...cur,
+      weatherMapViewByDisplay: resetWeatherMapViewForDisplay(
+        cur.weatherMapViewByDisplay,
+        getHudDisplayLayoutKey(),
+      ),
+    }));
+  }, [lat, lon, persist]);
 
   const loadForecast = useCallback(() => {
     let cancelled = false;
@@ -343,57 +407,12 @@ export function WeatherWidget({
 
   const current = forecast?.current ?? null;
   const todayForecast = forecast?.daily[0] ?? null;
-  const mapInteractive = mapZoomButtonsEnabled || mapScrollZoomEnabled || mapDoubleClickZoomEnabled;
-  const mapHasInlineZoomControls = mapZoomButtonsEnabled && mapZoomControlsOpen;
 
   return (
     <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {mapZoomButtonsEnabled ? (
-              <PanelTip
-                tip={mapZoomControlsOpen ? "Hide map zoom controls" : "Show map zoom controls"}
-              >
-                <button
-                  type="button"
-                  className="btn ghost icon-only sm"
-                  aria-label={
-                    mapZoomControlsOpen ? "Hide map zoom controls" : "Show map zoom controls"
-                  }
-                  aria-pressed={mapZoomControlsOpen}
-                  onClick={() => setMapZoomControlsOpen((open) => !open)}
-                >
-                  <ZoomIn size={18} strokeWidth={2} aria-hidden />
-                </button>
-              </PanelTip>
-            ) : null}
-            <PanelTitleInline>Weather</PanelTitleInline>
-            {mapHasInlineZoomControls ? (
-              <div className="row gap-1" role="group" aria-label="Map zoom">
-                <PanelTip tip="Zoom in">
-                  <button
-                    type="button"
-                    className="btn ghost icon-only sm"
-                    aria-label="Zoom in on the weather location map"
-                    onClick={() => setMapZoom((z) => Math.min(17, Math.max(1, Math.round(z + 1))))}
-                  >
-                    <Plus size={18} strokeWidth={2} aria-hidden />
-                  </button>
-                </PanelTip>
-                <PanelTip tip="Zoom out">
-                  <button
-                    type="button"
-                    className="btn ghost icon-only sm"
-                    aria-label="Zoom out on the weather location map"
-                    onClick={() => setMapZoom((z) => Math.min(17, Math.max(1, Math.round(z - 1))))}
-                  >
-                    <Minus size={18} strokeWidth={2} aria-hidden />
-                  </button>
-                </PanelTip>
-              </div>
-            ) : null}
-          </div>
+          <PanelTitleInline>Weather</PanelTitleInline>
           <div className="row wrap items-center gap-2">
             {!autoGeoEnabled ? (
               <div role="group" aria-label="Weather location">
@@ -451,21 +470,19 @@ export function WeatherWidget({
           </div>
         </div>
         <WeatherStaticMap
-          lat={lat}
-          lon={lon}
+          lat={mapCenterLat}
+          lon={mapCenterLon}
           zoom={mapZoom}
-          scrollZoomEnabled={mapInteractive && mapScrollZoomEnabled}
-          doubleClickZoomEnabled={mapInteractive && mapDoubleClickZoomEnabled}
-          onZoomIn={
-            mapInteractive
-              ? () => setMapZoom((z) => Math.min(17, Math.max(1, Math.round(z + 1))))
-              : undefined
-          }
-          onZoomOut={
-            mapInteractive
-              ? () => setMapZoom((z) => Math.min(17, Math.max(1, Math.round(z - 1))))
-              : undefined
-          }
+          anchorLat={lat}
+          anchorLon={lon}
+          scrollZoomEnabled={mapScrollZoomEnabled}
+          doubleClickZoomEnabled={mapDoubleClickZoomEnabled}
+          onCenterChange={(nextLat, nextLon) => {
+            commitMapView(nextLat, nextLon, mapZoom);
+          }}
+          onRecenter={recenterMapView}
+          onZoomIn={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom + 1)}
+          onZoomOut={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom - 1)}
         />
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">
