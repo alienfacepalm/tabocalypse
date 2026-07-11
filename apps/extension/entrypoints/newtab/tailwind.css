@@ -1146,6 +1146,10 @@
     @apply cursor-grabbing;
   }
 
+  .weather-location-map--locked {
+    @apply cursor-default;
+  }
+
   .weather-location-map-crop {
     @apply absolute inset-x-0 top-0 h-[115%];
   }
@@ -1167,12 +1171,20 @@
     @apply pointer-events-none absolute top-1 right-1 z-[2] flex flex-col items-end gap-1;
   }
 
+  .weather-location-map-lock {
+    @apply pointer-events-none absolute bottom-1 right-1 z-[2];
+  }
+
   .weather-location-map-zoom {
     @apply flex flex-col gap-px;
   }
 
   .weather-location-map-control-btn {
     @apply btn ghost icon-only pointer-events-auto min-h-[1.35rem] min-w-[1.35rem] border-border bg-surface-weak p-0 text-muted shadow-[2px_2px_0px_0px_var(--color-border)];
+  }
+
+  .weather-location-map-control-btn.is-locked {
+    @apply border-accent2 text-accent2 shadow-[2px_2px_0px_0px_var(--color-accent2)];
   }
 
   .weather-location-map-control-btn:hover {

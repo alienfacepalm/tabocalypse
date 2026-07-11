@@ -3027,8 +3027,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <p className="muted sm mb-2 mt-4">Map</p>
                         <p className="muted text-xs mb-2 mt-0">
                           Drag the map to pan and use the +/− buttons on the map to zoom. Pan and
-                          zoom are saved per monitor on this computer. Optional scroll-wheel and
-                          double-click zoom below (off by default).
+                          zoom are saved per monitor on this computer. Use the lock control on the
+                          map (bottom right) to freeze pan, zoom, and one-shot location until you
+                          unlock. Optional scroll-wheel and double-click zoom below (off by
+                          default).
                         </p>
                         <div
                           className="row wrap gap-2"

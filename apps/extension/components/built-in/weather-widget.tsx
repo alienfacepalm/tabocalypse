@@ -244,6 +244,7 @@ export function WeatherWidget({
   const lakesEmbedEnabled = s.weatherLakesEmbedEnabled;
   const mapScrollZoomEnabled = s.weatherMapScrollZoomEnabled;
   const mapDoubleClickZoomEnabled = s.weatherMapDoubleClickZoomEnabled;
+  const mapLocked = s.weatherMapLocked;
   const panelView = s.weatherPanelView;
   const [forecast, setForecast] = useState<IWeatherForecast | null>(null);
   const [forecastStale, setForecastStale] = useState(false);
@@ -275,6 +276,7 @@ export function WeatherWidget({
   }, []);
 
   useEffect(() => {
+    if (mapLocked) return;
     const view = resolveWeatherMapViewForDisplay(
       s.weatherMapViewByDisplay,
       displayLayoutKey,
@@ -284,10 +286,11 @@ export function WeatherWidget({
     setMapZoom(view.zoom);
     setMapCenterLat(view.centerLat);
     setMapCenterLon(view.centerLon);
-  }, [lat, lon, displayLayoutKey, s.weatherMapViewByDisplay]);
+  }, [lat, lon, displayLayoutKey, mapLocked, s.weatherMapViewByDisplay]);
 
   const commitMapView = useCallback(
     (centerLat: number, centerLon: number, zoom: number) => {
+      if (mapLocked) return;
       const nextZoom = clampWeatherMapZoom(zoom);
       setMapCenterLat(centerLat);
       setMapCenterLon(centerLon);
@@ -307,10 +310,11 @@ export function WeatherWidget({
         ),
       }));
     },
-    [lat, lon, persist],
+    [lat, lon, mapLocked, persist],
   );
 
   const recenterMapView = useCallback(() => {
+    if (mapLocked) return;
     const defaults = defaultWeatherMapView(lat, lon);
     setMapCenterLat(defaults.centerLat);
     setMapCenterLon(defaults.centerLon);
@@ -322,7 +326,7 @@ export function WeatherWidget({
         getHudDisplayLayoutKey(),
       ),
     }));
-  }, [lat, lon, persist]);
+  }, [lat, lon, mapLocked, persist]);
 
   const loadForecast = useCallback(() => {
     let cancelled = false;
@@ -451,6 +455,7 @@ export function WeatherWidget({
           zoom={mapZoom}
           anchorLat={lat}
           anchorLon={lon}
+          locked={mapLocked}
           scrollZoomEnabled={mapScrollZoomEnabled}
           doubleClickZoomEnabled={mapDoubleClickZoomEnabled}
           onCenterChange={(nextLat, nextLon) => {
@@ -461,6 +466,12 @@ export function WeatherWidget({
           useMyLocationDetecting={geoStatus === "detecting"}
           onZoomIn={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom + 1)}
           onZoomOut={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom - 1)}
+          onToggleLocked={() =>
+            void persist((cur) => ({
+              ...cur,
+              weatherMapLocked: !cur.weatherMapLocked,
+            }))
+          }
         />
         {showGeoAccuracyHint ? (
           <p className="mt-2 text-xs leading-tight text-[var(--color-accent2)]">

@@ -1,5 +1,5 @@
 /** Weather panel location map (Yandex hybrid) — 115% crop hides footer branding; HUD pin overlay marks center. */
-import { Crosshair, LocateFixed, MapPin, Minus, Plus } from "lucide-react";
+import { Crosshair, LocateFixed, Lock, MapPin, Minus, Plus, Unlock } from "lucide-react";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PanelTip } from "../panel-sdk";
 import { getHudDisplayLayoutKey } from "../../lib/hud-layout";
@@ -52,6 +52,7 @@ export function WeatherStaticMap({
   doubleClickZoomEnabled = false,
   dragEnabled = true,
   showZoomControls = true,
+  locked = false,
   anchorLat,
   anchorLon,
   onZoomIn,
@@ -59,6 +60,7 @@ export function WeatherStaticMap({
   onCenterChange,
   onRecenter,
   onUseMyLocationOnce,
+  onToggleLocked,
   useMyLocationDetecting = false,
   className = "",
 }: {
@@ -69,6 +71,7 @@ export function WeatherStaticMap({
   doubleClickZoomEnabled?: boolean;
   dragEnabled?: boolean;
   showZoomControls?: boolean;
+  locked?: boolean;
   anchorLat?: number;
   anchorLon?: number;
   onZoomIn?: () => void;
@@ -76,6 +79,7 @@ export function WeatherStaticMap({
   onCenterChange?: (lat: number, lon: number) => void;
   onRecenter?: () => void;
   onUseMyLocationOnce?: () => void;
+  onToggleLocked?: () => void;
   useMyLocationDetecting?: boolean;
   className?: string;
 }) {
@@ -270,21 +274,31 @@ export function WeatherStaticMap({
     ? `${layout.displayKey}-${src ?? "pending"}-${loadAttempt}`
     : "pending";
 
-  const canZoom = typeof onZoomIn === "function" && typeof onZoomOut === "function";
-  const showUseMyLocation = typeof onUseMyLocationOnce === "function";
+  const mapInteractive = !locked;
+  const canPan = mapInteractive && dragEnabled;
+  const canZoom =
+    mapInteractive && typeof onZoomIn === "function" && typeof onZoomOut === "function";
+  const showUseMyLocation = mapInteractive && typeof onUseMyLocationOnce === "function";
   const showRecenter =
+    mapInteractive &&
     typeof onRecenter === "function" &&
     typeof anchorLat === "number" &&
     typeof anchorLon === "number" &&
     !isWeatherStaticMapNearAnchor(lat, lon, anchorLat, anchorLon);
+  const showLockToggle = typeof onToggleLocked === "function";
+  const showTopControls =
+    (showZoomControls && typeof onZoomIn === "function" && typeof onZoomOut === "function") ||
+    showRecenter ||
+    showUseMyLocation;
 
   return (
     <div
       ref={containerRef}
       className={[
         "weather-location-map",
-        dragEnabled ? "weather-location-map--draggable" : "",
+        canPan ? "weather-location-map--draggable" : "",
         isPanning ? "weather-location-map--panning" : "",
+        locked ? "weather-location-map--locked" : "",
         className,
       ]
         .filter(Boolean)
@@ -310,10 +324,10 @@ export function WeatherStaticMap({
             }
           : undefined
       }
-      onPointerDown={dragEnabled ? handlePanPointerDown : undefined}
-      onPointerMove={dragEnabled ? handlePanPointerMove : undefined}
-      onPointerUp={dragEnabled ? handlePanPointerUp : undefined}
-      onPointerCancel={dragEnabled ? handlePanPointerCancel : undefined}
+      onPointerDown={canPan ? handlePanPointerDown : undefined}
+      onPointerMove={canPan ? handlePanPointerMove : undefined}
+      onPointerUp={canPan ? handlePanPointerUp : undefined}
+      onPointerCancel={canPan ? handlePanPointerCancel : undefined}
       style={
         dimensions
           ? { height: dimensions.visibleHeight }
@@ -321,7 +335,11 @@ export function WeatherStaticMap({
               aspectRatio: `${WEATHER_STATIC_MAP_WIDTH} / ${WEATHER_STATIC_MAP_VISIBLE_HEIGHT}`,
             }
       }
-      aria-label="Map showing your saved weather location"
+      aria-label={
+        locked
+          ? "Map showing your saved weather location (locked)"
+          : "Map showing your saved weather location"
+      }
     >
       {src ? (
         <div
@@ -347,7 +365,7 @@ export function WeatherStaticMap({
           />
         </div>
       ) : null}
-      {(showZoomControls && canZoom) || showRecenter || showUseMyLocation ? (
+      {showTopControls ? (
         <div
           className="weather-location-map-controls"
           role="group"
@@ -379,22 +397,24 @@ export function WeatherStaticMap({
               </button>
             </PanelTip>
           ) : null}
-          {showZoomControls && canZoom ? (
+          {showZoomControls && typeof onZoomIn === "function" && typeof onZoomOut === "function" ? (
             <div className="weather-location-map-zoom" role="group" aria-label="Map zoom">
-              <PanelTip tip="Zoom in">
+              <PanelTip tip={locked ? "Unlock the map to zoom" : "Zoom in"}>
                 <button
                   type="button"
                   className="weather-location-map-control-btn"
+                  disabled={locked}
                   aria-label="Zoom in on the weather location map"
                   onClick={onZoomIn}
                 >
                   <Plus size={14} strokeWidth={2} aria-hidden />
                 </button>
               </PanelTip>
-              <PanelTip tip="Zoom out">
+              <PanelTip tip={locked ? "Unlock the map to zoom" : "Zoom out"}>
                 <button
                   type="button"
                   className="weather-location-map-control-btn"
+                  disabled={locked}
                   aria-label="Zoom out on the weather location map"
                   onClick={onZoomOut}
                 >
@@ -403,6 +423,35 @@ export function WeatherStaticMap({
               </PanelTip>
             </div>
           ) : null}
+        </div>
+      ) : null}
+      {showLockToggle ? (
+        <div className="weather-location-map-lock" onPointerDown={(e) => e.stopPropagation()}>
+          <PanelTip
+            tip={
+              locked
+                ? "Unlock to pan, zoom, or change location"
+                : "Lock pan, zoom, and location on this map"
+            }
+          >
+            <button
+              type="button"
+              className={
+                locked
+                  ? "weather-location-map-control-btn is-locked"
+                  : "weather-location-map-control-btn"
+              }
+              aria-pressed={locked}
+              aria-label={locked ? "Unlock weather map" : "Lock weather map"}
+              onClick={onToggleLocked}
+            >
+              {locked ? (
+                <Lock size={14} strokeWidth={2} aria-hidden />
+              ) : (
+                <Unlock size={14} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          </PanelTip>
         </div>
       ) : null}
       <MapPin className="weather-location-map-pin" aria-hidden size={28} strokeWidth={2} />
