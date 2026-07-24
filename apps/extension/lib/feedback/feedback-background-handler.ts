@@ -31,7 +31,10 @@ export async function handleTabocalypseFeedbackSendRequest(
   if (typeof m.extensionVersion !== "string" || m.extensionVersion.trim().length === 0) {
     return { ok: false, error: "Missing extension version" };
   }
-  const trimmedUserAgent = m.userAgent.trim();
+  let trimmedUserAgent = "";
+  if (typeof m.userAgent === "string" && m.userAgent.length > 0) {
+    trimmedUserAgent = m.userAgent.trim();
+  }
   if (trimmedUserAgent.length === 0) {
     return { ok: false, error: "Missing browser info" };
   }
