@@ -31,9 +31,18 @@ export async function handleTabocalypseFeedbackSendRequest(
   if (typeof m.extensionVersion !== "string" || m.extensionVersion.trim().length === 0) {
     return { ok: false, error: "Missing extension version" };
   }
-  if (typeof m.userAgent !== "string" || m.userAgent.trim().length === 0) {
+  let trimmedUserAgent = "";
+  if (typeof m.userAgent === "string" && m.userAgent.length > 0) {
+    trimmedUserAgent = m.userAgent.trim();
+  }
+  if (trimmedUserAgent.length === 0) {
     return { ok: false, error: "Missing browser info" };
   }
+  if (trimmedUserAgent.length > 512) {
+    // User agents can be several KB; truncate to keep inbox usable.
+    return { ok: false, error: "Browser info is too long" };
+  }
+
   const replyEmail =
     typeof m.replyEmail === "string" && m.replyEmail.trim().length > 0
       ? m.replyEmail.trim()
@@ -48,7 +57,7 @@ export async function handleTabocalypseFeedbackSendRequest(
       message: m.message.trim(),
       replyEmail,
       extensionVersion: m.extensionVersion.trim(),
-      userAgent: m.userAgent.trim(),
+      userAgent: trimmedUserAgent,
     });
     return { ok: true };
   } catch (e: unknown) {
