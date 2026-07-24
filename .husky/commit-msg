@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+commit_msg=$(cat "$1")
+
+# Conventional commit pattern: type(scope): description
+# type:   feat | fix | docs | style | refactor | perf | test | chore | build | ci
+# scope:  optional, lowercase hyphenated
+# regex:  allows any description after the colon
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\([a-z0-9-]+\))?!?: .+"
+
+if ! echo "$commit_msg" | grep -qE "$PATTERN"; then
+  echo ""
+  echo "ERROR: Commit message does not follow conventional commits format."
+  echo ""
+  echo "Format: type(scope): description"
+  echo ""
+  echo "Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci"
+  echo "Example: fix(feedback): reject userAgent >512 chars"
+  echo ""
+  echo "If you want to bypass, use: git commit --no-verify"
+  echo ""
+  exit 1
+fi
