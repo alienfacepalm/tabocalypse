@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Settings > Widgets** — panel list uses pressed chips in a wrapping grid (same control style as Appearance) instead of a tall checkbox column.
 - **Settings > Feedback** — opens your email app only (mailto). Builds no longer embed SMTP / Elastic Email credentials.
 - **Settings export** — API keys are omitted from the downloaded JSON by default.
 - **Browser sync** — sync and the local mirror merge by `prefsSavedAt` (newer wins; ties keep the mirror so a local save after a failed sync is not discarded).

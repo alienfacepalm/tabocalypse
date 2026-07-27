@@ -77,6 +77,7 @@ import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widg
 import { PluginDeck } from "../../components/plugin-views";
 import { SettingsChangelogPanel } from "../../components/settings-changelog-panel";
 import { SettingsFeedbackForm } from "../../components/settings-feedback-form";
+import { WidgetsSettingsToggles } from "../../components/widgets-settings-toggles";
 import { runOneShotHudGeolocation } from "../../lib/hud-geolocation";
 import {
   patchHudGeoCoords,
@@ -140,7 +141,6 @@ import {
   EXPERIMENTAL_FEATURE_FLAG_KEYS,
   EXPERIMENTAL_FEATURE_LABELS,
   isExperimentalFeatureEnabled,
-  WIDGET_LABELS,
 } from "../../lib/settings";
 import { mergeHydratedSettingsWithBaseline } from "../../lib/merge-hydrated-settings";
 import { exportSettingsJsonText } from "../../lib/settings-export";
@@ -2213,19 +2213,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         <p className="muted sm mb-2 mt-0">
                           Choose which HUD panels appear on this monitor ({displayLayoutLabel}).
                           Each screen keeps its own list; synced defaults apply until you change a
-                          toggle here.
+                          chip here.
                         </p>
-                        {(Object.keys(effectiveWidgets) as TWidgetKey[]).map((k) => (
-                          <label key={k} className="check-row">
-                            <input
-                              type="checkbox"
-                              checked={effectiveWidgets[k]}
-                              disabled={s.preset === "focus" && k === "humorBanner"}
-                              onChange={(e) => toggleWidget(k, e.target.checked)}
-                            />
-                            <span>{WIDGET_LABELS[k]}</span>
-                          </label>
-                        ))}
+                        <WidgetsSettingsToggles
+                          widgets={effectiveWidgets}
+                          preset={s.preset}
+                          onToggle={toggleWidget}
+                        />
                         {hasWidgetsDisplayOverride(s.widgetsByDisplay, displayLayoutKey) ? (
                           <button
                             type="button"
