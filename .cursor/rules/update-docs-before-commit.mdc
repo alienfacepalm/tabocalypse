@@ -1,11 +1,11 @@
 ---
-description: After checks pass, update shipped-behavior docs before git commit; keep doc/CHANGELOG.md [Unreleased] current
+description: After checks pass, update CHANGELOG and PM board before git commit for major/user-facing work
 alwaysApply: true
 ---
 
 # Update docs before commit
 
-After **`pnpm check`** passes (and **`pnpm build`** when [validate-commit-push.mdc](validate-commit-push.mdc) requires it), and **before** **`git commit`**, confirm documentation matches what you are about to ship.
+After **`pnpm check`** passes (and **`pnpm build`** when [validate-commit-push.mdc](validate-commit-push.mdc) requires it), and **before** **`git commit`**, confirm documentation **and** the roadmap PM board match what you are about to ship.
 
 ## Keep CHANGELOG up to date
 
@@ -16,14 +16,29 @@ After **`pnpm check`** passes (and **`pnpm build`** when [validate-commit-push.m
 - **How:** plain language about what users notice — not commit hashes, file paths, or internal refactors.
 - **Scope:** major/minor lines only (see the header in `CHANGELOG.md`); patch detail stays in Git history.
 - **Same commit:** stage CHANGELOG updates **with** the code they describe whenever possible; do not leave **[Unreleased]** empty while landing meaningful extension changes.
+- **Settings embed:** when **[Unreleased]** (or rolled history) should appear in **Settings > Changelog**, regenerate with **`pnpm generate:settings-changelog`** ([settings-changelog-version-bump.mdc](settings-changelog-version-bump.mdc)).
 
 When unsure whether something is user-facing, add a short **[Unreleased]** line rather than ship silent product changes.
+
+## Keep the PM board current (major / roadmap work)
+
+After **major** shipped work — new features, completing or advancing a roadmap item, multi-file product changes, or anything that closes/moves a `pm:PM-T###` task — update the Projocalypse plan in the **same delivery**:
+
+1. Edit [`doc/PLAN/ROADMAP-PM-BOARD.md`](../../doc/PLAN/ROADMAP-PM-BOARD.md) — check `[x]` / move `pm:section=Done` (or the correct sprint column) for finished ids; add approved items from [`ROADMAP.md`](../../doc/PLAN/ROADMAP.md) only with maintainer intent.
+2. Run **`pnpm pm:sync`** so `.projocalypse/pending/tabocalypse-roadmap.json` matches the plan.
+3. Run **`pnpm pm:stale`** and fix drift if reported.
+4. Stage **plan + pending JSON** with the feature/fix (or an immediate follow-up commit in the same PR).
+
+**Skip PM board** only when the change is unrelated to roadmap items (typo, pure test/tooling, internal refactor with no product milestone). Prefer a quick glance at `ROADMAP-PM-BOARD.md` over silent skip when unsure.
+
+Full sync loop: [tabocalypse-pm-board.mdc](tabocalypse-pm-board.mdc) and skill **`tabocalypse-pm-board`**.
 
 ## When to update other docs
 
 | Change | Update |
-| ------ | ------ |
+| --- | --- |
 | User-facing feature, fix, or default | **[Unreleased]** in [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) (required — see above) |
+| Completes / advances a roadmap `pm:PM-T###` or major milestone | [`ROADMAP-PM-BOARD.md`](../../doc/PLAN/ROADMAP-PM-BOARD.md) + **`pnpm pm:sync`** (required — see above) |
 | Permissions, `host_permissions`, manifest, or network use | [`PRIVACY.md`](../../PRIVACY.md); [`doc/STORE-LISTING.md`](../../doc/STORE-LISTING.md) / [`doc/PUBLISHING-EXTENSION-STORES.md`](../../doc/PUBLISHING-EXTENSION-STORES.md) when store copy or justifications change |
 | New or renamed `doc/*.md` guide | Root [`README.md`](../../README.md) Documentation section + [`doc/README.md`](../../doc/README.md) index ([documentation-layout.mdc](documentation-layout.mdc)) |
 | Supported browsers, install steps, or WXT output paths | Relevant `doc/*`, [`README.md`](../../README.md); keep Safari with Chrome, Edge, Firefox ([safari-supported-browser.mdc](safari-supported-browser.mdc)) |
@@ -31,21 +46,21 @@ When unsure whether something is user-facing, add a short **[Unreleased]** line 
 
 ## When to skip
 
-- Internal refactors with **no** shipped behavior, permissions, or network change
-- Test-only, tooling-only, or agent-only edits (`.cursor/`, CI internals) with no product impact
+- Internal refactors with **no** shipped behavior, permissions, network, or roadmap status change
+- Test-only, tooling-only, or agent-only edits (`.cursor/`, CI internals) with no product impact — except when the edit **is** the docs/PM rule itself
 - Trivial typo in a non-shipped comment
 
-Use judgment on other docs; **CHANGELOG is never optional** for user-facing shipped work.
+Use judgment on other docs; **CHANGELOG is never optional** for user-facing shipped work. **PM board sync is never optional** when a roadmap task status should change.
 
 ## Workflow order
 
 ```
-pnpm check → (pnpm build when needed) → review + update docs → stage docs → git commit
+pnpm check → (pnpm build when needed) → CHANGELOG [Unreleased] → PM board + pnpm pm:sync (if major/roadmap) → stage docs/pending → git commit
 ```
 
-Do **not** commit meaningful shipped work when checks are green but **[Unreleased]** in `doc/CHANGELOG.md` (or required privacy/store docs) is stale.
+Do **not** commit meaningful shipped work when checks are green but **[Unreleased]** in `doc/CHANGELOG.md` is stale, or a finished `pm:PM-T###` is still unchecked on the board.
 
 ## Commit pairing
 
-- Prefer **one commit** that includes code + doc updates when they describe the same change.
-- A **docs-only follow-up** is fine when catching up on CHANGELOG after an earlier code commit — still run **`pnpm check`** before that commit.
+- Prefer **one commit** that includes code + CHANGELOG + PM plan/pending when they describe the same change.
+- A **docs/PM-only follow-up** is fine when catching up after an earlier code commit — still run **`pnpm check`** (and **`pnpm pm:stale`** if the plan changed) before that commit.

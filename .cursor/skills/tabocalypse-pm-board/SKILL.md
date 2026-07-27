@@ -15,6 +15,7 @@ description: >-
 
 ## When to use
 
+- **After major shipped work** that completes or advances a roadmap item (required with CHANGELOG — see [update-docs-before-commit.mdc](../../rules/update-docs-before-commit.mdc))
 - User asks to update PM board, sync projocalypse, or refresh roadmap status
 - PR touches `doc/PLAN/ROADMAP-PM-BOARD.md`, `ROADMAP.md`, or `.projocalypse/`
 - After approving new items from `ROADMAP.md` → copy into `ROADMAP-PM-BOARD.md` with `pm:PM-T###` ids

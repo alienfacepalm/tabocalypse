@@ -6,6 +6,8 @@
 
 **Canon:** Narrative and notes in [ROADMAP.md](./ROADMAP.md). Priority order: store launch → features new-tab users expect → data trust → plugins → a11y → stretch.
 
+**After shipping major work:** mark matching `pm:PM-T###` items done here, run `pnpm pm:sync`, and keep [`doc/CHANGELOG.md`](../CHANGELOG.md) **[Unreleased]** current (see `.cursor/rules/update-docs-before-commit.mdc` and `tabocalypse-pm-board.mdc`).
+
 ## W1 · Ship blockers
 
 _(Removed — pre-store checklist items are no longer tracked on the board.)_

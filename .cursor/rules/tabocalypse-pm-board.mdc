@@ -1,9 +1,6 @@
 ---
-description: Tabocalypse roadmap PM board — sync pending JSON on plan changes; stale checks
-alwaysApply: false
-globs:
-  - doc/PLAN/**
-  - .projocalypse/**
+description: After major shipped work and plan edits, keep ROADMAP-PM-BOARD + pending JSON in sync (CHANGELOG via update-docs-before-commit)
+alwaysApply: true
 ---
 
 # Tabocalypse PM board (Projocalypse)
@@ -13,11 +10,23 @@ Submodule: `packages/projocalypse`. **Package key:** `tabocalypse-roadmap` in `.
 ## Source of truth (git on `master`)
 
 | What | Path |
-|------|------|
+| --- | --- |
 | Plan checkboxes | `doc/PLAN/ROADMAP-PM-BOARD.md` (`pm:PM-T###` ids) |
 | Candidate options (pre-approval) | `doc/PLAN/ROADMAP.md` |
 | Team sync JSON | `.projocalypse/pending/tabocalypse-roadmap.json` — **commit when changed** |
 | Registry + column names | `.projocalypse/workspace.json` |
+
+## After major / meaningful product work (required)
+
+Closing a feature or fix that **completes or advances** a roadmap item is incomplete until the board reflects it — same bar as keeping [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) **[Unreleased]** current ([update-docs-before-commit.mdc](update-docs-before-commit.mdc)).
+
+1. Find matching `pm:PM-T###` in `ROADMAP-PM-BOARD.md` (or add from `ROADMAP.md` only when approved).
+2. Mark done (`[x]` + `pm:section=Done`) or move `pm:section=` to the correct sprint column.
+3. Run **`pnpm pm:sync`**, then **`pnpm pm:stale`**.
+4. Commit plan + pending JSON with the ship PR (or immediate follow-up in the same PR).
+5. Confirm **[Unreleased]** in `doc/CHANGELOG.md` describes the user-facing change.
+
+**Do not** ship major roadmap work with a green CI and a stale board or empty CHANGELOG line.
 
 ## Mandatory sync when task status changes
 
@@ -47,4 +56,5 @@ See [doc/PLAN/PROJOCALYPSE.md](../../doc/PLAN/PROJOCALYPSE.md).
 
 ## Agents
 
-- **`tabocalypse-pm-board`** skill — full sync loop
+- Skill **`tabocalypse-pm-board`** — full sync loop
+- Pair with [update-docs-before-commit.mdc](update-docs-before-commit.mdc) for CHANGELOG + board closure
