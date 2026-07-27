@@ -28,3 +28,5 @@ Use Antigravity as a suggestion engine, but apply changes as **small, reviewable
 
 - `pnpm check`
 - If extension UI/packaging/tooling was touched: `pnpm build`
+- User-facing work: update `doc/CHANGELOG.md` **[Unreleased]** before commit
+- Major / roadmap work: update `doc/PLAN/ROADMAP-PM-BOARD.md`, run `pnpm pm:sync`, confirm with `pnpm pm:stale`

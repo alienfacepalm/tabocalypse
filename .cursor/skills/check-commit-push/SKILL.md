@@ -24,7 +24,7 @@ Details: [validate-commit-push.mdc](../../rules/validate-commit-push.mdc).
 
 ## 1b. Docs (after check passes, before commit)
 
-Review staged/changed paths against [update-docs-before-commit.mdc](../../rules/update-docs-before-commit.mdc). **Keep [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) [Unreleased] up to date** — required for user-facing changes. Update privacy/store docs when required. Stage doc updates with the same commit when they belong together.
+Review staged/changed paths against [update-docs-before-commit.mdc](../../rules/update-docs-before-commit.mdc) and [tabocalypse-pm-board.mdc](../../rules/tabocalypse-pm-board.mdc). **Keep [`doc/CHANGELOG.md`](../../doc/CHANGELOG.md) [Unreleased] up to date** — required for user-facing changes. For major / roadmap work, update `ROADMAP-PM-BOARD.md`, run **`pnpm pm:sync`**, and stage pending JSON. Update privacy/store docs when required. Stage doc/PM updates with the same commit when they belong together.
 
 ## 2. Commit (only if check passed)
 
