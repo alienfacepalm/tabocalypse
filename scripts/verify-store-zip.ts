@@ -26,7 +26,7 @@ function windowsTarListArgs(zipPath: string): { args: string[]; cwd: string } {
 }
 
 function windowsTarExtractArgs(zipPath: string, entry: string): { args: string[]; cwd: string } {
-  return { args: ["-xOf", basename(zipPath), entry], cwd: dirname(zipPath) };
+  return { args: ["-xO", "-f", basename(zipPath), entry], cwd: dirname(zipPath) };
 }
 
 function runUnzip(args: string[]): { stdout: string; status: number | null } {
