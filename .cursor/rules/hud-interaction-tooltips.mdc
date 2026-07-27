@@ -1,7 +1,7 @@
 ---
 description: HUD-styled tooltips on interactive controls in the extension new tab
 globs: apps/extension/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # HUD interaction tooltips

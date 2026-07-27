@@ -1,7 +1,7 @@
 ---
 description: Geo-based HUD panels must share one location slice from settings
 globs: apps/extension/**/*.{ts,tsx}
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Shared HUD geo location

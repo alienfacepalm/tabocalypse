@@ -1,7 +1,7 @@
 ---
 description: TypeScript interface (I) and type-alias (T) naming prefixes; ESLint-enforced
 globs: "**/*.{ts,tsx}"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # TypeScript type and interface prefixes

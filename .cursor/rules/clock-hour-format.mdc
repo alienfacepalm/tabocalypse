@@ -1,7 +1,7 @@
 ---
 description: User-visible times must respect the global 12h / 24h clock setting
 globs: apps/extension/**/*.{ts,tsx}
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Clock hour format (extension)

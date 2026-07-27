@@ -1,6 +1,6 @@
 ---
 description: Reserve space above the fixed page footer for HUD panels, grid, and resize grips
-alwaysApply: false
+alwaysApply: true
 globs:
   - apps/extension/lib/hud-layout.ts
   - apps/extension/lib/hud-auto-layout.ts
