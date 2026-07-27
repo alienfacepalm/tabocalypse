@@ -137,13 +137,15 @@ Depth is created through **Glassmorphism** and aggressive **Hard Shadows**, rath
 
 ## Shapes
 
-This design system strictly forbids rounded corners. All elements—including buttons, cards, input fields, and tooltips—must have a **0px border radius**. The sharp edges reinforce the brutalist aesthetic and the "jagged" nature of a glitching interface.
+**Default:** sharp **0px** border radius on buttons, cards, inputs, and tooltips — the brutalist “jagged” HUD look.
+
+**Optional (Settings > Appearance → Control shape):** users may choose **Soft corners** or **Pill buttons**, which apply CSS radius tokens to controls (and a light panel radius for soft/pill). Soft/Pill are deliberate accessibility / preference options; they do not change the default Sharp brand look.
 
 ## Components
 
 ### Buttons
 
-- **Style:** 0px radius, 1px solid border (match shadow color).
+- **Style:** 0px radius by default (or Soft/Pill when the user picks that control shape), 1px solid border (match shadow color).
 - **Shadow:** 4px offset (#39FF14 for primary, #FF00FF for warning).
 - **Text:** Space Mono, All Caps, Heavy weight.
 - **Hover:** Invert colors (Background becomes the shadow color, text becomes Void Black).
@@ -157,6 +159,7 @@ This design system strictly forbids rounded corners. All elements—including bu
 ### Inputs & Terminal Fields
 
 - **Style:** Inset appearance using a 1px Ash Grey border.
+- **Style note:** Square boxes (0px radius) unless the user selected Soft/Pill control shape.
 - **Focus:** Border changes to Acid Green with a "glitch" flicker animation.
 - **Prefix:** Every input should have a terminal prompt prefix like `USER_LOG@TAB:>`.
 

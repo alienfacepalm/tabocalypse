@@ -1,74 +1,8 @@
 {
   "packageName": "tabocalypse-roadmap",
-  "generatedAt": "2026-06-17T19:47:53.285Z",
+  "generatedAt": "2026-07-27T17:48:34.071Z",
   "files": ["doc/PLAN/ROADMAP-PM-BOARD.md"],
   "items": [
-    {
-      "id": "PM-T001",
-      "title": "Firefox Gecko add-on ID in `.env`",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 11
-      }
-    },
-    {
-      "id": "PM-T002",
-      "title": "Privacy policy at public HTTPS URL",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 12
-      }
-    },
-    {
-      "id": "PM-T003",
-      "title": "Store screenshots (1280×800 / 440×280)",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 13
-      }
-    },
-    {
-      "id": "PM-T004",
-      "title": "Permission justification copy for store reviewers",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 14
-      }
-    },
-    {
-      "id": "PM-T005",
-      "title": "Support URL (GitHub Issues or contact page)",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 15
-      }
-    },
-    {
-      "id": "PM-T006",
-      "title": "Safari converter smoke test on macOS",
-      "done": false,
-      "section": "W1 · Ship blockers",
-      "priority": "high",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 16
-      }
-    },
     {
       "id": "PM-T014",
       "title": "Release CI — tagged build + store zips",
@@ -77,7 +11,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 20
+        "line": 15
       }
     },
     {
@@ -88,7 +22,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 21
+        "line": 16
       }
     },
     {
@@ -99,7 +33,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 22
+        "line": 17
       }
     },
     {
@@ -110,7 +44,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 26
+        "line": 21
       }
     },
     {
@@ -121,7 +55,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 27
+        "line": 22
       }
     },
     {
@@ -132,7 +66,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 28
+        "line": 23
       }
     },
     {
@@ -143,7 +77,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 32
+        "line": 27
       }
     },
     {
@@ -154,7 +88,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 33
+        "line": 28
       }
     },
     {
@@ -165,7 +99,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 34
+        "line": 29
       }
     },
     {
@@ -176,7 +110,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 35
+        "line": 30
       }
     },
     {
@@ -187,7 +121,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 39
+        "line": 34
       }
     },
     {
@@ -198,7 +132,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 40
+        "line": 35
       }
     },
     {
@@ -209,7 +143,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 41
+        "line": 36
       }
     },
     {
@@ -220,7 +154,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 42
+        "line": 37
       }
     },
     {
@@ -231,7 +165,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 46
+        "line": 41
       }
     },
     {
@@ -242,7 +176,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 47
+        "line": 42
       }
     },
     {
@@ -253,7 +187,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 48
+        "line": 43
       }
     },
     {
@@ -264,7 +198,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 52
+        "line": 47
       }
     },
     {
@@ -275,7 +209,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 53
+        "line": 48
       }
     },
     {
@@ -286,7 +220,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 54
+        "line": 49
       }
     },
     {
@@ -297,7 +231,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 55
+        "line": 50
       }
     },
     {
@@ -308,7 +242,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 59
+        "line": 54
       }
     },
     {
@@ -319,7 +253,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 60
+        "line": 55
       }
     },
     {
@@ -330,7 +264,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 61
+        "line": 56
       }
     },
     {
@@ -341,7 +275,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 65
+        "line": 60
       }
     },
     {
@@ -352,7 +286,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 66
+        "line": 61
       }
     },
     {
@@ -363,7 +297,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 67
+        "line": 62
       }
     },
     {
@@ -374,7 +308,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 68
+        "line": 63
       }
     },
     {
@@ -385,7 +319,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 72
+        "line": 67
       }
     },
     {
@@ -396,7 +330,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 73
+        "line": 68
       }
     },
     {
@@ -407,7 +341,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 74
+        "line": 69
       }
     },
     {
@@ -418,7 +352,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 75
+        "line": 70
       }
     },
     {
@@ -429,7 +363,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 76
+        "line": 71
       }
     },
     {
@@ -440,7 +374,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 77
+        "line": 72
       }
     },
     {
@@ -451,7 +385,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 78
+        "line": 73
       }
     },
     {
@@ -462,13 +396,13 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 79
+        "line": 74
       }
     }
   ],
   "summary": {
-    "total": 42,
+    "total": 36,
     "done": 0,
-    "open": 42
+    "open": 36
   }
 }

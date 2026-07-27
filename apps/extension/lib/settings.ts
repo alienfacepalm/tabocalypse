@@ -1,5 +1,6 @@
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
 import browser from "webextension-polyfill";
+import { coerceImportedPlugins } from "./plugin-import";
 import {
   HUD_LAYOUT_REFERENCE_CANVAS,
   HUD_PANEL_IDS,
@@ -881,6 +882,30 @@ export interface INotesSyncSlice {
   notePanels: INotePanel[];
   notePanelsEpoch: number;
   notesListPanelVisible?: boolean;
+  /** Wall-clock ms when this notes slice was last written (mirror vs cloud merge). */
+  prefsSavedAt?: number;
+}
+
+/** Coerce optional prefsSavedAt timestamps used to merge sync vs local mirror. */
+export function coercePrefsSavedAt(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+/**
+ * Merge cloud sync with the local mirror. Newer `prefsSavedAt` wins; ties prefer the
+ * mirror so a successful local write after a failed/lagging sync is not discarded.
+ */
+export function mergeSyncSlicesBySavedAt<T extends { prefsSavedAt?: number }>(
+  cloud: Partial<T> | undefined,
+  mirror: Partial<T> | undefined,
+): Partial<T> | undefined {
+  if (!cloud && !mirror) return undefined;
+  if (!cloud) return mirror;
+  if (!mirror) return cloud;
+  const cAt = coercePrefsSavedAt(cloud.prefsSavedAt);
+  const mAt = coercePrefsSavedAt(mirror.prefsSavedAt);
+  if (mAt >= cAt) return { ...cloud, ...mirror };
+  return { ...mirror, ...cloud };
 }
 
 function syncJsonByteLength(value: unknown): number {
@@ -903,20 +928,19 @@ export function isTabocalypseSettingsStorageChange(
   return false;
 }
 
+/** Prefer newer prefsSavedAt; ties keep the local mirror (sync lag / quota safety). */
 function mergeSyncFromSources(
   cloud: Partial<ISyncSlice> | undefined,
   mirror: Partial<ISyncSlice> | undefined,
 ): Partial<ISyncSlice> | undefined {
-  if (!cloud && !mirror) return undefined;
-  return { ...cloud, ...mirror };
+  return mergeSyncSlicesBySavedAt(cloud, mirror);
 }
 
 function mergeNotesSyncFromSources(
   cloud: Partial<INotesSyncSlice> | undefined,
   mirror: Partial<INotesSyncSlice> | undefined,
 ): Partial<INotesSyncSlice> | undefined {
-  if (!cloud && !mirror) return undefined;
-  return { ...cloud, ...mirror };
+  return mergeSyncSlicesBySavedAt(cloud, mirror);
 }
 
 /** Resolve notes from sync (cloud + mirror) and legacy local storage on load. */
@@ -926,7 +950,6 @@ function resolveNotesFromStorage(
   local: Partial<ILocalSlice> | undefined,
   mergeNow: number,
 ): Pick<ISettings, "notes" | "notePanels" | "notePanelsEpoch" | "notesListPanelVisible"> {
-  const notesSync = mergeNotesSyncFromSources(cloud, mirror);
   const mirrorNotes = coerceNotes(mirror?.notes);
   const cloudNotes = coerceNotes(cloud?.notes);
   let notes = mergeNotesPreferNewerBaseline(mirrorNotes, cloudNotes);
@@ -940,22 +963,14 @@ function resolveNotesFromStorage(
   }
 
   const mergedNoteIds = new Set(notes.map((n) => n.id));
-  const mirrorEpoch =
-    typeof mirror?.notePanelsEpoch === "number" && Number.isFinite(mirror.notePanelsEpoch)
-      ? Math.max(0, Math.floor(mirror.notePanelsEpoch))
+  const notesSyncMerged = mergeNotesSyncFromSources(cloud, mirror);
+  const winnerEpoch =
+    typeof notesSyncMerged?.notePanelsEpoch === "number" &&
+    Number.isFinite(notesSyncMerged.notePanelsEpoch)
+      ? Math.max(0, Math.floor(notesSyncMerged.notePanelsEpoch))
       : 0;
-  const cloudEpoch =
-    typeof cloud?.notePanelsEpoch === "number" && Number.isFinite(cloud.notePanelsEpoch)
-      ? Math.max(0, Math.floor(cloud.notePanelsEpoch))
-      : 0;
-  let notePanels = mergeNotePanelsForStorageReload(
-    coerceNotePanels(mirror?.notePanels, mergedNoteIds),
-    coerceNotePanels(cloud?.notePanels, mergedNoteIds),
-    mirrorEpoch,
-    cloudEpoch,
-    mergedNoteIds,
-  );
-  let notePanelsEpoch = Math.max(mirrorEpoch, cloudEpoch);
+  let notePanels = coerceNotePanels(notesSyncMerged?.notePanels, mergedNoteIds);
+  let notePanelsEpoch = winnerEpoch;
 
   if (local?.notePanels) {
     const localEpoch =
@@ -970,21 +985,12 @@ function resolveNotesFromStorage(
       mergedNoteIds,
     );
     notePanelsEpoch = Math.max(notePanelsEpoch, localEpoch);
-  } else if (notesSync?.notePanels) {
-    notePanels = coerceNotePanels(notesSync.notePanels, mergedNoteIds);
-    if (
-      typeof notesSync.notePanelsEpoch === "number" &&
-      Number.isFinite(notesSync.notePanelsEpoch)
-    ) {
-      notePanelsEpoch = Math.max(0, Math.floor(notesSync.notePanelsEpoch));
-    }
   }
 
   if (notePanels.length > 0 && notePanelsEpoch === 0) {
     notePanelsEpoch = 1;
   }
 
-  const notesSyncMerged = mergeNotesSyncFromSources(cloud, mirror);
   const notesListPanelVisible =
     typeof notesSyncMerged?.notesListPanelVisible === "boolean"
       ? notesSyncMerged.notesListPanelVisible
@@ -1053,6 +1059,8 @@ export interface ISyncSlice {
   debugPluginSource: boolean;
   hasSeenSettingsIntro: boolean;
   experimentalFeatures: Record<TExperimentalFeatureFlag, boolean>;
+  /** Wall-clock ms when this sync slice was last written (mirror vs cloud merge). */
+  prefsSavedAt?: number;
 }
 
 export interface ILocalSlice {
@@ -1464,7 +1472,7 @@ export function defaultSettings(): ISettings {
   };
 }
 
-function toSync(s: ISettings): ISyncSlice {
+function toSync(s: ISettings, prefsSavedAt = Date.now()): ISyncSlice {
   return {
     version: 1,
     preset: s.preset,
@@ -1524,16 +1532,18 @@ function toSync(s: ISettings): ISyncSlice {
     debugPluginSource: s.debugPluginSource,
     hasSeenSettingsIntro: s.hasSeenSettingsIntro,
     experimentalFeatures: s.experimentalFeatures,
+    prefsSavedAt,
   };
 }
 
-function toNotesSync(s: ISettings): INotesSyncSlice {
+function toNotesSync(s: ISettings, prefsSavedAt = Date.now()): INotesSyncSlice {
   return {
     version: 1,
     notes: s.notes,
     notePanels: s.notePanels,
     notePanelsEpoch: s.notePanelsEpoch,
     notesListPanelVisible: s.notesListPanelVisible,
+    prefsSavedAt,
   };
 }
 
@@ -1871,7 +1881,7 @@ function mergeSettings(
       typeof local?.steamWebApiKey === "string" ? local.steamWebApiKey : d.steamWebApiKey,
     myLines: local?.myLines ?? d.myLines,
     importedPacks: local?.importedPacks ?? d.importedPacks,
-    importedPlugins: local?.importedPlugins ?? d.importedPlugins,
+    importedPlugins: coerceImportedPlugins(local?.importedPlugins ?? d.importedPlugins),
     notesText: "",
     notes: mergedNotes,
     notePanels: mergedNotePanels,
@@ -1934,8 +1944,9 @@ function isSyncQuotaError(err: unknown): boolean {
 
 export async function saveSettings(s: ISettings): Promise<void> {
   const normalized = applyPersonalityPresetHarmony(s);
-  const syncPayload = toSync(normalized);
-  const notesPayload = toNotesSync(normalized);
+  const prefsSavedAt = Date.now();
+  const syncPayload = toSync(normalized, prefsSavedAt);
+  const notesPayload = toNotesSync(normalized, prefsSavedAt);
   const writes: Promise<unknown>[] = [
     browser.storage.local.set({
       [LOCAL_KEY]: toLocal(normalized),

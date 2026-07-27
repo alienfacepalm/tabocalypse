@@ -123,10 +123,8 @@ import {
   isTabocalypseSettingsStorageChange,
   type IUserBackgroundImage,
   loadSettings,
-  mergeNotePanelsForStorageReload,
   mergeWidgets,
   mergeExperimentalFeatures,
-  mergeNotesPreferNewerBaseline,
   patchWidgetsForDisplay,
   resetWidgetsForDisplay,
   resolveNotesListPanelVisible,
@@ -144,6 +142,14 @@ import {
   isExperimentalFeatureEnabled,
   WIDGET_LABELS,
 } from "../../lib/settings";
+import { mergeHydratedSettingsWithBaseline } from "../../lib/merge-hydrated-settings";
+import { exportSettingsJsonText } from "../../lib/settings-export";
+import { applyImportedSecretKeys } from "../../lib/settings-import-secrets";
+import {
+  coerceImportedPlugins,
+  mergeImportedPlugin,
+  removeImportedPlugin,
+} from "../../lib/plugin-import";
 import { hideBookmarksStripBookmark } from "../../lib/bookmarks-strip-preferences";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import {
@@ -161,7 +167,6 @@ import { countEnabledWidgets } from "../../lib/system-status-line";
 import { PresetPersonalityIcons } from "../../components/preset-personality-icons";
 import { SystemStatusTagline } from "../../components/system-status-tagline";
 import { validatePluginJsonText } from "@tabocalypse/plugin-sdk";
-import { mergeImportedPlugin, removeImportedPlugin } from "../../lib/plugin-import";
 import { getSupportActions, openExternal } from "../../lib/support-links";
 import {
   estimateImportedBytes,
@@ -367,30 +372,6 @@ function applyReactStyle(target: HTMLElement, style: React.CSSProperties): void 
   }
 }
 
-function mergeHydratedSettingsWithBaseline(
-  baseline: ISettings,
-  disk: ISettings,
-  preserveMyLinesDraft: boolean,
-): ISettings {
-  const mergedNotes = coerceNotes(mergeNotesPreferNewerBaseline(baseline.notes, disk.notes));
-  const validNoteIds = new Set(mergedNotes.map((n) => n.id));
-  const bEpoch = baseline.notePanelsEpoch ?? 0;
-  const dEpoch = disk.notePanelsEpoch ?? 0;
-  return {
-    ...disk,
-    notes: mergedNotes,
-    notePanels: mergeNotePanelsForStorageReload(
-      baseline.notePanels,
-      disk.notePanels,
-      bEpoch,
-      dEpoch,
-      validNoteIds,
-    ),
-    notePanelsEpoch: Math.max(bEpoch, dEpoch),
-    ...(preserveMyLinesDraft ? { myLines: baseline.myLines } : {}),
-  };
-}
-
 function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Element {
   const [settings, setSettings] = useState<ISettings>(initialSettings);
   const [openSettings, setOpenSettings] = useState(() => !initialSettings.hasSeenSettingsIntro);
@@ -473,6 +454,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const lastWallpaperAccentApplyRef = useRef<{ logicalKey: string } | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
   const persistChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  const persistInFlightRef = useRef(0);
+  const pendingStorageReloadRef = useRef(false);
+  const hydrateGenRef = useRef(0);
   const myLinesSaveTimerRef = useRef<number | null>(null);
   const bgPanDragRef = useRef<{
     pointerId: number;
@@ -553,13 +537,14 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   );
 
   useEffect(() => {
+    const gen = ++hydrateGenRef.current;
     void loadSettings().then((next) => {
+      if (gen !== hydrateGenRef.current) return;
       const baseline = latestSettingsRef.current;
-      const merged = mergeHydratedSettingsWithBaseline(
-        baseline,
-        next,
-        myLinesSaveTimerRef.current !== null,
-      );
+      const merged = mergeHydratedSettingsWithBaseline(baseline, next, {
+        preserveMyLinesDraft: myLinesSaveTimerRef.current !== null,
+        preserveBaselinePrefs: persistInFlightRef.current > 0,
+      });
       latestSettingsRef.current = merged;
       setSettings(merged);
       setHudLayoutBootstrapToken((token) => token + 1);
@@ -577,21 +562,34 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, []);
 
   useEffect(() => {
+    const applyDiskSettings = (next: ISettings): void => {
+      const baseline = latestSettingsRef.current;
+      const merged = mergeHydratedSettingsWithBaseline(baseline, next, {
+        preserveMyLinesDraft: myLinesSaveTimerRef.current !== null,
+        preserveBaselinePrefs: persistInFlightRef.current > 0,
+      });
+      latestSettingsRef.current = merged;
+      setSettings(merged);
+    };
+
     const onStorageChanged: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
       changes,
       areaName,
     ) => {
       if (areaName !== "local" && areaName !== "sync") return;
       if (!isTabocalypseSettingsStorageChange(changes, areaName)) return;
+      if (persistInFlightRef.current > 0) {
+        pendingStorageReloadRef.current = true;
+        return;
+      }
+      const gen = ++hydrateGenRef.current;
       void loadSettings().then((next) => {
-        const baseline = latestSettingsRef.current;
-        const merged = mergeHydratedSettingsWithBaseline(
-          baseline,
-          next,
-          myLinesSaveTimerRef.current !== null,
-        );
-        latestSettingsRef.current = merged;
-        setSettings(merged);
+        if (gen !== hydrateGenRef.current) return;
+        if (persistInFlightRef.current > 0) {
+          pendingStorageReloadRef.current = true;
+          return;
+        }
+        applyDiskSettings(next);
       });
     };
     browser.storage.onChanged.addListener(onStorageChanged);
@@ -818,23 +816,47 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     (next: TSettingsUpdater): Promise<boolean> => {
       const run = async (): Promise<boolean> => {
         clearMyLinesDebouncedSaveTimer();
-        const current = latestSettingsRef.current;
-        const raw = typeof next === "function" ? next(current) : next;
-        const noteLayoutChanged =
-          raw.notePanels !== current.notePanels ||
-          raw.notePanelsByDisplay !== current.notePanelsByDisplay;
-        const rawResolved: ISettings = noteLayoutChanged
-          ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
-          : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
-        const resolved = applyPersonalityPresetHarmony(rawResolved);
-        latestSettingsRef.current = resolved;
-        setSettings(resolved);
+        persistInFlightRef.current += 1;
+        hydrateGenRef.current += 1;
         try {
-          await saveSettings(resolved);
-          return true;
-        } catch (e: unknown) {
-          showHudError(e instanceof Error ? e.message : String(e));
-          return false;
+          const current = latestSettingsRef.current;
+          const raw = typeof next === "function" ? next(current) : next;
+          const noteLayoutChanged =
+            raw.notePanels !== current.notePanels ||
+            raw.notePanelsByDisplay !== current.notePanelsByDisplay;
+          const rawResolved: ISettings = noteLayoutChanged
+            ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
+            : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
+          const resolved = applyPersonalityPresetHarmony(rawResolved);
+          latestSettingsRef.current = resolved;
+          setSettings(resolved);
+          try {
+            await saveSettings(resolved);
+            return true;
+          } catch (e: unknown) {
+            showHudError(e instanceof Error ? e.message : String(e));
+            return false;
+          }
+        } finally {
+          persistInFlightRef.current = Math.max(0, persistInFlightRef.current - 1);
+          if (persistInFlightRef.current === 0 && pendingStorageReloadRef.current) {
+            pendingStorageReloadRef.current = false;
+            const gen = ++hydrateGenRef.current;
+            void loadSettings().then((next) => {
+              if (gen !== hydrateGenRef.current) return;
+              if (persistInFlightRef.current > 0) {
+                pendingStorageReloadRef.current = true;
+                return;
+              }
+              const baseline = latestSettingsRef.current;
+              const merged = mergeHydratedSettingsWithBaseline(baseline, next, {
+                preserveMyLinesDraft: myLinesSaveTimerRef.current !== null,
+                preserveBaselinePrefs: false,
+              });
+              latestSettingsRef.current = merged;
+              setSettings(merged);
+            });
+          }
         }
       };
 
@@ -2065,7 +2087,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
 
   const exportSettingsJson = () => {
     const cur = latestSettingsRef.current ?? s;
-    const blob = new Blob([JSON.stringify(cur, null, 2)], { type: "application/json" });
+    const blob = new Blob([exportSettingsJsonText(cur)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "tabocalypse-settings.json";
@@ -4118,6 +4140,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             <Download size={18} strokeWidth={2} aria-hidden />
                             <span>Export settings JSON</span>
                           </button>
+                          <p className="muted sm mt-2 mb-0 w-full basis-full">
+                            Export omits API keys (OpenAI, Gemini, Balanced news, Steam) so backup
+                            files are safer to share.
+                          </p>
                           <label className="btn has-icon">
                             <Upload size={18} strokeWidth={2} aria-hidden />
                             <span>Import settings JSON</span>
@@ -4135,12 +4161,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                       String(reader.result),
                                     ) as Partial<ISettings>;
                                     const d = defaultSettings();
+                                    const cur = latestSettingsRef.current ?? d;
                                     const importThemeMode = coerceThemeMode(
                                       parsed.themeMode,
                                       d.themeMode,
                                     );
                                     const importGradFallback = themeGradientStops(importThemeMode);
-                                    const merged: ISettings = {
+                                    const mergedRaw: ISettings = {
                                       ...d,
                                       ...parsed,
                                       version: 1,
@@ -4278,7 +4305,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                           | Partial<Record<string, unknown>>
                                           | undefined,
                                       ),
+                                      importedPlugins: coerceImportedPlugins(
+                                        parsed.importedPlugins,
+                                      ),
+                                      notes: coerceNotes(parsed.notes),
                                     };
+                                    const merged = applyImportedSecretKeys(mergedRaw, parsed, cur);
                                     void persist(applyChaosPresetHumorHarmony(merged));
                                   } catch {
                                     showHudError("Invalid settings JSON");

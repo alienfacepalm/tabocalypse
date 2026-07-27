@@ -33,7 +33,7 @@ interface IGlobalWithOptionalChrome {
 }
 
 describe("isPrivilegedExtensionFetchUrlAllowed", () => {
-  it("allows Peapix, Open-Meteo, CoinGecko, King County, Unsuck, and search suggestion hosts", () => {
+  it("allows Peapix, Open-Meteo, CoinGecko, King County, Unsuck, Steam Charts, and search suggestion hosts", () => {
     expect(isPrivilegedExtensionFetchUrlAllowed("https://peapix.com/bing/feed?country=us")).toBe(
       true,
     );
@@ -45,6 +45,7 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     ).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://www.unsuck-it.com/classics")).toBe(true);
+    expect(isPrivilegedExtensionFetchUrlAllowed("https://steamcharts.com/top")).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://duckduckgo.com/ac/?q=tab&type=list")).toBe(
       true,
     );

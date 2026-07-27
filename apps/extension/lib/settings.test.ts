@@ -48,9 +48,58 @@ const {
   resolveNotesListPanelVisible,
   stableUserBackgroundIdFromDataUrl,
   isHudAutoRepositionEnabled,
+  mergeSyncSlicesBySavedAt,
+  coercePrefsSavedAt,
 } = await import("./settings");
 
 const { settingsBackgroundGradientCss } = await import("./background-gradient-css");
+
+describe("mergeSyncSlicesBySavedAt", () => {
+  type TSlice = { themePalette?: string; prefsSavedAt?: number };
+
+  it("prefers the newer prefsSavedAt and ties on mirror", () => {
+    expect(
+      mergeSyncSlicesBySavedAt<TSlice>(
+        { themePalette: "glitch", prefsSavedAt: 2 },
+        { themePalette: "ocean", prefsSavedAt: 1 },
+      ),
+    ).toMatchObject({ themePalette: "glitch", prefsSavedAt: 2 });
+    expect(
+      mergeSyncSlicesBySavedAt<TSlice>(
+        { themePalette: "glitch", prefsSavedAt: 1 },
+        { themePalette: "ocean", prefsSavedAt: 2 },
+      ),
+    ).toMatchObject({ themePalette: "ocean", prefsSavedAt: 2 });
+    expect(
+      mergeSyncSlicesBySavedAt<TSlice>(
+        { themePalette: "glitch", prefsSavedAt: 5 },
+        { themePalette: "ocean", prefsSavedAt: 5 },
+      ),
+    ).toMatchObject({ themePalette: "ocean", prefsSavedAt: 5 });
+  });
+
+  it("returns the only present side and undefined when both missing", () => {
+    expect(mergeSyncSlicesBySavedAt<TSlice>(undefined, undefined)).toBeUndefined();
+    expect(mergeSyncSlicesBySavedAt<TSlice>({ themePalette: "glitch" }, undefined)).toMatchObject({
+      themePalette: "glitch",
+    });
+    expect(mergeSyncSlicesBySavedAt<TSlice>(undefined, { themePalette: "ocean" })).toMatchObject({
+      themePalette: "ocean",
+    });
+  });
+
+  it("treats missing prefsSavedAt as 0 so mirror wins ties with legacy cloud", () => {
+    expect(
+      mergeSyncSlicesBySavedAt<TSlice>({ themePalette: "glitch" }, { themePalette: "ocean" }),
+    ).toMatchObject({ themePalette: "ocean" });
+  });
+
+  it("coerces invalid prefsSavedAt to 0", () => {
+    expect(coercePrefsSavedAt("x")).toBe(0);
+    expect(coercePrefsSavedAt(-3)).toBe(0);
+    expect(coercePrefsSavedAt(12.9)).toBe(12);
+  });
+});
 
 describe("isHudAutoRepositionEnabled", () => {
   it("is priority 1: off disables auto-reposition regardless of other flags", () => {
@@ -755,7 +804,7 @@ describe("loadSettings", () => {
     expect(s.hasSeenSettingsIntro).toBe(false);
   });
 
-  it("prefers local sync mirror over cloud sync for overlapping fields", async () => {
+  it("prefers newer prefsSavedAt when merging cloud sync and local mirror", async () => {
     syncGet.mockResolvedValue({
       [SYNC_KEY]: {
         version: 1,
@@ -776,8 +825,163 @@ describe("loadSettings", () => {
         backgroundKind: "gradient",
         backgroundSolid: "#0f0f12",
         debugPluginSource: false,
+        prefsSavedAt: 2_000,
       },
     });
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: false,
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+      [TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "ocean",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: ["tab_shame"],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        debugPluginSource: false,
+        prefsSavedAt: 1_000,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.themePalette).toBe("glitch");
+  });
+
+  it("prefers newer local mirror over stale cloud when sync lagged", async () => {
+    syncGet.mockResolvedValue({
+      [SYNC_KEY]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "glitch",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: ["tab_shame"],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        debugPluginSource: false,
+        prefsSavedAt: 1_000,
+      },
+    });
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: false,
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+      [TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]: {
+        version: 1,
+        preset: "balanced",
+        themeMode: "dark",
+        themePalette: "ocean",
+        humorEnabled: true,
+        humorIntensity: "mild",
+        humorBuiltinPackIds: ["tab_shame"],
+        spicyContentAcknowledged: false,
+        widgets: { humorBanner: true },
+        searchEngine: "ddg",
+        weatherLat: 0,
+        weatherLon: 0,
+        weatherAutoGeo: false,
+        bingWallpaperCountryAuto: true,
+        bingWallpaperCountry: "us",
+        backgroundKind: "gradient",
+        backgroundSolid: "#0f0f12",
+        debugPluginSource: false,
+        prefsSavedAt: 2_000,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.themePalette).toBe("ocean");
+  });
+
+  it("uses prefsSavedAt winner for sticky note panels even when cloud epoch is higher", async () => {
+    const note = {
+      id: "n1",
+      name: "A",
+      tags: [],
+      text: "hello",
+      locked: false,
+      createdAt: 100,
+      updatedAt: 200,
+    };
+    const cloudPos = { xPx: 10, yPx: 10, widthPx: 260, heightPx: 220 };
+    const mirrorPos = { xPx: 400, yPx: 120, widthPx: 260, heightPx: 220 };
+    syncGet.mockResolvedValue({
+      [NOTES_SYNC_KEY]: {
+        version: 1,
+        notes: [note],
+        notePanels: [{ noteId: "n1", position: cloudPos }],
+        notePanelsEpoch: 9,
+        prefsSavedAt: 1_000,
+      },
+    });
+    localGet.mockResolvedValue({
+      [LOCAL_KEY]: {
+        version: 1,
+        userBackgroundDataUrl: null,
+        userBackgroundDataUrls: [],
+        backgroundRotate: false,
+        openaiApiKey: "",
+        openaiBaseUrl: "https://api.openai.com/v1",
+        myLines: [],
+        importedPacks: [],
+        importedPlugins: [],
+        notesText: "",
+        todos: [],
+      },
+      [TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]: {
+        version: 1,
+        notes: [note],
+        notePanels: [{ noteId: "n1", position: mirrorPos }],
+        notePanelsEpoch: 2,
+        prefsSavedAt: 2_000,
+      },
+    });
+    const s = await loadSettings();
+    expect(s.notePanels).toEqual([{ noteId: "n1", position: mirrorPos }]);
+    expect(s.notePanelsEpoch).toBe(2);
+  });
+
+  it("uses local sync mirror when cloud sync is missing", async () => {
+    syncGet.mockResolvedValue({});
     localGet.mockResolvedValue({
       [LOCAL_KEY]: {
         version: 1,

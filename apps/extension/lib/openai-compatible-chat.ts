@@ -1,5 +1,6 @@
 /** BYO OpenAI-compatible chat completions. User pays the provider; no publisher backend. */
 
+import { validateByoAiBaseUrlForPermission } from "./byo-ai-base-url";
 import { formatHttpApiError, formatNetworkError } from "./format-api-error";
 
 export type TOpenAiChatRole = "user" | "assistant" | "system";
@@ -35,6 +36,9 @@ export async function postOpenAiCompatibleChat(opts: {
   messages: IOpenAiChatMessage[];
   maxTokens?: number;
 }): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
+  const urlGuard = validateByoAiBaseUrlForPermission(opts.baseUrl);
+  if (!urlGuard.ok) return urlGuard;
+
   const model = opts.model.trim() || DEFAULT_OPENAI_COMPATIBLE_MODEL;
   const url = buildOpenAiChatCompletionsUrl(opts.baseUrl);
   try {

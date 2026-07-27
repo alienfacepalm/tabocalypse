@@ -17,10 +17,24 @@ function resolvePrivilegedFetchUrl(url: string): string | null {
   }
 }
 
-export async function privilegedFetchJsonInBackground(
+/** Reject redirects that leave the allowlisted host (or leave HTTPS). */
+function assertAllowlistedFinalUrl(requestUrl: string, responseUrl: string): string | null {
+  let finalUrl: string;
+  try {
+    finalUrl = normalizePrivilegedExtensionFetchUrl(responseUrl || requestUrl);
+  } catch {
+    return null;
+  }
+  if (!isPrivilegedExtensionFetchUrlAllowed(finalUrl)) {
+    return null;
+  }
+  return finalUrl;
+}
+
+async function privilegedFetchResponse(
   url: string,
-  headers?: Record<string, string>,
-): Promise<TPrivilegedFetchJsonResponse> {
+  init?: RequestInit,
+): Promise<{ ok: true; res: Response } | { ok: false; error: string }> {
   const normalizedUrl = resolvePrivilegedFetchUrl(url);
   if (!normalizedUrl) {
     return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
@@ -29,8 +43,26 @@ export async function privilegedFetchJsonInBackground(
     const res = await fetch(normalizedUrl, {
       credentials: "omit",
       cache: "no-store",
-      ...(headers ? { headers } : {}),
+      redirect: "follow",
+      ...init,
     });
+    if (!assertAllowlistedFinalUrl(normalizedUrl, res.url)) {
+      return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
+    }
+    return { ok: true, res };
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function privilegedFetchJsonInBackground(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<TPrivilegedFetchJsonResponse> {
+  const fetched = await privilegedFetchResponse(url, headers ? { headers } : undefined);
+  if (!fetched.ok) return fetched;
+  const { res } = fetched;
+  try {
     if (!res.ok) {
       let error = `HTTP ${res.status}`;
       try {
@@ -57,16 +89,10 @@ export async function privilegedFetchTextInBackground(
   url: string,
   headers?: Record<string, string>,
 ): Promise<TPrivilegedFetchTextResponse> {
-  const normalizedUrl = resolvePrivilegedFetchUrl(url);
-  if (!normalizedUrl) {
-    return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
-  }
+  const fetched = await privilegedFetchResponse(url, headers ? { headers } : undefined);
+  if (!fetched.ok) return fetched;
+  const { res } = fetched;
   try {
-    const res = await fetch(normalizedUrl, {
-      credentials: "omit",
-      cache: "no-store",
-      ...(headers ? { headers } : {}),
-    });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const text = await res.text();
     return { ok: true, text };
@@ -78,12 +104,10 @@ export async function privilegedFetchTextInBackground(
 export async function privilegedFetchBytesInBackground(
   url: string,
 ): Promise<TPrivilegedFetchBytesResponse> {
-  const normalizedUrl = resolvePrivilegedFetchUrl(url);
-  if (!normalizedUrl) {
-    return { ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND };
-  }
+  const fetched = await privilegedFetchResponse(url);
+  if (!fetched.ok) return fetched;
+  const { res } = fetched;
   try {
-    const res = await fetch(normalizedUrl, { credentials: "omit", cache: "no-store" });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const mime = res.headers.get("content-type") ?? "application/octet-stream";
     const buf = await res.arrayBuffer();
