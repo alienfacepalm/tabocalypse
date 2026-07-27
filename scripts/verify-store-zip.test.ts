@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -10,23 +10,24 @@ import {
   verifyStoreZip,
 } from "./verify-store-zip";
 
-function toTarFriendlyPath(path: string): string {
-  // Windows tar treats `C:\...` as a remote host unless slashes are forward.
-  return path.replace(/\\/g, "/");
-}
+const WINDOWS_TEST_ZIP_NAME = "__tabocalypse-test-archive.zip";
 
 function makeZip(dir: string, zipPath: string): void {
-  const result =
-    process.platform === "win32"
-      ? spawnSync("tar", [
-          "-a",
-          "-cf",
-          toTarFriendlyPath(zipPath),
-          "-C",
-          toTarFriendlyPath(dir),
-          ".",
-        ])
-      : spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
+  if (process.platform === "win32") {
+    // Avoid absolute `C:/...` paths — tar can treat the drive letter as a remote host.
+    const localZipPath = join(dir, WINDOWS_TEST_ZIP_NAME);
+    const result = spawnSync("tar", ["-a", "-cf", WINDOWS_TEST_ZIP_NAME, "."], { cwd: dir });
+    if (result.status !== 0) {
+      throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
+    }
+    if (localZipPath !== zipPath) {
+      rmSync(zipPath, { force: true });
+      renameSync(localZipPath, zipPath);
+    }
+    return;
+  }
+
+  const result = spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
   if (result.status !== 0) {
     throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
   }
