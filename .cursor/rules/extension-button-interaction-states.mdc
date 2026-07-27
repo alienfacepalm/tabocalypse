@@ -1,7 +1,7 @@
 ---
 description: Extension buttons must define hover and active feedback (shared .btn layer or explicit utilities)
 globs: apps/extension/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Extension UI: button hover and active states

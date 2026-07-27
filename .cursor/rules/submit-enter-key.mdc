@@ -1,7 +1,7 @@
 ---
 description: Submit actions beside text fields must also run on Enter (same as the submit control)
 globs: apps/extension/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Submit controls: Enter key

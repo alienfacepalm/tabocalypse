@@ -1,7 +1,7 @@
 ---
 description: Use Lucide React for compact/icon affordances in extension UI (with accessibility)
 globs: apps/extension/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Extension UI: Lucide icons

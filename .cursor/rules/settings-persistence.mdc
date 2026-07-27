@@ -1,7 +1,7 @@
 ---
 description: User settings persistence and multi-tab consistency for the extension
 globs: apps/extension/lib/settings.ts,apps/extension/entrypoints/newtab/app.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Settings persistence (extension)

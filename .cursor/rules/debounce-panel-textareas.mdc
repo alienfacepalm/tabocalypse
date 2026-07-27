@@ -1,7 +1,7 @@
 ---
 description: Debounce persisted textarea writes in HUD panels
 globs: apps/extension/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Debounce persisted textarea writes in panels

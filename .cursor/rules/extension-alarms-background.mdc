@@ -1,7 +1,7 @@
 ---
 description: Alarms run in the MV3 service worker and deliver OS notifications only
 globs: apps/extension/**/*.{ts,tsx}
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Extension alarms (background + OS notifications)

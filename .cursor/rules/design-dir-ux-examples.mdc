@@ -1,7 +1,7 @@
 ---
 description: Use `design/` HTML examples as UX/layout reference for the new tab
 globs: apps/extension/**/*.{tsx,css,mjs}
-alwaysApply: false
+alwaysApply: true
 ---
 
 # `design/` is the UX example source
