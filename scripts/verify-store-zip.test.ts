@@ -10,14 +10,24 @@ import {
   verifyStoreZip,
 } from "./verify-store-zip";
 
+const WINDOWS_STAGING_ZIP = "__tabocalypse-staging.zip";
+
 function makeZip(dir: string, zipPath: string): void {
   if (process.platform === "win32") {
     const archiveName = basename(zipPath);
-    const result = spawnSync("tar", ["-a", "-cf", archiveName, "."], { cwd: dir });
+    const stagingName = WINDOWS_STAGING_ZIP;
+    const result = spawnSync(
+      "tar",
+      ["-a", "-cf", stagingName, "--exclude", stagingName, "--exclude", archiveName, "."],
+      { cwd: dir },
+    );
     if (result.status !== 0) {
       throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
     }
+    const stagedPath = join(dir, stagingName);
     const localZipPath = join(dir, archiveName);
+    rmSync(localZipPath, { force: true });
+    renameSync(stagedPath, localZipPath);
     if (localZipPath !== zipPath) {
       rmSync(zipPath, { force: true });
       renameSync(localZipPath, zipPath);
