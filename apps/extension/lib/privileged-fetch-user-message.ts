@@ -61,7 +61,10 @@ export function resolvePrivilegedFetchUserMessage(error: string): IPrivilegedFet
     trimmed.includes("Provider server error") ||
     trimmed.includes("could not load") ||
     trimmed.includes("Could not load") ||
-    trimmed.includes("Bad weather payload");
+    trimmed.includes("Bad weather payload") ||
+    trimmed.includes("Steam ID") ||
+    trimmed.includes("Steam Web API key") ||
+    trimmed.includes("Could not resolve");
 
   return {
     userMessage: isLikelyUserActionable ? trimmed : GENERIC_FETCH_USER_MESSAGE,

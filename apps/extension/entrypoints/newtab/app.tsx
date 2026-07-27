@@ -5,13 +5,13 @@ import {
   CheckCircle2,
   CircleX,
   Download,
-  Eye,
-  EyeOff,
+  ExternalLink,
   Flame,
   FolderUp,
   Image,
   ImagePlus,
   Images,
+  Info,
   LayoutDashboard,
   LayoutGrid,
   Layers,
@@ -61,6 +61,7 @@ import {
 } from "../../components/panel-sdk";
 import { TabocalypseSettingsProvider } from "../../components/tabocalypse-settings-context";
 import { HudColorInput } from "../../components/hud-color-input";
+import { SettingsCredentialField } from "../../components/settings-credential-field";
 import type { TPanelToastHandle as THudToastHandle } from "../../components/panel-sdk";
 import { ClockWidget } from "../../components/built-in/clock-widget";
 import { CryptoPricesWidget } from "../../components/built-in/crypto-prices-widget";
@@ -74,6 +75,8 @@ import { SearchEngineSettingPicker } from "../../components/search-engine-settin
 import { TodoWidget } from "../../components/built-in/todo-widget";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widget";
+import { SteamChartsWidget } from "../../components/built-in/steam-charts-widget";
+import { SteamIconLogo, steamWebApiKeyExampleUrl } from "../../components/built-in/steam-icon-logo";
 import { PluginDeck } from "../../components/plugin-views";
 import { SettingsChangelogPanel } from "../../components/settings-changelog-panel";
 import { SettingsFeedbackForm } from "../../components/settings-feedback-form";
@@ -113,6 +116,9 @@ import {
   coerceCryptoChartDays,
   coerceHumorBuiltinVoice,
   coercePreset,
+  coerceSteamChartsBoardMode,
+  coerceSteamChartsRowCount,
+  coerceSteamChartsSteamId,
   DEFAULT_BACKGROUND_ROTATE_MINUTES,
   defaultSettings,
   defaultStickyNotePosition,
@@ -134,6 +140,8 @@ import {
   resolveWidgetsForDisplay,
   hasWidgetsDisplayOverride,
   saveSettings,
+  STEAM_CHARTS_ROW_COUNT_MAX,
+  STEAM_CHARTS_ROW_COUNT_MIN,
   type THumorIntensity,
   type THudPanelId,
   type TWidgetKey,
@@ -243,6 +251,8 @@ type TSettingsUpdater = ISettings | ((current: ISettings) => ISettings);
 type TSettingsSectionJump =
   | "weather"
   | "balancedNews"
+  | "steamCharts"
+  | "steamChartsSteamId"
   | "widgets"
   | "chaos"
   | "byoAi"
@@ -262,6 +272,7 @@ type TSettingsAccordionSection =
   | "background"
   | "weather"
   | "balancedNews"
+  | "steamCharts"
   | "bookmarks"
   | "optionalPermissions"
   | "byoAi"
@@ -424,13 +435,16 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const [settingsAccordionOpen, setSettingsAccordionOpen] = useState<
     Partial<Record<TSettingsAccordionSection, boolean>>
   >(() => ({ chaos: true }));
-  const [byoAiApiKeyVisible, setByoAiApiKeyVisible] = useState(false);
+  const [steamApiKeyHelpOpen, setSteamApiKeyHelpOpen] = useState(false);
+  const [steamSteamIdHelpOpen, setSteamSteamIdHelpOpen] = useState(false);
+  const [steamApiKeyExampleOpen, setSteamApiKeyExampleOpen] = useState(false);
   const [humorContentRevision, setHumorContentRevision] = useState(0);
   const [humorRefreshBusy, setHumorRefreshBusy] = useState(false);
   const [humorRefreshStatus, setHumorRefreshStatus] = useState<string | null>(null);
   const weatherManualGeoEpochRef = useRef(0);
   const weatherSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const balancedNewsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const steamChartsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -975,6 +989,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, [persist]);
 
   const closeSettingsDialog = useCallback(() => {
+    setSteamApiKeyExampleOpen(false);
     setOpenSettings(false);
     const cur = latestSettingsRef.current;
     if (!cur.hasSeenSettingsIntro) {
@@ -1025,15 +1040,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
         ? weatherSettingsSectionRef.current
         : pendingSettingsSectionJump === "balancedNews"
           ? balancedNewsSettingsSectionRef.current
-          : pendingSettingsSectionJump === "widgets"
-            ? widgetsSettingsSectionRef.current
-            : pendingSettingsSectionJump === "chaos"
-              ? chaosSettingsSectionRef.current
-              : pendingSettingsSectionJump === "byoAi"
-                ? byoAiSettingsSectionRef.current
-                : pendingSettingsSectionJump === "bookmarks"
-                  ? bookmarksSettingsSectionRef.current
-                  : optionalPermissionsSettingsSectionRef.current;
+          : pendingSettingsSectionJump === "steamCharts" ||
+              pendingSettingsSectionJump === "steamChartsSteamId"
+            ? steamChartsSettingsSectionRef.current
+            : pendingSettingsSectionJump === "widgets"
+              ? widgetsSettingsSectionRef.current
+              : pendingSettingsSectionJump === "chaos"
+                ? chaosSettingsSectionRef.current
+                : pendingSettingsSectionJump === "byoAi"
+                  ? byoAiSettingsSectionRef.current
+                  : pendingSettingsSectionJump === "bookmarks"
+                    ? bookmarksSettingsSectionRef.current
+                    : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -1046,7 +1064,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
           ? bookmarksPermissionButtonRef.current
           : pendingSettingsSectionJump === "tabsPermission"
             ? tabsPermissionButtonRef.current
-            : section.querySelector("summary");
+            : pendingSettingsSectionJump === "steamChartsSteamId"
+              ? section.querySelector("#settings-steam-steam-id")
+              : section.querySelector("summary");
     requestAnimationFrame(() => {
       section.scrollIntoView({ block: "start" });
       if (focusTarget instanceof HTMLElement) {
@@ -1065,6 +1085,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const openBalancedNewsSettingsSection = useCallback(() => {
     openSettingsAccordionSection("balancedNews");
     setPendingSettingsSectionJump("balancedNews");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openSteamChartsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("steamCharts");
+    setPendingSettingsSectionJump("steamCharts");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openSteamChartsSteamIdSettings = useCallback(() => {
+    openSettingsAccordionSection("steamCharts");
+    setPendingSettingsSectionJump("steamChartsSteamId");
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
@@ -2219,6 +2251,13 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           widgets={effectiveWidgets}
                           preset={s.preset}
                           onToggle={toggleWidget}
+                          extras={{
+                            steamCharts: {
+                              icon: <SteamIconLogo size={16} />,
+                              onOpenSettings: openSteamChartsSettingsSection,
+                              settingsTip: "Open Settings > Steam® leaderboard",
+                            },
+                          }}
                         />
                         {hasWidgetsDisplayOverride(s.widgetsByDisplay, displayLayoutKey) ? (
                           <button
@@ -2271,12 +2310,29 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           ))}
                         </div>
                         <p className="muted sm mb-2 mt-4">Accent palette</p>
+                        {s.themeAccentsMatchWallpaper ? (
+                          <p className="muted sm mb-2" role="status">
+                            Auto HUD is on, so accents follow your wallpaper and presets are locked.
+                            Turn Auto HUD off under Custom accents below to pick a specific palette.
+                          </p>
+                        ) : (
+                          <p className="muted sm mb-2">
+                            Choose a preset here, or turn Auto HUD on under Custom accents to sample
+                            accents from Bing or uploaded wallpaper instead.
+                          </p>
+                        )}
                         <div className="row wrap">
                           {THEME_PRESET_PALETTES.map((palette) => (
                             <button
                               key={palette}
                               type="button"
                               className={s.themePalette === palette ? "btn primary" : "btn"}
+                              disabled={s.themeAccentsMatchWallpaper}
+                              title={
+                                s.themeAccentsMatchWallpaper
+                                  ? "Turn Auto HUD off under Custom accents to pick a palette"
+                                  : undefined
+                              }
                               onClick={() =>
                                 void persist((cur) => ({ ...cur, themePalette: palette }))
                               }
@@ -2299,11 +2355,26 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           ))}
                         </div>
                         <p className="muted sm mb-2 mt-4">Custom accents</p>
-                        <p className="muted sm mb-3">
-                          The swatches match the selected preset. Changing either switches to a
-                          custom palette (synced like other appearance settings).
-                        </p>
-                        <HudTip tip="Sample the wallpaper (lower area → primary accent, upper band → secondary) and save a custom palette when the image changes. Sampled colors are lightened for readability—manual accent picks below are unchanged.">
+                        {s.themeAccentsMatchWallpaper ? (
+                          <p className="muted sm mb-3" role="status">
+                            Auto HUD samples primary and secondary accents from Bing or uploaded
+                            wallpaper (and overrides the Accent palette above). Turn it off to
+                            choose a preset or pick colors yourself.
+                          </p>
+                        ) : (
+                          <p className="muted sm mb-3">
+                            The swatches match the selected preset. Changing either switches to a
+                            custom palette (synced like other appearance settings). Turn Auto HUD on
+                            to sample accents from Bing or uploaded wallpaper instead of a preset.
+                          </p>
+                        )}
+                        <HudTip
+                          tip={
+                            s.themeAccentsMatchWallpaper
+                              ? "Turn off to unlock the Accent palette and custom swatches above"
+                              : "Sample the wallpaper (lower area → primary, upper band → secondary) and lock the Accent palette while this is on. Sampled colors are lightened for readability."
+                          }
+                        >
                           <label className="check-row mb-3">
                             <input
                               type="checkbox"
@@ -2318,10 +2389,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </HudTip>
                         <div className="color-accent-row">
                           <label htmlFor="tabocalypse-accent-primary">Primary accent</label>
-                          <HudTip tip="Main HUD highlight color (buttons, borders)">
+                          <HudTip
+                            tip={
+                              s.themeAccentsMatchWallpaper
+                                ? "Turn Auto HUD off to edit the primary accent"
+                                : "Main HUD highlight color (buttons, borders)"
+                            }
+                          >
                             <HudColorInput
                               id="tabocalypse-accent-primary"
-                              aria-label="Primary accent color"
+                              aria-label={
+                                s.themeAccentsMatchWallpaper
+                                  ? "Primary accent color (locked while Auto HUD is on)"
+                                  : "Primary accent color"
+                              }
+                              disabled={s.themeAccentsMatchWallpaper}
                               value={
                                 getResolvedAccentPair(s.themePalette, {
                                   accent: s.themeCustomAccent,
@@ -2334,10 +2416,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                         </div>
                         <div className="color-accent-row">
                           <label htmlFor="tabocalypse-accent-secondary">Secondary accent</label>
-                          <HudTip tip="Second highlight for hovers and contrast accents">
+                          <HudTip
+                            tip={
+                              s.themeAccentsMatchWallpaper
+                                ? "Turn Auto HUD off to edit the secondary accent"
+                                : "Second highlight for hovers and contrast accents"
+                            }
+                          >
                             <HudColorInput
                               id="tabocalypse-accent-secondary"
-                              aria-label="Secondary accent color"
+                              aria-label={
+                                s.themeAccentsMatchWallpaper
+                                  ? "Secondary accent color (locked while Auto HUD is on)"
+                                  : "Secondary accent color"
+                              }
+                              disabled={s.themeAccentsMatchWallpaper}
                               value={
                                 getResolvedAccentPair(s.themePalette, {
                                   accent: s.themeCustomAccent,
@@ -3266,18 +3359,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             }}
                           />
                         </label>
-                        <label className="block mt-3">
+                        <label className="block mt-3" htmlFor="settings-balanced-news-api-key">
                           FreeQuickNews API key (optional)
-                          <input
-                            type="password"
-                            autoComplete="off"
+                          <SettingsCredentialField
+                            id="settings-balanced-news-api-key"
+                            name="tabocalypse-balanced-news-api-key"
+                            kind="secret"
                             value={s.balancedNewsApiKey}
                             placeholder="fqn_…"
-                            onChange={(e) => {
-                              void persist((cur) => ({
-                                ...cur,
-                                balancedNewsApiKey: e.target.value,
-                              }));
+                            className="row gap-2 mt-1"
+                            onCommit={(balancedNewsApiKey) => {
+                              void persist((cur) => ({ ...cur, balancedNewsApiKey }));
                             }}
                           />
                         </label>
@@ -3285,6 +3377,250 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           Without a key, FreeQuickNews allows about 100 requests per day. Register
                           at freequicknews.com for a higher free tier.
                         </p>
+                      </div>
+                    </details>
+
+                    <details
+                      ref={steamChartsSettingsSectionRef}
+                      id="settings-steam-charts"
+                      className="acc-item"
+                      open={settingsAccordionIsOpen("steamCharts")}
+                      onToggle={onSettingsAccordionToggle("steamCharts")}
+                    >
+                      <summary className="acc-summary">
+                        <span className="acc-title inline-flex items-center gap-2">
+                          <SteamIconLogo size={18} />
+                          Steam® leaderboard
+                        </span>
+                      </summary>
+                      <div className="acc-body">
+                        <p className="muted sm mb-2 mt-0">
+                          Master switch for this monitor. Options below belong to this panel.
+                        </p>
+                        <HudTip
+                          tip={
+                            effectiveWidgets.steamCharts
+                              ? "Hide Steam® leaderboard on this monitor"
+                              : "Show Steam® leaderboard on this monitor"
+                          }
+                        >
+                          <button
+                            type="button"
+                            className={
+                              effectiveWidgets.steamCharts ? "btn primary has-icon" : "btn has-icon"
+                            }
+                            aria-pressed={effectiveWidgets.steamCharts}
+                            aria-label={
+                              effectiveWidgets.steamCharts
+                                ? "Hide Steam® leaderboard on this monitor"
+                                : "Show Steam® leaderboard on this monitor"
+                            }
+                            onClick={() =>
+                              toggleWidget("steamCharts", !effectiveWidgets.steamCharts)
+                            }
+                          >
+                            <SteamIconLogo size={18} />
+                            <span>Steam® leaderboard</span>
+                          </button>
+                        </HudTip>
+                        <div
+                          className={[
+                            "mt-3 border-l-2 border-accent pl-3",
+                            effectiveWidgets.steamCharts ? "" : "opacity-70",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          <p className="muted sm mb-2 mt-0">Panel options</p>
+                          <label className="block">
+                            Preferred rows
+                            <input
+                              type="number"
+                              min={STEAM_CHARTS_ROW_COUNT_MIN}
+                              max={STEAM_CHARTS_ROW_COUNT_MAX}
+                              value={s.steamChartsRowCount}
+                              onChange={(e) => {
+                                const steamChartsRowCount = coerceSteamChartsRowCount(
+                                  Number(e.target.value),
+                                  s.steamChartsRowCount,
+                                );
+                                void persist((cur) => ({ ...cur, steamChartsRowCount }));
+                              }}
+                            />
+                          </label>
+                          <p className="muted text-xs mt-1 mb-0">
+                            Minimum to keep loaded. Tall panels load more to fill their height
+                            (virtualized scroll); absolute cap is 200.
+                          </p>
+                          <div className="mt-3">
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <label htmlFor="settings-steam-api-key">API key</label>
+                              <HudTip tip="How to get a Steam Web API key">
+                                <button
+                                  type="button"
+                                  className="btn ghost icon-only sm"
+                                  aria-expanded={steamApiKeyHelpOpen}
+                                  aria-controls="settings-steam-api-key-help"
+                                  aria-label="How to get a Steam Web API key"
+                                  onClick={() => setSteamApiKeyHelpOpen((v) => !v)}
+                                >
+                                  <Info size={14} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                              <HudTip tip="Stored on this device only. Default settings export omits it.">
+                                <button
+                                  type="button"
+                                  className="btn ghost icon-only sm"
+                                  aria-label="API key stays on this device"
+                                >
+                                  <LucideLock size={14} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                            </div>
+                            {steamApiKeyHelpOpen ? (
+                              <div
+                                id="settings-steam-api-key-help"
+                                role="note"
+                                className="hud-glass-popover mb-2 p-2.5 text-xs leading-snug"
+                              >
+                                <p className="m-0">
+                                  On Valve's form, set Domain Name to{" "}
+                                  <span className="font-mono text-accent">localhost</span> (not your
+                                  API key). Copy the key Valve shows, then paste it into the API key
+                                  field below — not Steam ID. Optional; open steamcharts.com data
+                                  works without one.
+                                </p>
+                                <button
+                                  type="button"
+                                  className="btn ghost mt-2 w-full p-0 text-left"
+                                  aria-label="View example of Steam Web API key page"
+                                  onClick={() => setSteamApiKeyExampleOpen(true)}
+                                >
+                                  <img
+                                    src={steamWebApiKeyExampleUrl()}
+                                    alt="Example: Steam Web API key page with Domain Name localhost (key hidden)"
+                                    className="block w-full border border-border"
+                                    decoding="async"
+                                  />
+                                </button>
+                                <p className="muted m-0 mt-1 text-[0.65rem]">
+                                  Example screenshot (key redacted). Click to enlarge.
+                                </p>
+                                <button
+                                  type="button"
+                                  className="linkish mt-2 inline-flex items-center gap-1"
+                                  onClick={() => {
+                                    void browser.tabs.create({
+                                      url: "https://steamcommunity.com/dev/apikey",
+                                    });
+                                  }}
+                                >
+                                  <ExternalLink size={14} strokeWidth={2} aria-hidden />
+                                  Open Steam Web API key page
+                                </button>
+                              </div>
+                            ) : null}
+                            <SettingsCredentialField
+                              id="settings-steam-api-key"
+                              name="tabocalypse-steam-web-api-key"
+                              kind="secret"
+                              value={s.steamWebApiKey}
+                              placeholder="Optional — open data without one"
+                              onCommit={(steamWebApiKey) => {
+                                void persist((cur) => ({ ...cur, steamWebApiKey }));
+                              }}
+                            />
+                          </div>
+                          <div className="mt-3">
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <label htmlFor="settings-steam-steam-id">Steam ID</label>
+                              <HudTip tip="How to find your Steam profile ID">
+                                <button
+                                  type="button"
+                                  className="btn ghost icon-only sm"
+                                  aria-expanded={steamSteamIdHelpOpen}
+                                  aria-controls="settings-steam-steam-id-help"
+                                  aria-label="How to find your Steam profile ID"
+                                  onClick={() => setSteamSteamIdHelpOpen((v) => !v)}
+                                >
+                                  <Info size={14} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                              <HudTip tip="Stored on this device only. Default settings export omits it.">
+                                <button
+                                  type="button"
+                                  className="btn ghost icon-only sm"
+                                  aria-label="Steam ID stays on this device"
+                                >
+                                  <LucideLock size={14} strokeWidth={2} aria-hidden />
+                                </button>
+                              </HudTip>
+                            </div>
+                            {steamSteamIdHelpOpen ? (
+                              <div
+                                id="settings-steam-steam-id-help"
+                                role="note"
+                                className="hud-glass-popover mb-2 p-2.5 text-xs leading-snug"
+                              >
+                                <ol className="m-0 list-decimal space-y-1.5 pl-4">
+                                  <li>
+                                    Open your Steam profile (client or browser). In the Steam app:
+                                    click your name (top right) →{" "}
+                                    <span className="font-mono text-accent">View my profile</span>.
+                                  </li>
+                                  <li>
+                                    Read the address bar URL (in the desktop client, enable{" "}
+                                    <span className="font-mono text-accent">
+                                      Settings → Interface → Display Steam URL address bar
+                                    </span>{" "}
+                                    if you do not see one).
+                                  </li>
+                                  <li>
+                                    If the URL is{" "}
+                                    <span className="font-mono text-accent">
+                                      steamcommunity.com/profiles/7656119…
+                                    </span>
+                                    , paste the 17-digit number into Steam ID below.
+                                  </li>
+                                  <li>
+                                    If the URL is{" "}
+                                    <span className="font-mono text-accent">
+                                      steamcommunity.com/id/yourname
+                                    </span>
+                                    , paste only the custom name (yourname) — not your display name.
+                                  </li>
+                                </ol>
+                                <button
+                                  type="button"
+                                  className="linkish mt-2 inline-flex items-center gap-1"
+                                  onClick={() => {
+                                    void browser.tabs.create({
+                                      url: "https://steamcommunity.com/my/profile",
+                                    });
+                                  }}
+                                >
+                                  <ExternalLink size={14} strokeWidth={2} aria-hidden />
+                                  Open my Steam profile
+                                </button>
+                              </div>
+                            ) : null}
+                            <SettingsCredentialField
+                              id="settings-steam-steam-id"
+                              name="tabocalypse-steam-charts-steam-id"
+                              kind="identifier"
+                              value={s.steamChartsSteamId}
+                              placeholder="Profile name or 7656119…"
+                              transform={coerceSteamChartsSteamId}
+                              onCommit={(steamChartsSteamId) => {
+                                void persist((cur) => ({ ...cur, steamChartsSteamId }));
+                              }}
+                            />
+                          </div>
+                          <p className="muted text-xs mt-1 mb-0">
+                            Needed for Recently played (API key alone is not enough). Use the info
+                            control above for steps.
+                          </p>
+                        </div>
                       </div>
                     </details>
 
@@ -3901,56 +4237,44 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             void runByoAiTest();
                           }}
                         >
-                          <div className="flex gap-2">
-                            <input
-                              placeholder={
+                          <SettingsCredentialField
+                            key={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? "gemini"
+                                : "openai"
+                            }
+                            id="settings-byo-ai-api-key"
+                            name={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? "tabocalypse-gemini-api-key"
+                                : "tabocalypse-openai-api-key"
+                            }
+                            kind="secret"
+                            value={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? s.geminiApiKey
+                                : s.openaiApiKey
+                            }
+                            placeholder={
+                              matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) === "gemini"
+                                ? BYO_AI_PROVIDER_PRESETS.gemini.apiKeyHint
+                                : matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
+                                    "openai"
+                                  ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
+                                  : "API key"
+                            }
+                            className="row gap-2"
+                            onCommit={(v) => {
+                              if (
                                 matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
                                 "gemini"
-                                  ? BYO_AI_PROVIDER_PRESETS.gemini.apiKeyHint
-                                  : matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
-                                      "openai"
-                                    ? BYO_AI_PROVIDER_PRESETS.openai.apiKeyHint
-                                    : "API key"
+                              ) {
+                                void persist((cur) => ({ ...cur, geminiApiKey: v }));
+                              } else {
+                                void persist((cur) => ({ ...cur, openaiApiKey: v }));
                               }
-                              type={byoAiApiKeyVisible ? "text" : "password"}
-                              autoComplete="off"
-                              value={
-                                matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
-                                "gemini"
-                                  ? s.geminiApiKey
-                                  : s.openaiApiKey
-                              }
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (
-                                  matchByoAiProviderPreset(s.openaiBaseUrl, s.openaiModel) ===
-                                  "gemini"
-                                ) {
-                                  void persist((cur) => ({ ...cur, geminiApiKey: v }));
-                                } else {
-                                  void persist((cur) => ({ ...cur, openaiApiKey: v }));
-                                }
-                              }}
-                              className="min-w-0 flex-1"
-                            />
-                            <HudTip
-                              tip={byoAiApiKeyVisible ? "Hide the API key" : "Show the API key"}
-                            >
-                              <button
-                                type="button"
-                                className="btn ghost icon-only sm shrink-0"
-                                aria-pressed={byoAiApiKeyVisible}
-                                aria-label={byoAiApiKeyVisible ? "Hide API key" : "Show API key"}
-                                onClick={() => setByoAiApiKeyVisible((visible) => !visible)}
-                              >
-                                {byoAiApiKeyVisible ? (
-                                  <EyeOff size={18} strokeWidth={2} aria-hidden />
-                                ) : (
-                                  <Eye size={18} strokeWidth={2} aria-hidden />
-                                )}
-                              </button>
-                            </HudTip>
-                          </div>
+                            }}
+                          />
                           <input
                             placeholder="Base URL"
                             value={s.openaiBaseUrl}
@@ -4135,8 +4459,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                             <span>Export settings JSON</span>
                           </button>
                           <p className="muted sm mt-2 mb-0 w-full basis-full">
-                            Export omits API keys (OpenAI, Gemini, Balanced news, Steam) so backup
-                            files are safer to share.
+                            Export omits API keys and your Steam ID so backup files are safer to
+                            share.
                           </p>
                           <label className="btn has-icon">
                             <Upload size={18} strokeWidth={2} aria-hidden />
@@ -4276,6 +4600,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                         typeof parsed.balancedNewsApiKey === "string"
                                           ? parsed.balancedNewsApiKey
                                           : d.balancedNewsApiKey,
+                                      steamChartsRowCount: coerceSteamChartsRowCount(
+                                        parsed.steamChartsRowCount,
+                                        d.steamChartsRowCount,
+                                      ),
+                                      steamChartsBoardMode: coerceSteamChartsBoardMode(
+                                        parsed.steamChartsBoardMode,
+                                        d.steamChartsBoardMode,
+                                      ),
+                                      steamChartsSteamId: coerceSteamChartsSteamId(
+                                        parsed.steamChartsSteamId,
+                                      ),
                                       humorBuiltinVoice: coerceHumorBuiltinVoice(
                                         parsed as {
                                           humorBuiltinVoice?: unknown;
@@ -4382,6 +4717,56 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     </details>
                   </div>
                 </div>
+              </div>
+            </div>
+          ) : null}
+
+          {steamApiKeyExampleOpen ? (
+            <div
+              className="dialog-backdrop z-[60]"
+              role="presentation"
+              onClick={() => setSteamApiKeyExampleOpen(false)}
+            >
+              <div
+                className="dialog small flex max-w-[min(40rem,100%)] flex-col gap-3 p-4"
+                role="dialog"
+                aria-label="Steam Web API key page example"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="row items-start justify-between gap-2">
+                  <h2 className="m-0 text-base">Steam Web API key — example</h2>
+                  <button
+                    type="button"
+                    className="btn ghost has-icon shrink-0"
+                    onClick={() => setSteamApiKeyExampleOpen(false)}
+                  >
+                    <X size={18} strokeWidth={2} aria-hidden />
+                    <span>Close</span>
+                  </button>
+                </div>
+                <img
+                  src={steamWebApiKeyExampleUrl()}
+                  alt="Example Steam Web API key page. Domain Name is localhost. The API key value is redacted."
+                  className="block w-full border border-border"
+                  decoding="async"
+                />
+                <p className="muted m-0 text-xs leading-snug">
+                  After you register, Valve shows your key here. Use{" "}
+                  <span className="font-mono text-accent">localhost</span> for Domain Name, then
+                  paste the key into Tabocalypse’s API key field.
+                </p>
+                <button
+                  type="button"
+                  className="btn primary has-icon self-start"
+                  onClick={() => {
+                    void browser.tabs.create({
+                      url: "https://steamcommunity.com/dev/apikey",
+                    });
+                  }}
+                >
+                  <ExternalLink size={18} strokeWidth={2} aria-hidden />
+                  <span>Open Steam key page</span>
+                </button>
               </div>
             </div>
           ) : null}
@@ -4788,6 +5173,29 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     <SpeedTestWidget
                       displayLocale={hudNumberLocale}
                       hourFormat={effectiveClockHourFormat}
+                    />
+                  </DraggableHudPanel>
+                ) : null}
+                {effectiveWidgets.steamCharts ? (
+                  <DraggableHudPanel
+                    key="steamCharts"
+                    panelId="steamCharts"
+                    canvasRef={hudCanvasRef}
+                    position={effectiveHudPanelPositions.steamCharts}
+                    locked={s.hudLayoutLocked}
+                    onCommit={(pos) => commitHudPanel("steamCharts", pos)}
+                  >
+                    <SteamChartsWidget
+                      rowCount={s.steamChartsRowCount}
+                      boardMode={s.steamChartsBoardMode}
+                      onBoardModeChange={(steamChartsBoardMode) => {
+                        void persist((cur) => ({ ...cur, steamChartsBoardMode }));
+                      }}
+                      steamWebApiKey={s.steamWebApiKey}
+                      steamId={s.steamChartsSteamId}
+                      displayLocale={hudNumberLocale}
+                      onOpenSteamSettings={openSteamChartsSettingsSection}
+                      onNeedSteamId={openSteamChartsSteamIdSettings}
                     />
                   </DraggableHudPanel>
                 ) : null}

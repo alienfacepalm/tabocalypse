@@ -5,6 +5,7 @@ export interface IHudColorInputProps {
   id?: string;
   value: string;
   "aria-label": string;
+  disabled?: boolean;
   onChange: (e: FormEvent<HTMLInputElement>) => void;
 }
 
@@ -31,21 +32,24 @@ export function HudColorInput({
   id,
   value,
   "aria-label": ariaLabel,
+  disabled = false,
   onChange,
 }: IHudColorInputProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const openPicker = useCallback(() => {
+    if (disabled) return;
     const el = inputRef.current;
     if (el) openOrActivateColorInput(el);
-  }, []);
+  }, [disabled]);
 
   return (
     <span className="inline-flex max-w-full align-middle">
       <button
         type="button"
         id={id}
-        className="relative h-9 w-12 shrink-0 cursor-pointer border-2 border-border bg-transparent p-0 shadow-[3px_3px_0_0_var(--color-accent)] transition-[transform,box-shadow,filter] duration-100 hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_var(--color-accent)] hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        disabled={disabled}
+        className="relative h-9 w-12 shrink-0 cursor-pointer border-2 border-border bg-transparent p-0 shadow-[3px_3px_0_0_var(--color-accent)] transition-[transform,box-shadow,filter] duration-100 hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_var(--color-accent)] hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:brightness-100 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:brightness-100"
         aria-label={ariaLabel}
         onClick={openPicker}
       >
@@ -59,6 +63,7 @@ export function HudColorInput({
         ref={inputRef}
         type="color"
         tabIndex={-1}
+        disabled={disabled}
         className="sr-only"
         value={value}
         aria-hidden

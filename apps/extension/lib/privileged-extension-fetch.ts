@@ -183,6 +183,10 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "api.bing.com",
   "api.wikimedia.org",
   "steamcharts.com",
+  "api.steampowered.com",
+  "cdn.cloudflare.steamstatic.com",
+  "shared.akamai.steamstatic.com",
+  "steamcdn-a.akamaihd.net",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {

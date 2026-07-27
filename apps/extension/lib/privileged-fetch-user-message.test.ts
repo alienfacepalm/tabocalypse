@@ -30,6 +30,14 @@ describe("resolvePrivilegedFetchUserMessage", () => {
     expect(resolved.showTechnicalDetail).toBe(false);
   });
 
+  it("keeps Steam settings guidance visible", () => {
+    const message =
+      "Add your Steam ID (or profile name) under Settings > Steam® leaderboard to load recently played games.";
+    const resolved = resolvePrivilegedFetchUserMessage(message);
+    expect(resolved.userMessage).toBe(message);
+    expect(resolved.showTechnicalDetail).toBe(false);
+  });
+
   it("hides opaque internal errors but can expose technical detail separately", () => {
     const resolved = resolvePrivilegedFetchUserMessage(PRIV_FETCH_BACKGROUND_NO_RESPONSE);
     expect(resolved.userMessage).toContain("background worker");

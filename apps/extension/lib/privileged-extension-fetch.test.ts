@@ -46,6 +46,16 @@ describe("isPrivilegedExtensionFetchUrlAllowed", () => {
     expect(isPrivilegedExtensionFetchUrlAllowed(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL)).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://www.unsuck-it.com/classics")).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://steamcharts.com/top")).toBe(true);
+    expect(
+      isPrivilegedExtensionFetchUrlAllowed(
+        "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/",
+      ),
+    ).toBe(true);
+    expect(
+      isPrivilegedExtensionFetchUrlAllowed(
+        "https://cdn.cloudflare.steamstatic.com/steam/apps/730/capsule_sm_120.jpg",
+      ),
+    ).toBe(true);
     expect(isPrivilegedExtensionFetchUrlAllowed("https://duckduckgo.com/ac/?q=tab&type=list")).toBe(
       true,
     );

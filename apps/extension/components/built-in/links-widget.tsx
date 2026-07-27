@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, EyeOff } from "lucide-react";
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import browser from "webextension-polyfill";
 import { coerceAlarmMetaMessage } from "../../lib/alarm-meta-message";
 import {
@@ -9,7 +9,21 @@ import {
 } from "../../lib/bookmarks-strip-preferences";
 import { rankBookmarksBySearchRelevance } from "../../lib/bookmark-search-relevance";
 import { faviconUrl } from "../../lib/favicon-url";
+import { rowsThatFitViewport } from "../../lib/hud-virtual-window";
+import { HudVirtualList } from "../hud-virtual-list";
 import { PanelBody, PanelTip, PanelTitle, PanelTitleInline } from "../panel-sdk";
+
+/** Row height for bookmarks virtual list (favicon + actions + gap). */
+const BOOKMARKS_ROW_HEIGHT_PX = 32;
+/** Minimum recent/search fetch when the panel has not been measured yet. */
+const BOOKMARKS_FETCH_MIN = 16;
+/** Cap aligned with bookmarks strip preference storage. */
+const BOOKMARKS_FETCH_MAX = 256;
+
+function bookmarksFetchCount(viewportHeightPx: number): number {
+  const fitted = rowsThatFitViewport(viewportHeightPx, BOOKMARKS_ROW_HEIGHT_PX) + 4;
+  return Math.min(BOOKMARKS_FETCH_MAX, Math.max(BOOKMARKS_FETCH_MIN, fitted));
+}
 
 export function TopSitesWidget({
   permissionsEpoch,
@@ -18,10 +32,10 @@ export function TopSitesWidget({
   permissionsEpoch: number;
   onOpenTopSitesSettings: () => void;
 }) {
-  const [sites, setSites] = React.useState<{ url?: string; title?: string }[]>([]);
-  const [err, setErr] = React.useState<"permission" | null>(null);
+  const [sites, setSites] = useState<{ url?: string; title?: string }[]>([]);
+  const [err, setErr] = useState<"permission" | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setErr(null);
     setSites([]);
     const api = browser.topSites;
@@ -83,6 +97,108 @@ export function TopSitesWidget({
   );
 }
 
+type TBookmarkRow = { id: string; title?: string; url?: string };
+
+function BookmarkListRow({
+  bookmark,
+  index,
+  total,
+  searchActive,
+  onReorder,
+  onHide,
+}: {
+  bookmark: TBookmarkRow;
+  index: number;
+  total: number;
+  searchActive: boolean;
+  onReorder: (bookmarkId: string, direction: "up" | "down") => void;
+  onHide: (bookmark: TBookmarksStripItem) => void;
+}): React.JSX.Element {
+  const label = coerceAlarmMetaMessage(bookmark.title as unknown) || bookmark.url || "";
+  const cannotMoveUp = searchActive || index === 0;
+  const cannotMoveDown = searchActive || index >= total - 1;
+  return (
+    <div className="link-grid-row h-full">
+      <PanelTip tip={label} wrapClassName="block min-w-0 flex-1">
+        <a href={bookmark.url} target="_blank" rel="noreferrer">
+          <img
+            src={faviconUrl(bookmark.url ?? "")}
+            alt=""
+            width={16}
+            height={16}
+            className="favicon"
+          />
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+        </a>
+      </PanelTip>
+      <div className="link-grid-row-actions">
+        {!searchActive ? (
+          <>
+            <PanelTip
+              tip={
+                cannotMoveUp
+                  ? "Already first in the list"
+                  : "Move this bookmark earlier in the list"
+              }
+            >
+              <button
+                type="button"
+                className="btn ghost icon-only sm disabled:pointer-events-none"
+                aria-label={
+                  cannotMoveUp
+                    ? "Bookmark is already first in the list"
+                    : "Move bookmark earlier in the list"
+                }
+                title={cannotMoveUp ? "Already first in the list" : undefined}
+                disabled={cannotMoveUp}
+                onClick={() => onReorder(bookmark.id, "up")}
+              >
+                <ChevronUp size={14} strokeWidth={2} aria-hidden />
+              </button>
+            </PanelTip>
+            <PanelTip
+              tip={
+                cannotMoveDown ? "Already last in the list" : "Move this bookmark later in the list"
+              }
+            >
+              <button
+                type="button"
+                className="btn ghost icon-only sm disabled:pointer-events-none"
+                aria-label={
+                  cannotMoveDown
+                    ? "Bookmark is already last in the list"
+                    : "Move bookmark later in the list"
+                }
+                title={cannotMoveDown ? "Already last in the list" : undefined}
+                disabled={cannotMoveDown}
+                onClick={() => onReorder(bookmark.id, "down")}
+              >
+                <ChevronDown size={14} strokeWidth={2} aria-hidden />
+              </button>
+            </PanelTip>
+          </>
+        ) : null}
+        <PanelTip tip="Hide this bookmark from the panel (unhide in Settings > Bookmarks)">
+          <button
+            type="button"
+            className="btn ghost icon-only sm"
+            aria-label="Hide bookmark from panel"
+            onClick={() =>
+              onHide({
+                id: bookmark.id,
+                title: bookmark.title,
+                url: bookmark.url,
+              })
+            }
+          >
+            <EyeOff size={14} strokeWidth={2} aria-hidden />
+          </button>
+        </PanelTip>
+      </div>
+    </div>
+  );
+}
+
 export function BookmarksWidget({
   permissionsEpoch,
   hidden,
@@ -100,14 +216,27 @@ export function BookmarksWidget({
   onOpenBookmarksPermissionSettings: () => void;
   onOpenBookmarksHiddenSettings: () => void;
 }) {
-  const [marks, setMarks] = React.useState<{ id: string; title?: string; url?: string }[]>([]);
-  const [query, setQuery] = React.useState("");
-  const [err, setErr] = React.useState<"permission" | null>(null);
+  const [marks, setMarks] = useState<TBookmarkRow[]>([]);
+  const [query, setQuery] = useState("");
+  const [err, setErr] = useState<"permission" | null>(null);
+  const [listViewportH, setListViewportH] = useState(0);
+  const listHostRef = useRef<HTMLDivElement | null>(null);
 
   const trimmedQuery = query.trim();
   const searchActive = trimmedQuery.length > 0;
+  const fetchCount = bookmarksFetchCount(listViewportH);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const el = listHostRef.current;
+    if (!el) return;
+    const measure = () => setListViewportH(el.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [err]);
+
+  useEffect(() => {
     let cancelled = false;
     setErr(null);
     const api = browser.bookmarks;
@@ -121,9 +250,9 @@ export function BookmarksWidget({
           rankBookmarksBySearchRelevance(
             results.filter((b) => b.url),
             trimmedQuery,
-          ).slice(0, 32),
+          ).slice(0, fetchCount),
         )
-      : api.getRecent(16);
+      : api.getRecent(fetchCount);
     void load
       .then((results) => {
         if (!cancelled) setMarks(results);
@@ -134,14 +263,14 @@ export function BookmarksWidget({
     return () => {
       cancelled = true;
     };
-  }, [permissionsEpoch, searchActive, trimmedQuery]);
+  }, [fetchCount, permissionsEpoch, searchActive, trimmedQuery]);
 
-  const visibleMarks = React.useMemo(
+  const visibleMarks = useMemo(
     () => applyBookmarksStripPreferences(marks, hidden, orderIds),
     [hidden, marks, orderIds],
   );
 
-  const handleReorder = React.useCallback(
+  const handleReorder = useCallback(
     (bookmarkId: string, direction: "up" | "down") => {
       onOrderIdsChange(
         reorderBookmarksStripVisibleIds(
@@ -157,7 +286,7 @@ export function BookmarksWidget({
 
   if (err)
     return (
-      <section className="card">
+      <section className="card flex h-full min-h-0 flex-col">
         <PanelTitle>Bookmarks</PanelTitle>
         <PanelBody>
           <p className="err">
@@ -179,8 +308,8 @@ export function BookmarksWidget({
     );
 
   return (
-    <section className="card">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section className="card flex h-full min-h-0 flex-col gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <PanelTitleInline>Bookmarks</PanelTitleInline>
         <input
           type="search"
@@ -191,9 +320,9 @@ export function BookmarksWidget({
           aria-label="Search bookmarks"
         />
       </div>
-      <PanelBody>
+      <PanelBody bodyOverflow={false} className="flex min-h-0 flex-1 flex-col gap-2">
         {hidden.length > 0 ? (
-          <p className="muted sm mb-2 mt-0">
+          <p className="muted sm mb-0 mt-0 shrink-0">
             {hidden.length} hidden.{" "}
             <PanelTip tip="Open Settings and jump to Hidden from panel">
               <button
@@ -207,95 +336,30 @@ export function BookmarksWidget({
             </PanelTip>
           </p>
         ) : null}
-        <ul className="link-grid">
-          {visibleMarks.map((b, index) => {
-            const label = coerceAlarmMetaMessage(b.title as unknown) || b.url || "";
-            const cannotMoveUp = searchActive || index === 0;
-            const cannotMoveDown = searchActive || index >= visibleMarks.length - 1;
-            return (
-              <li key={b.id} className="link-grid-row">
-                <PanelTip tip={label} wrapClassName="block min-w-0 flex-1">
-                  <a href={b.url} target="_blank" rel="noreferrer">
-                    <img
-                      src={faviconUrl(b.url ?? "")}
-                      alt=""
-                      width={16}
-                      height={16}
-                      className="favicon"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{label}</span>
-                  </a>
-                </PanelTip>
-                <div className="link-grid-row-actions">
-                  {!searchActive ? (
-                    <>
-                      <PanelTip
-                        tip={
-                          cannotMoveUp
-                            ? "Already first in the list"
-                            : "Move this bookmark earlier in the list"
-                        }
-                      >
-                        <button
-                          type="button"
-                          className="btn ghost icon-only sm disabled:pointer-events-none"
-                          aria-label={
-                            cannotMoveUp
-                              ? "Bookmark is already first in the list"
-                              : "Move bookmark earlier in the list"
-                          }
-                          title={cannotMoveUp ? "Already first in the list" : undefined}
-                          disabled={cannotMoveUp}
-                          onClick={() => handleReorder(b.id, "up")}
-                        >
-                          <ChevronUp size={14} strokeWidth={2} aria-hidden />
-                        </button>
-                      </PanelTip>
-                      <PanelTip
-                        tip={
-                          cannotMoveDown
-                            ? "Already last in the list"
-                            : "Move this bookmark later in the list"
-                        }
-                      >
-                        <button
-                          type="button"
-                          className="btn ghost icon-only sm disabled:pointer-events-none"
-                          aria-label={
-                            cannotMoveDown
-                              ? "Bookmark is already last in the list"
-                              : "Move bookmark later in the list"
-                          }
-                          title={cannotMoveDown ? "Already last in the list" : undefined}
-                          disabled={cannotMoveDown}
-                          onClick={() => handleReorder(b.id, "down")}
-                        >
-                          <ChevronDown size={14} strokeWidth={2} aria-hidden />
-                        </button>
-                      </PanelTip>
-                    </>
-                  ) : null}
-                  <PanelTip tip="Hide this bookmark from the panel (unhide in Settings > Bookmarks)">
-                    <button
-                      type="button"
-                      className="btn ghost icon-only sm"
-                      aria-label="Hide bookmark from panel"
-                      onClick={() =>
-                        onHideBookmark({
-                          id: b.id,
-                          title: b.title,
-                          url: b.url,
-                        })
-                      }
-                    >
-                      <EyeOff size={14} strokeWidth={2} aria-hidden />
-                    </button>
-                  </PanelTip>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div ref={listHostRef} className="flex min-h-0 flex-1 flex-col">
+          {visibleMarks.length > 0 ? (
+            <HudVirtualList
+              items={visibleMarks}
+              itemHeight={BOOKMARKS_ROW_HEIGHT_PX}
+              getItemKey={(b) => b.id}
+              aria-label="Bookmarks"
+              renderItem={(b, index) => (
+                <BookmarkListRow
+                  bookmark={b}
+                  index={index}
+                  total={visibleMarks.length}
+                  searchActive={searchActive}
+                  onReorder={handleReorder}
+                  onHide={onHideBookmark}
+                />
+              )}
+            />
+          ) : (
+            <p className="muted font-mono text-sm">
+              {searchActive ? "No bookmarks match that search." : "No recent bookmarks yet."}
+            </p>
+          )}
+        </div>
       </PanelBody>
     </section>
   );

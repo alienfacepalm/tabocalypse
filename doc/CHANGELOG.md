@@ -14,15 +14,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Steam leaderboard** widget — top concurrent players from open steamcharts.com data by default; optional Steam Web API key and Steam ID under **Settings > Steam leaderboard** unlock a **Recently played** board with hours.
 - **Settings > Appearance** — choose **Sharp**, **Soft corners**, or **Pill buttons** for HUD controls (synced like other appearance settings).
 - **Weather** widget location map — lock control (bottom right) freezes pan, zoom, and one-shot location until you unlock.
 - **Weather** widget location map — drag to pan and compact +/− zoom on the map; optional scroll-wheel and double-click zoom in **Settings > Weather > Map**.
 
 ### Changed
 
+- **Bookmarks** panel — loads enough recent (or search) results to fill the panel height and virtualizes the list so tall panels are not left empty.
+- **Steam leaderboard** — **Recently played** loads owned games by last play date (fills tall panels), shows a short last-played date (e.g. `Mar 12`) plus an **hrs** suffix.
+- **Steam leaderboard** — remembers **Top players** vs **Recently played** across new-tab loads (synced preference).
+- **Steam leaderboard** — list is virtualized with infinite scroll (paginated steamcharts.com pages). Tall panels load enough rows to fill their height (preferred-rows setting is a floor; hard cap 200).
+- **Settings credentials** — Steam, FreeQuickNews, and BYO AI API key fields share one secure control (local draft + paste, no `type=password`, masked by default, autofill suppressed). Default settings export also omits Steam ID.
+- **Settings > Steam leaderboard** — Steam ID help popover explains how to find your profile URL (`/profiles/…` number or `/id/…` custom name), with a link to open your Steam profile.
+- **Settings > Steam leaderboard** — Steam ID field accepts paste (same draft/paste handling as the API key) and stores the ID on this device with the API key.
+- **Steam leaderboard** — **Recently played** explains that a Steam ID is required (API key alone is not enough) and offers a button that opens Settings focused on the Steam ID field.
+- **Steam leaderboard** — adding a Steam Web API key no longer replaces the open top-players chart with a failing Steam most-played call. With a key (and Steam ID), the panel gains **Top players** / **Recently played** chips; recently played shows lifetime hours.
+- **Settings > Steam leaderboard** — top-level pressed chip (Steam mark) shows/hides the panel on this monitor; Rows / API key / Steam ID sit under it as panel options. The Widgets chip for Steam also shows the mark plus a settings control that jumps here.
+- **Settings > Appearance** — when **Auto HUD** is on, accent presets and custom color swatches are locked, with copy explaining you must turn Auto HUD off to pick a palette (and turn it on to sample wallpaper accents instead).
+- **Settings > Steam leaderboard** — shorter labels and icon controls (show/hide key, local-only tip, and an info popover with steps plus a link to Valve’s Steam Web API key page) instead of long help paragraphs.
+- **Steam leaderboard** — simplified to one chart (open data by default); multi-board and favorite app-id settings removed from the UI. The panel points you to **Settings > Steam leaderboard** when you have not added a Steam Web API key yet. Rows show Steam store capsule artwork from Valve’s CDN, plus the Steam® icon mark (with Valve trademark attribution).
 - **Settings > Widgets** — panel list uses pressed chips in a wrapping grid (same control style as Appearance) instead of a tall checkbox column.
 - **Settings > Feedback** — opens your email app only (mailto). Builds no longer embed SMTP / Elastic Email credentials.
-- **Settings export** — API keys are omitted from the downloaded JSON by default.
+- **Settings export** — API keys and Steam ID are omitted from the downloaded JSON by default.
 - **Browser sync** — sync and the local mirror merge by `prefsSavedAt` (newer wins; ties keep the mirror so a local save after a failed sync is not discarded).
 - **DESIGN.md** — documents Soft/Pill control shapes as optional Appearance settings (Sharp remains the default).
 - **Weather** widget — the one-shot “use my location” control sits on the location map above the zoom buttons (instead of in the panel header).
@@ -31,8 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Settings > Steam leaderboard** — info help includes a redacted example screenshot of Valve’s API key page (Domain Name: localhost) with an enlarge modal.
+- **Settings > Steam leaderboard** — API key field no longer stays empty after paste (password managers were clearing `type=password` inputs).
+- **Steam leaderboard** — panel chrome uses the same `.card` glass shell as other HUD widgets (content was rendering without a background).
+- **Steam leaderboard** widget — enabling it under Settings > Widgets now shows the HUD panel (it was stored and toggled but never mounted).
+- **Steam Charts** — `steamcharts.com` (and Steam Web API hosts when you add a key) are allowlisted so the leaderboard can load after reload.
 - **Settings import** — empty API keys in a redacted backup no longer wipe keys already saved on this device.
-- **Steam Charts** widget — `steamcharts.com` is allowlisted and declared in extension host permissions so leaderboards can load after reload.
 - **Settings import** — imported plugins are re-validated; malformed widgets are dropped instead of crashing the HUD.
 - **New tab settings** — storage reloads no longer clobber in-flight Appearance and other preference edits while a save is in progress.
 - **Plugin LinkGrid** — only `https://` links are accepted (http links are rejected).

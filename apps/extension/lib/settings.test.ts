@@ -48,6 +48,10 @@ const {
   resolveNotesListPanelVisible,
   stableUserBackgroundIdFromDataUrl,
   isHudAutoRepositionEnabled,
+  parseSteamChartsFavoriteAppIdsText,
+  formatSteamChartsFavoriteAppIdsText,
+  coerceSteamChartsSteamId,
+  coerceSteamChartsBoardMode,
   mergeSyncSlicesBySavedAt,
   coercePrefsSavedAt,
 } = await import("./settings");
@@ -156,6 +160,30 @@ describe("WIDGET_LABELS", () => {
     for (const key of Object.keys(DEFAULT_WIDGETS) as (keyof typeof DEFAULT_WIDGETS)[]) {
       expect(WIDGET_LABELS[key]?.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("Steam Charts favorites text", () => {
+  it("parses and formats comma-separated app ids", () => {
+    expect(parseSteamChartsFavoriteAppIdsText("730, 570;440  \n999")).toEqual([730, 570, 440, 999]);
+    expect(formatSteamChartsFavoriteAppIdsText([730, 570])).toBe("730, 570");
+    expect(parseSteamChartsFavoriteAppIdsText("0, -1, abc")).toEqual([]);
+  });
+});
+
+describe("coerceSteamChartsSteamId", () => {
+  it("keeps 17-digit Steam IDs as exact strings", () => {
+    expect(coerceSteamChartsSteamId("76561198025217855")).toBe("76561198025217855");
+    expect(coerceSteamChartsSteamId(" 76561198025217855\n")).toBe("76561198025217855");
+  });
+});
+
+describe("coerceSteamChartsBoardMode", () => {
+  it("keeps open/recent and falls back for unknown values", () => {
+    expect(coerceSteamChartsBoardMode("open")).toBe("open");
+    expect(coerceSteamChartsBoardMode("recent")).toBe("recent");
+    expect(coerceSteamChartsBoardMode("nope", "recent")).toBe("recent");
+    expect(coerceSteamChartsBoardMode(undefined)).toBe("open");
   });
 });
 
