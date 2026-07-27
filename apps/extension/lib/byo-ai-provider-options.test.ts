@@ -27,6 +27,12 @@ describe("byo ai provider options", () => {
     expect(normalizeByoAiBaseUrl("https://api.openai.com/v1/")).toBe("https://api.openai.com/v1");
   });
 
+  it("rejects non-HTTPS base URLs", () => {
+    expect(normalizeByoAiBaseUrl("http://api.example.com/v1")).toBeNull();
+    expect(normalizeByoAiBaseUrl("ftp://api.example.com/v1")).toBeNull();
+    expect(normalizeByoAiBaseUrl("api.example.com/v1")).toBeNull();
+  });
+
   it("matches known presets regardless of trailing slash", () => {
     const gemini = BYO_AI_PROVIDER_PRESETS.gemini;
     expect(matchByoAiProviderPreset(`${gemini.baseUrl}/`, gemini.model)).toBe("gemini");

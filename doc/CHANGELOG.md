@@ -34,6 +34,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Balanced news** — headlines older than 72 hours are marked **Stale**, trigger an automatic refresh when allowed, and show a precise published time on hover for verification.
 - **Crypto** widget — coin logos (for example ADA and USDC) load again from CoinGecko’s current image CDN in the watchlist and add-coin search results; watchlist entries missing a saved logo are backfilled automatically.
 - **Bookmarks** — hidden bookmarks now appear under **Settings > Bookmarks** immediately after you hide them from the panel.
+- **Settings > AI** — custom API base URLs must use HTTPS before the extension requests host permission.
+- **Feedback** — rejects oversized browser info strings so the inbox stays usable.
 
 ### Changed
 

@@ -33,8 +33,11 @@ export const BYO_AI_PROVIDER_PRESETS: Record<TByoAiProviderPreset, IByoAiProvide
   },
 };
 
-export function normalizeByoAiBaseUrl(baseUrl: string): string {
-  return baseUrl.trim().replace(/\/+$/, "");
+/** Returns a normalized base URL or null when the URL is not HTTPS (guard before permission request). */
+export function normalizeByoAiBaseUrl(baseUrl: string): string | null {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (!trimmed.startsWith("https://")) return null;
+  return trimmed;
 }
 
 export function matchByoAiProviderPreset(
@@ -42,6 +45,7 @@ export function matchByoAiProviderPreset(
   model: string,
 ): TByoAiProviderPreset | null {
   const normalizedBase = normalizeByoAiBaseUrl(baseUrl);
+  if (normalizedBase === null) return null;
   const normalizedModel = model.trim();
   for (const id of BYO_AI_PROVIDER_ORDER) {
     const preset = BYO_AI_PROVIDER_PRESETS[id];

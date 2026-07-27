@@ -19,6 +19,8 @@ import {
 import { KING_COUNTY_LAKE_BUOY_MAP_DATA_URL } from "./weather/parse-king-county-lake-buoy-map-data";
 import {
   fetchAllLakesBuoys,
+  LAKES_BUOY_STATUS_ACTIVE,
+  LAKES_BUOY_STATUS_WATER_TEMP_MISSING,
   mapKingCountyRowsToBuoyEntries,
 } from "./weather/fetch-lakes-buoy-data";
 import { parseKingCountyLakeBuoyMapData } from "./weather/parse-king-county-lake-buoy-map-data";
@@ -98,12 +100,13 @@ describe("privilegedFetchTextInBackground (King County e2e)", () => {
     expect(buoys.length).toBeGreaterThanOrEqual(2);
     const activeLakeBuoys = buoys.filter((row) => row.label.startsWith("Lake "));
     expect(activeLakeBuoys.length).toBeGreaterThanOrEqual(2);
-    if (activeLakeBuoys.every((row) => row.data.waterTemp != null)) {
-      expect(activeLakeBuoys.every((row) => (row.data.waterTemp ?? 0) > 32)).toBe(true);
-    } else {
-      expect(
-        activeLakeBuoys.every((row) => row.data.status === "Live sensor (water temp missing)"),
-      ).toBe(true);
+    for (const row of activeLakeBuoys) {
+      if (row.data.waterTemp != null) {
+        expect(row.data.waterTemp).toBeGreaterThan(32);
+        expect(row.data.status).toBe(LAKES_BUOY_STATUS_ACTIVE);
+      } else {
+        expect(row.data.status).toBe(LAKES_BUOY_STATUS_WATER_TEMP_MISSING);
+      }
     }
   }, 20_000);
 });
