@@ -86,4 +86,59 @@ describe("validatePluginJsonText", () => {
     );
     expect(r.ok).toBe(true);
   });
+
+  it("accepts LinkGrid https links and rejects http links", () => {
+    const httpsOk = validatePluginJsonText(
+      JSON.stringify({
+        schemaVersion: 1,
+        id: "links",
+        name: "Links",
+        version: "1",
+        widgets: [
+          {
+            id: "g1",
+            type: "LinkGrid",
+            props: { links: [{ label: "Ok", url: "https://example.com" }] },
+          },
+        ],
+      }),
+    );
+    expect(httpsOk.ok).toBe(true);
+
+    const httpOnly = validatePluginJsonText(
+      JSON.stringify({
+        schemaVersion: 1,
+        id: "links_http",
+        name: "Links",
+        version: "1",
+        widgets: [
+          {
+            id: "g1",
+            type: "LinkGrid",
+            props: { links: [{ label: "Bad", url: "http://example.com" }] },
+          },
+        ],
+      }),
+    );
+    expect(httpOnly.ok).toBe(false);
+  });
+
+  it("can drop invalid widgets instead of failing the whole plugin", () => {
+    const r = validatePluginJsonText(
+      JSON.stringify({
+        schemaVersion: 1,
+        id: "partial",
+        name: "Partial",
+        version: "1",
+        widgets: [
+          { id: "ok", type: "StaticText", props: { text: "hi" } },
+          { id: "bad", type: "Nope", props: {} },
+        ],
+      }),
+      { dropInvalidWidgets: true },
+    );
+    expect(r.ok).toBe(true);
+    expect(r.plugin?.widgets).toEqual([{ id: "ok", type: "StaticText", props: { text: "hi" } }]);
+    expect(r.warnings.some((w) => w.includes("dropped"))).toBe(true);
+  });
 });

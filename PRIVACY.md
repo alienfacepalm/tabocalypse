@@ -18,13 +18,17 @@
 - **Peapix** (`peapix.com`, `img.peapix.com`) when you choose **Bing spotlight** as the new-tab background — the extension loads a public JSON feed that mirrors Bing’s daily images (no Tabocalypse account; subject to Peapix’s and Microsoft’s terms and privacy policies for that imagery).
 - **Search** opens your chosen engine in a new tab (normal web navigation). While you type in the HUD search field (when the Search widget is enabled), Tabocalypse may request **live query suggestions** from that same engine (DuckDuckGo, Google, or Bing — whichever you selected in Settings). Partial queries are sent only for autocomplete; Tabocalypse does not store them.
 - **BYO AI** sends chat requests to the **base URL you configure** (e.g. OpenAI) using **your** API key when you click “Test chat completion” in Settings or send a message in the **AI chat** widget (if enabled). Conversation text in the widget stays in memory for that tab session until you reload. You are subject to that provider’s privacy policy and billing.
-- **Declarative plugins** may include `LinkGrid` or other types that open URLs **you** supplied in the plugin JSON.
+- **Steam Charts** (`steamcharts.com`) when the **Steam Charts** widget is enabled — public HTML leaderboards for concurrent players (no Tabocalypse account; no publisher API key).
+- **Cloudflare Speed Test** (`speed.cloudflare.com`) when the **Speed test** widget is enabled — measures download/upload against Cloudflare’s public endpoints (no Tabocalypse account).
+- **King County** (`green2.kingcounty.gov`) when Weather **2 Lakes** buoy data is enabled — public lake buoy readings for the Pacific Northwest (no Tabocalypse account).
+- **Unsuck-it** (`www.unsuck-it.com`) when humor pack refresh is configured — optional fetch of public jargon lines for the built-in classics pack (no Tabocalypse account).
+- **Declarative plugins** may include `LinkGrid` or other types that open **HTTPS** URLs **you** supplied in the plugin JSON.
 
 ## Donations / feature suggestions
 
 Support links open third-party sites (e.g. Ko-fi, GitHub Issues) in a new tab. Tabocalypse does not process payments.
 
-When you submit **Settings > Feedback & Feature Requests**, the extension may send your message (type, text, optional reply email, extension version, and browser user-agent string) to the maintainer via **Elastic Email’s public SMTP relay** (`smtp.elasticemail.com`) using a build-time SMTP.js secure token — only when that token is configured for the build. If direct send is unavailable, you can use **Use email app** (your local mail client). We do not store feedback on AlienFacepalm servers.
+When you use **Settings > Feedback & Feature Requests**, Tabocalypse opens your local mail client with a prefilled message (mailto). No publisher SMTP relay or embedded mail credentials are used. We do not store feedback on AlienFacepalm servers.
 
 ## User-imported content
 

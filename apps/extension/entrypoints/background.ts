@@ -1,4 +1,5 @@
 import { defineBackground } from "wxt/sandbox";
+import type { Runtime } from "webextension-polyfill";
 import browser from "webextension-polyfill";
 import {
   invalidCryptoCoingeckoMarketRowResponse,
@@ -6,6 +7,7 @@ import {
   TABOCALYPSE_CRYPTO_COINGECKO_MARKET_ROW,
 } from "../lib/crypto/crypto-coingecko-message";
 import { handleCryptoCoingeckoMarketRowRequest } from "../lib/crypto/crypto-coingecko-background";
+import { isTrustedExtensionSender } from "../lib/extension-message-sender";
 import {
   TABOCALYPSE_PRIV_FETCH_BYTES,
   TABOCALYPSE_PRIV_FETCH_JSON,
@@ -27,11 +29,10 @@ import {
   handleTabocalypseAlarmFired,
   scheduleTabocalypseAlarm,
 } from "../lib/tabocalypse-alarm-service";
-import { TABOCALYPSE_FEEDBACK_SEND } from "../lib/feedback/feedback-message";
-import { handleTabocalypseFeedbackSendRequest } from "../lib/feedback/feedback-background-handler";
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((message: unknown) => {
+  browser.runtime.onMessage.addListener((message: unknown, sender: Runtime.MessageSender) => {
+    if (!isTrustedExtensionSender(sender)) return undefined;
     if (!message || typeof message !== "object" || !("type" in message)) return undefined;
     const m = message as {
       type: unknown;
@@ -87,9 +88,6 @@ export default defineBackground(() => {
     }
     if (m.type === TABOCALYPSE_PRIV_FETCH_BYTES && typeof m.url === "string") {
       return privilegedFetchBytesInBackground(m.url);
-    }
-    if (m.type === TABOCALYPSE_FEEDBACK_SEND) {
-      return handleTabocalypseFeedbackSendRequest(message);
     }
     return undefined;
   });

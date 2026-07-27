@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IImportedPlugin } from "@tabocalypse/plugin-sdk";
-import { mergeImportedPlugin, removeImportedPlugin } from "./plugin-import";
+import { coerceImportedPlugins, mergeImportedPlugin, removeImportedPlugin } from "./plugin-import";
 
 function makePlugin(overrides: Partial<IImportedPlugin> = {}): IImportedPlugin {
   return {
@@ -9,11 +9,41 @@ function makePlugin(overrides: Partial<IImportedPlugin> = {}): IImportedPlugin {
     version: "1.0.0",
     enabled: true,
     schemaVersion: 1,
-    widgets: [],
+    widgets: [{ id: "w1", type: "StaticText", props: { text: "hi" } }],
     importedAt: Date.now(),
     ...overrides,
   };
 }
+
+describe("coerceImportedPlugins", () => {
+  it("keeps valid plugins and drops malformed widgets", () => {
+    const raw = [
+      makePlugin({ id: "good" }),
+      {
+        id: "mixed",
+        name: "Mixed",
+        version: "1",
+        enabled: true,
+        schemaVersion: 1,
+        widgets: [
+          { id: "ok", type: "StaticText", props: { text: "keep me" } },
+          { id: "bad", type: "LinkGrid", props: {} },
+        ],
+        importedAt: 1,
+      },
+    ];
+    const out = coerceImportedPlugins(raw);
+    expect(out.map((p) => p.id)).toEqual(["good", "mixed"]);
+    expect(out.find((p) => p.id === "mixed")?.widgets).toEqual([
+      { id: "ok", type: "StaticText", props: { text: "keep me" } },
+    ]);
+  });
+
+  it("returns empty for non-arrays", () => {
+    expect(coerceImportedPlugins(null)).toEqual([]);
+    expect(coerceImportedPlugins({})).toEqual([]);
+  });
+});
 
 describe("mergeImportedPlugin", () => {
   it("appends a new plugin to an empty list", () => {

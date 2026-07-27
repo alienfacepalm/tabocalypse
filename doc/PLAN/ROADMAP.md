@@ -18,16 +18,7 @@ Human-readable backlog for Tabocalypse after the current alpha. **Machine-readab
 
 ## P0 · Ship blockers (pre-store)
 
-Items that block **any** public store listing. See also [CROSS-BROWSER-PUBLISHING-PLAN.md](../CROSS-BROWSER-PUBLISHING-PLAN.md).
-
-| ID    | Candidate                                                   | Notes                                               |
-| ----- | ----------------------------------------------------------- | --------------------------------------------------- |
-| T-001 | **Firefox Gecko add-on ID** — replace placeholder in `.env` | AMO requires a unique reverse-domain ID             |
-| T-002 | **Privacy policy at public HTTPS URL**                      | Host `PRIVACY.md`; stores reject repo-only          |
-| T-003 | **Store screenshots** (1280×800 / 440×280)                  | New tab default, Settings, import/BYO AI disclaimer |
-| T-004 | **Permission justification copy** pre-written for reviewers | `bookmarks`, `topSites`, `tabs`, BYO AI host        |
-| T-005 | **Support URL**                                             | GitHub Issues or contact page                       |
-| T-006 | **Safari converter smoke test** on macOS                    | `safari-mv3` → Xcode wrapper → load signed build    |
+_(Removed from the active roadmap — store prerequisites are tracked outside this board when needed. See [CROSS-BROWSER-PUBLISHING-PLAN.md](../CROSS-BROWSER-PUBLISHING-PLAN.md) for publishing ops.)_
 
 ---
 

@@ -54,7 +54,7 @@ function validateWidget(w: unknown): IPluginWidget | null {
     for (const item of props.links.slice(0, 30)) {
       if (!isRecord(item)) continue;
       if (typeof item.label !== "string" || typeof item.url !== "string") continue;
-      if (!/^https?:\/\//i.test(item.url)) continue;
+      if (!/^https:\/\//i.test(item.url)) continue;
       links.push({ label: item.label.slice(0, 120), url: item.url.slice(0, 2000) });
     }
     if (links.length === 0) return null;
@@ -63,7 +63,11 @@ function validateWidget(w: unknown): IPluginWidget | null {
   return null;
 }
 
-export function validatePluginJsonText(text: string): IValidationResult {
+export function validatePluginJsonText(
+  text: string,
+  options?: { dropInvalidWidgets?: boolean },
+): IValidationResult {
+  const dropInvalidWidgets = options?.dropInvalidWidgets === true;
   const errors: string[] = [];
   const warnings: string[] = [];
   let raw: IRawPluginJson;
@@ -90,8 +94,11 @@ export function validatePluginJsonText(text: string): IValidationResult {
   if (Array.isArray(raw.widgets)) {
     raw.widgets.forEach((w, i) => {
       const parsed = validateWidget(w);
-      if (!parsed) errors.push(`widgets[${i}] invalid or unknown type`);
-      else widgets.push(parsed);
+      if (!parsed) {
+        const msg = `widgets[${i}] invalid or unknown type`;
+        if (dropInvalidWidgets) warnings.push(`${msg} — dropped`);
+        else errors.push(msg);
+      } else widgets.push(parsed);
     });
   }
 

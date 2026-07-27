@@ -182,6 +182,7 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "suggestqueries.google.com",
   "api.bing.com",
   "api.wikimedia.org",
+  "steamcharts.com",
 ] as const;
 
 export function normalizePrivilegedExtensionFetchUrl(url: string): string {

@@ -53,6 +53,7 @@ describe("privilegedFetchTextInBackground (King County e2e)", () => {
     expect(fetchMock).toHaveBeenCalledWith(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL, {
       credentials: "omit",
       cache: "no-store",
+      redirect: "follow",
     });
     const buoys = mapKingCountyRowsToBuoyEntries(
       parseKingCountyLakeBuoyMapData(result.text),
@@ -75,7 +76,21 @@ describe("privilegedFetchTextInBackground (King County e2e)", () => {
     expect(fetchMock).toHaveBeenCalledWith(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL, {
       credentials: "omit",
       cache: "no-store",
+      redirect: "follow",
     });
+  });
+
+  it("rejects final redirect URLs outside the allowlist", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      url: "https://evil.example/steal",
+      text: async () => "nope",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await privilegedFetchTextInBackground(KING_COUNTY_LAKE_BUOY_MAP_DATA_URL);
+
+    expect(result).toEqual({ ok: false, error: PRIV_FETCH_ALLOWLIST_ERROR_BACKGROUND });
   });
 
   it("rejects hosts outside the privileged allowlist", async () => {

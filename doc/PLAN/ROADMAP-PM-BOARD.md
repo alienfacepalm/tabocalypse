@@ -4,16 +4,11 @@
 
 **Sprint columns** (`W1`–`W10`) must match `.projocalypse/workspace.json` and `pm:section=` comments below.
 
-**Canon:** Narrative and notes in [ROADMAP.md](./ROADMAP.md). Priority order: ship blockers → store launch → features new-tab users expect → data trust → plugins → a11y → stretch.
+**Canon:** Narrative and notes in [ROADMAP.md](./ROADMAP.md). Priority order: store launch → features new-tab users expect → data trust → plugins → a11y → stretch.
 
 ## W1 · Ship blockers
 
-- [ ] pm:PM-T001 Firefox Gecko add-on ID in `.env` <!-- pm:section=W1 · Ship blockers pm:priority=high -->
-- [ ] pm:PM-T002 Privacy policy at public HTTPS URL <!-- pm:section=W1 · Ship blockers pm:priority=high -->
-- [ ] pm:PM-T003 Store screenshots (1280×800 / 440×280) <!-- pm:section=W1 · Ship blockers pm:priority=high -->
-- [ ] pm:PM-T004 Permission justification copy for store reviewers <!-- pm:section=W1 · Ship blockers pm:priority=high -->
-- [ ] pm:PM-T005 Support URL (GitHub Issues or contact page) <!-- pm:section=W1 · Ship blockers pm:priority=high -->
-- [ ] pm:PM-T006 Safari converter smoke test on macOS <!-- pm:section=W1 · Ship blockers pm:priority=high -->
+_(Removed — pre-store checklist items are no longer tracked on the board.)_
 
 ## W2 · Chrome launch
 

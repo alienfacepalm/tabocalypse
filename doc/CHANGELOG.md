@@ -20,12 +20,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Settings > Feedback** — opens your email app only (mailto). Builds no longer embed SMTP / Elastic Email credentials.
+- **Settings export** — API keys are omitted from the downloaded JSON by default.
+- **Browser sync** — sync and the local mirror merge by `prefsSavedAt` (newer wins; ties keep the mirror so a local save after a failed sync is not discarded).
+- **DESIGN.md** — documents Soft/Pill control shapes as optional Appearance settings (Sharp remains the default).
 - **Weather** widget — the one-shot “use my location” control sits on the location map above the zoom buttons (instead of in the panel header).
 - **Weather** widget location map — pan and zoom are saved per monitor on this computer (same display fingerprint as panel layout); the shared forecast pin still comes from **Settings > Weather**.
 - **Weather** widget location map — compact +/− controls sit on the map (no settings toggle); drag-to-pan is always available.
 
 ### Fixed
 
+- **Settings import** — empty API keys in a redacted backup no longer wipe keys already saved on this device.
+- **Steam Charts** widget — `steamcharts.com` is allowlisted and declared in extension host permissions so leaderboards can load after reload.
+- **Settings import** — imported plugins are re-validated; malformed widgets are dropped instead of crashing the HUD.
+- **New tab settings** — storage reloads no longer clobber in-flight Appearance and other preference edits while a save is in progress.
+- **Plugin LinkGrid** — only `https://` links are accepted (http links are rejected).
 - **New tab HUD** — widget columns expand again to fill horizontal space on wide monitors (auto-layout no longer freezes a smaller window’s panel widths, which left large gutters between columns).
 - **HUD panels** — manually dragged panels stay where you drop them instead of snapping back to the first column after release.
 - **New tab** — Weather and AI chat panels no longer crash when loading shared settings from the HUD provider.
