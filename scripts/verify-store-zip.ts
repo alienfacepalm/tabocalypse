@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
+import { basename, dirname } from "node:path";
 
 export type TStoreZipKind = "extension" | "firefox-sources";
 
@@ -15,19 +16,17 @@ export interface IVerifyStoreZipResult {
   manifestVersion?: string;
 }
 
-function toTarFriendlyPath(path: string): string {
-  return path.replace(/\\/g, "/");
+function runTar(args: string[], cwd?: string): { stdout: string; status: number | null } {
+  const result = spawnSync("tar", args, { encoding: "utf8", cwd });
+  return { stdout: result.stdout?.trim() ?? "", status: result.status };
 }
 
-function runTar(args: string[]): { stdout: string; status: number | null } {
-  const tarArgs =
-    process.platform === "win32"
-      ? args.map((arg) =>
-          /^[A-Za-z]:[\\/]/.test(arg) || arg.includes("\\") ? toTarFriendlyPath(arg) : arg,
-        )
-      : args;
-  const result = spawnSync("tar", tarArgs, { encoding: "utf8" });
-  return { stdout: result.stdout?.trim() ?? "", status: result.status };
+function windowsTarListArgs(zipPath: string): { args: string[]; cwd: string } {
+  return { args: ["-tf", basename(zipPath)], cwd: dirname(zipPath) };
+}
+
+function windowsTarExtractArgs(zipPath: string, entry: string): { args: string[]; cwd: string } {
+  return { args: ["-xOf", basename(zipPath), entry], cwd: dirname(zipPath) };
 }
 
 function runUnzip(args: string[]): { stdout: string; status: number | null } {
@@ -53,7 +52,11 @@ export function listZipEntries(zipPath: string): string[] {
       .filter((entry) => entry !== "." && entry !== "");
   }
 
-  const { stdout, status } = runTar(["-tf", zipPath]);
+  const tarInvocation =
+    process.platform === "win32"
+      ? windowsTarListArgs(zipPath)
+      : { args: ["-tf", zipPath], cwd: undefined as string | undefined };
+  const { stdout, status } = runTar(tarInvocation.args, tarInvocation.cwd);
   if (status !== 0) {
     throw new Error(`tar -tf failed for ${zipPath}`);
   }
@@ -78,7 +81,11 @@ export function readManifestFromZip(zipPath: string): Record<string, unknown> {
     return JSON.parse(stdout) as Record<string, unknown>;
   }
 
-  const { stdout, status } = runTar(["-xOf", zipPath, "manifest.json"]);
+  const tarInvocation =
+    process.platform === "win32"
+      ? windowsTarExtractArgs(zipPath, "manifest.json")
+      : { args: ["-xOf", zipPath, "manifest.json"], cwd: undefined as string | undefined };
+  const { stdout, status } = runTar(tarInvocation.args, tarInvocation.cwd);
   if (status !== 0) {
     throw new Error(`Could not read manifest.json from ${zipPath}`);
   }
