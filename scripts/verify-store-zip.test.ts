@@ -10,10 +10,22 @@ import {
   verifyStoreZip,
 } from "./verify-store-zip";
 
+function toTarFriendlyPath(path: string): string {
+  // Windows tar treats `C:\...` as a remote host unless slashes are forward.
+  return path.replace(/\\/g, "/");
+}
+
 function makeZip(dir: string, zipPath: string): void {
   const result =
     process.platform === "win32"
-      ? spawnSync("tar", ["-a", "-cf", zipPath, "-C", dir, "."], { shell: true })
+      ? spawnSync("tar", [
+          "-a",
+          "-cf",
+          toTarFriendlyPath(zipPath),
+          "-C",
+          toTarFriendlyPath(dir),
+          ".",
+        ])
       : spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
   if (result.status !== 0) {
     throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
