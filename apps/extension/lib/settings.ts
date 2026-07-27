@@ -14,11 +14,13 @@ import {
   coerceThemeHex,
   coerceThemeMode,
   coerceThemePalette,
+  coerceUiShape,
   DEFAULT_THEME_CUSTOM_ACCENT,
   DEFAULT_THEME_CUSTOM_ACCENT2,
   themeGradientStops,
   type TThemeMode,
   type TThemePalette,
+  type TUiShape,
 } from "./theme";
 import { coercePeapixBingCountry, type TPeapixBingCountry } from "./bing-wallpaper-country";
 import { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
@@ -75,7 +77,7 @@ export { coerceCryptoChartDays };
 
 export type { IHudPanelPosition, THudPanelId, THudPanelPositionsByDisplay } from "./hud-layout";
 
-export type { TThemeMode, TThemePalette } from "./theme";
+export type { TThemeMode, TThemePalette, TUiShape } from "./theme";
 export { coerceClockHourFormat, type TClockHourFormat } from "./clock-hour-format";
 export type { TWeatherPanelView } from "./weather/weather-panel-view";
 export type { TWeatherTenDayLayout } from "./weather/weather-ten-day-layout";
@@ -681,6 +683,8 @@ export interface ISettings {
    * Defaults to on; turn off in Appearance to freeze manual accent colors on those backgrounds.
    */
   themeAccentsMatchWallpaper: boolean;
+  /** Button and input corner style (sharp brutalist default). */
+  uiShape: TUiShape;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   /** Specialty built-in voice, or default mix controlled by `humorBuiltinPackIds`. */
@@ -997,6 +1001,8 @@ export interface ISyncSlice {
   themeCustomAccent: string;
   themeCustomAccent2: string;
   themeAccentsMatchWallpaper: boolean;
+  /** Button and input corner style (sharp brutalist default). */
+  uiShape: TUiShape;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   humorBuiltinVoice: THumorBuiltinVoice;
@@ -1362,6 +1368,7 @@ export function defaultSettings(): ISettings {
     themeCustomAccent: DEFAULT_THEME_CUSTOM_ACCENT,
     themeCustomAccent2: DEFAULT_THEME_CUSTOM_ACCENT2,
     themeAccentsMatchWallpaper: true,
+    uiShape: "sharp",
     humorEnabled: true,
     humorIntensity: "spicy",
     humorBuiltinVoice: "gen_z",
@@ -1466,6 +1473,7 @@ function toSync(s: ISettings): ISyncSlice {
     themeCustomAccent: s.themeCustomAccent,
     themeCustomAccent2: s.themeCustomAccent2,
     themeAccentsMatchWallpaper: s.themeAccentsMatchWallpaper,
+    uiShape: s.uiShape,
     humorEnabled: s.humorEnabled,
     humorIntensity: s.humorIntensity,
     humorBuiltinVoice: s.humorBuiltinVoice,
@@ -1691,6 +1699,7 @@ function mergeSettings(
       typeof sync?.themeAccentsMatchWallpaper === "boolean"
         ? sync.themeAccentsMatchWallpaper
         : d.themeAccentsMatchWallpaper,
+    uiShape: coerceUiShape(sync?.uiShape, d.uiShape),
     humorEnabled: sync?.humorEnabled ?? d.humorEnabled,
     humorIntensity: sync?.humorIntensity ?? d.humorIntensity,
     humorBuiltinVoice:

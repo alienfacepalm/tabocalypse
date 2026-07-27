@@ -4,6 +4,7 @@ import {
   coerceThemeHex,
   coerceThemeMode,
   coerceThemePalette,
+  coerceUiShape,
   DEFAULT_THEME_CUSTOM_ACCENT,
   ensureAccent2ReadableInLightMode,
   ensureAccentReadableInDarkMode,
@@ -166,6 +167,14 @@ describe("themeGradientStops", () => {
   it("returns darker stops for dark mode", () => {
     expect(themeGradientStops("dark").mid).toContain("#");
     expect(themeGradientStops("light").mid).not.toBe(themeGradientStops("dark").mid);
+  });
+});
+
+describe("coerceUiShape", () => {
+  it("accepts sharp, soft, and pill only", () => {
+    expect(coerceUiShape("pill", "sharp")).toBe("pill");
+    expect(coerceUiShape("soft", "sharp")).toBe("soft");
+    expect(coerceUiShape("bogus", "sharp")).toBe("sharp");
   });
 });
 

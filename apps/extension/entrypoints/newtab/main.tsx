@@ -15,10 +15,15 @@ void (async () => {
   } catch {
     initialSettings = defaultSettings();
   }
-  applyDocumentTheme(initialSettings.themeMode, initialSettings.themePalette, {
-    accent: initialSettings.themeCustomAccent,
-    accent2: initialSettings.themeCustomAccent2,
-  });
+  applyDocumentTheme(
+    initialSettings.themeMode,
+    initialSettings.themePalette,
+    {
+      accent: initialSettings.themeCustomAccent,
+      accent2: initialSettings.themeCustomAccent2,
+    },
+    initialSettings.uiShape,
+  );
 
   const rootEl = document.getElementById("root");
   if (!rootEl) return;
