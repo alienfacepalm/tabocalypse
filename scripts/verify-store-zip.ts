@@ -15,11 +15,18 @@ export interface IVerifyStoreZipResult {
   manifestVersion?: string;
 }
 
+function toTarFriendlyPath(path: string): string {
+  return path.replace(/\\/g, "/");
+}
+
 function runTar(args: string[]): { stdout: string; status: number | null } {
-  const result = spawnSync("tar", args, {
-    encoding: "utf8",
-    shell: process.platform === "win32",
-  });
+  const tarArgs =
+    process.platform === "win32"
+      ? args.map((arg) =>
+          /^[A-Za-z]:[\\/]/.test(arg) || arg.includes("\\") ? toTarFriendlyPath(arg) : arg,
+        )
+      : args;
+  const result = spawnSync("tar", tarArgs, { encoding: "utf8" });
   return { stdout: result.stdout?.trim() ?? "", status: result.status };
 }
 
