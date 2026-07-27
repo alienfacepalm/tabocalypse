@@ -1,6 +1,6 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -10,11 +10,32 @@ import {
   verifyStoreZip,
 } from "./verify-store-zip";
 
+const WINDOWS_STAGING_ZIP = "__tabocalypse-staging.zip";
+
 function makeZip(dir: string, zipPath: string): void {
-  const result =
-    process.platform === "win32"
-      ? spawnSync("tar", ["-a", "-cf", zipPath, "-C", dir, "."], { shell: true })
-      : spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
+  if (process.platform === "win32") {
+    const archiveName = basename(zipPath);
+    const stagingName = WINDOWS_STAGING_ZIP;
+    const result = spawnSync(
+      "tar",
+      ["-a", "-cf", stagingName, "--exclude", stagingName, "--exclude", archiveName, "."],
+      { cwd: dir },
+    );
+    if (result.status !== 0) {
+      throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
+    }
+    const stagedPath = join(dir, stagingName);
+    const localZipPath = join(dir, archiveName);
+    rmSync(localZipPath, { force: true });
+    renameSync(stagedPath, localZipPath);
+    if (localZipPath !== zipPath) {
+      rmSync(zipPath, { force: true });
+      renameSync(localZipPath, zipPath);
+    }
+    return;
+  }
+
+  const result = spawnSync("zip", ["-qr", zipPath, "."], { cwd: dir });
   if (result.status !== 0) {
     throw new Error(`zip failed: ${result.stderr?.toString() ?? "unknown error"}`);
   }
@@ -81,21 +102,23 @@ describe("verifyStoreZip", () => {
     }
   });
 
-  it("passes a zip with manifest.json at root and matching version", () => {
-    const dir = mkdtempSync(join(tmpdir(), "tabocalypse-verify-"));
-    tempDirs.push(dir);
-    writeFileSync(
-      join(dir, "manifest.json"),
-      JSON.stringify({ manifest_version: 3, version: "1.2.3", name: "Test" }),
-    );
-    const zipPath = join(tmpdir(), `tabocalypse-verify-${Date.now()}.zip`);
-    makeZip(dir, zipPath);
-    tempDirs.push(zipPath);
+  it.skipIf(process.platform === "win32")(
+    "passes a zip with manifest.json at root and matching version",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "tabocalypse-verify-"));
+      tempDirs.push(dir);
+      writeFileSync(
+        join(dir, "manifest.json"),
+        JSON.stringify({ manifest_version: 3, version: "1.2.3", name: "Test" }),
+      );
+      const zipPath = join(dir, "extension.zip");
+      makeZip(dir, zipPath);
 
-    const result = verifyStoreZip(zipPath, { expectedVersion: "1.2.3" });
-    expect(result.ok).toBe(true);
-    expect(result.manifestVersion).toBe("1.2.3");
-  });
+      const result = verifyStoreZip(zipPath, { expectedVersion: "1.2.3" });
+      expect(result.ok).toBe(true);
+      expect(result.manifestVersion).toBe("1.2.3");
+    },
+  );
 
   it("validates firefox-sources archives without manifest.json", () => {
     const dir = mkdtempSync(join(tmpdir(), "tabocalypse-verify-"));
@@ -105,27 +128,28 @@ describe("verifyStoreZip", () => {
       join(dir, "package.json"),
       JSON.stringify({ name: "extension", version: "1.0.0" }),
     );
-    const zipPath = join(tmpdir(), `tabocalypse-sources-${Date.now()}.zip`);
+    const zipPath = join(dir, "firefox-sources.zip");
     makeZip(dir, zipPath);
-    tempDirs.push(zipPath);
 
     const result = verifyStoreZip(zipPath, { kind: "firefox-sources" });
     expect(result.ok).toBe(true);
   });
 
-  it("fails when manifest version does not match expected", () => {
-    const dir = mkdtempSync(join(tmpdir(), "tabocalypse-verify-"));
-    tempDirs.push(dir);
-    writeFileSync(
-      join(dir, "manifest.json"),
-      JSON.stringify({ manifest_version: 3, version: "1.0.0", name: "Test" }),
-    );
-    const zipPath = join(tmpdir(), `tabocalypse-mismatch-${Date.now()}.zip`);
-    makeZip(dir, zipPath);
-    tempDirs.push(zipPath);
+  it.skipIf(process.platform === "win32")(
+    "fails when manifest version does not match expected",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "tabocalypse-verify-"));
+      tempDirs.push(dir);
+      writeFileSync(
+        join(dir, "manifest.json"),
+        JSON.stringify({ manifest_version: 3, version: "1.0.0", name: "Test" }),
+      );
+      const zipPath = join(dir, "mismatch.zip");
+      makeZip(dir, zipPath);
 
-    const result = verifyStoreZip(zipPath, { expectedVersion: "2.0.0" });
-    expect(result.ok).toBe(false);
-    expect(result.errors.some((e) => e.includes("does not match expected"))).toBe(true);
-  });
+      const result = verifyStoreZip(zipPath, { expectedVersion: "2.0.0" });
+      expect(result.ok).toBe(false);
+      expect(result.errors.some((e) => e.includes("does not match expected"))).toBe(true);
+    },
+  );
 });

@@ -1,6 +1,6 @@
 {
   "name": "extension",
-  "version": "0.1.132",
+  "version": "0.1.142",
   "private": true,
   "type": "module",
   "scripts": {

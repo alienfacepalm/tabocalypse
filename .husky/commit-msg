@@ -3,6 +3,11 @@ set -e
 
 commit_msg=$(cat "$1")
 
+# Merge commits use Git's default subject line.
+if echo "$commit_msg" | grep -qE '^Merge '; then
+  exit 0
+fi
+
 # Conventional commit pattern: type(scope): description
 # type:   feat | fix | docs | style | refactor | perf | test | chore | build | ci
 # scope:  optional, lowercase hyphenated

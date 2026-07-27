@@ -39,7 +39,7 @@ export async function handleTabocalypseFeedbackSendRequest(
     return { ok: false, error: "Missing browser info" };
   }
   if (trimmedUserAgent.length > 512) {
-    // User agents can be several KB; truncate to keep inbox usable.
+    // User agents can be several KB; reject oversized values to keep inbox usable.
     return { ok: false, error: "Browser info is too long" };
   }
 
