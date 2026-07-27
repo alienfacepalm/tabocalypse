@@ -137,6 +137,17 @@ export type TSteamChartsBoardKey =
   | "globalPeakAllTime"
   | "globalTrendingUp";
 
+/** Top players (open steamcharts) vs Recently played (Steam Web API). */
+export type TSteamChartsBoardMode = "open" | "recent";
+
+export function coerceSteamChartsBoardMode(
+  raw: unknown,
+  fallback: TSteamChartsBoardMode = "open",
+): TSteamChartsBoardMode {
+  if (raw === "open" || raw === "recent") return raw;
+  return fallback;
+}
+
 export const STEAM_CHARTS_BOARD_KEYS = [
   "favoritesNow",
   "favoritesPeak24h",
@@ -158,11 +169,10 @@ export const STEAM_CHARTS_BOARD_LABELS: Record<TSteamChartsBoardKey, string> = {
 };
 
 export const STEAM_CHARTS_ROW_COUNT_MIN = 3;
-export const STEAM_CHARTS_ROW_COUNT_MAX = 50;
-export const DEFAULT_STEAM_CHARTS_ROW_COUNT = 10;
+export const STEAM_CHARTS_ROW_COUNT_MAX = 200;
+export const DEFAULT_STEAM_CHARTS_ROW_COUNT = 50;
 
 export const DEFAULT_STEAM_CHARTS_BOARDS: readonly TSteamChartsBoardKey[] = [
-  "favoritesNow",
   "globalNow",
   "globalPeak24h",
   "globalPeakAllTime",
@@ -203,8 +213,29 @@ export function coerceSteamChartsFavoriteAppIds(raw: unknown): number[] {
 }
 
 export function coerceSteamChartsSteamId(raw: unknown): string {
-  if (typeof raw !== "string") return "";
-  return raw.trim();
+  if (typeof raw === "string") return raw.trim();
+  if (typeof raw === "bigint") return raw.toString();
+  // Never Number()-coerce 17-digit Steam IDs (precision loss). Accept only exact integers already stored.
+  if (typeof raw === "number" && Number.isFinite(raw) && Number.isInteger(raw)) {
+    return String(raw);
+  }
+  return "";
+}
+
+/** Parse comma/space/semicolon-separated Steam app ids from Settings text. */
+export function parseSteamChartsFavoriteAppIdsText(raw: string): number[] {
+  const parts = raw.split(/[\s,;]+/).filter(Boolean);
+  const nums: number[] = [];
+  for (const p of parts) {
+    const n = Number(p);
+    if (!Number.isFinite(n)) continue;
+    nums.push(n);
+  }
+  return coerceSteamChartsFavoriteAppIds(nums);
+}
+
+export function formatSteamChartsFavoriteAppIdsText(ids: readonly number[]): string {
+  return ids.join(", ");
 }
 
 export interface IImportedUserPack {
@@ -736,8 +767,10 @@ export interface ISettings {
   cryptoWatchlist: ICryptoWatchlistEntry[];
   /** Which Steam leaderboards are shown (order matters). */
   steamChartsBoards: TSteamChartsBoardKey[];
-  /** Rows shown per leaderboard (3–50). */
+  /** Preferred rows to keep loaded (3–200); tall panels may load more to fill height. */
   steamChartsRowCount: number;
+  /** Last selected board chip: open top players vs recently played. */
+  steamChartsBoardMode: TSteamChartsBoardMode;
   /** Steam app ids pinned by the user for personal-first leaderboards. */
   steamChartsFavoriteAppIds: number[];
   /** Optional SteamID / vanity name / profile token for library import (best-effort). */
@@ -1039,8 +1072,8 @@ export interface ISyncSlice {
   cryptoWatchlist: ICryptoWatchlistEntry[];
   steamChartsBoards: TSteamChartsBoardKey[];
   steamChartsRowCount: number;
+  steamChartsBoardMode: TSteamChartsBoardMode;
   steamChartsFavoriteAppIds: number[];
-  steamChartsSteamId: string;
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: ISettings["balancedNewsCountry"];
   balancedNewsUseDeviceGeo: boolean;
@@ -1081,6 +1114,8 @@ export interface ILocalSlice {
   openaiModel: string;
   balancedNewsApiKey: string;
   steamWebApiKey?: string;
+  /** Steam ID / vanity — local with the API key (not sync). */
+  steamChartsSteamId?: string;
   myLines: string[];
   importedPacks: IImportedUserPack[];
   importedPlugins: IImportedPlugin[];
@@ -1227,7 +1262,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   weather: true,
   crypto: true,
   speedTest: false,
-  steamCharts: false,
+  steamCharts: true,
   aiChat: false,
   topSites: false,
   bookmarksStrip: false,
@@ -1330,7 +1365,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   weather: "Weather",
   crypto: "Crypto prices",
   speedTest: "Speed test",
-  steamCharts: "Steam leaderboards",
+  steamCharts: "Steam® leaderboard",
   aiChat: "AI chat",
   topSites: "Top sites",
   bookmarksStrip: "Bookmarks strip",
@@ -1414,6 +1449,7 @@ export function defaultSettings(): ISettings {
     cryptoWatchlist: [...DEFAULT_CRYPTO_WATCHLIST],
     steamChartsBoards: [...DEFAULT_STEAM_CHARTS_BOARDS],
     steamChartsRowCount: DEFAULT_STEAM_CHARTS_ROW_COUNT,
+    steamChartsBoardMode: "open",
     steamChartsFavoriteAppIds: [],
     steamChartsSteamId: "",
     steamWebApiKey: "",
@@ -1512,8 +1548,8 @@ function toSync(s: ISettings, prefsSavedAt = Date.now()): ISyncSlice {
     cryptoWatchlist: s.cryptoWatchlist,
     steamChartsBoards: s.steamChartsBoards,
     steamChartsRowCount: s.steamChartsRowCount,
+    steamChartsBoardMode: s.steamChartsBoardMode,
     steamChartsFavoriteAppIds: s.steamChartsFavoriteAppIds,
-    steamChartsSteamId: s.steamChartsSteamId,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
     balancedNewsCountry: s.balancedNewsCountry,
     balancedNewsUseDeviceGeo: s.balancedNewsUseDeviceGeo,
@@ -1564,6 +1600,7 @@ function toLocal(s: ISettings): ILocalSlice {
     openaiModel: s.openaiModel,
     balancedNewsApiKey: s.balancedNewsApiKey,
     steamWebApiKey: s.steamWebApiKey,
+    steamChartsSteamId: s.steamChartsSteamId,
     myLines: s.myLines,
     importedPacks: s.importedPacks,
     importedPlugins: s.importedPlugins,
@@ -1800,8 +1837,16 @@ function mergeSettings(
       sync?.steamChartsRowCount,
       d.steamChartsRowCount,
     ),
+    steamChartsBoardMode: coerceSteamChartsBoardMode(
+      sync?.steamChartsBoardMode,
+      d.steamChartsBoardMode,
+    ),
     steamChartsFavoriteAppIds: coerceSteamChartsFavoriteAppIds(sync?.steamChartsFavoriteAppIds),
-    steamChartsSteamId: coerceSteamChartsSteamId(sync?.steamChartsSteamId),
+    steamChartsSteamId: coerceSteamChartsSteamId(
+      local?.steamChartsSteamId ??
+        // Older builds stored Steam ID on the sync slice — migrate on read.
+        (sync as { steamChartsSteamId?: unknown } | undefined)?.steamChartsSteamId,
+    ),
     balancedNewsCountryAuto:
       typeof sync?.balancedNewsCountryAuto === "boolean"
         ? sync.balancedNewsCountryAuto

@@ -32,6 +32,10 @@ export default defineConfig({
       "https://api.bing.com/*",
       "https://api.wikimedia.org/*",
       "https://steamcharts.com/*",
+      "https://api.steampowered.com/*",
+      "https://cdn.cloudflare.steamstatic.com/*",
+      "https://shared.akamai.steamstatic.com/*",
+      "https://steamcdn-a.akamaihd.net/*",
     ],
     optional_host_permissions: [
       "https://api.openai.com/*",

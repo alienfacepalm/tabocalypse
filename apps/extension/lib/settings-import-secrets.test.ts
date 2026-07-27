@@ -21,12 +21,14 @@ describe("applyImportedSecretKeys", () => {
       geminiApiKey: "gem-live",
       balancedNewsApiKey: "news-live",
       steamWebApiKey: "steam-live",
+      steamChartsSteamId: "76561198025217855",
     } as ISettings;
     const imported = {
       openaiApiKey: "",
       geminiApiKey: "",
       balancedNewsApiKey: "",
       steamWebApiKey: "",
+      steamChartsSteamId: "",
     } as Partial<ISettings>;
     const target = { ...current, ...imported } as ISettings;
     const merged = applyImportedSecretKeys(target, imported, current);
@@ -34,6 +36,7 @@ describe("applyImportedSecretKeys", () => {
     expect(merged.geminiApiKey).toBe("gem-live");
     expect(merged.balancedNewsApiKey).toBe("news-live");
     expect(merged.steamWebApiKey).toBe("steam-live");
+    expect(merged.steamChartsSteamId).toBe("76561198025217855");
   });
 
   it("applies non-empty imported secrets and keeps others from current", () => {
@@ -42,14 +45,17 @@ describe("applyImportedSecretKeys", () => {
       geminiApiKey: "gem-live",
       balancedNewsApiKey: "news-live",
       steamWebApiKey: "steam-live",
+      steamChartsSteamId: "76561198025217855",
     } as ISettings;
     const imported = {
       openaiApiKey: "sk-new",
       geminiApiKey: "",
+      steamChartsSteamId: "76561198123456789",
     } as Partial<ISettings>;
     const target = { ...current, ...imported } as ISettings;
     const merged = applyImportedSecretKeys(target, imported, current);
     expect(merged.openaiApiKey).toBe("sk-new");
     expect(merged.geminiApiKey).toBe("gem-live");
+    expect(merged.steamChartsSteamId).toBe("76561198123456789");
   });
 });

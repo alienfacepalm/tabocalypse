@@ -1,35 +1,41 @@
-import { privilegedExtensionFetchText } from "../privileged-extension-fetch";
 import {
-  parseSteamChartsAppSummary,
-  parseSteamChartsTopGames,
-  parseSteamChartsTopRecords,
-  type ISteamChartsAppSummary,
-  type ISteamChartsTopGameRow,
-} from "./parse-steamcharts";
+  privilegedExtensionFetchJson,
+  privilegedExtensionFetchText,
+} from "../privileged-extension-fetch";
+import { parseSteamChartsTopGames } from "./parse-steamcharts";
+import {
+  STEAM_CHARTS_OPEN_ABSOLUTE_MAX,
+  STEAM_CHARTS_TOP_PAGE_SIZE,
+  steamChartsTopPageUrl,
+} from "./steam-charts-virtual";
 
-export type TSteamChartsLeaderboardKind =
-  | "globalNow"
-  | "globalPeak24h"
-  | "globalPeakAllTime"
-  | "globalTrendingUp"
-  | "favoritesNow"
-  | "favoritesPeak24h"
-  | "favoritesPeakAllTime";
+export type TSteamChartsBoardMode = "open" | "recent";
+
+export type TSteamChartsLeaderboardSource = "open" | "recent";
 
 export interface ISteamChartsLeaderboardEntry {
   rank: number;
   appId: number;
   name: string;
   value: number;
+  /** Unix seconds of last play (Recently played / owned games); omitted for open charts. */
+  lastPlayedAtSec?: number | null;
 }
 
 export interface ISteamChartsLeaderboardResult {
-  kind: TSteamChartsLeaderboardKind;
+  source: TSteamChartsLeaderboardSource;
+  /** Short label for the value column (e.g. players now, hours). */
+  valueLabel: string;
   updatedAtIso: string | null;
   entries: ISteamChartsLeaderboardEntry[];
+  /** True when more open-chart pages may exist (ignored for recent). */
+  hasMore?: boolean;
+  /** 1-based next page to request for open charts when hasMore. */
+  nextPage?: number;
 }
 
 const CACHE_TTL_MS = 15 * 60_000;
+const DEFAULT_MAX_ROWS = 10;
 
 type TCacheRow = { expiresAt: number; value: unknown };
 const memCache = new Map<string, TCacheRow>();
@@ -48,152 +54,210 @@ function cacheSet(key: string, value: unknown): void {
   memCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value });
 }
 
-function byValueDesc(a: ISteamChartsLeaderboardEntry, b: ISteamChartsLeaderboardEntry): number {
-  return b.value - a.value;
+function clampMaxRows(raw: number | undefined): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return DEFAULT_MAX_ROWS;
+  return Math.max(1, Math.min(STEAM_CHARTS_OPEN_ABSOLUTE_MAX, Math.floor(raw)));
 }
 
-function toEntries(
-  rows: readonly ISteamChartsTopGameRow[],
-  valueKey: "currentPlayers" | "peakPlayers",
-  max: number,
-): ISteamChartsLeaderboardEntry[] {
-  const out: ISteamChartsLeaderboardEntry[] = [];
-  for (const row of rows) {
-    const value = row[valueKey];
-    if (value == null) continue;
-    out.push({ rank: out.length + 1, appId: row.appId, name: row.name, value });
-    if (out.length >= max) break;
-  }
-  return out;
+function asRecord(v: unknown): Record<string, unknown> | null {
+  if (v == null || typeof v !== "object" || Array.isArray(v)) return null;
+  return v as Record<string, unknown>;
 }
 
-function computeTrendingUp(
-  rows: readonly ISteamChartsTopGameRow[],
-  max: number,
-): ISteamChartsLeaderboardEntry[] {
-  const scored: ISteamChartsLeaderboardEntry[] = [];
-  for (const row of rows) {
-    if (row.currentPlayers == null || row.peakPlayers == null) continue;
-    if (row.peakPlayers <= 0) continue;
-    const ratio = row.currentPlayers / row.peakPlayers;
-    const value = Math.round(ratio * 10_000);
-    scored.push({ rank: 0, appId: row.appId, name: row.name, value });
-  }
-  scored.sort(byValueDesc);
-  return scored.slice(0, max).map((e, i) => ({ ...e, rank: i + 1 }));
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
 }
 
-async function loadTopGames(): Promise<ISteamChartsTopGameRow[]> {
-  const key = "steamcharts:top";
-  const cached = cacheGet<ISteamChartsTopGameRow[]>(key);
+export interface ISteamChartsOpenPageResult {
+  page: number;
+  entries: ISteamChartsLeaderboardEntry[];
+  hasMore: boolean;
+}
+
+/** Load one steamcharts.com /top page (25 rows). Page is 1-based. */
+export async function fetchSteamChartsOpenPage(page: number): Promise<ISteamChartsOpenPageResult> {
+  const p = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+  const cacheKey = `steamcharts:top:page:${p}`;
+  const cached = cacheGet<ISteamChartsOpenPageResult>(cacheKey);
   if (cached) return cached;
-  const html = await privilegedExtensionFetchText("https://steamcharts.com/top");
+
+  const html = await privilegedExtensionFetchText(steamChartsTopPageUrl(p));
   const rows = parseSteamChartsTopGames(html);
-  cacheSet(key, rows);
-  return rows;
-}
-
-async function loadTopRecords(): Promise<ReturnType<typeof parseSteamChartsTopRecords>> {
-  const key = "steamcharts:toppeaks";
-  const cached = cacheGet<ReturnType<typeof parseSteamChartsTopRecords>>(key);
-  if (cached) return cached;
-  const html = await privilegedExtensionFetchText("https://steamcharts.com/");
-  const rows = parseSteamChartsTopRecords(html);
-  cacheSet(key, rows);
-  return rows;
-}
-
-async function loadAppSummary(appId: number): Promise<ISteamChartsAppSummary | null> {
-  const key = `steamcharts:app:${appId}`;
-  const cached = cacheGet<ISteamChartsAppSummary | null>(key);
-  if (cached !== null) return cached;
-  const html = await privilegedExtensionFetchText(`https://steamcharts.com/app/${appId}`);
-  const parsed = parseSteamChartsAppSummary(html, appId);
-  cacheSet(key, parsed);
-  return parsed;
-}
-
-async function loadFavoritesSummaries(
-  appIds: readonly number[],
-): Promise<ISteamChartsAppSummary[]> {
-  const out: ISteamChartsAppSummary[] = [];
-  for (const id of appIds) {
-    const s = await loadAppSummary(id);
-    if (s) out.push(s);
+  const entries: ISteamChartsLeaderboardEntry[] = [];
+  for (const row of rows) {
+    if (row.currentPlayers == null) continue;
+    entries.push({
+      rank: row.rank > 0 ? row.rank : (p - 1) * STEAM_CHARTS_TOP_PAGE_SIZE + entries.length + 1,
+      appId: row.appId,
+      name: row.name,
+      value: row.currentPlayers,
+    });
   }
-  return out;
-}
-
-export async function fetchSteamChartsLeaderboard(input: {
-  kind: TSteamChartsLeaderboardKind;
-  maxRows: number;
-  favoriteAppIds: readonly number[];
-}): Promise<ISteamChartsLeaderboardResult> {
-  const maxRows = Math.max(1, Math.min(50, Math.floor(input.maxRows)));
-  const favoriteAppIds = input.favoriteAppIds
-    .filter((n) => Number.isFinite(n) && n > 0)
-    .slice(0, 200);
-
-  if (input.kind === "globalNow") {
-    const rows = await loadTopGames();
-    return {
-      kind: input.kind,
-      updatedAtIso: null,
-      entries: toEntries(rows, "currentPlayers", maxRows),
-    };
-  }
-
-  if (input.kind === "globalPeak24h") {
-    const rows = await loadTopGames();
-    return {
-      kind: input.kind,
-      updatedAtIso: null,
-      entries: toEntries(rows, "peakPlayers", maxRows),
-    };
-  }
-
-  if (input.kind === "globalPeakAllTime") {
-    const rows = await loadTopRecords();
-    const entries: ISteamChartsLeaderboardEntry[] = [];
-    for (const row of rows) {
-      if (row.peakAllTime == null) continue;
-      entries.push({
-        rank: entries.length + 1,
-        appId: row.appId,
-        name: row.name,
-        value: row.peakAllTime,
-      });
-      if (entries.length >= maxRows) break;
-    }
-    return { kind: input.kind, updatedAtIso: null, entries };
-  }
-
-  if (input.kind === "globalTrendingUp") {
-    const rows = await loadTopGames();
-    return { kind: input.kind, updatedAtIso: null, entries: computeTrendingUp(rows, maxRows) };
-  }
-
-  const summaries = await loadFavoritesSummaries(favoriteAppIds);
-  const updatedAtIso = summaries[0]?.updatedAtIso ?? null;
-
-  const build = (
-    valueOf: (s: ISteamChartsAppSummary) => number | null,
-  ): ISteamChartsLeaderboardEntry[] => {
-    const entries: ISteamChartsLeaderboardEntry[] = [];
-    for (const s of summaries) {
-      const value = valueOf(s);
-      if (value == null) continue;
-      entries.push({ rank: 0, appId: s.appId, name: s.name, value });
-    }
-    entries.sort(byValueDesc);
-    return entries.slice(0, maxRows).map((e, i) => ({ ...e, rank: i + 1 }));
+  const result: ISteamChartsOpenPageResult = {
+    page: p,
+    entries,
+    hasMore: entries.length >= STEAM_CHARTS_TOP_PAGE_SIZE,
   };
+  cacheSet(cacheKey, result);
+  return result;
+}
 
-  if (input.kind === "favoritesNow") {
-    return { kind: input.kind, updatedAtIso, entries: build((s) => s.playingNow) };
+async function loadOpenTopGamesUntil(maxRows: number): Promise<ISteamChartsLeaderboardResult> {
+  const limit = clampMaxRows(maxRows);
+  const entries: ISteamChartsLeaderboardEntry[] = [];
+  let page = 1;
+  let hasMore = true;
+  while (entries.length < limit && hasMore) {
+    const batch = await fetchSteamChartsOpenPage(page);
+    for (const row of batch.entries) {
+      if (entries.length >= limit) break;
+      // Prefer sequential rank when merging pages.
+      entries.push({ ...row, rank: entries.length + 1 });
+    }
+    hasMore = batch.hasMore;
+    page += 1;
+    if (batch.entries.length === 0) break;
   }
-  if (input.kind === "favoritesPeak24h") {
-    return { kind: input.kind, updatedAtIso, entries: build((s) => s.peak24h) };
+  return {
+    source: "open",
+    valueLabel: "Players now",
+    updatedAtIso: null,
+    entries,
+    hasMore: hasMore && entries.length < STEAM_CHARTS_OPEN_ABSOLUTE_MAX,
+    nextPage: page,
+  };
+}
+
+async function resolveSteamId64(apiKey: string, steamIdOrVanity: string): Promise<string> {
+  const trimmed = steamIdOrVanity.trim();
+  const fromUrl = /steamcommunity\.com\/(?:id|profiles)\/([^/?#]+)/i.exec(trimmed)?.[1];
+  const candidate = fromUrl ? decodeURIComponent(fromUrl) : trimmed;
+  if (/^\d{17}$/.test(candidate)) return candidate;
+
+  const url = new URL("https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/");
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("vanityurl", candidate);
+  const data = await privilegedExtensionFetchJson(url.href);
+  const response = asRecord(asRecord(data)?.response);
+  const success = response?.success;
+  const steamid = response?.steamid;
+  if (success === 1 && typeof steamid === "string" && /^\d{17}$/.test(steamid)) {
+    return steamid;
   }
-  return { kind: input.kind, updatedAtIso, entries: build((s) => s.peakAllTime) };
+  throw new Error("Could not resolve that Steam ID or profile name. Check the id and try again.");
+}
+
+/**
+ * Recently played board: owned games sorted by last play time (fills tall panels),
+ * with lifetime hours. Needs a public profile (or the key owner's account).
+ */
+async function loadRecentlyPlayedGames(
+  apiKey: string,
+  steamIdOrVanity: string,
+  maxRows: number,
+): Promise<ISteamChartsLeaderboardResult> {
+  const steamid = await resolveSteamId64(apiKey, steamIdOrVanity);
+  const limit = clampMaxRows(maxRows);
+  const cacheKey = `steamapi:owned-lastplayed:${steamid}:${limit}`;
+  const cached = cacheGet<ISteamChartsLeaderboardResult>(cacheKey);
+  if (cached) return cached;
+
+  const url = new URL("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/");
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("steamid", steamid);
+  url.searchParams.set("include_appinfo", "1");
+  url.searchParams.set("include_played_free_games", "1");
+  url.searchParams.set("format", "json");
+
+  const data = await privilegedExtensionFetchJson(url.href);
+  const response = asRecord(asRecord(data)?.response);
+  const games = asArray(response?.games);
+
+  type TOwnedRow = {
+    appId: number;
+    name: string;
+    hours: number;
+    lastPlayedAtSec: number;
+  };
+  const parsed: TOwnedRow[] = [];
+  for (const raw of games) {
+    const row = asRecord(raw);
+    if (!row) continue;
+    const appId = typeof row.appid === "number" ? row.appid : Number(row.appid);
+    if (!Number.isFinite(appId) || appId <= 0) continue;
+    const playtimeForever =
+      typeof row.playtime_forever === "number"
+        ? row.playtime_forever
+        : Number(row.playtime_forever);
+    const lastPlayedRaw =
+      typeof row.rtime_last_played === "number"
+        ? row.rtime_last_played
+        : Number(row.rtime_last_played);
+    const lastPlayedAtSec =
+      Number.isFinite(lastPlayedRaw) && lastPlayedRaw > 0 ? Math.floor(lastPlayedRaw) : 0;
+    const minutes = Number.isFinite(playtimeForever) && playtimeForever > 0 ? playtimeForever : 0;
+    // Skip never-played titles (no last play and no hours).
+    if (lastPlayedAtSec <= 0 && minutes <= 0) continue;
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    parsed.push({
+      appId,
+      name: name || `App ${appId}`,
+      hours: Math.round(minutes / 60),
+      lastPlayedAtSec,
+    });
+  }
+
+  parsed.sort((a, b) => {
+    if (b.lastPlayedAtSec !== a.lastPlayedAtSec) return b.lastPlayedAtSec - a.lastPlayedAtSec;
+    return b.hours - a.hours;
+  });
+
+  const entries: ISteamChartsLeaderboardEntry[] = parsed.slice(0, limit).map((row, i) => ({
+    rank: i + 1,
+    appId: row.appId,
+    name: row.name,
+    value: row.hours,
+    lastPlayedAtSec: row.lastPlayedAtSec > 0 ? row.lastPlayedAtSec : null,
+  }));
+
+  const result: ISteamChartsLeaderboardResult = {
+    source: "recent",
+    valueLabel: "Hours played",
+    updatedAtIso: null,
+    entries,
+    hasMore: parsed.length > entries.length,
+  };
+  cacheSet(cacheKey, result);
+  return result;
+}
+
+/**
+ * Steam Charts leaderboard.
+ * - `open` (default) → public steamcharts.com concurrent players — works without a key.
+ * - `recent` → your owned games by last play date, with lifetime hours (needs API key + Steam ID).
+ */
+export async function fetchSteamChartsLeaderboard(input: {
+  mode?: TSteamChartsBoardMode;
+  maxRows?: number;
+  steamWebApiKey?: string;
+  steamId?: string;
+}): Promise<ISteamChartsLeaderboardResult> {
+  const maxRows = clampMaxRows(input.maxRows);
+  const mode: TSteamChartsBoardMode = input.mode === "recent" ? "recent" : "open";
+  const apiKey = input.steamWebApiKey?.trim() ?? "";
+  const steamId = input.steamId?.trim() ?? "";
+
+  if (mode === "recent") {
+    if (!apiKey) {
+      throw new Error("Add a Steam Web API key under Settings > Steam® leaderboard.");
+    }
+    if (!steamId) {
+      throw new Error(
+        "Add your Steam ID (or profile name) under Settings > Steam® leaderboard to load recently played games.",
+      );
+    }
+    return loadRecentlyPlayedGames(apiKey, steamId, maxRows);
+  }
+
+  return loadOpenTopGamesUntil(maxRows);
 }

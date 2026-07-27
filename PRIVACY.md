@@ -6,7 +6,7 @@
 
 - Preferences, widget toggles, and **notes** (text and which note panels are open) may sync via the browser’s extension storage sync (if you use browser sync), controlled by Mozilla/Google/Microsoft/Apple — not by us.
 - **Per-monitor** widget toggles and note panel **screen positions** stay in **local** extension storage on each device (they are not part of browser sync).
-- API keys (OpenAI-compatible, OpenWeather), imported packs/plugins, todos, a single saved **HUD location** (latitude/longitude used by Weather, Clock timezone, Balanced News device region, and related panels), and optional background images stay in **local** extension storage on your device.
+- API keys (OpenAI-compatible, FreeQuickNews, Steam Web API), optional Steam ID, imported packs/plugins, todos, a single saved **HUD location** (latitude/longitude used by Weather, Clock timezone, Balanced News device region, and related panels), and optional background images stay in **local** extension storage on your device. Default **Settings export** omits API keys and Steam ID so shared backup files do not include them.
 
 ## Network requests (only when you use a feature)
 
@@ -18,7 +18,7 @@
 - **Peapix** (`peapix.com`, `img.peapix.com`) when you choose **Bing spotlight** as the new-tab background — the extension loads a public JSON feed that mirrors Bing’s daily images (no Tabocalypse account; subject to Peapix’s and Microsoft’s terms and privacy policies for that imagery).
 - **Search** opens your chosen engine in a new tab (normal web navigation). While you type in the HUD search field (when the Search widget is enabled), Tabocalypse may request **live query suggestions** from that same engine (DuckDuckGo, Google, or Bing — whichever you selected in Settings). Partial queries are sent only for autocomplete; Tabocalypse does not store them.
 - **BYO AI** sends chat requests to the **base URL you configure** (e.g. OpenAI) using **your** API key when you click “Test chat completion” in Settings or send a message in the **AI chat** widget (if enabled). Conversation text in the widget stays in memory for that tab session until you reload. You are subject to that provider’s privacy policy and billing.
-- **Steam Charts** (`steamcharts.com`) when the **Steam Charts** widget is enabled — public HTML leaderboards for concurrent players (no Tabocalypse account; no publisher API key).
+- **Steam Charts** (`steamcharts.com`) when the **Steam® leaderboard** widget is enabled — public concurrent-player chart by default (no Tabocalypse account; no publisher API key). If you add your own **Steam Web API key** and Steam ID under Settings, the widget may call **Steam** (`api.steampowered.com`) for your owned games (last played dates and hours; key and Steam ID stay in local storage). Game capsule artwork loads from Steam’s public CDN (`cdn.cloudflare.steamstatic.com` and related hosts) for identification only.
 - **Cloudflare Speed Test** (`speed.cloudflare.com`) when the **Speed test** widget is enabled — measures download/upload against Cloudflare’s public endpoints (no Tabocalypse account).
 - **King County** (`green2.kingcounty.gov`) when Weather **2 Lakes** buoy data is enabled — public lake buoy readings for the Pacific Northwest (no Tabocalypse account).
 - **Unsuck-it** (`www.unsuck-it.com`) when humor pack refresh is configured — optional fetch of public jargon lines for the built-in classics pack (no Tabocalypse account).
