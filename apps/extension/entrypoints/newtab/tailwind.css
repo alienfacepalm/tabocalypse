@@ -40,6 +40,9 @@
     --scrollbar-thumb-hover: color-mix(in srgb, var(--color-accent2) 92%, white);
     /* Fixed `.footer` clearance — keep in sync with HUD_PAGE_FOOTER_RESERVE_PX in hud-layout.ts */
     --hud-footer-reserve: 3.5rem;
+    /* Settings > Appearance > Control shape (sharp default) */
+    --ui-radius-control: 0px;
+    --ui-radius-panel: 0px;
   }
 
   [data-theme="light"] {
@@ -72,6 +75,7 @@
   textarea,
   select {
     @apply border border-border bg-input px-3 py-2 font-sans text-text;
+    border-radius: var(--ui-radius-control);
   }
 
   input:focus,
@@ -840,6 +844,7 @@
 
   .btn {
     @apply border border-accent bg-btn-bg px-[0.85rem] py-[0.5rem] font-display text-[0.85rem] font-bold uppercase tracking-widest text-accent shadow-[4px_4px_0px_0px_var(--color-accent)] transition-[transform,box-shadow,background-color,color,filter] duration-100;
+    border-radius: var(--ui-radius-control);
   }
 
   .btn:hover {
@@ -1462,6 +1467,7 @@
 
   .dialog {
     @apply flex max-h-[90vh] w-[min(720px,100%)] flex-col overflow-hidden border;
+    border-radius: var(--ui-radius-panel);
     border-color: rgb(148 163 184 / 0.24);
     background:
       linear-gradient(
@@ -1487,7 +1493,7 @@
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.1),
       4px 4px 0 0 var(--color-accent);
-    border-radius: 0;
+    border-radius: var(--ui-radius-panel);
   }
 
   .settings-welcome-title {

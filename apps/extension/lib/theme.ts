@@ -30,6 +30,22 @@ export const THEME_MODE_LABELS: Record<TThemeMode, string> = {
   light: "Light",
 };
 
+/** Button and control corner style (Settings > Appearance). */
+export const UI_SHAPES = ["sharp", "soft", "pill"] as const;
+export type TUiShape = (typeof UI_SHAPES)[number];
+
+export const UI_SHAPE_LABELS: Record<TUiShape, string> = {
+  sharp: "Sharp",
+  soft: "Soft corners",
+  pill: "Pill buttons",
+};
+
+const UI_SHAPE_RADIUS: Record<TUiShape, { control: string; panel: string }> = {
+  sharp: { control: "0px", panel: "0px" },
+  soft: { control: "6px", panel: "4px" },
+  pill: { control: "9999px", panel: "8px" },
+};
+
 export const THEME_PALETTE_LABELS: Record<TThemePalette, string> = {
   glitch: "Acid & magenta",
   ocean: "Cyan & indigo",
@@ -366,10 +382,26 @@ export function resolveThemeCssVars(
   };
 }
 
+export function coerceUiShape(value: unknown, fallback: TUiShape): TUiShape {
+  if (typeof value === "string" && (UI_SHAPES as readonly string[]).includes(value)) {
+    return value as TUiShape;
+  }
+  return fallback;
+}
+
+export function applyUiShape(shape: TUiShape): void {
+  const root = document.documentElement;
+  root.dataset.uiShape = shape;
+  const radii = UI_SHAPE_RADIUS[shape];
+  root.style.setProperty("--ui-radius-control", radii.control);
+  root.style.setProperty("--ui-radius-panel", radii.panel);
+}
+
 export function applyDocumentTheme(
   mode: TThemeMode,
   palette: TThemePalette,
   customAccents: IThemeCustomAccents,
+  uiShape: TUiShape = "sharp",
 ): void {
   const root = document.documentElement;
   root.dataset.theme = mode;
@@ -378,6 +410,7 @@ export function applyDocumentTheme(
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
   }
+  applyUiShape(uiShape);
 }
 
 export function themeGradientStops(mode: TThemeMode): { mid: string; end: string } {

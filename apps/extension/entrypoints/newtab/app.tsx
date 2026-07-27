@@ -214,11 +214,14 @@ import {
   coerceThemeHex,
   coerceThemeMode,
   coerceThemePalette,
+  coerceUiShape,
   getResolvedAccentPair,
   THEME_MODE_LABELS,
   THEME_PALETTE_LABELS,
   THEME_MODES,
   THEME_PRESET_PALETTES,
+  UI_SHAPE_LABELS,
+  UI_SHAPES,
   themeGradientStops,
 } from "../../lib/theme";
 
@@ -596,15 +599,21 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   }, []);
 
   useLayoutEffect(() => {
-    applyDocumentTheme(settings.themeMode, settings.themePalette, {
-      accent: settings.themeCustomAccent,
-      accent2: settings.themeCustomAccent2,
-    });
+    applyDocumentTheme(
+      settings.themeMode,
+      settings.themePalette,
+      {
+        accent: settings.themeCustomAccent,
+        accent2: settings.themeCustomAccent2,
+      },
+      settings.uiShape,
+    );
   }, [
     settings.themeMode,
     settings.themePalette,
     settings.themeCustomAccent,
     settings.themeCustomAccent2,
+    settings.uiShape,
   ]);
 
   const peapixBingCountry = useMemo(
@@ -2257,6 +2266,19 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               }
                             >
                               {THEME_PALETTE_LABELS[palette]}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="muted sm mb-2 mt-4">Control shape</p>
+                        <div className="row wrap">
+                          {UI_SHAPES.map((shape) => (
+                            <button
+                              key={shape}
+                              type="button"
+                              className={s.uiShape === shape ? "btn primary" : "btn"}
+                              onClick={() => void persist((cur) => ({ ...cur, uiShape: shape }))}
+                            >
+                              {UI_SHAPE_LABELS[shape]}
                             </button>
                           ))}
                         </div>
@@ -4145,6 +4167,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                         typeof parsed.themeAccentsMatchWallpaper === "boolean"
                                           ? parsed.themeAccentsMatchWallpaper
                                           : d.themeAccentsMatchWallpaper,
+                                      uiShape: coerceUiShape(parsed.uiShape, d.uiShape),
                                       backgroundSolid: coerceThemeHex(
                                         parsed.backgroundSolid,
                                         d.backgroundSolid,

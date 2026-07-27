@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Settings > Appearance** — choose **Sharp**, **Soft corners**, or **Pill buttons** for HUD controls (synced like other appearance settings).
 - **Weather** widget location map — lock control (bottom right) freezes pan, zoom, and one-shot location until you unlock.
 - **Weather** widget location map — drag to pan and compact +/− zoom on the map; optional scroll-wheel and double-click zoom in **Settings > Weather > Map**.
 
