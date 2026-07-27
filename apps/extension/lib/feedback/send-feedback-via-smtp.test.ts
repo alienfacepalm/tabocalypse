@@ -69,4 +69,28 @@ describe("feedback-background-handler", () => {
     });
     expect(result).toEqual({ ok: false, error: "Enter a message before sending" });
   });
+
+  it("rejects oversized browser info", async () => {
+    const { handleTabocalypseFeedbackSendRequest } = await import("./feedback-background-handler");
+    const result = await handleTabocalypseFeedbackSendRequest({
+      type: "tabocalypse/feedbackSend",
+      kind: "feedback",
+      message: "hello",
+      extensionVersion: "0.1.97",
+      userAgent: "x".repeat(513),
+    });
+    expect(result).toEqual({ ok: false, error: "Browser info is too long" });
+  });
+
+  it("accepts null userAgent as missing browser info", async () => {
+    const { handleTabocalypseFeedbackSendRequest } = await import("./feedback-background-handler");
+    const result = await handleTabocalypseFeedbackSendRequest({
+      type: "tabocalypse/feedbackSend",
+      kind: "feedback",
+      message: "hello",
+      extensionVersion: "0.1.97",
+      userAgent: null as unknown as string,
+    });
+    expect(result).toEqual({ ok: false, error: "Missing browser info" });
+  });
 });

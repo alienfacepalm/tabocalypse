@@ -1,5 +1,9 @@
 import browser from "webextension-polyfill";
-import { byoAiHostOriginPattern, byoAiHostPermissionHostname } from "./byo-ai-base-url";
+import {
+  byoAiHostOriginPattern,
+  byoAiHostPermissionHostname,
+  validateByoAiBaseUrlForPermission,
+} from "./byo-ai-base-url";
 
 /**
  * Ensures the extension may fetch the user-configured BYO host.
@@ -8,9 +12,15 @@ import { byoAiHostOriginPattern, byoAiHostPermissionHostname } from "./byo-ai-ba
 export async function ensureByoAiHostPermission(
   baseUrl: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const validation = validateByoAiBaseUrlForPermission(baseUrl);
+  if (!validation.ok) return validation;
+
   const pattern = byoAiHostOriginPattern(baseUrl);
   if (!pattern) {
-    return { ok: false, error: "Enter a valid base URL (https:// or http://)." };
+    return {
+      ok: false,
+      error: "Enter a valid HTTPS base URL (http://localhost is allowed for local models).",
+    };
   }
   const hostname = byoAiHostPermissionHostname(baseUrl);
   try {
