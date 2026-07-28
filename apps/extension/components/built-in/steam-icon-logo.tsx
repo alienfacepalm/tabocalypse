@@ -9,7 +9,7 @@ import React from "react";
 const STEAM_ICON_LOGO_PATH = "steam-icon-logo.svg";
 const STEAM_WEB_API_KEY_EXAMPLE_PATH = "steam-web-api-key-example.png";
 
-export function steamIconLogoUrl(): string {
+function steamIconLogoUrl(): string {
   try {
     return browser.runtime.getURL(STEAM_ICON_LOGO_PATH);
   } catch {

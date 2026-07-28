@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { computeVirtualWindow } from "../lib/hud-virtual-window";
 
-export interface IHudVirtualListProps<TItem> {
+interface IHudVirtualListProps<TItem> {
   items: readonly TItem[];
   itemHeight: number;
   /** Stable key for each item. */

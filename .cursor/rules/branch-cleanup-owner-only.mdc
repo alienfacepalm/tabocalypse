@@ -1,0 +1,25 @@
+---
+description: When cleaning git branches, only delete branches owned by this user — never others' remote branches.
+alwaysApply: true
+---
+
+# Branch cleanup — only this user's branches
+
+When the user asks to clean up, remove unused, or prune branches (e.g. “clean up all branches”, “remove unused branches”, “keep master only”):
+
+## Scope
+
+- **Only** delete branches **created / owned by this user** (GitHub login **`alienfacepalm`**, commit emails in [`.github/owner-merge-policy.json`](../../.github/owner-merge-policy.json)).
+- **Never** delete remote (or local tracking) branches whose tip / creator is someone else — leave collaborators’ work alone even if the branch looks stale or merged.
+
+## How to decide ownership
+
+1. Prefer **`gh`** / GitHub: branch creator, or author of the tip commit / open PR head.
+2. Local-only branches: tip commit author email/name must match this user (same policy file).
+3. If ownership is **unclear**, **do not delete** — list the branch and ask.
+
+## Safe defaults
+
+- Keep **`master`** / the default branch.
+- Deleting **this user’s** merged feature branches and pruning stale **local** remotes for already-gone refs is fine.
+- “Keep master only” means: remove **this user’s** other branches; **not** wipe every non-master ref on the remote.

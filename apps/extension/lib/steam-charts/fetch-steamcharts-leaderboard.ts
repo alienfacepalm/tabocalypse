@@ -22,11 +22,10 @@ export interface ISteamChartsLeaderboardEntry {
   lastPlayedAtSec?: number | null;
 }
 
-export interface ISteamChartsLeaderboardResult {
+interface ISteamChartsLeaderboardResult {
   source: TSteamChartsLeaderboardSource;
   /** Short label for the value column (e.g. players now, hours). */
   valueLabel: string;
-  updatedAtIso: string | null;
   entries: ISteamChartsLeaderboardEntry[];
   /** True when more open-chart pages may exist (ignored for recent). */
   hasMore?: boolean;
@@ -68,7 +67,7 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-export interface ISteamChartsOpenPageResult {
+interface ISteamChartsOpenPageResult {
   page: number;
   entries: ISteamChartsLeaderboardEntry[];
   hasMore: boolean;
@@ -121,7 +120,6 @@ async function loadOpenTopGamesUntil(maxRows: number): Promise<ISteamChartsLeade
   return {
     source: "open",
     valueLabel: "Players now",
-    updatedAtIso: null,
     entries,
     hasMore: hasMore && entries.length < STEAM_CHARTS_OPEN_ABSOLUTE_MAX,
     nextPage: page,
@@ -223,7 +221,6 @@ async function loadRecentlyPlayedGames(
   const result: ISteamChartsLeaderboardResult = {
     source: "recent",
     valueLabel: "Hours played",
-    updatedAtIso: null,
     entries,
     hasMore: parsed.length > entries.length,
   };

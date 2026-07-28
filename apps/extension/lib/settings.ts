@@ -128,15 +128,6 @@ export type TWidgetKey =
   | "aiChat"
   | "balancedNews";
 
-export type TSteamChartsBoardKey =
-  | "favoritesNow"
-  | "favoritesPeak24h"
-  | "favoritesPeakAllTime"
-  | "globalNow"
-  | "globalPeak24h"
-  | "globalPeakAllTime"
-  | "globalTrendingUp";
-
 /** Top players (open steamcharts) vs Recently played (Steam Web API). */
 export type TSteamChartsBoardMode = "open" | "recent";
 
@@ -148,68 +139,14 @@ export function coerceSteamChartsBoardMode(
   return fallback;
 }
 
-export const STEAM_CHARTS_BOARD_KEYS = [
-  "favoritesNow",
-  "favoritesPeak24h",
-  "favoritesPeakAllTime",
-  "globalNow",
-  "globalPeak24h",
-  "globalPeakAllTime",
-  "globalTrendingUp",
-] as const satisfies readonly TSteamChartsBoardKey[];
-
-export const STEAM_CHARTS_BOARD_LABELS: Record<TSteamChartsBoardKey, string> = {
-  favoritesNow: "Your favorites (now)",
-  favoritesPeak24h: "Your favorites (24h peak)",
-  favoritesPeakAllTime: "Your favorites (all-time peak)",
-  globalNow: "Steam (now)",
-  globalPeak24h: "Steam (24h peak)",
-  globalPeakAllTime: "Steam (all-time peak)",
-  globalTrendingUp: "Steam (trending up)",
-};
-
 export const STEAM_CHARTS_ROW_COUNT_MIN = 3;
 export const STEAM_CHARTS_ROW_COUNT_MAX = 200;
 export const DEFAULT_STEAM_CHARTS_ROW_COUNT = 50;
-
-export const DEFAULT_STEAM_CHARTS_BOARDS: readonly TSteamChartsBoardKey[] = [
-  "globalNow",
-  "globalPeak24h",
-  "globalPeakAllTime",
-  "globalTrendingUp",
-];
 
 export function coerceSteamChartsRowCount(raw: unknown, fallback: number): number {
   if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback;
   const rounded = Math.round(raw);
   return Math.min(STEAM_CHARTS_ROW_COUNT_MAX, Math.max(STEAM_CHARTS_ROW_COUNT_MIN, rounded));
-}
-
-export function coerceSteamChartsBoards(raw: unknown): TSteamChartsBoardKey[] {
-  if (!Array.isArray(raw)) return [...DEFAULT_STEAM_CHARTS_BOARDS];
-  const set = new Set<TSteamChartsBoardKey>();
-  for (const v of raw) {
-    if (typeof v !== "string") continue;
-    if ((STEAM_CHARTS_BOARD_KEYS as readonly string[]).includes(v)) {
-      set.add(v as TSteamChartsBoardKey);
-    }
-  }
-  const out = [...set];
-  return out.length > 0 ? out : [...DEFAULT_STEAM_CHARTS_BOARDS];
-}
-
-export function coerceSteamChartsFavoriteAppIds(raw: unknown): number[] {
-  if (!Array.isArray(raw)) return [];
-  const out: number[] = [];
-  const seen = new Set<number>();
-  for (const v of raw) {
-    if (typeof v !== "number" || !Number.isFinite(v)) continue;
-    const id = Math.floor(v);
-    if (id <= 0 || seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-  }
-  return out;
 }
 
 export function coerceSteamChartsSteamId(raw: unknown): string {
@@ -220,22 +157,6 @@ export function coerceSteamChartsSteamId(raw: unknown): string {
     return String(raw);
   }
   return "";
-}
-
-/** Parse comma/space/semicolon-separated Steam app ids from Settings text. */
-export function parseSteamChartsFavoriteAppIdsText(raw: string): number[] {
-  const parts = raw.split(/[\s,;]+/).filter(Boolean);
-  const nums: number[] = [];
-  for (const p of parts) {
-    const n = Number(p);
-    if (!Number.isFinite(n)) continue;
-    nums.push(n);
-  }
-  return coerceSteamChartsFavoriteAppIds(nums);
-}
-
-export function formatSteamChartsFavoriteAppIdsText(ids: readonly number[]): string {
-  return ids.join(", ");
 }
 
 export interface IImportedUserPack {
@@ -765,14 +686,10 @@ export interface ISettings {
   cryptoChartDays: TCryptoChartDays;
   /** Coins shown in the Crypto panel (CoinGecko ids + display symbols). */
   cryptoWatchlist: ICryptoWatchlistEntry[];
-  /** Which Steam leaderboards are shown (order matters). */
-  steamChartsBoards: TSteamChartsBoardKey[];
   /** Preferred rows to keep loaded (3–200); tall panels may load more to fill height. */
   steamChartsRowCount: number;
   /** Last selected board chip: open top players vs recently played. */
   steamChartsBoardMode: TSteamChartsBoardMode;
-  /** Steam app ids pinned by the user for personal-first leaderboards. */
-  steamChartsFavoriteAppIds: number[];
   /** Optional SteamID / vanity name / profile token for library import (best-effort). */
   steamChartsSteamId: string;
   /** Optional Steam Web API key (local only) for more reliable library lookups. */
@@ -1070,10 +987,8 @@ export interface ISyncSlice {
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
   cryptoWatchlist: ICryptoWatchlistEntry[];
-  steamChartsBoards: TSteamChartsBoardKey[];
   steamChartsRowCount: number;
   steamChartsBoardMode: TSteamChartsBoardMode;
-  steamChartsFavoriteAppIds: number[];
   balancedNewsCountryAuto: boolean;
   balancedNewsCountry: ISettings["balancedNewsCountry"];
   balancedNewsUseDeviceGeo: boolean;
@@ -1447,10 +1362,8 @@ export function defaultSettings(): ISettings {
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
     cryptoWatchlist: [...DEFAULT_CRYPTO_WATCHLIST],
-    steamChartsBoards: [...DEFAULT_STEAM_CHARTS_BOARDS],
     steamChartsRowCount: DEFAULT_STEAM_CHARTS_ROW_COUNT,
     steamChartsBoardMode: "open",
-    steamChartsFavoriteAppIds: [],
     steamChartsSteamId: "",
     steamWebApiKey: "",
     balancedNewsCountryAuto: true,
@@ -1546,10 +1459,8 @@ function toSync(s: ISettings, prefsSavedAt = Date.now()): ISyncSlice {
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
     cryptoWatchlist: s.cryptoWatchlist,
-    steamChartsBoards: s.steamChartsBoards,
     steamChartsRowCount: s.steamChartsRowCount,
     steamChartsBoardMode: s.steamChartsBoardMode,
-    steamChartsFavoriteAppIds: s.steamChartsFavoriteAppIds,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
     balancedNewsCountry: s.balancedNewsCountry,
     balancedNewsUseDeviceGeo: s.balancedNewsUseDeviceGeo,
@@ -1832,7 +1743,6 @@ function mergeSettings(
     ),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     cryptoWatchlist: coerceCryptoWatchlist(sync?.cryptoWatchlist, d.cryptoWatchlist),
-    steamChartsBoards: coerceSteamChartsBoards(sync?.steamChartsBoards),
     steamChartsRowCount: coerceSteamChartsRowCount(
       sync?.steamChartsRowCount,
       d.steamChartsRowCount,
@@ -1841,7 +1751,6 @@ function mergeSettings(
       sync?.steamChartsBoardMode,
       d.steamChartsBoardMode,
     ),
-    steamChartsFavoriteAppIds: coerceSteamChartsFavoriteAppIds(sync?.steamChartsFavoriteAppIds),
     steamChartsSteamId: coerceSteamChartsSteamId(
       local?.steamChartsSteamId ??
         // Older builds stored Steam ID on the sync slice — migrate on read.

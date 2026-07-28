@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Steam leaderboard** — dropped leftover multi-board / favorite app-id preference storage (UI was already single-chart); stops syncing unused board lists.
 - **Bookmarks** panel — loads enough recent (or search) results to fill the panel height and virtualizes the list so tall panels are not left empty.
 - **Steam leaderboard** — **Recently played** loads owned games by last play date (fills tall panels), shows a short last-played date (e.g. `Mar 12`) plus an **hrs** suffix.
 - **Steam leaderboard** — remembers **Top players** vs **Recently played** across new-tab loads (synced preference).

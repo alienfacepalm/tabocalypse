@@ -48,8 +48,6 @@ const {
   resolveNotesListPanelVisible,
   stableUserBackgroundIdFromDataUrl,
   isHudAutoRepositionEnabled,
-  parseSteamChartsFavoriteAppIdsText,
-  formatSteamChartsFavoriteAppIdsText,
   coerceSteamChartsSteamId,
   coerceSteamChartsBoardMode,
   mergeSyncSlicesBySavedAt,
@@ -160,14 +158,6 @@ describe("WIDGET_LABELS", () => {
     for (const key of Object.keys(DEFAULT_WIDGETS) as (keyof typeof DEFAULT_WIDGETS)[]) {
       expect(WIDGET_LABELS[key]?.trim().length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("Steam Charts favorites text", () => {
-  it("parses and formats comma-separated app ids", () => {
-    expect(parseSteamChartsFavoriteAppIdsText("730, 570;440  \n999")).toEqual([730, 570, 440, 999]);
-    expect(formatSteamChartsFavoriteAppIdsText([730, 570])).toBe("730, 570");
-    expect(parseSteamChartsFavoriteAppIdsText("0, -1, abc")).toEqual([]);
   });
 });
 
