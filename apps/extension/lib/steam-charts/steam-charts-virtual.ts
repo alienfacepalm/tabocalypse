@@ -7,11 +7,7 @@ export const STEAM_CHARTS_TOP_PAGE_SIZE = 25;
 /** Absolute ceiling for infinite-scroll open charts (multiple /top pages). */
 export const STEAM_CHARTS_OPEN_ABSOLUTE_MAX = 200;
 
-export {
-  computeVirtualWindow,
-  rowsThatFitViewport,
-  type IVirtualWindow,
-} from "../hud-virtual-window";
+export { rowsThatFitViewport } from "../hud-virtual-window";
 
 export function steamChartsTopPageUrl(page: number): string {
   const p = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
