@@ -233,8 +233,8 @@
       </h1>
       <p class="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--muted)]">
         Tabocalypse is a cross-browser new-tab HUD: search, clock, weather, notes, to-dos, crypto
-        prices, an optional Steam® leaderboard, a speed test, and a personality dial that ranges
-        from
+        prices, a Steam® leaderboard, a speed test — every single panel opt-in — plus a personality
+        dial that ranges from
         <span class="text-[var(--accent)]">quiet and useful</span> to
         <span class="text-[var(--accent2)]">actively judging your open tabs</span>. Chrome, Edge,
         Firefox, and Safari.
@@ -404,8 +404,8 @@
         A HUD, not a homepage
       </h2>
       <p class="mt-3 max-w-2xl text-[var(--muted)]">
-        Toggle any panel per monitor. Nothing is forced on except the ones that make a new tab a new
-        tab. (Real Settings screenshot below — try the fake version above.)
+        Toggle any panel per monitor — every widget is opt-in, nothing is forced on. (Real Settings
+        screenshot below — try the fake version above.)
       </p>
       <div class="mt-8 grid gap-8 lg:grid-cols-2">
         <div
@@ -734,7 +734,8 @@ pnpm dev:firefox</code></pre>
         var toggleLabel = document.getElementById("theme-toggle-label");
         function syncToggleLabel() {
           var mode = root.getAttribute("data-theme") || "dark";
-          toggleLabel.textContent = mode === "light" ? "Light" : "Dark";
+          // Label names the mode a click switches TO, not the current mode.
+          toggleLabel.textContent = mode === "light" ? "Dark" : "Light";
         }
         syncToggleLabel();
         toggle.addEventListener("click", function () {
