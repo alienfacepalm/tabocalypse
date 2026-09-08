@@ -146,12 +146,30 @@
         border-radius: 50%;
       }
       .demo-panel {
+        position: absolute;
+        box-sizing: border-box;
+        width: 190px;
         border: 1px solid var(--d-border);
         border-radius: var(--d-radius-panel);
+        background-color: var(--d-bg);
         padding: 10px;
         font-size: 12px;
         min-height: 76px;
-        transition: border-radius 0.15s;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        transition:
+          border-radius 0.15s,
+          box-shadow 0.1s;
+      }
+      .demo-panel.is-dragging {
+        cursor: grabbing;
+        box-shadow: 0 0 0 2px var(--d-accent);
+        transition: none;
+      }
+      #demo-grid {
+        position: relative;
+        overflow: hidden;
       }
       .demo-tagline {
         transition: color 0.1s;
@@ -334,7 +352,20 @@
                 style="color: var(--d-accent2)"
               ></span>
             </div>
-            <div id="demo-grid" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div class="mt-3 flex items-center justify-between">
+              <p class="font-head text-[10px] uppercase" style="color: var(--d-muted)">
+                Drag any panel to rearrange it
+              </p>
+              <button
+                id="demo-reset-layout"
+                type="button"
+                class="demo-chip"
+                style="padding: 4px 9px; font-size: 10px"
+              >
+                ↻ Reset layout
+              </button>
+            </div>
+            <div id="demo-grid" class="mt-2">
               <div data-panel="search" class="demo-panel">
                 <p class="font-head text-[10px] font-bold uppercase" style="color: var(--d-muted)">
                   Search
@@ -903,6 +934,75 @@ pnpm dev:firefox</code></pre>
             if (panel) panel.style.display = nowActive ? "" : "none";
           });
           widgetsEl.appendChild(btn);
+        });
+
+        // Draggable panels — real HUD panels drag/snap to a grid; this mockup mirrors that.
+        var grid = document.getElementById("demo-grid");
+        var panels = Array.prototype.slice.call(grid.querySelectorAll(".demo-panel"));
+        var PANEL_W = 190;
+        var PANEL_H = 92;
+        var GAP = 12;
+        var SNAP = 8;
+        var initialLayout = {};
+        var zTop = 10;
+
+        function layoutPanels() {
+          var cols = Math.max(1, Math.floor((grid.clientWidth + GAP) / (PANEL_W + GAP)));
+          panels.forEach(function (panel, i) {
+            var col = i % cols;
+            var row = Math.floor(i / cols);
+            var left = col * (PANEL_W + GAP);
+            var top = row * (PANEL_H + GAP);
+            panel.style.left = left + "px";
+            panel.style.top = top + "px";
+            initialLayout[panel.dataset.panel] = { left: left, top: top };
+          });
+          var rows = Math.ceil(panels.length / cols);
+          grid.style.height = rows * (PANEL_H + GAP) - GAP + 90 + "px";
+        }
+        layoutPanels();
+
+        function resetLayout() {
+          panels.forEach(function (panel) {
+            var pos = initialLayout[panel.dataset.panel];
+            if (!pos) return;
+            panel.style.left = pos.left + "px";
+            panel.style.top = pos.top + "px";
+          });
+        }
+        document.getElementById("demo-reset-layout").addEventListener("click", resetLayout);
+
+        panels.forEach(function (panel) {
+          panel.addEventListener("pointerdown", function (e) {
+            if (panel.style.display === "none") return;
+            panel.setPointerCapture(e.pointerId);
+            var startX = e.clientX;
+            var startY = e.clientY;
+            var startLeft = Number.parseFloat(panel.style.left) || 0;
+            var startTop = Number.parseFloat(panel.style.top) || 0;
+            panel.classList.add("is-dragging");
+            panel.style.zIndex = String(++zTop);
+
+            function onMove(ev) {
+              var maxLeft = Math.max(0, grid.clientWidth - panel.offsetWidth);
+              var maxTop = Math.max(0, grid.clientHeight - panel.offsetHeight);
+              var nextLeft = Math.min(maxLeft, Math.max(0, startLeft + (ev.clientX - startX)));
+              var nextTop = Math.min(maxTop, Math.max(0, startTop + (ev.clientY - startY)));
+              panel.style.left = nextLeft + "px";
+              panel.style.top = nextTop + "px";
+            }
+            function onUp() {
+              panel.classList.remove("is-dragging");
+              panel.style.left =
+                Math.round((Number.parseFloat(panel.style.left) || 0) / SNAP) * SNAP + "px";
+              panel.style.top =
+                Math.round((Number.parseFloat(panel.style.top) || 0) / SNAP) * SNAP + "px";
+              panel.removeEventListener("pointermove", onMove);
+              panel.removeEventListener("pointerup", onUp);
+            }
+            panel.addEventListener("pointermove", onMove);
+            panel.addEventListener("pointerup", onUp);
+          });
         });
 
         // Real ticking clock, because it's free
