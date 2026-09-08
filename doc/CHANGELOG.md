@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0] - 2026-09-07
+
+Marketing homepage launch. Rolls up the widget, Appearance, and Chaos work accumulated under the prior **[Unreleased]** section.
+
 ### Added
 
 - **Steam leaderboard** widget — top concurrent players from open steamcharts.com data by default; optional Steam Web API key and Steam ID under **Settings > Steam leaderboard** unlock a **Recently played** board with hours.

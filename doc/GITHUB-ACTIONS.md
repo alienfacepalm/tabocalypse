@@ -4,10 +4,11 @@ Tabocalypse uses GitHub Actions for **CI** (quality gate on pull requests) and *
 
 ## Workflows
 
-| Workflow             | File                                                                | When it runs                                                                                          |
-| -------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **CI**               | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)           | Push and pull requests to `main` / `master`                                                           |
-| **Release packages** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | When a GitHub Release is **published**, or manually via **Actions → Release packages → Run workflow** |
+| Workflow                     | File                                                                | When it runs                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **CI**                       | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)           | Push and pull requests to `main` / `master`                                                                |
+| **Release packages**         | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | When a GitHub Release is **published**, or manually via **Actions → Release packages → Run workflow**      |
+| **Deploy homepage to Pages** | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)     | Push to `master` touching `site/**`, or manually via **Actions → Deploy homepage to Pages → Run workflow** |
 
 Both workflows use **Node.js 22**, **pnpm** (from root `package.json` `packageManager`), and `pnpm install --frozen-lockfile`.
 
@@ -55,6 +56,10 @@ Set this before the first automated release. Without it, **Release packages** fa
 ### Manual test run
 
 Use **Actions → Release packages → Run workflow** without creating a release. The workflow uploads a **`tabocalypse-store-deliverables`** artifact instead of attaching files to a release. Firefox may use the placeholder Gecko ID if the secret is unset; published releases still require the secret.
+
+## Deploy homepage to Pages
+
+Publishes the static marketing homepage under [`site/`](../site) to GitHub Pages using the **GitHub Actions** Pages source (not a `/docs` folder — this repo reserves `doc/` for guides, see [documentation-layout.mdc](../.cursor/rules/documentation-layout.mdc)). Runs on every push to `master` that touches `site/**`; rerun manually via **Actions → Deploy homepage to Pages → Run workflow** to redeploy without a code change (for example after enabling Pages for the first time).
 
 ## Local equivalent
 
