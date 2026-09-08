@@ -12,4 +12,4 @@ npx serve site
 
 ## Deploy
 
-Point GitHub Pages (or any static host) at this `site/` folder. Screenshots under `assets/screenshots/` are real captures from a local build of `apps/extension` (Playwright + the `chrome_edge-mv3` output), not mockups — recapture them the same way after any visual change worth showing off.
+[`.github/workflows/pages.yml`](../.github/workflows/pages.yml) deploys this folder to GitHub Pages on every push to `master` that touches `site/**` (source: GitHub Actions, not a `/docs` branch folder). Live at `https://alienfacepalm.github.io/tabocalypse/` once Pages is enabled for the repo (**Settings → Pages → Source → GitHub Actions**, one-time). Screenshots under `assets/screenshots/` are real captures from a local build of `apps/extension` (Playwright + the `chrome_edge-mv3` output), not mockups — recapture them the same way after any visual change worth showing off.
