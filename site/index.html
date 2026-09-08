@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tabocalypse — The New Tab That Judges You</title>
+    <meta
+      name="description"
+      content="Tabocalypse replaces your new tab with a HUD of widgets, humor packs, and declarative plugins. Local-first, no publisher backend, no telemetry, BYO AI."
+    />
+    <link rel="icon" type="image/png" href="assets/favicon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              void: "#050505",
+              acid: "#39ff14",
+              magenta: "#ff00fe",
+              ash: "#52525b",
+            },
+            fontFamily: {
+              head: ["Space Mono", "monospace"],
+              body: ["JetBrains Mono", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .scanlines::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 50;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.02) 0px,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      }
+      .glitch-caret {
+        animation: blink 1s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="scanlines text-[#dae6d0] antialiased">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 border-b border-ash bg-void/90 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+        <a
+          href="#top"
+          class="flex items-center gap-2 font-head text-lg font-bold uppercase text-acid"
+        >
+          <img src="assets/icon-128.png" alt="" class="h-7 w-7" />
+          Tabocalypse
+        </a>
+        <nav
+          class="hidden items-center gap-6 font-head text-xs font-bold uppercase tracking-wide sm:flex"
+        >
+          <a href="#widgets" class="hover:text-acid">Widgets</a>
+          <a href="#chaos" class="hover:text-acid">Chaos</a>
+          <a href="#theme" class="hover:text-acid">Theme</a>
+          <a href="#privacy" class="hover:text-acid">Privacy</a>
+        </nav>
+        <a
+          href="https://github.com/alienfacepalm/tabocalypse"
+          class="border border-acid px-3 py-2 font-head text-xs font-bold uppercase text-acid shadow-[4px_4px_0_0_#39ff14] hover:bg-acid hover:text-black hover:shadow-none"
+        >
+          View on GitHub
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section id="top" class="mx-auto max-w-6xl px-4 pt-16 pb-10 sm:px-6">
+      <p
+        class="mb-4 inline-block border border-magenta px-3 py-1 font-head text-xs font-bold uppercase text-magenta"
+      >
+        Unreleased — build it yourself, no store listing yet
+      </p>
+      <h1
+        class="max-w-3xl font-head text-4xl font-bold uppercase leading-tight text-[#efffe3] sm:text-6xl"
+      >
+        Your new tab is now a hazmat site.
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg leading-relaxed text-[#baccb0]">
+        Tabocalypse is a cross-browser new-tab HUD: search, clock, weather, notes, to-dos, crypto
+        prices, an optional Steam® leaderboard, a speed test, and a personality dial that ranges
+        from
+        <span class="text-acid">quiet and useful</span> to
+        <span class="text-magenta">actively judging your open tabs</span>. Chrome, Edge, Firefox,
+        and Safari.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-4">
+        <a
+          href="https://github.com/alienfacepalm/tabocalypse/blob/master/doc/ALPHA-SETUP.md"
+          class="border border-acid bg-acid px-5 py-3 font-head text-sm font-bold uppercase text-black shadow-[4px_4px_0_0_#052900] hover:shadow-none"
+        >
+          Build it from source
+        </a>
+        <a
+          href="https://github.com/alienfacepalm/tabocalypse/blob/master/doc/INSTALL-LOCAL-TESTING.md"
+          class="border border-[#52525b] px-5 py-3 font-head text-sm font-bold uppercase text-[#dae6d0] shadow-[4px_4px_0_0_#52525b] hover:bg-[#52525b] hover:shadow-none"
+        >
+          Load a pre-built zip
+        </a>
+      </div>
+
+      <div class="mt-12 border border-ash bg-black/40 p-2 shadow-[8px_8px_0_0_#39ff14]">
+        <img
+          src="assets/screenshots/hero-hummingbird.webp"
+          alt="Tabocalypse new tab HUD showing weather, clock, to-dos, and a Steam leaderboard over a hummingbird wallpaper with green and red accents"
+          class="w-full"
+        />
+      </div>
+      <p class="mt-3 font-head text-xs uppercase text-[#85967c]">
+        Real screenshot. Not a mockup. Yes, the tagline at the top really does mock you like that.
+      </p>
+    </section>
+
+    <!-- Trust strip -->
+    <section class="border-y border-ash bg-[#0c1609]">
+      <div
+        class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 text-center font-head text-xs font-bold uppercase tracking-wide text-[#baccb0] sm:grid-cols-4 sm:px-6"
+      >
+        <div>No publisher backend</div>
+        <div>No telemetry</div>
+        <div>BYO AI key only</div>
+        <div>Declarative plugins only</div>
+      </div>
+    </section>
+
+    <!-- Widgets -->
+    <section id="widgets" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-head text-3xl font-bold uppercase text-acid">A HUD, not a homepage</h2>
+      <p class="mt-3 max-w-2xl text-[#baccb0]">
+        Toggle any panel per monitor. Nothing is forced on except the ones that make a new tab a new
+        tab.
+      </p>
+      <div class="mt-8 grid gap-8 lg:grid-cols-2">
+        <div class="border border-ash bg-black/40 p-2 shadow-[6px_6px_0_0_#52525b]">
+          <img
+            src="assets/screenshots/feature-widgets.webp"
+            alt="Tabocalypse Settings panel showing widget toggle chips for Search, Clock, Notes, To-do, Weather, Crypto prices, Steam leaderboard, and more"
+            class="w-full"
+          />
+        </div>
+        <ul
+          class="grid grid-cols-2 gap-3 self-start font-head text-xs font-bold uppercase sm:text-sm"
+        >
+          <li class="border border-ash px-3 py-2">Search + assist handoff</li>
+          <li class="border border-ash px-3 py-2">Clock + alarms</li>
+          <li class="border border-ash px-3 py-2">Weather + location map</li>
+          <li class="border border-ash px-3 py-2">Notes</li>
+          <li class="border border-ash px-3 py-2">To-dos</li>
+          <li class="border border-ash px-3 py-2">Crypto prices</li>
+          <li class="border border-ash px-3 py-2">Steam® leaderboard</li>
+          <li class="border border-ash px-3 py-2">Speed test</li>
+          <li class="border border-ash px-3 py-2">AI chat (BYO key)</li>
+          <li class="border border-ash px-3 py-2">Bookmarks strip</li>
+          <li class="border border-ash px-3 py-2">Top sites</li>
+          <li class="border border-ash px-3 py-2">Balanced news</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Chaos -->
+    <section id="chaos" class="border-y border-ash bg-[#0c1609]">
+      <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 class="font-head text-3xl font-bold uppercase text-magenta">Dial the chaos</h2>
+        <p class="mt-3 max-w-2xl text-[#baccb0]">
+          Three personality settings — <span class="text-acid">Chaotic</span>,
+          <span class="text-[#dae6d0]">Balanced</span>, and <span class="text-acid">Focus</span> —
+          control the humor strip and clock roasts. Pick a built-in voice (default pack mix, Gen-Z,
+          or classic corporate jargon), mix in built-in packs by mildness, or write your own lines.
+          Turn it off entirely and Tabocalypse is just a fast, quiet HUD.
+        </p>
+        <div class="mt-8 border border-ash bg-black/40 p-2 shadow-[6px_6px_0_0_#ff00fe]">
+          <img
+            src="assets/screenshots/feature-chaos.webp"
+            alt="Tabocalypse Chaos settings section showing Chaotic, Balanced, and Focus personality options, built-in voice choices, and humor pack checkboxes"
+            class="w-full"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Adaptive theme -->
+    <section id="theme" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-head text-3xl font-bold uppercase text-acid">The theme is your wallpaper</h2>
+      <p class="mt-3 max-w-2xl text-[#baccb0]">
+        Auto HUD samples accent colors straight from today's background photo, so the same HUD reads
+        differently every day. Turn it off for 12 fixed palettes and Sharp, Soft corners, or Pill
+        control shapes instead.
+      </p>
+      <div class="mt-8 grid gap-6 sm:grid-cols-2">
+        <figure class="border border-ash bg-black/40 p-2 shadow-[6px_6px_0_0_#39ff14]">
+          <img
+            src="assets/screenshots/hero-mural.webp"
+            alt="Tabocalypse HUD with pink and salmon accent colors sampled from a mural wallpaper"
+            class="w-full"
+          />
+          <figcaption class="mt-2 px-1 font-head text-xs uppercase text-[#85967c]">
+            Mural wallpaper → pink/salmon accents
+          </figcaption>
+        </figure>
+        <figure class="border border-ash bg-black/40 p-2 shadow-[6px_6px_0_0_#ff00fe]">
+          <img
+            src="assets/screenshots/hero-hummingbird.webp"
+            alt="Tabocalypse HUD with green and red accent colors sampled from a hummingbird wallpaper"
+            class="w-full"
+          />
+          <figcaption class="mt-2 px-1 font-head text-xs uppercase text-[#85967c]">
+            Hummingbird wallpaper → acid green/red accents
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Privacy -->
+    <section id="privacy" class="border-y border-ash bg-[#0c1609]">
+      <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 class="font-head text-3xl font-bold uppercase text-[#efffe3]">
+          Privacy, but make it spite
+        </h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2">
+          <div class="border border-ash px-4 py-4">
+            <p class="font-head text-xs font-bold uppercase text-acid">No publisher backend</p>
+            <p class="mt-2 text-sm text-[#baccb0]">
+              No AlienFacepalm account, sync server, or telemetry. Network calls are user-directed —
+              weather, your chosen search engine, optional widgets you turn on.
+            </p>
+          </div>
+          <div class="border border-ash px-4 py-4">
+            <p class="font-head text-xs font-bold uppercase text-acid">BYO AI, always</p>
+            <p class="mt-2 text-sm text-[#baccb0]">
+              The optional AI chat widget and search assist handoff use your own API key or open a
+              third-party site in a new tab. No publisher API keys are ever shipped.
+            </p>
+          </div>
+          <div class="border border-ash px-4 py-4">
+            <p class="font-head text-xs font-bold uppercase text-acid">Declarative plugins only</p>
+            <p class="mt-2 text-sm text-[#baccb0]">
+              Imported packs and plugins are JSON, validated against a schema. No <code>eval</code>,
+              no user-supplied JavaScript, no remote code execution.
+            </p>
+          </div>
+          <div class="border border-ash px-4 py-4">
+            <p class="font-head text-xs font-bold uppercase text-acid">Local-first storage</p>
+            <p class="mt-2 text-sm text-[#baccb0]">
+              Settings, notes, todos, imported packs, and API keys stay on your device. Only what
+              you enable in browser sync leaves this computer — and that's
+              Mozilla/Google/Microsoft/Apple's sync, not ours.
+            </p>
+          </div>
+        </div>
+        <a
+          href="https://github.com/alienfacepalm/tabocalypse/blob/master/PRIVACY.md"
+          class="mt-6 inline-block font-head text-xs font-bold uppercase text-magenta underline hover:text-acid"
+        >
+          Read the full privacy policy →
+        </a>
+      </div>
+    </section>
+
+    <!-- Get it -->
+    <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-head text-3xl font-bold uppercase text-acid">Get it</h2>
+      <p class="mt-3 max-w-2xl text-[#baccb0]">
+        Tabocalypse isn't on the Chrome, Edge, Firefox, or Safari extension stores yet. Until it is,
+        run it from source or load a build someone shares with you.
+      </p>
+      <div class="mt-8 grid gap-6 sm:grid-cols-3">
+        <div class="border border-ash px-4 py-4">
+          <p class="font-head text-sm font-bold uppercase text-[#efffe3]">1. Clone + build</p>
+          <pre
+            class="mt-3 overflow-x-auto text-xs text-[#baccb0]"
+          ><code>git clone git@github.com:alienfacepalm/tabocalypse.git
+cd tabocalypse
+pnpm install
+pnpm build</code></pre>
+        </div>
+        <div class="border border-ash px-4 py-4">
+          <p class="font-head text-sm font-bold uppercase text-[#efffe3]">2. Load unpacked</p>
+          <p class="mt-3 text-xs text-[#baccb0]">
+            Open your browser's extensions page, enable developer mode, and load
+            <code class="text-acid">apps/extension/output/chrome_edge-mv3</code>.
+          </p>
+        </div>
+        <div class="border border-ash px-4 py-4">
+          <p class="font-head text-sm font-bold uppercase text-[#efffe3]">3. Open a new tab</p>
+          <p class="mt-3 text-xs text-[#baccb0]">
+            That's it. Settings live behind the gear icon, top right. Everything ships in Chaotic
+            mode by default.
+          </p>
+        </div>
+      </div>
+      <a
+        href="https://github.com/alienfacepalm/tabocalypse/blob/master/doc/ALPHA-SETUP.md"
+        class="mt-8 inline-block border border-acid bg-acid px-5 py-3 font-head text-sm font-bold uppercase text-black shadow-[4px_4px_0_0_#052900] hover:shadow-none"
+      >
+        Full setup guide <span class="glitch-caret">_</span>
+      </a>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-ash bg-[#0c1609]">
+      <div
+        class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-xs text-[#85967c] sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      >
+        <p>
+          Tabocalypse by AlienFacepalm. Not affiliated with Valve, Steam, CoinGecko, or your browser
+          vendor.
+        </p>
+        <div class="flex gap-4 font-head font-bold uppercase">
+          <a href="https://github.com/alienfacepalm/tabocalypse" class="hover:text-acid">GitHub</a>
+          <a
+            href="https://github.com/alienfacepalm/tabocalypse/blob/master/PRIVACY.md"
+            class="hover:text-acid"
+            >Privacy</a
+          >
+          <a
+            href="https://github.com/alienfacepalm/tabocalypse/blob/master/doc/README.md"
+            class="hover:text-acid"
+            >Docs</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -4,6 +4,8 @@
 
 Cross-browser new-tab extension (Chrome, Edge, Firefox, Safari): HUD widgets, humor packs, declarative plugins, and local-first settings. No publisher backend or telemetry.
 
+Marketing homepage (static, buildless): [site/index.html](site/index.html) — see [site/README.md](site/README.md) to preview or deploy it.
+
 > **Unreleased** — not on extension stores yet. Use a local build for testing; see [Try it locally](#try-it-locally) below.
 
 ## Try it locally
