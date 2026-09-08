@@ -300,9 +300,9 @@
         </h2>
         <p class="mt-3 max-w-2xl text-[var(--muted)]">
           A simplified mockup of the real <strong>Settings &gt; Appearance</strong>,
-          <strong>Chaos</strong>, and <strong>Widgets</strong> controls — the same 10 accent
-          palettes and 3 control shapes shipped in the extension, wired to fake data so you can feel
-          how it changes before you build it.
+          <strong>Chaos</strong>, and <strong>Widgets</strong> controls — real Dark/Light modes, 5
+          featured accent palettes, and 3 control shapes, wired to fake data so you can feel how it
+          changes before you build it.
         </p>
 
         <div
@@ -311,6 +311,12 @@
         >
           <!-- Controls -->
           <div class="space-y-6">
+            <div>
+              <p class="font-head text-xs font-bold uppercase" style="color: var(--d-muted)">
+                Mode
+              </p>
+              <div id="demo-mode" class="mt-2 flex flex-wrap gap-2"></div>
+            </div>
             <div>
               <p class="font-head text-xs font-bold uppercase" style="color: var(--d-muted)">
                 Personality
@@ -322,6 +328,9 @@
                 Accent palette
               </p>
               <div id="demo-palette" class="mt-2 flex flex-wrap gap-2"></div>
+              <p class="mt-1.5 text-[10px]" style="color: var(--d-muted)">
+                5 featured here — the real Settings has all 10, plus a custom picker.
+              </p>
             </div>
             <div>
               <p class="font-head text-xs font-bold uppercase" style="color: var(--d-muted)">
@@ -784,13 +793,26 @@ pnpm dev:firefox</code></pre>
           { key: "glitch", label: "Acid & magenta", accent: "#39ff14", accent2: "#ff00ff" },
           { key: "ocean", label: "Cyan & indigo", accent: "#22d3ee", accent2: "#6366f1" },
           { key: "ember", label: "Amber & rose", accent: "#fb923c", accent2: "#f43f5e" },
-          { key: "slate", label: "Cool gray", accent: "#94a3b8", accent2: "#64748b" },
-          { key: "forest", label: "Lime & forest", accent: "#84cc16", accent2: "#15803d" },
           { key: "plasma", label: "Violet & pink", accent: "#c084fc", accent2: "#ec4899" },
-          { key: "sunset", label: "Orange & violet", accent: "#fb923c", accent2: "#7c3aed" },
-          { key: "voltage", label: "Blue & gold", accent: "#3b82f6", accent2: "#eab308" },
-          { key: "blood", label: "Crimson & scarlet", accent: "#f87171", accent2: "#b91c1c" },
           { key: "mint", label: "Mint & aqua", accent: "#2dd4bf", accent2: "#0ea5e9" },
+        ];
+        var MODES = [
+          {
+            key: "dark",
+            label: "Dark",
+            bg: "#050505",
+            text: "#dae6d0",
+            muted: "#85967c",
+            border: "#27272a",
+          },
+          {
+            key: "light",
+            label: "Light",
+            bg: "#e8e8e4",
+            text: "#1a1f18",
+            muted: "#57534e",
+            border: "#a8a8a3",
+          },
         ];
         var SHAPES = [
           { key: "sharp", label: "Sharp", control: "0px", panel: "0px" },
@@ -840,6 +862,71 @@ pnpm dev:firefox</code></pre>
           return luminance(hex) > 0.55 ? "#0a0a0a" : "#f2f2ec";
         }
 
+        // Ports apps/extension/lib/theme.ts's HSL lightness cap so the demo's light-mode
+        // secondary-accent contrast fix matches the real Settings > Appearance behavior.
+        function hexToRgb(hex) {
+          var n = hex.replace("#", "");
+          return {
+            r: Number.parseInt(n.substring(0, 2), 16),
+            g: Number.parseInt(n.substring(2, 4), 16),
+            b: Number.parseInt(n.substring(4, 6), 16),
+          };
+        }
+        function rgbToHsl(r, g, b) {
+          r /= 255;
+          g /= 255;
+          b /= 255;
+          var max = Math.max(r, g, b);
+          var min = Math.min(r, g, b);
+          var l = (max + min) / 2;
+          var h = 0;
+          var s = 0;
+          if (max !== min) {
+            var d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h /= 6;
+          }
+          return { h: h, s: s, l: l };
+        }
+        function hue2rgb(p, q, t) {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        }
+        function hslToHex(h, s, l) {
+          var r, g, b;
+          if (s === 0) {
+            r = g = b = l;
+          } else {
+            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            var p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1 / 3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1 / 3);
+          }
+          function c(n) {
+            return Math.round(Math.min(255, Math.max(0, n * 255)))
+              .toString(16)
+              .padStart(2, "0");
+          }
+          return "#" + c(r) + c(g) + c(b);
+        }
+        // Same thresholds as ensureAccent2ReadableInLightMode: only darkens accents that are
+        // too pale to read on light glass; primary accent is used as-authored either way.
+        function accent2ForMode(hex, mode) {
+          if (mode !== "light") return hex;
+          var rgb = hexToRgb(hex);
+          var hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+          if (hsl.l <= 0.68) return hex;
+          return hslToHex(hsl.h, hsl.s, Math.min(hsl.l, 0.6));
+        }
+
         function makeChip(container, label, onClick) {
           var btn = document.createElement("button");
           btn.type = "button";
@@ -874,13 +961,40 @@ pnpm dev:firefox</code></pre>
         applyPersonality(PERSONALITIES[0]);
         setActive(personalityButtons, personalityButtons[0]);
 
+        // Mode (Dark/Light) + accent palette share one resolved-color pass, since the real
+        // extension re-derives accent contrast from whichever mode is active.
+        var demoState = { mode: MODES[0], palette: PALETTES[0] };
+        function renderTheme() {
+          var mode = demoState.mode;
+          var palette = demoState.palette;
+          frame.style.setProperty("--d-bg", mode.bg);
+          frame.style.setProperty("--d-text", mode.text);
+          frame.style.setProperty("--d-muted", mode.muted);
+          frame.style.setProperty("--d-border", mode.border);
+          frame.style.setProperty("--d-accent", palette.accent);
+          frame.style.setProperty("--d-accent2", accent2ForMode(palette.accent2, mode.key));
+          frame.style.setProperty("--d-on-accent", onAccentFor(palette.accent));
+        }
+
+        // Mode
+        var modeEl = document.getElementById("demo-mode");
+        var modeButtons = [];
+        MODES.forEach(function (m) {
+          var btn = makeChip(modeEl, m.label, function () {
+            demoState.mode = m;
+            renderTheme();
+            setActive(modeButtons, btn);
+          });
+          modeButtons.push(btn);
+        });
+        setActive(modeButtons, modeButtons[0]);
+
         // Accent palette
         var paletteEl = document.getElementById("demo-palette");
         var paletteButtons = [];
         function applyPalette(p) {
-          frame.style.setProperty("--d-accent", p.accent);
-          frame.style.setProperty("--d-accent2", p.accent2);
-          frame.style.setProperty("--d-on-accent", onAccentFor(p.accent));
+          demoState.palette = p;
+          renderTheme();
         }
         PALETTES.forEach(function (p) {
           var btn = document.createElement("button");
