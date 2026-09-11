@@ -70,6 +70,7 @@ Index by audience: [doc/README.md](doc/README.md).
 - [doc/CROSS-BROWSER-PUBLISHING-PLAN.md](doc/CROSS-BROWSER-PUBLISHING-PLAN.md) — phased rollout
 - [doc/PLAN/ROADMAP.md](doc/PLAN/ROADMAP.md) — future enhancements (candidate backlog)
 - [doc/PLAN/MONETIZATION.md](doc/PLAN/MONETIZATION.md) — monetization spectrum, approved package, pricing, signed-JSON design
+- [doc/PLAN/THEME-SUITES.md](doc/PLAN/THEME-SUITES.md) — sellable theme suites, brand kits for companies, theme pack schema and designer
 - [doc/PLAN/PROJOCALYPSE.md](doc/PLAN/PROJOCALYPSE.md) — Projocalypse PM submodule and `pnpm pm:board`
 - [doc/STORE-LISTING.md](doc/STORE-LISTING.md) — listing checklist
 - [doc/GITHUB-ACTIONS.md](doc/GITHUB-ACTIONS.md) — CI and release packaging

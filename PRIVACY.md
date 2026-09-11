@@ -24,7 +24,7 @@
 - **Unsuck-it** (`www.unsuck-it.com`) when humor pack refresh is configured — optional fetch of public jargon lines for the built-in classics pack (no Tabocalypse account).
 - **Declarative plugins** may include `LinkGrid` or other types that open **HTTPS** URLs **you** supplied in the plugin JSON.
 
-## Donations, memberships, purchases / feature suggestions
+## Donations, purchases / feature suggestions
 
 Support links open third-party sites (e.g. GitHub Sponsors, Ko-fi, Patreon, GitHub Issues) in a new tab. Tabocalypse does not process payments and contains no checkout.
 

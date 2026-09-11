@@ -1,6 +1,6 @@
 {
   "packageName": "tabocalypse-roadmap",
-  "generatedAt": "2026-09-11T08:44:01.177Z",
+  "generatedAt": "2026-09-11T23:07:32.381Z",
   "files": ["doc/PLAN/ROADMAP-PM-BOARD.md"],
   "items": [
     {
@@ -323,6 +323,61 @@
       }
     },
     {
+      "id": "PM-T080",
+      "title": "Theme engine: theme packs, token → CSS vars, Appearance › Themes library",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 64
+      }
+    },
+    {
+      "id": "PM-T081",
+      "title": "Typography roles: bundled font menu + embedded WOFF2 cap",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 65
+      }
+    },
+    {
+      "id": "PM-T082",
+      "title": "Chrome, shape, motion tokens (reduced motion always wins)",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 66
+      }
+    },
+    {
+      "id": "PM-T083",
+      "title": "Background sets, layout templates, personality copy in themes",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 67
+      }
+    },
+    {
+      "id": "PM-T087",
+      "title": "Creator docs: THEME-AUTHORING, sign-pack CLI, no-ads policy, example signed theme",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 68
+      }
+    },
+    {
       "id": "PM-T050",
       "title": "Keyboard navigation audit (HUD + Settings)",
       "done": false,
@@ -330,7 +385,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 67
+        "line": 72
       }
     },
     {
@@ -341,7 +396,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 68
+        "line": 73
       }
     },
     {
@@ -352,7 +407,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 69
+        "line": 74
       }
     },
     {
@@ -363,7 +418,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 70
+        "line": 75
       }
     },
     {
@@ -374,7 +429,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 74
+        "line": 79
       }
     },
     {
@@ -385,7 +440,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 75
+        "line": 80
       }
     },
     {
@@ -396,7 +451,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 76
+        "line": 81
       }
     },
     {
@@ -407,7 +462,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 77
+        "line": 82
       }
     },
     {
@@ -418,7 +473,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 78
+        "line": 83
       }
     },
     {
@@ -429,7 +484,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 79
+        "line": 84
       }
     },
     {
@@ -440,7 +495,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 80
+        "line": 85
       }
     },
     {
@@ -451,29 +506,40 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 81
+        "line": 86
       }
     },
     {
-      "id": "PM-T078",
-      "title": "Enterprise managed-storage policy + Team token",
+      "id": "PM-T084",
+      "title": "Dashboard designer page (site/design): live preview, export, in-browser signing",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 87
+      }
+    },
+    {
+      "id": "PM-T085",
+      "title": "Brand kits: brand block, brand token, storage.managed loader, ENTERPRISE-DEPLOYMENT doc (one-time license)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 88
+      }
+    },
+    {
+      "id": "PM-T086",
+      "title": "First-party theme suites: Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; free Starter",
       "done": false,
       "section": "W10 · Stretch & backlog",
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 82
-      }
-    },
-    {
-      "id": "PM-T079",
-      "title": "Monthly supporter pack drop workflow (content ops)",
-      "done": false,
-      "section": "W10 · Stretch & backlog",
-      "priority": "low",
-      "source": {
-        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 83
+        "line": 89
       }
     },
     {
@@ -484,7 +550,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 87
+        "line": 93
       }
     },
     {
@@ -495,7 +561,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 88
+        "line": 94
       }
     },
     {
@@ -506,13 +572,13 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 89
+        "line": 95
       }
     }
   ],
   "summary": {
-    "total": 46,
+    "total": 52,
     "done": 3,
-    "open": 43
+    "open": 49
   }
 }

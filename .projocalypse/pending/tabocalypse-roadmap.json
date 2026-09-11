@@ -2,7 +2,7 @@
   "version": 1,
   "packageName": "tabocalypse-roadmap",
   "hostProjectId": null,
-  "generatedAt": "2026-09-11T08:44:01.175Z",
+  "generatedAt": "2026-09-11T23:07:32.379Z",
   "seedPolicy": "merge-new-only",
   "sections": [
     "Backlog",
@@ -254,12 +254,52 @@
       "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:63"
     },
     {
+      "planItemId": "PM-T080",
+      "title": "Theme engine: theme packs, token → CSS vars, Appearance › Themes library",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "high",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:64"
+    },
+    {
+      "planItemId": "PM-T081",
+      "title": "Typography roles: bundled font menu + embedded WOFF2 cap",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:65"
+    },
+    {
+      "planItemId": "PM-T082",
+      "title": "Chrome, shape, motion tokens (reduced motion always wins)",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:66"
+    },
+    {
+      "planItemId": "PM-T083",
+      "title": "Background sets, layout templates, personality copy in themes",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:67"
+    },
+    {
+      "planItemId": "PM-T087",
+      "title": "Creator docs: THEME-AUTHORING, sign-pack CLI, no-ads policy, example signed theme",
+      "completed": false,
+      "sectionName": "W8 · Plugins & packs",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:68"
+    },
+    {
       "planItemId": "PM-T050",
       "title": "Keyboard navigation audit (HUD + Settings)",
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:67"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:72"
     },
     {
       "planItemId": "PM-T051",
@@ -267,7 +307,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:68"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:73"
     },
     {
       "planItemId": "PM-T052",
@@ -275,7 +315,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:69"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:74"
     },
     {
       "planItemId": "PM-T055",
@@ -283,7 +323,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:70"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:75"
     },
     {
       "planItemId": "PM-T033",
@@ -291,7 +331,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:74"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:79"
     },
     {
       "planItemId": "PM-T053",
@@ -299,7 +339,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:75"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:80"
     },
     {
       "planItemId": "PM-T060",
@@ -307,7 +347,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:76"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:81"
     },
     {
       "planItemId": "PM-T061",
@@ -315,7 +355,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:77"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:82"
     },
     {
       "planItemId": "PM-T062",
@@ -323,7 +363,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:78"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:83"
     },
     {
       "planItemId": "PM-T063",
@@ -331,7 +371,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:79"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:84"
     },
     {
       "planItemId": "PM-T064",
@@ -339,7 +379,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:80"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:85"
     },
     {
       "planItemId": "PM-T065",
@@ -347,23 +387,31 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:81"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:86"
     },
     {
-      "planItemId": "PM-T078",
-      "title": "Enterprise managed-storage policy + Team token",
+      "planItemId": "PM-T084",
+      "title": "Dashboard designer page (site/design): live preview, export, in-browser signing",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:87"
+    },
+    {
+      "planItemId": "PM-T085",
+      "title": "Brand kits: brand block, brand token, storage.managed loader, ENTERPRISE-DEPLOYMENT doc (one-time license)",
+      "completed": false,
+      "sectionName": "W10 · Stretch & backlog",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:88"
+    },
+    {
+      "planItemId": "PM-T086",
+      "title": "First-party theme suites: Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; free Starter",
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:82"
-    },
-    {
-      "planItemId": "PM-T079",
-      "title": "Monthly supporter pack drop workflow (content ops)",
-      "completed": false,
-      "sectionName": "W10 · Stretch & backlog",
-      "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:83"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:89"
     },
     {
       "planItemId": "PM-T070",
@@ -371,7 +419,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:87"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:93"
     },
     {
       "planItemId": "PM-T071",
@@ -379,7 +427,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:88"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:94"
     },
     {
       "planItemId": "PM-T072",
@@ -387,7 +435,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:89"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:95"
     }
   ]
 }

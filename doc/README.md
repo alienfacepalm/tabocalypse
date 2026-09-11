@@ -10,6 +10,7 @@ Start here for **development**, **local testing** (including non-developers), an
 | [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md) | Phased rollout, deliverables, and blueprint corrections for Tabocalypse |
 | [Future enhancements roadmap](PLAN/ROADMAP.md)                    | Candidate backlog before Projocalypse board sync                        |
 | [Monetization plan](PLAN/MONETIZATION.md)                         | Revenue spectrum, approved package, pricing, signed-JSON entitlements   |
+| [Theme suites and brand kits](PLAN/THEME-SUITES.md)               | Sellable theme suites, company branding, theme pack schema, designer    |
 | [Projocalypse PM board](PLAN/PROJOCALYPSE.md)                     | Submodule setup, `pnpm pm:board`, plan ↔ board sync                     |
 | [Architecture overview](ARCHITECTURE.md)                          | High-level map of packages and extension surfaces                       |
 | [Contributing](CONTRIBUTING.md)                                   | PR expectations and checks                                              |

@@ -51,7 +51,7 @@ Each widget:
 
 ### `LinkGrid`
 
-Links must be `http://` or `https://`.
+Links must be `https://` (the SDK validator rejects anything else).
 
 ```json
 {
@@ -62,6 +62,12 @@ Links must be `http://` or `https://`.
   }
 }
 ```
+
+## Content policy (applies to every plugin, pack, and theme)
+
+- **No advertising.** Plugins must not carry ads of any kind: no affiliate links, sponsored links or images, partner placements, promotional `RotatingQuotes`, or tracking parameters on `LinkGrid` URLs. This mirrors the Tabocalypse product invariant in `.cursor/rules/project-conventions.mdc` and applies to first-party and third-party content alike. The importer may add automated checks (for example rejecting known affiliate URL patterns) as the schema grows.
+- **You may sell your plugin.** Creators are welcome to sell plugins, packs, and themes as **signed JSON** on their own merchant pages (Gumroad, Lemon Squeezy, Ko-fi shop, and so on). Tabocalypse takes no cut, runs no review queue, and does not sign third-party content; the signed envelope carries your own public key and the extension shows the signer to the user. See [`PLAN/MONETIZATION.md`](PLAN/MONETIZATION.md) for the envelope format and the honesty clause (signed JSON is provenance, not DRM).
+- **Declarative only, always.** Selling a plugin does not change the rules: JSON only, allowlisted widget types, HTTPS links, no user JavaScript.
 
 ## Distribution
 
