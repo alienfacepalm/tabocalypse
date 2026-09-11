@@ -21,7 +21,7 @@ This repository also contains the “source of truth” for behavior and repo co
   - TypeScript: no `any`
   - naming: interfaces `I*`, type aliases `T*`
   - filenames: kebab-case
-  - product: no publisher backend/keys; declarative plugins only (no user JS execution); no in-extension checkout (purchases are link-out; offline signature verification of purchased tokens/signed JSON is allowed)
+  - product: no publisher backend/keys; declarative plugins only (no user JS execution); no in-extension checkout (purchases are link-out; offline signature verification of purchased tokens/signed JSON is allowed); no ads anywhere (extension, site, first- or third-party packs/plugins); no scheduled delivery obligations
 
 ### Preferred output format from Claude
 

@@ -61,6 +61,11 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T075 Signed pack/plugin envelope + Verified badge <!-- pm:section=W8 · Plugins & packs pm:priority=high -->
 - [ ] pm:PM-T076 Plugin schema v2 premium widget types (DataCard, Countdown, RssList, StatChart) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
 - [ ] pm:PM-T077 Static signed catalog with link-out purchase (extends T-030) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
+- [ ] pm:PM-T080 Theme engine: theme packs, token → CSS vars, Appearance › Themes library <!-- pm:section=W8 · Plugins & packs pm:priority=high -->
+- [ ] pm:PM-T081 Typography roles: bundled font menu + embedded WOFF2 cap <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
+- [ ] pm:PM-T082 Chrome, shape, motion tokens (reduced motion always wins) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
+- [ ] pm:PM-T083 Background sets, layout templates, personality copy in themes <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
+- [ ] pm:PM-T087 Creator docs: THEME-AUTHORING, sign-pack CLI, no-ads policy, example signed theme <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
 
 ## W9 · Accessibility & performance
 
@@ -79,8 +84,9 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T063 Pomodoro / focus timer tied to Clock alarms <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
 - [ ] pm:PM-T064 Wallpaper rotation from user folder <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
 - [ ] pm:PM-T065 HUD layout templates (productivity vs news-heavy) <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
-- [ ] pm:PM-T078 Enterprise managed-storage policy + Team token <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
-- [ ] pm:PM-T079 Monthly supporter pack drop workflow (content ops) <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
+- [ ] pm:PM-T084 Dashboard designer page (site/design): live preview, export, in-browser signing <!-- pm:section=W10 · Stretch & backlog pm:priority=medium -->
+- [ ] pm:PM-T085 Brand kits: brand block, brand token, storage.managed loader, ENTERPRISE-DEPLOYMENT doc (one-time license) <!-- pm:section=W10 · Stretch & backlog pm:priority=medium -->
+- [ ] pm:PM-T086 First-party theme suites: Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; free Starter <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
 
 ## Done
 

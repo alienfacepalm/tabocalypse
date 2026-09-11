@@ -12,7 +12,7 @@ Human-readable backlog for Tabocalypse after the current alpha. **Machine-readab
 2. **This file** keeps narrative notes and original theme groupings (P0–P5) for reference.
 3. Open the board: `pnpm pm:board` — see [PROJOCALYPSE.md](./PROJOCALYPSE.md).
 
-**Product constraints** (non-negotiable): no publisher backend or telemetry; declarative plugins only; BYO AI keys; link-out support/donations/purchases (no in-extension checkout; offline signature verification of purchased tokens and signed JSON is allowed — see [MONETIZATION.md](./MONETIZATION.md)).
+**Product constraints** (non-negotiable): no publisher backend or telemetry; declarative plugins only; BYO AI keys; link-out support/donations/purchases (no in-extension checkout; offline signature verification of purchased tokens and signed JSON is allowed); **no ads anywhere** (extension, site, first- or third-party packs/plugins); **no scheduled delivery obligations** — see [MONETIZATION.md](./MONETIZATION.md).
 
 ---
 
@@ -99,8 +99,23 @@ _(Removed from the active roadmap — store prerequisites are tracked outside th
 | T-075 | **Signed pack/plugin envelope** + Verified badge                      | Bad signature imports as unverified, never rejected                      |
 | T-076 | **Plugin schema v2 premium widget types** (DataCard, Countdown, RSS…) | Declarative only; user grants host permission at import                  |
 | T-077 | **Static signed catalog** with link-out purchase                      | Extends T-030; fetched only when the user opens Browse packs             |
-| T-078 | **Enterprise managed-storage policy** + Team token                    | `storage.managed`; Safari unsupported                                    |
-| T-079 | **Monthly supporter drop workflow** (content ops)                     | One signed pack per month to all supporter platforms                     |
+| T-078 | ~~Enterprise managed-storage policy + Team token~~                    | Reframed as one-time **Brand Kit** (T-085); per-seat renewals dropped    |
+| T-079 | ~~Monthly supporter drop workflow~~                                   | Dropped — a content cadence violates the no-scheduled-obligations rule   |
+
+---
+
+## P7 · Theme suites & brand kits (see [THEME-SUITES.md](./THEME-SUITES.md))
+
+| ID    | Candidate                                                                 | Notes                                                                         |
+| ----- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| T-080 | **Theme engine**: `kind: "theme"` packs, token → CSS vars, Themes library | Free for everyone; heavy assets in `storage.local`, pointer in sync           |
+| T-081 | **Typography roles**: bundled font menu, embedded WOFF2 with cap          | No remote fonts                                                               |
+| T-082 | **Chrome, shape, motion tokens**                                          | Blur, opacity, borders, shadow style, scanlines; reduced motion always wins   |
+| T-083 | **Background sets, layout templates, personality copy** in themes         | Data URLs or user-approved HTTPS                                              |
+| T-084 | **Dashboard designer** page (`site/design/`)                              | Static, buildless; live preview, export, in-browser WebCrypto signing         |
+| T-085 | **Brand kits** for companies                                              | `brand` block + one-time `brand` token + `storage.managed` loader; no seats   |
+| T-086 | **First-party theme suites**                                              | Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; Starter |
+| T-087 | **Creator docs + `sign-pack` CLI**                                        | Self-signed, self-sold; no-ads policy text                                    |
 
 ---
 
@@ -119,17 +134,17 @@ _(Removed from the active roadmap — store prerequisites are tracked outside th
 
 ## Sprint schedule (1 week each)
 
-| Week | Column                      | Focus                                                                                            |
-| ---- | --------------------------- | ------------------------------------------------------------------------------------------------ |
-| W1   | Ship blockers               | Store prerequisites (Gecko ID, privacy URL, screenshots, Safari smoke)                           |
-| W2   | Chrome launch               | Release CI, listing copy, Chrome Web Store                                                       |
-| W3   | Multi-store rollout         | Edge, Firefox AMO, Safari App Store                                                              |
-| W4   | New tab essentials          | Quick links, Speed test default-on, error deep links, offline indicator                          |
-| W5   | News & productivity         | Balanced news default, calendar, RSS, onboarding tour                                            |
-| W6   | AI & HUD layout             | AI chat polish, weather streak, HUD preset export                                                |
-| W7   | Settings & data trust       | Backup/restore, sync conflicts, pack import URL                                                  |
-| W8   | Plugins & packs             | Marketplace index, pack CLI, more humor packs                                                    |
-| W9   | Accessibility & performance | Keyboard audit, reduced motion, contrast, perf budget                                            |
-| W10  | Stretch & backlog           | iframe widget, i18n, P2P sync, custom search, tab groups, pomodoro, wallpapers, layout templates |
+| Week | Column                      | Focus                                                                                                              |
+| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| W1   | Ship blockers               | Store prerequisites (Gecko ID, privacy URL, screenshots, Safari smoke)                                             |
+| W2   | Chrome launch               | Release CI, listing copy, Chrome Web Store                                                                         |
+| W3   | Multi-store rollout         | Edge, Firefox AMO, Safari App Store                                                                                |
+| W4   | New tab essentials          | Quick links, Speed test default-on, error deep links, offline indicator                                            |
+| W5   | News & productivity         | Balanced news default, calendar, RSS, onboarding tour                                                              |
+| W6   | AI & HUD layout             | AI chat polish, weather streak, HUD preset export                                                                  |
+| W7   | Settings & data trust       | Backup/restore, sync conflicts, pack import URL                                                                    |
+| W8   | Plugins & packs             | Catalog index, pack CLI, more humor packs, theme engine + theme tokens, creator docs                               |
+| W9   | Accessibility & performance | Keyboard audit, reduced motion, contrast, perf budget                                                              |
+| W10  | Stretch & backlog           | iframe widget, i18n, P2P sync, custom search, tab groups, pomodoro, wallpapers, designer, brand kits, theme suites |
 
 Checkboxes and `pm:PM-T###` ids: [ROADMAP-PM-BOARD.md](./ROADMAP-PM-BOARD.md).
