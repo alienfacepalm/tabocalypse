@@ -462,8 +462,13 @@ export function WeatherWidget({
             commitMapView(nextLat, nextLon, mapZoom);
           }}
           onRecenter={recenterMapView}
-          onUseMyLocationOnce={!autoGeoEnabled ? onUseMyLocationOnce : undefined}
+          onUseMyLocationOnce={onUseMyLocationOnce}
           useMyLocationDetecting={geoStatus === "detecting"}
+          useMyLocationDisabledTip={
+            autoGeoEnabled
+              ? "Automatic HUD location is on and already updates on each new tab. Turn it off under Settings > Optional permissions to use a one-time lookup."
+              : undefined
+          }
           onZoomIn={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom + 1)}
           onZoomOut={() => commitMapView(mapCenterLat, mapCenterLon, mapZoom - 1)}
           onToggleLocked={() =>
