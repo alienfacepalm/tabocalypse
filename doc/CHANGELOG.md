@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Weather** widget location map — the "use my location once" button no longer disappears when the map is locked or automatic HUD location is on. It now stays visible and disabled with a tooltip explaining why, matching the zoom buttons. The automatic-location tooltip under **Settings > Optional permissions** no longer points at a button that was hidden while it was on.
 - **Settings > Feedback** — the default mailto recipient was missing its domain suffix (`jagon@alienfacepalm` → `jagon@alienfacepalm.com`), so builds without `WXT_TABOCALYPSE_FEEDBACK_TO` opened an undeliverable address.
 
 ## [1.0] - 2026-09-07

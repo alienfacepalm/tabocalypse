@@ -62,6 +62,7 @@ export function WeatherStaticMap({
   onUseMyLocationOnce,
   onToggleLocked,
   useMyLocationDetecting = false,
+  useMyLocationDisabledTip,
   className = "",
 }: {
   lat: number;
@@ -81,6 +82,8 @@ export function WeatherStaticMap({
   onUseMyLocationOnce?: () => void;
   onToggleLocked?: () => void;
   useMyLocationDetecting?: boolean;
+  /** When set, the one-shot location button renders disabled with this tooltip (e.g. automatic location is on). */
+  useMyLocationDisabledTip?: string;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -278,7 +281,18 @@ export function WeatherStaticMap({
   const canPan = mapInteractive && dragEnabled;
   const canZoom =
     mapInteractive && typeof onZoomIn === "function" && typeof onZoomOut === "function";
-  const showUseMyLocation = mapInteractive && typeof onUseMyLocationOnce === "function";
+  // Always render the one-shot location button when a handler exists; lock or auto-geo only disable it
+  // (matching the zoom buttons) so the control never silently vanishes.
+  const showUseMyLocation = typeof onUseMyLocationOnce === "function";
+  const useMyLocationDisabled =
+    locked || useMyLocationDetecting || typeof useMyLocationDisabledTip === "string";
+  const useMyLocationTip = locked
+    ? "Unlock the map to use your location"
+    : typeof useMyLocationDisabledTip === "string"
+      ? useMyLocationDisabledTip
+      : useMyLocationDetecting
+        ? "Getting your location once…"
+        : "Use your current location once (does not enable automatic location on future tabs).";
   const showRecenter =
     mapInteractive &&
     typeof onRecenter === "function" &&
@@ -385,11 +399,11 @@ export function WeatherStaticMap({
             </PanelTip>
           ) : null}
           {showUseMyLocation ? (
-            <PanelTip tip="Use your current location once (does not enable automatic location on future tabs).">
+            <PanelTip tip={useMyLocationTip}>
               <button
                 type="button"
                 className="weather-location-map-control-btn"
-                disabled={useMyLocationDetecting}
+                disabled={useMyLocationDisabled}
                 aria-label="Use location once to set shared HUD coordinates"
                 onClick={onUseMyLocationOnce}
               >
