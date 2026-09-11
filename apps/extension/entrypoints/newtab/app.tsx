@@ -139,7 +139,8 @@ import {
   resolveUserBackgroundImage,
   resolveWidgetsForDisplay,
   hasWidgetsDisplayOverride,
-  saveSettings,
+  flushPendingSettingsSave,
+  scheduleSaveSettings,
   STEAM_CHARTS_ROW_COUNT_MAX,
   STEAM_CHARTS_ROW_COUNT_MIN,
   type THumorIntensity,
@@ -467,7 +468,6 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
    */
   const lastWallpaperAccentApplyRef = useRef<{ logicalKey: string } | null>(null);
   const latestSettingsRef = useRef<ISettings>(initialSettings);
-  const persistChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const persistInFlightRef = useRef(0);
   const pendingStorageReloadRef = useRef(false);
   const hydrateGenRef = useRef(0);
@@ -608,6 +608,22 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     };
     browser.storage.onChanged.addListener(onStorageChanged);
     return () => browser.storage.onChanged.removeListener(onStorageChanged);
+  }, []);
+
+  // Saves are coalesced (see scheduleSaveSettings); write anything pending before the tab goes away.
+  useEffect(() => {
+    const flush = (): void => {
+      void flushPendingSettingsSave();
+    };
+    const onVisibilityChange = (): void => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -817,70 +833,67 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
     myLinesSaveTimerRef.current = null;
   }, []);
 
-  const saveLatestToDisk = useCallback(async (): Promise<void> => {
-    const cur = latestSettingsRef.current;
-    try {
-      await saveSettings(cur);
-    } catch (e: unknown) {
-      showHudError(e instanceof Error ? e.message : String(e));
-    }
-  }, [showHudError]);
-
-  const persist = useCallback(
-    (next: TSettingsUpdater): Promise<boolean> => {
-      const run = async (): Promise<boolean> => {
-        clearMyLinesDebouncedSaveTimer();
-        persistInFlightRef.current += 1;
-        hydrateGenRef.current += 1;
-        try {
-          const current = latestSettingsRef.current;
-          const raw = typeof next === "function" ? next(current) : next;
-          const noteLayoutChanged =
-            raw.notePanels !== current.notePanels ||
-            raw.notePanelsByDisplay !== current.notePanelsByDisplay;
-          const rawResolved: ISettings = noteLayoutChanged
-            ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
-            : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
-          const resolved = applyPersonalityPresetHarmony(rawResolved);
-          latestSettingsRef.current = resolved;
-          setSettings(resolved);
-          try {
-            await saveSettings(resolved);
-            return true;
-          } catch (e: unknown) {
-            showHudError(e instanceof Error ? e.message : String(e));
-            return false;
-          }
-        } finally {
-          persistInFlightRef.current = Math.max(0, persistInFlightRef.current - 1);
-          if (persistInFlightRef.current === 0 && pendingStorageReloadRef.current) {
-            pendingStorageReloadRef.current = false;
-            const gen = ++hydrateGenRef.current;
-            void loadSettings().then((next) => {
-              if (gen !== hydrateGenRef.current) return;
-              if (persistInFlightRef.current > 0) {
-                pendingStorageReloadRef.current = true;
-                return;
-              }
-              const baseline = latestSettingsRef.current;
-              const merged = mergeHydratedSettingsWithBaseline(baseline, next, {
-                preserveMyLinesDraft: myLinesSaveTimerRef.current !== null,
-                preserveBaselinePrefs: false,
-              });
-              latestSettingsRef.current = merged;
-              setSettings(merged);
-            });
-          }
-        }
-      };
-
-      persistChainRef.current = persistChainRef.current.then(run).catch((e: unknown) => {
+  /**
+   * Queue a coalesced storage write for `resolved` (already applied to state). Tracks in-flight
+   * saves so `storage.onChanged` reloads wait until our own writes have landed.
+   */
+  const saveResolvedToDisk = useCallback(
+    async (resolved: ISettings): Promise<boolean> => {
+      persistInFlightRef.current += 1;
+      hydrateGenRef.current += 1;
+      try {
+        await scheduleSaveSettings(resolved);
+        return true;
+      } catch (e: unknown) {
         showHudError(e instanceof Error ? e.message : String(e));
         return false;
-      });
-      return persistChainRef.current;
+      } finally {
+        persistInFlightRef.current = Math.max(0, persistInFlightRef.current - 1);
+        if (persistInFlightRef.current === 0 && pendingStorageReloadRef.current) {
+          pendingStorageReloadRef.current = false;
+          const gen = ++hydrateGenRef.current;
+          void loadSettings().then((next) => {
+            if (gen !== hydrateGenRef.current) return;
+            if (persistInFlightRef.current > 0) {
+              pendingStorageReloadRef.current = true;
+              return;
+            }
+            const baseline = latestSettingsRef.current;
+            const merged = mergeHydratedSettingsWithBaseline(baseline, next, {
+              preserveMyLinesDraft: myLinesSaveTimerRef.current !== null,
+              preserveBaselinePrefs: false,
+            });
+            latestSettingsRef.current = merged;
+            setSettings(merged);
+          });
+        }
+      }
     },
-    [clearMyLinesDebouncedSaveTimer, showHudError],
+    [showHudError],
+  );
+
+  const saveLatestToDisk = useCallback(async (): Promise<void> => {
+    await saveResolvedToDisk(latestSettingsRef.current);
+  }, [saveResolvedToDisk]);
+
+  /** Apply a settings update to state immediately and schedule the storage write. */
+  const persist = useCallback(
+    (next: TSettingsUpdater): Promise<boolean> => {
+      clearMyLinesDebouncedSaveTimer();
+      const current = latestSettingsRef.current;
+      const raw = typeof next === "function" ? next(current) : next;
+      const noteLayoutChanged =
+        raw.notePanels !== current.notePanels ||
+        raw.notePanelsByDisplay !== current.notePanelsByDisplay;
+      const rawResolved: ISettings = noteLayoutChanged
+        ? { ...raw, notePanelsEpoch: (current.notePanelsEpoch ?? 0) + 1 }
+        : { ...raw, notePanelsEpoch: raw.notePanelsEpoch ?? current.notePanelsEpoch ?? 0 };
+      const resolved = applyPersonalityPresetHarmony(rawResolved);
+      latestSettingsRef.current = resolved;
+      setSettings(resolved);
+      return saveResolvedToDisk(resolved);
+    },
+    [clearMyLinesDebouncedSaveTimer, saveResolvedToDisk],
   );
 
   useEffect(() => {
@@ -1547,18 +1560,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
       }
       myLinesSaveTimerRef.current = window.setTimeout(() => {
         myLinesSaveTimerRef.current = null;
-        persistChainRef.current = persistChainRef.current
-          .then(async (): Promise<boolean> => {
-            await saveLatestToDisk();
-            return true;
-          })
-          .catch((e: unknown) => {
-            showHudError(e instanceof Error ? e.message : String(e));
-            return false;
-          });
+        void saveLatestToDisk();
       }, 300);
     },
-    [saveLatestToDisk, showHudError],
+    [saveLatestToDisk],
   );
 
   const humorCtx: IHumorContext = useMemo(
