@@ -24,7 +24,7 @@ Tabocalypse replaces your browser’s new tab page with clocks, weather, todos, 
 Overrides the new tab page to show configurable widgets and optional humor or declarative plugins. User-imported packs are optional personal content.
 
 **Monetization:**  
-Donate/support links open third-party sites only; the extension does not process payments.
+Free to install and use. Support links (tips, supporter memberships on GitHub Sponsors / Ko-fi / Patreon) open third-party sites only. Optional paid content (premium packs, a Pro unlock) is purchased on a third-party merchant site and delivered as a signed JSON file or license token that the extension verifies offline. The extension contains no checkout and does not process payments. See [PLAN/MONETIZATION.md](PLAN/MONETIZATION.md).
 
 ## Permission justifications (for reviewer notes)
 
@@ -70,4 +70,4 @@ Typical store sizes: **1280×800** and/or **440×280** — confirm each portal�
 - **Single purpose**: Replace the new tab page with widgets and optional humor; user-imported JSON/ZIP packs are optional personal content.
 - **Permissions**: `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; `host_permissions` for Open-Meteo, CoinGecko, Peapix/Bing imagery, FreeQuickNews, Wikimedia, King County buoys, Cloudflare Speed Test, Unsuck-it humor refresh, Steam Charts / optional Steam Web API hosts, and search suggestion endpoints for the user’s chosen engine; optional HTTPS/localhost hosts for BYO AI (settings test and optional AI chat widget).
 - **Privacy**: Summarize [PRIVACY.md](../PRIVACY.md); disclose user-directed network calls (weather, user-configured AI base URL).
-- **Fundraising**: Donate links open third-party sites; the extension does not process payments.
+- **Fundraising / paid content**: Donate, membership, and purchase links open third-party sites; the extension does not process payments. Purchased packs or license tokens are verified offline (signature check only, no network).

@@ -1,6 +1,6 @@
 {
   "packageName": "tabocalypse-roadmap",
-  "generatedAt": "2026-07-27T17:48:34.071Z",
+  "generatedAt": "2026-09-11T08:44:01.177Z",
   "files": ["doc/PLAN/ROADMAP-PM-BOARD.md"],
   "items": [
     {
@@ -11,7 +11,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 15
+        "line": 17
       }
     },
     {
@@ -22,7 +22,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 16
+        "line": 18
       }
     },
     {
@@ -33,7 +33,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 17
+        "line": 19
       }
     },
     {
@@ -44,7 +44,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 21
+        "line": 23
       }
     },
     {
@@ -55,7 +55,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 22
+        "line": 24
       }
     },
     {
@@ -66,7 +66,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 23
+        "line": 25
       }
     },
     {
@@ -77,7 +77,7 @@
       "priority": "high",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 27
+        "line": 29
       }
     },
     {
@@ -88,7 +88,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 28
+        "line": 30
       }
     },
     {
@@ -99,7 +99,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 29
+        "line": 31
       }
     },
     {
@@ -110,7 +110,18 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 30
+        "line": 32
+      }
+    },
+    {
+      "id": "PM-T073",
+      "title": "\"What's new\" banner after update (lastSeenVersion + changelog)",
+      "done": false,
+      "section": "W4 · New tab essentials",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 33
       }
     },
     {
@@ -121,7 +132,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 34
+        "line": 37
       }
     },
     {
@@ -132,7 +143,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 35
+        "line": 38
       }
     },
     {
@@ -143,7 +154,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 36
+        "line": 39
       }
     },
     {
@@ -154,7 +165,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 37
+        "line": 40
       }
     },
     {
@@ -165,7 +176,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 41
+        "line": 44
       }
     },
     {
@@ -176,7 +187,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 42
+        "line": 45
       }
     },
     {
@@ -187,7 +198,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 43
+        "line": 46
       }
     },
     {
@@ -198,7 +209,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 47
+        "line": 50
       }
     },
     {
@@ -209,7 +220,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 48
+        "line": 51
       }
     },
     {
@@ -220,7 +231,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 49
+        "line": 52
       }
     },
     {
@@ -231,7 +242,18 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 50
+        "line": 53
+      }
+    },
+    {
+      "id": "PM-T074",
+      "title": "Offline license entitlements (signed token, Settings › License)",
+      "done": false,
+      "section": "W7 · Settings & data trust",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 54
       }
     },
     {
@@ -242,7 +264,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 54
+        "line": 58
       }
     },
     {
@@ -253,7 +275,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 55
+        "line": 59
       }
     },
     {
@@ -264,7 +286,40 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 56
+        "line": 60
+      }
+    },
+    {
+      "id": "PM-T075",
+      "title": "Signed pack/plugin envelope + Verified badge",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 61
+      }
+    },
+    {
+      "id": "PM-T076",
+      "title": "Plugin schema v2 premium widget types (DataCard, Countdown, RssList, StatChart)",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 62
+      }
+    },
+    {
+      "id": "PM-T077",
+      "title": "Static signed catalog with link-out purchase (extends T-030)",
+      "done": false,
+      "section": "W8 · Plugins & packs",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 63
       }
     },
     {
@@ -275,7 +330,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 60
+        "line": 67
       }
     },
     {
@@ -286,7 +341,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 61
+        "line": 68
       }
     },
     {
@@ -297,7 +352,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 62
+        "line": 69
       }
     },
     {
@@ -308,7 +363,7 @@
       "priority": "medium",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 63
+        "line": 70
       }
     },
     {
@@ -319,7 +374,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 67
+        "line": 74
       }
     },
     {
@@ -330,7 +385,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 68
+        "line": 75
       }
     },
     {
@@ -341,7 +396,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 69
+        "line": 76
       }
     },
     {
@@ -352,7 +407,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 70
+        "line": 77
       }
     },
     {
@@ -363,7 +418,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 71
+        "line": 78
       }
     },
     {
@@ -374,7 +429,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 72
+        "line": 79
       }
     },
     {
@@ -385,7 +440,7 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 73
+        "line": 80
       }
     },
     {
@@ -396,13 +451,68 @@
       "priority": "low",
       "source": {
         "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
-        "line": 74
+        "line": 81
+      }
+    },
+    {
+      "id": "PM-T078",
+      "title": "Enterprise managed-storage policy + Team token",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 82
+      }
+    },
+    {
+      "id": "PM-T079",
+      "title": "Monthly supporter pack drop workflow (content ops)",
+      "done": false,
+      "section": "W10 · Stretch & backlog",
+      "priority": "low",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 83
+      }
+    },
+    {
+      "id": "PM-T070",
+      "title": "Licensing: AGPL-3.0 extension, MIT plugin SDK",
+      "done": true,
+      "section": "Done",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 87
+      }
+    },
+    {
+      "id": "PM-T071",
+      "title": "Monetization doc, invariant amendment, listing/privacy monetization copy",
+      "done": true,
+      "section": "Done",
+      "priority": "high",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 88
+      }
+    },
+    {
+      "id": "PM-T072",
+      "title": "Supporter chooser page + homepage CTA (GitHub Sponsors, Ko-fi, Patreon)",
+      "done": true,
+      "section": "Done",
+      "priority": "medium",
+      "source": {
+        "file": "doc/PLAN/ROADMAP-PM-BOARD.md",
+        "line": 89
       }
     }
   ],
   "summary": {
-    "total": 36,
-    "done": 0,
-    "open": 36
+    "total": 46,
+    "done": 3,
+    "open": 43
   }
 }

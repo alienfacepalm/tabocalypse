@@ -9,6 +9,7 @@ Start here for **development**, **local testing** (including non-developers), an
 | [Publishing to extension stores](PUBLISHING-EXTENSION-STORES.md)  | Maintainers shipping to Chrome, Edge, Firefox, and Safari               |
 | [Cross-browser publishing plan](CROSS-BROWSER-PUBLISHING-PLAN.md) | Phased rollout, deliverables, and blueprint corrections for Tabocalypse |
 | [Future enhancements roadmap](PLAN/ROADMAP.md)                    | Candidate backlog before Projocalypse board sync                        |
+| [Monetization plan](PLAN/MONETIZATION.md)                         | Revenue spectrum, approved package, pricing, signed-JSON entitlements   |
 | [Projocalypse PM board](PLAN/PROJOCALYPSE.md)                     | Submodule setup, `pnpm pm:board`, plan ↔ board sync                     |
 | [Architecture overview](ARCHITECTURE.md)                          | High-level map of packages and extension surfaces                       |
 | [Contributing](CONTRIBUTING.md)                                   | PR expectations and checks                                              |

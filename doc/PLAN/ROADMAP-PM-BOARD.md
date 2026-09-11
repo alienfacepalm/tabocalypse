@@ -30,6 +30,7 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T020 Graduate Speed test to on-by-default <!-- pm:section=W4 · New tab essentials pm:priority=medium -->
 - [ ] pm:PM-T041 Per-widget settings deep links from HUD errors <!-- pm:section=W4 · New tab essentials pm:priority=medium -->
 - [ ] pm:PM-T054 Offline-first indicator in footer for cached data <!-- pm:section=W4 · New tab essentials pm:priority=medium -->
+- [ ] pm:PM-T073 "What's new" banner after update (lastSeenVersion + changelog) <!-- pm:section=W4 · New tab essentials pm:priority=medium -->
 
 ## W5 · News & productivity
 
@@ -50,12 +51,16 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T042 Sync conflict UI when storage.sync diverges <!-- pm:section=W7 · Settings & data trust pm:priority=medium -->
 - [ ] pm:PM-T043 Import pack from user-pasted HTTPS URL <!-- pm:section=W7 · Settings & data trust pm:priority=medium -->
 - [ ] pm:PM-T034 Settings export includes pack manifests <!-- pm:section=W7 · Settings & data trust pm:priority=medium -->
+- [ ] pm:PM-T074 Offline license entitlements (signed token, Settings › License) <!-- pm:section=W7 · Settings & data trust pm:priority=high -->
 
 ## W8 · Plugins & packs
 
 - [ ] pm:PM-T030 Plugin marketplace (curated static index, link-out install) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
 - [ ] pm:PM-T031 Pack authoring CLI in plugin-sdk <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
 - [ ] pm:PM-T032 More built-in humor packs (scrape workflow) <!-- pm:section=W8 · Plugins & packs pm:priority=low -->
+- [ ] pm:PM-T075 Signed pack/plugin envelope + Verified badge <!-- pm:section=W8 · Plugins & packs pm:priority=high -->
+- [ ] pm:PM-T076 Plugin schema v2 premium widget types (DataCard, Countdown, RssList, StatChart) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
+- [ ] pm:PM-T077 Static signed catalog with link-out purchase (extends T-030) <!-- pm:section=W8 · Plugins & packs pm:priority=medium -->
 
 ## W9 · Accessibility & performance
 
@@ -74,3 +79,11 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T063 Pomodoro / focus timer tied to Clock alarms <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
 - [ ] pm:PM-T064 Wallpaper rotation from user folder <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
 - [ ] pm:PM-T065 HUD layout templates (productivity vs news-heavy) <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
+- [ ] pm:PM-T078 Enterprise managed-storage policy + Team token <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
+- [ ] pm:PM-T079 Monthly supporter pack drop workflow (content ops) <!-- pm:section=W10 · Stretch & backlog pm:priority=low -->
+
+## Done
+
+- [x] pm:PM-T070 Licensing: AGPL-3.0 extension, MIT plugin SDK <!-- pm:section=Done pm:priority=high -->
+- [x] pm:PM-T071 Monetization doc, invariant amendment, listing/privacy monetization copy <!-- pm:section=Done pm:priority=high -->
+- [x] pm:PM-T072 Supporter chooser page + homepage CTA (GitHub Sponsors, Ko-fi, Patreon) <!-- pm:section=Done pm:priority=medium -->
