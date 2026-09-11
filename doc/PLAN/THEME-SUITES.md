@@ -1,6 +1,6 @@
 # Theme suites and brand kits
 
-**Status:** plan drafted 2026-09-11. Nothing here is built yet. Board items proposed at the end (`PM-T080`–`PM-T087`); add them to [ROADMAP-PM-BOARD.md](./ROADMAP-PM-BOARD.md) and run `pnpm pm:sync` when approved.
+**Status:** plan drafted 2026-09-11. Nothing here is built yet. Board items `PM-T080`–`PM-T087` (listed at the end) are on [ROADMAP-PM-BOARD.md](./ROADMAP-PM-BOARD.md) and synced with `pnpm pm:sync`.
 
 **Purpose:** turn the theme system into a product. Today a "theme" is a palette swap. A **theme suite** should change the entire face of the new tab: colors, type, shapes, panel chrome, background, motion, personality copy, and default layout. Suites are sold as **signed JSON**, one-off, with no release schedule. The same engine powers **brand kits**: companies design a branded, locked-down dashboard for employee computers and deploy it through browser policy.
 
@@ -85,7 +85,7 @@ Field rules (enforced in `@tabocalypse/plugin-sdk`, the same package that valida
 - `layout.widgets` may only name known widget keys; unknown keys are ignored so old builds can import newer themes.
 - `brand` is `null` unless the pack is a brand kit (below).
 - **Size caps:** whole pack ≤ 2 MB; the slice mirrored to `storage.sync` is only `{ themeId, version, colors, type (names only), shape, chrome, motion, personality }` and must stay under the 6 KB safety margin the settings code already uses. Heavy assets (wallpapers, embedded fonts, logos) live in `storage.local` on each device. Sync carries the pointer; a device without the pack shows a "theme assets not on this device, re-import" note instead of a broken page.
-- **No ads.** No promotional text in `personality`, no third-party links in `brand.footerLinks` that are not the buyer's own, no tracking parameters. The importer rejects `?utm_` and known affiliate patterns on any URL in a theme pack.
+- **No ads.** No promotional text in `personality`, no third-party links in `brand.footerLinks` that are not the buyer's own, no tracking parameters. This is policy, enforced best-effort: the importer checks URLs in a theme pack for `?utm_` and known affiliate patterns, but a creator-owned redirect can evade any pattern check, so the rule itself is what creators agree to (see [`PLUGIN-SCHEMA.md`](../PLUGIN-SCHEMA.md)).
 
 ---
 
@@ -155,13 +155,13 @@ A brand kit is a theme pack whose `brand` block is populated. The brand block is
 
 ## Pricing (one-off only)
 
-| SKU                    | Price                     | Notes                                                                                   |
-| ---------------------- | ------------------------- | --------------------------------------------------------------------------------------- |
-| Single theme           | $3                        | Signed JSON from the merchant                                                           |
-| Theme suite (3–5)      | $7–9                      | One download, all themes in the suite                                                   |
-| Pro (lifetime)         | $19 (see MONETIZATION.md) | Pro holders can download any first-party suite that exists; no future suite is promised |
-| Brand Kit license      | $149 one-time per org     | Unlocks the `brand` block on unlimited devices; includes the deployment doc             |
-| Brand Kit + all suites | $199 one-time             | Convenience bundle                                                                      |
+| SKU                    | Price                     | Notes                                                                                                           |
+| ---------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Single theme           | $3                        | Signed JSON from the merchant                                                                                   |
+| Theme suite (3–5)      | $7–9                      | One download, all themes in the suite                                                                           |
+| Pro (lifetime)         | $19 (see MONETIZATION.md) | Whether Pro includes first-party suites is an open question (see below); no future suite is promised either way |
+| Brand Kit license      | $149 one-time per org     | Unlocks the `brand` block on unlimited devices; includes the deployment doc                                     |
+| Brand Kit + all suites | $199 one-time             | Convenience bundle                                                                                              |
 
 Third-party creators set their own prices on their own pages. Tabocalypse takes nothing and reviews nothing.
 
@@ -169,16 +169,16 @@ Third-party creators set their own prices on their own pages. Tabocalypse takes 
 
 ## Delivery phases (no dates)
 
-| Item                                                                                                                                                                               | Proposed board ID | Effort     | Depends on           |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------- | -------------------- |
-| Theme engine: `kind: "theme"` in the SDK validator, token → CSS variable mapping, local asset store, sync pointer, Settings › Appearance › Themes library (import, switch, remove) | PM-T080           | M          | none                 |
-| Typography roles: bundled font menu under `@fontsource`, embedded WOFF2 with cap, font tokens in `tailwind.css`                                                                    | PM-T081           | M          | T080                 |
-| Chrome, shape, and motion tokens: blur, opacity, borders, shadow style, scanlines, motion profile; reduced-motion always wins                                                      | PM-T082           | S–M        | T080                 |
-| Background sets and layout templates in a theme; personality copy tokens                                                                                                           | PM-T083           | M          | T080                 |
-| Designer page at `site/design/` with live preview, export, in-browser signing                                                                                                      | PM-T084           | M–L        | T080–T083 for parity |
-| Brand block + `brand` entitlement + `storage.managed` loader + `doc/ENTERPRISE-DEPLOYMENT.md` (reframes former PM-T078 as a one-time kit)                                          | PM-T085           | M          | T080, PM-T074        |
-| First-party suites: design and produce Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; ship Starter free                                                     | PM-T086           | L (design) | T080–T083            |
-| Creator docs: `doc/THEME-AUTHORING.md`, `sign-pack` in the SDK CLI, no-ads policy text, example signed theme                                                                       | PM-T087           | S          | PM-T075              |
+| Item                                                                                                                                                                               | Board ID | Effort     | Depends on                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- | -------------------------- |
+| Theme engine: `kind: "theme"` in the SDK validator, token → CSS variable mapping, local asset store, sync pointer, Settings › Appearance › Themes library (import, switch, remove) | PM-T080  | M          | none                       |
+| Typography roles: bundled font menu under `@fontsource`, embedded WOFF2 with cap, font tokens in `tailwind.css`                                                                    | PM-T081  | M          | PM-T080                    |
+| Chrome, shape, and motion tokens: blur, opacity, borders, shadow style, scanlines, motion profile; reduced-motion always wins                                                      | PM-T082  | S–M        | PM-T080                    |
+| Background sets and layout templates in a theme; personality copy tokens                                                                                                           | PM-T083  | M          | PM-T080                    |
+| Designer page at `site/design/` with live preview, export, in-browser signing                                                                                                      | PM-T084  | M–L        | PM-T080–PM-T083 for parity |
+| Brand block + `brand` entitlement + `storage.managed` loader + `doc/ENTERPRISE-DEPLOYMENT.md` (reframes former PM-T078 as a one-time kit)                                          | PM-T085  | M          | PM-T080, PM-T074           |
+| First-party suites: design and produce Neon Nights, Quiet Work, Retro Machines, Markets & Ops, Living World; ship Starter free                                                     | PM-T086  | L (design) | PM-T080–PM-T083            |
+| Creator docs: `doc/THEME-AUTHORING.md`, `sign-pack` in the SDK CLI, no-ads policy text, example signed theme                                                                       | PM-T087  | S          | PM-T075                    |
 
 Cold-load budget note: a theme must not add to the JavaScript bundle. Assets are data in storage; CSS variables are applied before first paint by `applyDocumentTheme` in `main.tsx`, which already runs before React mounts.
 

@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Licensing** — the extension is now released under **AGPL-3.0** and `@tabocalypse/plugin-sdk` under **MIT** (`LICENSE` files added; `license` fields set). Monetization direction (supporter memberships, offline-verified Pro and signed packs, no in-extension checkout) is documented in `doc/PLAN/MONETIZATION.md`; store listing and privacy copy describe it.
+- **Licensing** — the extension is now released under **AGPL-3.0** and `@tabocalypse/plugin-sdk` under **MIT** (`LICENSE` files added; `license` fields set). Monetization direction (one-off purchases such as a lifetime Pro unlock, signed packs, theme suites, and brand kits, plus donations of any kind; no ads, no scheduled obligations, no in-extension checkout) is documented in `doc/PLAN/MONETIZATION.md` and `doc/PLAN/THEME-SUITES.md`; the support page, store listing, and privacy copy describe tips with no perks and no monthly pack drop.
 - **Notes** sync each note as its own browser-sync item, so the ~8 KB sync limit now applies per note instead of to all notes combined. A note that is still too large stays on this device and the HUD names it; the rest keep syncing.
 - **Settings** writes are coalesced and only the parts that changed are written. Typing in a note, dragging a slider, or moving a panel no longer rewrites every stored setting (including wallpapers) on each change, which also stops the "changing too fast for browser sync" warnings. Pending changes are written when the tab is hidden or closed.
 - Wallpaper images are stored once locally instead of three times (legacy single-URL and URL-list copies are still read when upgrading).

@@ -51,7 +51,7 @@ Each widget:
 
 ### `LinkGrid`
 
-Links must be `http://` or `https://`.
+Links must be `https://` (the SDK validator rejects anything else).
 
 ```json
 {
