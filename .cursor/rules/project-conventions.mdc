@@ -13,7 +13,7 @@ Read **[AGENTS.md](../../AGENTS.md)** first for behavioral guidelines (simplicit
 - **Zero recurring publisher operating cost** — no publisher API keys; no hosted infrastructure you pay to run for users.
 - **AI** — only **user-supplied** API keys (OpenAI-compatible test UI). Never ship or inject publisher LLM keys.
 - **User content** — imported packs/plugins are user-owned; **declarative plugins only** (JSON + allowlisted widget types). No `eval`, no user-supplied JS execution, no loading `.js` from imports.
-- **Support / donations** — static **link-out** URLs (`WXT_TABOCALYPSE_*` in `.env`); no in-extension payments.
+- **Support / donations / purchases** — static **link-out** URLs (`WXT_TABOCALYPSE_*` in `.env`); **no in-extension checkout or payment processing**. Supporter memberships, Pro licenses, and paid packs are bought on third-party sites. **Offline signature verification** of purchased tokens or signed JSON content inside the extension is allowed (no network, no money movement). See `doc/PLAN/MONETIZATION.md`.
 - **Do not edit** the product spec in `~/.cursor/plans/tabocalypse_browser_extension_*.plan.md` unless the user explicitly asks to change the plan.
 
 ## TypeScript

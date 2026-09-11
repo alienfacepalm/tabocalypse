@@ -24,9 +24,11 @@
 - **Unsuck-it** (`www.unsuck-it.com`) when humor pack refresh is configured — optional fetch of public jargon lines for the built-in classics pack (no Tabocalypse account).
 - **Declarative plugins** may include `LinkGrid` or other types that open **HTTPS** URLs **you** supplied in the plugin JSON.
 
-## Donations / feature suggestions
+## Donations, memberships, purchases / feature suggestions
 
-Support links open third-party sites (e.g. Ko-fi, GitHub Issues) in a new tab. Tabocalypse does not process payments.
+Support links open third-party sites (e.g. GitHub Sponsors, Ko-fi, Patreon, GitHub Issues) in a new tab. Tabocalypse does not process payments and contains no checkout.
+
+If you buy optional paid content (a premium pack or a Pro license) from a third-party merchant, it is delivered to you as a file or text token. The extension verifies its signature **offline** using a public key built into the extension. No purchase, license, or account information is sent to AlienFacepalm, and no network request is made to validate it. A license token you paste in may sync via your browser's extension storage sync like other preferences; the default Settings export omits it.
 
 When you use **Settings > Feedback & Feature Requests**, Tabocalypse opens your local mail client with a prefilled message (mailto). No publisher SMTP relay or embedded mail credentials are used. We do not store feedback on AlienFacepalm servers.
 

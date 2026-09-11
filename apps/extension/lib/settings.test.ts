@@ -1,20 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockBrowser, syncGet, syncSet, localGet, localSet } = vi.hoisted(() => {
+const { mockBrowser, syncGet, syncSet, syncRemove, localGet, localSet } = vi.hoisted(() => {
   const syncGet = vi.fn();
   const syncSet = vi.fn();
+  const syncRemove = vi.fn();
   const localGet = vi.fn();
   const localSet = vi.fn();
   const mockBrowser = {
     storage: {
-      sync: { get: syncGet, set: syncSet } as {
+      sync: { get: syncGet, set: syncSet, remove: syncRemove } as {
         get: typeof syncGet;
         set: typeof syncSet;
+        remove: typeof syncRemove;
       } | null,
       local: { get: localGet, set: localSet },
     },
   };
-  return { mockBrowser, syncGet, syncSet, localGet, localSet };
+  return { mockBrowser, syncGet, syncSet, syncRemove, localGet, localSet };
 });
 
 vi.mock("webextension-polyfill", () => ({
@@ -52,7 +54,28 @@ const {
   coerceSteamChartsBoardMode,
   mergeSyncSlicesBySavedAt,
   coercePrefsSavedAt,
+  resetSettingsWriteCache,
+  scheduleSaveSettings,
+  flushPendingSettingsSave,
+  hasPendingSettingsSave,
+  noteSyncStorageKey,
+  isTabocalypseSettingsStorageChange,
+  SETTINGS_SAVE_DEBOUNCE_MS,
 } = await import("./settings");
+
+type TNoteFixture = {
+  id: string;
+  name: string;
+  tags: string[];
+  text: string;
+  locked: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+function noteFixture(id: string, text: string, updatedAt = 10): TNoteFixture {
+  return { id, name: "", tags: [], text, locked: false, createdAt: 1, updatedAt };
+}
 
 const { settingsBackgroundGradientCss } = await import("./background-gradient-css");
 
@@ -614,7 +637,7 @@ describe("loadSettings", () => {
   it("merges empty storage into defaults", async () => {
     const s = await loadSettings();
     expect(s).toEqual(defaultSettings());
-    expect(syncGet).toHaveBeenCalledWith([SYNC_KEY, NOTES_SYNC_KEY]);
+    expect(syncGet).toHaveBeenCalledWith(null);
     expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
   });
 
@@ -646,7 +669,7 @@ describe("loadSettings", () => {
       expect(syncGet).not.toHaveBeenCalled();
       expect(localGet).toHaveBeenCalledWith([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
     } finally {
-      mockBrowser.storage.sync = { get: syncGet, set: syncSet };
+      mockBrowser.storage.sync = { get: syncGet, set: syncSet, remove: syncRemove };
     }
   });
 
@@ -1134,13 +1157,70 @@ describe("loadSettings", () => {
     const s = await loadSettings();
     expect(s.notes[0]?.text).toBe("new");
   });
+
+  it("loads per-note sync items in noteIds order and ignores items not listed", async () => {
+    syncGet.mockResolvedValue({
+      [NOTES_SYNC_KEY]: {
+        version: 1,
+        noteIds: ["b", "a"],
+        notePanels: [],
+        notePanelsEpoch: 0,
+      },
+      [noteSyncStorageKey("a")]: noteFixture("a", "first"),
+      [noteSyncStorageKey("b")]: noteFixture("b", "second"),
+      [noteSyncStorageKey("orphan")]: noteFixture("orphan", "stale"),
+    });
+    const s = await loadSettings();
+    expect(s.notes.map((n) => n.id)).toEqual(["b", "a"]);
+  });
+
+  it("keeps every per-note item when the meta has no noteIds yet", async () => {
+    syncGet.mockResolvedValue({
+      [noteSyncStorageKey("a")]: noteFixture("a", "first"),
+      [noteSyncStorageKey("b")]: noteFixture("b", "second"),
+    });
+    const s = await loadSettings();
+    expect(s.notes.map((n) => n.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("merges a legacy in-meta notes array with per-note items by updatedAt", async () => {
+    syncGet.mockResolvedValue({
+      [NOTES_SYNC_KEY]: {
+        version: 1,
+        notes: [noteFixture("a", "legacy newer", 50), noteFixture("c", "legacy only", 5)],
+        noteIds: ["a", "b"],
+        notePanels: [],
+        notePanelsEpoch: 0,
+      },
+      [noteSyncStorageKey("a")]: noteFixture("a", "per-note older", 10),
+      [noteSyncStorageKey("b")]: noteFixture("b", "per-note only", 10),
+    });
+    const s = await loadSettings();
+    expect(s.notes.map((n) => n.id)).toEqual(["a", "b", "c"]);
+    expect(s.notes[0]?.text).toBe("legacy newer");
+  });
+});
+
+describe("isTabocalypseSettingsStorageChange", () => {
+  it("treats per-note sync items as settings changes", () => {
+    expect(
+      isTabocalypseSettingsStorageChange({ [noteSyncStorageKey("n1")]: { newValue: {} } }, "sync"),
+    ).toBe(true);
+    expect(isTabocalypseSettingsStorageChange({ unrelated: { newValue: 1 } }, "sync")).toBe(false);
+    expect(isTabocalypseSettingsStorageChange({ [SYNC_KEY]: { newValue: {} } }, "local")).toBe(
+      false,
+    );
+  });
 });
 
 describe("saveSettings", () => {
   beforeEach(() => {
+    resetSettingsWriteCache();
     syncSet.mockReset();
+    syncRemove.mockReset();
     localSet.mockReset();
     syncSet.mockResolvedValue(undefined);
+    syncRemove.mockResolvedValue(undefined);
     localSet.mockResolvedValue(undefined);
   });
 
@@ -1171,10 +1251,11 @@ describe("saveSettings", () => {
     });
     expect(syncArg[NOTES_SYNC_KEY]).toMatchObject({
       version: 1,
-      notes: s.notes,
+      noteIds: [],
       notePanels: s.notePanels,
       notePanelsEpoch: s.notePanelsEpoch,
     });
+    expect(syncArg[NOTES_SYNC_KEY]).not.toHaveProperty("notes");
     expect(localArg[LOCAL_KEY]).toMatchObject({
       version: 1,
       openaiApiKey: "secret",
@@ -1182,8 +1263,82 @@ describe("saveSettings", () => {
     });
     expect(localArg[LOCAL_KEY]).not.toHaveProperty("preset");
     expect(localArg[LOCAL_KEY]).not.toHaveProperty("notes");
+    expect(localArg[LOCAL_KEY]).not.toHaveProperty("userBackgroundDataUrls");
     expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[1]]).toEqual(syncArg[SYNC_KEY]);
-    expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]).toEqual(syncArg[NOTES_SYNC_KEY]);
+    expect(localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]).toEqual({
+      ...(syncArg[NOTES_SYNC_KEY] as object),
+      notes: s.notes,
+    });
+  });
+
+  it("writes one sync item per note and removes items for deleted notes", async () => {
+    const a = noteFixture("a", "alpha");
+    const b = noteFixture("b", "beta");
+    const s = { ...defaultSettings(), notes: [a, b] };
+    await saveSettings(s);
+    const first = syncSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(first[noteSyncStorageKey("a")]).toEqual(a);
+    expect(first[noteSyncStorageKey("b")]).toEqual(b);
+    expect(first[NOTES_SYNC_KEY]).toMatchObject({ noteIds: ["a", "b"] });
+
+    syncSet.mockClear();
+    await saveSettings({ ...s, notes: [b] });
+    expect(syncRemove).toHaveBeenCalledWith([noteSyncStorageKey("a")]);
+    const second = syncSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(second).not.toHaveProperty(noteSyncStorageKey("b"));
+    expect(second[NOTES_SYNC_KEY]).toMatchObject({ noteIds: ["b"] });
+  });
+
+  it("skips storage entirely when nothing changed since the last write", async () => {
+    const s = defaultSettings();
+    await saveSettings(s);
+    syncSet.mockClear();
+    localSet.mockClear();
+    await saveSettings(s);
+    expect(syncSet).not.toHaveBeenCalled();
+    expect(localSet).not.toHaveBeenCalled();
+  });
+
+  it("writes only the changed note and notes mirror when a note body changes", async () => {
+    const a = noteFixture("a", "alpha");
+    const b = noteFixture("b", "beta");
+    const s = { ...defaultSettings(), notes: [a, b] };
+    await saveSettings(s);
+    syncSet.mockClear();
+    localSet.mockClear();
+
+    const a2 = { ...a, text: "alpha edited", updatedAt: 20 };
+    await saveSettings({ ...s, notes: [a2, b] });
+    expect(syncSet).toHaveBeenCalledTimes(1);
+    const syncArg = syncSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(Object.keys(syncArg)).toEqual([noteSyncStorageKey("a")]);
+    expect(localSet).toHaveBeenCalledTimes(1);
+    const localArg = localSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(Object.keys(localArg)).toEqual([TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]]);
+  });
+
+  it("writes only the local slice when a local-only field changes", async () => {
+    const s = defaultSettings();
+    await saveSettings(s);
+    syncSet.mockClear();
+    localSet.mockClear();
+    await saveSettings({ ...s, todos: [{ id: "t1", text: "x", done: false }] });
+    expect(syncSet).not.toHaveBeenCalled();
+    const localArg = localSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(Object.keys(localArg)).toEqual([LOCAL_KEY]);
+  });
+
+  it("keeps an oversized note local, syncs the rest, then reports it", async () => {
+    const big = noteFixture("big", "x".repeat(9000));
+    const small = noteFixture("small", "fits");
+    const s = { ...defaultSettings(), notes: [big, small] };
+    await expect(saveSettings(s)).rejects.toThrow(/too large for browser sync/);
+    const syncArg = syncSet.mock.calls[0]![0] as Record<string, unknown>;
+    expect(syncArg).toHaveProperty(noteSyncStorageKey("small"));
+    expect(syncArg).not.toHaveProperty(noteSyncStorageKey("big"));
+    const localArg = localSet.mock.calls[0]![0] as Record<string, unknown>;
+    const mirror = localArg[TABOCALYPSE_SETTINGS_LOCAL_KEYS[2]] as { notes: TNoteFixture[] };
+    expect(mirror.notes.map((n) => n.id)).toEqual(["big", "small"]);
   });
 
   it("writes local only when storage.sync is unavailable", async () => {
@@ -1194,7 +1349,7 @@ describe("saveSettings", () => {
       expect(syncSet).not.toHaveBeenCalled();
       expect(localSet).toHaveBeenCalledTimes(1);
     } finally {
-      mockBrowser.storage.sync = { get: syncGet, set: syncSet };
+      mockBrowser.storage.sync = { get: syncGet, set: syncSet, remove: syncRemove };
     }
   });
 
@@ -1211,5 +1366,63 @@ describe("saveSettings", () => {
     syncSet.mockRejectedValueOnce(new Error("network down"));
     const s = defaultSettings();
     await expect(saveSettings(s)).rejects.toThrow("network down");
+  });
+
+  it("retries a slice on the next save when its write failed", async () => {
+    syncSet.mockRejectedValueOnce(new Error("network down"));
+    const s = { ...defaultSettings(), preset: "focus" as const };
+    await expect(saveSettings(s)).rejects.toThrow("network down");
+    syncSet.mockClear();
+    await saveSettings(s);
+    expect(syncSet).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("scheduleSaveSettings", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    resetSettingsWriteCache();
+    syncSet.mockReset();
+    syncRemove.mockReset();
+    localSet.mockReset();
+    syncSet.mockResolvedValue(undefined);
+    syncRemove.mockResolvedValue(undefined);
+    localSet.mockResolvedValue(undefined);
+  });
+
+  afterEach(async () => {
+    await flushPendingSettingsSave();
+    vi.useRealTimers();
+  });
+
+  it("coalesces rapid saves into one write carrying the newest settings", async () => {
+    const s1 = { ...defaultSettings(), todos: [{ id: "t1", text: "one", done: false }] };
+    const s2 = { ...s1, todos: [{ id: "t2", text: "two", done: false }] };
+    const p1 = scheduleSaveSettings(s1);
+    const p2 = scheduleSaveSettings(s2);
+    expect(hasPendingSettingsSave()).toBe(true);
+    expect(localSet).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_MS);
+    await Promise.all([p1, p2]);
+    expect(localSet).toHaveBeenCalledTimes(1);
+    const localArg = localSet.mock.calls[0]![0] as Record<string, { todos: unknown[] }>;
+    expect(localArg[LOCAL_KEY]!.todos).toEqual(s2.todos);
+    expect(hasPendingSettingsSave()).toBe(false);
+  });
+
+  it("flushPendingSettingsSave writes immediately without waiting for the timer", async () => {
+    const p = scheduleSaveSettings(defaultSettings());
+    await flushPendingSettingsSave();
+    await p;
+    expect(localSet).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects the waiting callers when the coalesced write fails", async () => {
+    syncSet.mockRejectedValueOnce(new Error("network down"));
+    const assertion = expect(scheduleSaveSettings(defaultSettings())).rejects.toThrow(
+      "network down",
+    );
+    await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_MS);
+    await assertion;
   });
 });

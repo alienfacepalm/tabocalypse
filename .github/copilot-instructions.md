@@ -17,7 +17,7 @@ These instructions apply to GitHub Copilot Chat / coding agent features operatin
 - TypeScript: no `any`
 - naming: interfaces `I*`, type aliases `T*`
 - filenames: kebab-case
-- product: no publisher backend/keys; declarative plugins only (no user JS execution)
+- product: no publisher backend/keys; declarative plugins only (no user JS execution); no in-extension checkout (purchases are link-out; offline signature verification of purchased tokens/signed JSON is allowed)
 - never paste secrets (`.env`, tokens, API keys, user data)
 
 ### How to propose changes

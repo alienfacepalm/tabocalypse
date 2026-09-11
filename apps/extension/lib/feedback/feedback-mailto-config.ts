@@ -1,5 +1,5 @@
 /** Default maintainer inbox for in-extension feedback mailto (override via build-time env). */
-export const FEEDBACK_MAILTO_DEFAULT_TO = "jagon@alienfacepalm";
+export const FEEDBACK_MAILTO_DEFAULT_TO = "jagon@alienfacepalm.com";
 
 function readEnv(key: string): string {
   return String(

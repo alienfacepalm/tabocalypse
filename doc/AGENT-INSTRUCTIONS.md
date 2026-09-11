@@ -16,7 +16,7 @@ This repo supports multiple coding agents. These rules are **agent-agnostic** an
 - **TypeScript**: no `any`
 - **Naming**: interfaces `I*`, type aliases `T*`
 - **Filenames**: kebab-case
-- **Product**: no publisher backend/keys; declarative plugins only (no user JS execution)
+- **Product**: no publisher backend/keys; declarative plugins only (no user JS execution); no in-extension checkout (purchases are link-out; offline signature verification of purchased tokens/signed JSON is allowed — see `doc/PLAN/MONETIZATION.md`)
 - **Secrets**: never paste `.env`, tokens, API keys, user data
 
 ## Preferred change shape

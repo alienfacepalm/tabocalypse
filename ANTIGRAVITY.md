@@ -18,7 +18,7 @@ Use Antigravity as a suggestion engine, but apply changes as **small, reviewable
   - TypeScript: no `any`
   - naming: `I*` for interfaces, `T*` for type aliases
   - filenames: kebab-case
-  - product: no publisher backend/keys; declarative plugins only (no user JS execution)
+  - product: no publisher backend/keys; declarative plugins only (no user JS execution); no in-extension checkout (purchases are link-out; offline signature verification of purchased tokens/signed JSON is allowed)
 
 ### Preferred Antigravity output
 

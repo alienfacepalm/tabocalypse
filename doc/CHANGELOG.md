@@ -12,6 +12,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Licensing** — the extension is now released under **AGPL-3.0** and `@tabocalypse/plugin-sdk` under **MIT** (`LICENSE` files added; `license` fields set). Monetization direction (supporter memberships, offline-verified Pro and signed packs, no in-extension checkout) is documented in `doc/PLAN/MONETIZATION.md`; store listing and privacy copy describe it.
+- **Notes** sync each note as its own browser-sync item, so the ~8 KB sync limit now applies per note instead of to all notes combined. A note that is still too large stays on this device and the HUD names it; the rest keep syncing.
+- **Settings** writes are coalesced and only the parts that changed are written. Typing in a note, dragging a slider, or moving a panel no longer rewrites every stored setting (including wallpapers) on each change, which also stops the "changing too fast for browser sync" warnings. Pending changes are written when the tab is hidden or closed.
+- Wallpaper images are stored once locally instead of three times (legacy single-URL and URL-list copies are still read when upgrading).
+
+### Fixed
+
+- **Settings > Feedback** — the default mailto recipient was missing its domain suffix (`jagon@alienfacepalm` → `jagon@alienfacepalm.com`), so builds without `WXT_TABOCALYPSE_FEEDBACK_TO` opened an undeliverable address.
+
 ## [1.0] - 2026-09-07
 
 Marketing homepage launch. Rolls up the widget, Appearance, and Chaos work accumulated under the prior **[Unreleased]** section.

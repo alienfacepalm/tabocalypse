@@ -806,15 +806,31 @@ export interface ISettings {
 }
 
 const SYNC_KEY = "tabocalypseSync";
+/**
+ * Notes meta in `storage.sync`: sticky layout, list visibility, and the ordered `noteIds`.
+ * Note bodies live under one {@link NOTE_SYNC_KEY_PREFIX} item each so the per-item sync
+ * quota applies per note instead of to all notes combined. Legacy payloads carried a `notes`
+ * array here; it is still read on load.
+ */
 const NOTES_SYNC_KEY = "tabocalypseNotes";
+/** One `storage.sync` item per note: `tabocalypseNote:<note id>` → {@link INote}. */
+export const NOTE_SYNC_KEY_PREFIX = "tabocalypseNote:";
 const LOCAL_KEY = "tabocalypseLocal";
 /** Same payload as `SYNC_KEY`, stored in `storage.local` so preferences survive sync quota/errors and new tabs read the latest save immediately. */
 const SYNC_LOCAL_MIRROR_KEY = "tabocalypseSyncMirror";
-/** Same payload as `NOTES_SYNC_KEY`, mirrored under `storage.local` for the same reasons as prefs. */
+/** Notes meta plus the full `notes` array, mirrored under `storage.local` for the same reasons as prefs. */
 const NOTES_SYNC_LOCAL_MIRROR_KEY = "tabocalypseNotesMirror";
 
-/** Keys read together from `browser.storage.sync` for settings (also used to filter `storage.onChanged`). */
+/** Fixed keys read from `browser.storage.sync` for settings (per-note items use {@link NOTE_SYNC_KEY_PREFIX}). */
 export const TABOCALYPSE_SETTINGS_SYNC_KEYS = [SYNC_KEY, NOTES_SYNC_KEY] as const;
+
+export function noteSyncStorageKey(noteId: string): string {
+  return `${NOTE_SYNC_KEY_PREFIX}${noteId}`;
+}
+
+function isNoteSyncStorageKey(key: string): boolean {
+  return key.startsWith(NOTE_SYNC_KEY_PREFIX) && key.length > NOTE_SYNC_KEY_PREFIX.length;
+}
 
 /** Keys read together from `browser.storage.local` for settings (also used to filter `storage.onChanged`). */
 export const TABOCALYPSE_SETTINGS_LOCAL_KEYS = [
@@ -823,12 +839,18 @@ export const TABOCALYPSE_SETTINGS_LOCAL_KEYS = [
   NOTES_SYNC_LOCAL_MIRROR_KEY,
 ] as const;
 
-/** Chromium per-item byte limit for `storage.sync` values. */
-const SYNC_NOTES_MAX_BYTES = 8192;
+/** Chromium per-item byte limit for `storage.sync` values (JSON value bytes plus key length). */
+export const SYNC_ITEM_MAX_BYTES = 8192;
 
 export interface INotesSyncSlice {
   version: 1;
-  notes: INote[];
+  /**
+   * Full note list. Always present in the local mirror; in `storage.sync` only legacy payloads
+   * carry it (current writes store one item per note and list ids in {@link noteIds}).
+   */
+  notes?: INote[];
+  /** Display order of per-note sync items (see {@link NOTE_SYNC_KEY_PREFIX}). */
+  noteIds?: string[];
   notePanels: INotePanel[];
   notePanelsEpoch: number;
   notesListPanelVisible?: boolean;
@@ -873,9 +895,44 @@ export function isTabocalypseSettingsStorageChange(
     return TABOCALYPSE_SETTINGS_LOCAL_KEYS.some((k) => changes[k] !== undefined);
   }
   if (areaName === "sync") {
-    return changes[SYNC_KEY] !== undefined || changes[NOTES_SYNC_KEY] !== undefined;
+    if (changes[SYNC_KEY] !== undefined || changes[NOTES_SYNC_KEY] !== undefined) return true;
+    return Object.keys(changes).some(isNoteSyncStorageKey);
   }
   return false;
+}
+
+/**
+ * Rebuild the cloud notes slice from a raw `storage.sync` snapshot: per-note items ordered by
+ * the meta `noteIds`, merged with a legacy in-meta `notes` array when present.
+ */
+export function resolveCloudNotesSlice(
+  syncRaw: Record<string, unknown>,
+): Partial<INotesSyncSlice> | undefined {
+  const meta = syncRaw[NOTES_SYNC_KEY] as Partial<INotesSyncSlice> | undefined;
+  const perNoteById = new Map<string, INote>();
+  for (const [key, value] of Object.entries(syncRaw)) {
+    if (!isNoteSyncStorageKey(key)) continue;
+    const note = coerceNotes([value])[0];
+    if (note) perNoteById.set(note.id, note);
+  }
+  const noteIds = Array.isArray(meta?.noteIds)
+    ? meta.noteIds.filter((id): id is string => typeof id === "string")
+    : null;
+  const ordered: INote[] = [];
+  if (noteIds) {
+    for (const id of noteIds) {
+      const note = perNoteById.get(id);
+      if (note) ordered.push(note);
+    }
+  } else {
+    // No id list: pre-per-note payload or a partially synced set. Keep every item we can see.
+    ordered.push(...perNoteById.values());
+  }
+  const legacyNotes = coerceNotes(meta?.notes);
+  const notes =
+    legacyNotes.length > 0 ? mergeNotesPreferNewerBaseline(legacyNotes, ordered) : ordered;
+  if (!meta && notes.length === 0) return undefined;
+  return { ...(meta ?? {}), notes };
 }
 
 /** Prefer newer prefsSavedAt; ties keep the local mirror (sync lag / quota safety). */
@@ -1013,8 +1070,10 @@ export interface ISyncSlice {
 
 export interface ILocalSlice {
   version: 1;
-  userBackgroundDataUrl: string | null;
-  userBackgroundDataUrls: string[];
+  /** @deprecated Derived from {@link userBackgroundImages}; read only when upgrading older storage. */
+  userBackgroundDataUrl?: string | null;
+  /** @deprecated Derived from {@link userBackgroundImages}; read only when upgrading older storage. */
+  userBackgroundDataUrls?: string[];
   userBackgroundImages?: IUserBackgroundImage[];
   userBackgroundActiveId?: string | null;
   bingWallpaperFramings?: TBingWallpaperFramings;
@@ -1483,10 +1542,11 @@ function toSync(s: ISettings, prefsSavedAt = Date.now()): ISyncSlice {
   };
 }
 
-function toNotesSync(s: ISettings, prefsSavedAt = Date.now()): INotesSyncSlice {
+/** Notes meta for `storage.sync` (bodies are written per note) and, with `notes`, the local mirror. */
+function toNotesMeta(s: ISettings, prefsSavedAt = Date.now()): INotesSyncSlice {
   return {
     version: 1,
-    notes: s.notes,
+    noteIds: s.notes.map((n) => n.id),
     notePanels: s.notePanels,
     notePanelsEpoch: s.notePanelsEpoch,
     notesListPanelVisible: s.notesListPanelVisible,
@@ -1497,8 +1557,6 @@ function toNotesSync(s: ISettings, prefsSavedAt = Date.now()): INotesSyncSlice {
 function toLocal(s: ISettings): ILocalSlice {
   return {
     version: 1,
-    userBackgroundDataUrl: s.userBackgroundDataUrl,
-    userBackgroundDataUrls: s.userBackgroundDataUrls,
     userBackgroundImages: s.userBackgroundImages,
     userBackgroundActiveId: s.userBackgroundActiveId,
     bingWallpaperFramings: s.bingWallpaperFramings,
@@ -1876,13 +1934,14 @@ function mergeSettings(
 
 export async function loadSettings(): Promise<ISettings> {
   const localRaw = await browser.storage.local.get([...TABOCALYPSE_SETTINGS_LOCAL_KEYS]);
+  // Read the whole sync area: per-note items are keyed by note id, so their names are not known up front.
   const syncRaw = browser.storage.sync
-    ? await browser.storage.sync.get([...TABOCALYPSE_SETTINGS_SYNC_KEYS])
+    ? ((await browser.storage.sync.get(null)) as Record<string, unknown>)
     : ({} as Record<string, unknown>);
   const cloudSync = syncRaw[SYNC_KEY] as ISyncSlice | undefined;
   const mirrorSync = localRaw[SYNC_LOCAL_MIRROR_KEY] as ISyncSlice | undefined;
   const sync = mergeSyncFromSources(cloudSync, mirrorSync);
-  const cloudNotes = syncRaw[NOTES_SYNC_KEY] as INotesSyncSlice | undefined;
+  const cloudNotes = resolveCloudNotesSlice(syncRaw);
   const mirrorNotes = localRaw[NOTES_SYNC_LOCAL_MIRROR_KEY] as INotesSyncSlice | undefined;
   const local = localRaw[LOCAL_KEY] as ILocalSlice | undefined;
   return mergeSettings(sync, cloudNotes, mirrorNotes, local);
@@ -1896,41 +1955,238 @@ function isSyncQuotaError(err: unknown): boolean {
   );
 }
 
+function toSyncQuotaUserError(err: unknown): Error {
+  if (isSyncQuotaError(err)) {
+    if (import.meta.env.DEV) {
+      console.warn("[Tabocalypse] sync write throttled:", err);
+    }
+    return new Error(
+      "Settings are changing too fast for browser sync. Your changes are saved locally — they'll sync once things settle down. Wait a moment before making more changes.",
+    );
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+/** Slice payload fields ignored when deciding whether a slice changed since the last write. */
+const SLICE_DIRTY_IGNORED_KEYS: ReadonlySet<string> = new Set(["version", "prefsSavedAt"]);
+
+/**
+ * Shallow field-by-field identity compare. Settings are updated immutably (`{ ...cur, field }`),
+ * so an unchanged field keeps its reference and a changed one gets a new object.
+ */
+function slicePayloadChanged<T extends object>(prev: T | undefined, next: T): boolean {
+  if (!prev) return true;
+  const p = prev as unknown as Record<string, unknown>;
+  const n = next as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(p), ...Object.keys(n)]);
+  for (const key of keys) {
+    if (SLICE_DIRTY_IGNORED_KEYS.has(key)) continue;
+    if (p[key] !== n[key]) return true;
+  }
+  return false;
+}
+
+/** JSON identity for small payloads where arrays are rebuilt on every save (note ids, note bodies). */
+function jsonKey(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+interface ISettingsWriteCache {
+  local?: ILocalSlice;
+  sync?: ISyncSlice;
+  /** Meta as last written to the local mirror (includes `notes`). */
+  mirrorNotesJson?: string;
+  /** Meta as last written to `storage.sync` (per-note ids only). */
+  syncNotesMetaJson?: string;
+  /** Per-note JSON as last written to `storage.sync`, keyed by note id. */
+  syncNoteJsonById: Map<string, string>;
+}
+
+let writeCache: ISettingsWriteCache = { syncNoteJsonById: new Map() };
+
+/** Forget what was last written so the next {@link saveSettings} writes every slice (tests, storage reset). */
+export function resetSettingsWriteCache(): void {
+  writeCache = { syncNoteJsonById: new Map() };
+}
+
+function oversizedNotesMessage(notes: readonly INote[]): string {
+  const titles = notes.map((n) => `“${deriveNoteTitle(n.text)}”`).join(", ");
+  return `${notes.length === 1 ? "One note is" : `${notes.length} notes are`} too large for browser sync (~8 KB per note): ${titles}. Everything is saved on this device — shorten ${notes.length === 1 ? "it" : "them"} to sync across devices.`;
+}
+
+/**
+ * Write settings to storage, touching only the slices that changed since the last write:
+ * - `storage.local`: main local slice, prefs mirror, notes mirror (meta + full notes array).
+ * - `storage.sync`: prefs, notes meta, and one item per changed note; deleted notes are removed.
+ * Notes over the per-item sync limit stay local and are reported after the other writes land.
+ * Prefer {@link scheduleSaveSettings} from UI code so rapid edits coalesce into one write.
+ */
 export async function saveSettings(s: ISettings): Promise<void> {
   const normalized = applyPersonalityPresetHarmony(s);
   const prefsSavedAt = Date.now();
+  const localPayload = toLocal(normalized);
   const syncPayload = toSync(normalized, prefsSavedAt);
-  const notesPayload = toNotesSync(normalized, prefsSavedAt);
-  const writes: Promise<unknown>[] = [
-    browser.storage.local.set({
-      [LOCAL_KEY]: toLocal(normalized),
-      [SYNC_LOCAL_MIRROR_KEY]: syncPayload,
-      [NOTES_SYNC_LOCAL_MIRROR_KEY]: notesPayload,
-    }),
-  ];
-  if (browser.storage.sync) {
-    if (syncJsonByteLength(notesPayload) > SYNC_NOTES_MAX_BYTES) {
-      throw new Error(
-        "Notes are too large for browser sync (~8 KB limit). Your changes are saved on this device — shorten notes or remove some to sync across devices.",
-      );
-    }
+  const notesMeta = toNotesMeta(normalized, prefsSavedAt);
+  const mirrorNotesPayload: INotesSyncSlice = { ...notesMeta, notes: normalized.notes };
+  const cache = writeCache;
+
+  const localDirty = slicePayloadChanged(cache.local, localPayload);
+  const syncDirty = slicePayloadChanged(cache.sync, syncPayload);
+  const mirrorNotesJson = jsonKey({ ...mirrorNotesPayload, prefsSavedAt: 0 });
+  const mirrorNotesDirty = cache.mirrorNotesJson !== mirrorNotesJson;
+
+  const localWrite: Record<string, unknown> = {};
+  if (localDirty) localWrite[LOCAL_KEY] = localPayload;
+  if (syncDirty) localWrite[SYNC_LOCAL_MIRROR_KEY] = syncPayload;
+  if (mirrorNotesDirty) localWrite[NOTES_SYNC_LOCAL_MIRROR_KEY] = mirrorNotesPayload;
+
+  const writes: Promise<void>[] = [];
+  if (Object.keys(localWrite).length > 0) {
     writes.push(
-      browser.storage.sync
-        .set({ [SYNC_KEY]: syncPayload, [NOTES_SYNC_KEY]: notesPayload })
-        .catch((err: unknown) => {
-          if (isSyncQuotaError(err)) {
-            if (import.meta.env.DEV) {
-              console.warn("[Tabocalypse] sync write throttled:", err);
-            }
-            throw new Error(
-              "Settings are changing too fast for browser sync. Your changes are saved locally — they'll sync once things settle down. Wait a moment before making more changes.",
-            );
-          }
-          throw err;
-        }),
+      browser.storage.local.set(localWrite).then(() => {
+        if (localDirty) cache.local = localPayload;
+        if (syncDirty) cache.sync = syncPayload;
+        if (mirrorNotesDirty) cache.mirrorNotesJson = mirrorNotesJson;
+      }),
     );
   }
+
+  const oversized: INote[] = [];
+  if (browser.storage.sync) {
+    const syncArea = browser.storage.sync;
+    const syncWrite: Record<string, unknown> = {};
+    if (syncDirty) syncWrite[SYNC_KEY] = syncPayload;
+
+    const syncMetaJson = jsonKey({ ...notesMeta, prefsSavedAt: 0 });
+    const syncMetaDirty = cache.syncNotesMetaJson !== syncMetaJson;
+    if (syncMetaDirty) syncWrite[NOTES_SYNC_KEY] = notesMeta;
+
+    const nextNoteJsonById = new Map<string, string>();
+    const changedNoteIds: string[] = [];
+    for (const note of normalized.notes) {
+      const key = noteSyncStorageKey(note.id);
+      const json = jsonKey(note);
+      if (syncJsonByteLength(note) + key.length > SYNC_ITEM_MAX_BYTES) {
+        oversized.push(note);
+        continue;
+      }
+      nextNoteJsonById.set(note.id, json);
+      if (cache.syncNoteJsonById.get(note.id) !== json) {
+        syncWrite[key] = note;
+        changedNoteIds.push(note.id);
+      }
+    }
+    const currentIds = new Set(normalized.notes.map((n) => n.id));
+    const removedKeys: string[] = [];
+    const removedIds: string[] = [];
+    for (const id of cache.syncNoteJsonById.keys()) {
+      if (currentIds.has(id)) continue;
+      removedKeys.push(noteSyncStorageKey(id));
+      removedIds.push(id);
+    }
+
+    const syncOps: Promise<void>[] = [];
+    if (Object.keys(syncWrite).length > 0) {
+      syncOps.push(
+        syncArea.set(syncWrite).then(() => {
+          if (syncDirty) cache.sync = syncPayload;
+          if (syncMetaDirty) cache.syncNotesMetaJson = syncMetaJson;
+          for (const id of changedNoteIds) {
+            cache.syncNoteJsonById.set(id, nextNoteJsonById.get(id)!);
+          }
+        }),
+      );
+    }
+    if (removedKeys.length > 0) {
+      syncOps.push(
+        syncArea.remove(removedKeys).then(() => {
+          for (const id of removedIds) cache.syncNoteJsonById.delete(id);
+        }),
+      );
+    }
+    if (syncOps.length > 0) {
+      writes.push(
+        Promise.all(syncOps)
+          .then(() => undefined)
+          .catch((err: unknown) => {
+            throw toSyncQuotaUserError(err);
+          }),
+      );
+    }
+  }
+
   await Promise.all(writes);
+  if (oversized.length > 0) {
+    throw new Error(oversizedNotesMessage(oversized));
+  }
+}
+
+/** Trailing debounce for {@link scheduleSaveSettings}; UI state updates stay immediate. */
+export const SETTINGS_SAVE_DEBOUNCE_MS = 250;
+
+interface IPendingSettingsSave {
+  settings: ISettings;
+  waiters: Array<{ resolve: () => void; reject: (err: unknown) => void }>;
+}
+
+let pendingSave: IPendingSettingsSave | null = null;
+let pendingSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let saveInFlight: Promise<void> | null = null;
+
+/**
+ * Coalesce rapid saves (typing, slider drags, drag commits) into one {@link saveSettings} call
+ * with the newest settings. Resolves or rejects when the write that carried this state finishes.
+ * Writes are serialized so storage never sees an older snapshot land after a newer one.
+ */
+export function scheduleSaveSettings(s: ISettings): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (pendingSave) {
+      pendingSave.settings = s;
+      pendingSave.waiters.push({ resolve, reject });
+    } else {
+      pendingSave = { settings: s, waiters: [{ resolve, reject }] };
+    }
+    if (pendingSaveTimer !== null) clearTimeout(pendingSaveTimer);
+    pendingSaveTimer = setTimeout(() => {
+      pendingSaveTimer = null;
+      void flushPendingSettingsSave();
+    }, SETTINGS_SAVE_DEBOUNCE_MS);
+  });
+}
+
+/** True while a scheduled save has not been written yet. */
+export function hasPendingSettingsSave(): boolean {
+  return pendingSave !== null || saveInFlight !== null;
+}
+
+/**
+ * Write any scheduled save now (page hide, tests). Never rejects: failures are delivered to the
+ * promises returned by {@link scheduleSaveSettings}.
+ */
+export async function flushPendingSettingsSave(): Promise<void> {
+  if (pendingSaveTimer !== null) {
+    clearTimeout(pendingSaveTimer);
+    pendingSaveTimer = null;
+  }
+  if (saveInFlight) {
+    await saveInFlight.catch(() => undefined);
+  }
+  const batch = pendingSave;
+  if (!batch) return;
+  pendingSave = null;
+  const run = saveSettings(batch.settings);
+  saveInFlight = run;
+  try {
+    await run;
+    for (const w of batch.waiters) w.resolve();
+  } catch (err: unknown) {
+    for (const w of batch.waiters) w.reject(err);
+  } finally {
+    if (saveInFlight === run) saveInFlight = null;
+    if (pendingSave && pendingSaveTimer === null) {
+      void flushPendingSettingsSave();
+    }
+  }
 }
 
 export function applyPreset(preset: ISettings["preset"], s: ISettings): ISettings {

@@ -12,7 +12,7 @@ Human-readable backlog for Tabocalypse after the current alpha. **Machine-readab
 2. **This file** keeps narrative notes and original theme groupings (P0–P5) for reference.
 3. Open the board: `pnpm pm:board` — see [PROJOCALYPSE.md](./PROJOCALYPSE.md).
 
-**Product constraints** (non-negotiable): no publisher backend or telemetry; declarative plugins only; BYO AI keys; link-out support/donations.
+**Product constraints** (non-negotiable): no publisher backend or telemetry; declarative plugins only; BYO AI keys; link-out support/donations/purchases (no in-extension checkout; offline signature verification of purchased tokens and signed JSON is allowed — see [MONETIZATION.md](./MONETIZATION.md)).
 
 ---
 
@@ -84,6 +84,23 @@ _(Removed from the active roadmap — store prerequisites are tracked outside th
 | T-053 | **i18n / locale strings** extraction                          | Large effort; English-first until then |
 | T-054 | **Offline-first indicator** in footer                         | When cached weather/crypto/news shown  |
 | T-055 | **Performance budget** for new-tab cold load                  | Measure on low-end hardware            |
+
+---
+
+## P6 · Monetization (Package A — see [MONETIZATION.md](./MONETIZATION.md))
+
+| ID    | Candidate                                                             | Notes                                                                    |
+| ----- | --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| T-070 | **Licensing**: AGPL-3.0 extension, MIT plugin SDK                     | Done — `LICENSE`, `packages/plugin-sdk/LICENSE`, `license` fields        |
+| T-071 | **Monetization doc + invariant amendment + listing/privacy copy**     | Done — no in-extension checkout; offline signature verification allowed  |
+| T-072 | **Supporter chooser page** + homepage CTA                             | Done — `site/support.html` (GitHub Sponsors, Ko-fi, Patreon)             |
+| T-073 | **"What's new" banner** after update                                  | `lastSeenVersion`; reuses changelog parser; Upgrade link when unentitled |
+| T-074 | **Offline license entitlements** (signed token, Settings › License)   | ECDSA P-256 via WebCrypto; sync slice; redacted on export                |
+| T-075 | **Signed pack/plugin envelope** + Verified badge                      | Bad signature imports as unverified, never rejected                      |
+| T-076 | **Plugin schema v2 premium widget types** (DataCard, Countdown, RSS…) | Declarative only; user grants host permission at import                  |
+| T-077 | **Static signed catalog** with link-out purchase                      | Extends T-030; fetched only when the user opens Browse packs             |
+| T-078 | **Enterprise managed-storage policy** + Team token                    | `storage.managed`; Safari unsupported                                    |
+| T-079 | **Monthly supporter drop workflow** (content ops)                     | One signed pack per month to all supporter platforms                     |
 
 ---
 
