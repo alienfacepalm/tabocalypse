@@ -4164,7 +4164,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                                 : "Enable Tab guilt (tabs)"}
                             </span>
                           </button>
-                          <HudTip tip="When on, saves shared HUD latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, open Weather and tap Use my location once.">
+                          <HudTip tip="When on, saves shared HUD latitude and longitude using one browser lookup each Tabocalypse tab you open—not continuous satellite-style tracking. For a single fill without future tab lookups, turn this off, then tap Use my location once on the Weather map or under Settings > Weather.">
                             <button
                               type="button"
                               className="btn has-icon"
