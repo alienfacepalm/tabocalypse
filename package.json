@@ -13,7 +13,9 @@
     "build": "pnpm --filter extension build",
     "build:firefox": "pnpm --filter extension build:firefox",
     "build:safari": "pnpm --filter extension build:safari",
+    "build:chrome": "pnpm --filter extension build:chrome",
     "zip": "pnpm --filter extension zip",
+    "screenshots:docs": "tsx scripts/capture-doc-screenshots.ts",
     "package:stores": "tsx scripts/package-store-deliverables.ts",
     "scripts:list": "tsx scripts/list-pnpm-scripts.ts",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,cjs,json,md,css}\"",
@@ -50,22 +52,23 @@
     "*.{json,md,css}": "prettier --write"
   },
   "devDependencies": {
+    "@eslint/js": "^9.19.0",
     "@projocalypse/cli": "workspace:*",
     "@projocalypse/core": "workspace:*",
     "@projocalypse/plan": "workspace:*",
     "@tailwindcss/vite": "^4.1.11",
     "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^8.0.12",
-    "@eslint/js": "^9.19.0",
     "eslint": "^9.19.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-unicorn": "^56.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
+    "playwright": "1.62.0",
     "prettier": "^3.4.2",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.22.0",
+    "vite": "^8.0.12",
     "vitest": "^3.0.5"
   }
 }

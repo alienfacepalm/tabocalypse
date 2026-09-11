@@ -52,7 +52,7 @@ Registry and package key are **already committed** — you do **not** need `pnpm
 | `scripts/projocalypse-board-dev.mjs`        | `pnpm pm:board` — starts host Vite on port 5173                |
 | `.projocalypse/workspace.json`              | Package registry (`tabocalypse-roadmap`, plan globs, sections) |
 
-Root **`pm:sync`** runs the Tabocalypse roadmap bridge. Root **`pm:gap`** / **`pm:status`** call upstream Projocalypse CLI.
+Root **`pm:sync`** runs the Tabocalypse roadmap bridge. Root **`pm:gap`** / **`pm:status`** call upstream Projocalypse CLI. The `pm:roadmap:*` aliases (`plan`, `bridge`, `gap`, `sync`, `status`) and `pm:init` scope the same CLI commands to the `tabocalypse-roadmap` package; `pm:setup` also runs `pm:doctor` at the end.
 
 ---
 
@@ -92,6 +92,6 @@ Use these exact strings in `pm:section=` comments.
 ## Agents
 
 - **`tabocalypse-pm-board`** skill — sync loop after plan edits
-- **`projocalypse-plan-sync`** — gap codes (from submodule templates)
+- **`projocalypse-plan-sync`** — gap codes; not installed in this repo's `.cursor/` by default, copy it from `packages/projocalypse/templates/cursor/projocalypse-plan-sync.mdc` if you want it
 
 Upstream: [packages/projocalypse/doc/MONOREPO.md](../../packages/projocalypse/doc/MONOREPO.md)

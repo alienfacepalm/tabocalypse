@@ -4,6 +4,12 @@ This guide is for **Alpha users** and **developers** who want to **build Tabocal
 
 If you already have a pre-built folder/zip from someone else, use **[Install and test locally](INSTALL-LOCAL-TESTING.md)** instead.
 
+What you get after the steps below — a new tab like this, with a first-run welcome that explains the personality modes:
+
+| New tab HUD                                            | First-run welcome                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| ![Tabocalypse HUD](assets/screenshots/hud-default.jpg) | ![First-run welcome inside Settings](assets/screenshots/first-run-welcome.jpg) |
+
 ## Supported browsers
 
 Tabocalypse supports **Chrome**, **Microsoft Edge**, **Mozilla Firefox**, and **Apple Safari**.

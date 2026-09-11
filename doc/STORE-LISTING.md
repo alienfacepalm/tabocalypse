@@ -28,42 +28,55 @@ Free to install and use. Support links (one-time or recurring tips with no perks
 
 ## Permission justifications (for reviewer notes)
 
-| Permission / host                                  | Why Tabocalypse needs it                                                                                                         |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`                                          | Save settings, todos, notes, imported packs, widget toggles (including per-monitor overrides), and shared HUD location on device |
-| `alarms`                                           | User-scheduled reminders and notifications                                                                                       |
-| `notifications`                                    | Show alarm/reminder notifications the user configured                                                                            |
-| `bookmarks` (optional)                             | Bookmark search widget — only when the user enables it                                                                           |
-| `topSites` (optional)                              | Frequent sites widget — only when the user enables it                                                                            |
-| `tabs` (optional)                                  | Open search results and assist handoffs in a new tab                                                                             |
-| `api.open-meteo.com`                               | Weather widget coordinates → forecast (no publisher API key)                                                                     |
-| `static-maps.yandex.ru`                            | Weather widget location map thumbnail (saved HUD coordinates; `<img>` request only — not a manifest host permission)             |
-| `api.coingecko.com` / `coin-images.coingecko.com`  | Crypto prices widget (public market data + logos)                                                                                |
-| `peapix.com` / `img.peapix.com`                    | Optional Bing spotlight background imagery                                                                                       |
-| `duckduckgo.com`                                   | Live search suggestions when Search widget is enabled and DuckDuckGo is selected                                                 |
-| `suggestqueries.google.com`                        | Live search suggestions when Search widget is enabled and Google is selected                                                     |
-| `api.bing.com`                                     | Live search suggestions when Search widget is enabled and Bing is selected                                                       |
-| `green2.kingcounty.gov`                            | Optional Pacific Northwest lake buoy weather data                                                                                |
-| `speed.cloudflare.com`                             | Optional network speed test widget                                                                                               |
-| `api.wikimedia.org`                                | Weather Forecast “on this day” trivia                                                                                            |
-| `freequicknews.com`                                | Optional Balanced news headlines                                                                                                 |
-| `www.unsuck-it.com`                                | Optional humor pack line refresh                                                                                                 |
-| `steamcharts.com`                                  | Optional Steam® leaderboard (open concurrent-player chart)                                                                       |
-| `api.steampowered.com`                             | Optional Steam Web API (owned games by last played / hours) when the user supplies a Steam Web API key and Steam ID              |
-| `cdn.cloudflare.steamstatic.com` (and related CDN) | Optional Steam store capsule artwork for games on the leaderboard                                                                |
-| OpenAI-compatible host (optional)                  | BYO AI settings test and optional AI chat widget — user-supplied URL and API key only                                            |
+| Permission / host                                                                            | Why Tabocalypse needs it                                                                                                         |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                                                                    | Save settings, todos, notes, imported packs, widget toggles (including per-monitor overrides), and shared HUD location on device |
+| `alarms`                                                                                     | User-scheduled reminders and notifications                                                                                       |
+| `notifications`                                                                              | Show alarm/reminder notifications the user configured                                                                            |
+| `bookmarks` (optional)                                                                       | Bookmarks strip widget (recent / searchable bookmarks, hide and reorder) — only when the user enables it                         |
+| `topSites` (optional)                                                                        | Top sites widget — only when the user enables it                                                                                 |
+| `tabs` (optional)                                                                            | Tab guilt widget (counts open tabs) — only when the user enables it                                                              |
+| `api.open-meteo.com`                                                                         | Weather widget coordinates → forecast; Clock timezone lookup for the shared HUD location (no publisher API key)                  |
+| `geocoding-api.open-meteo.com`                                                               | Reverse lookup of the shared HUD location for the Balanced news device-region option                                             |
+| `static-maps.yandex.ru`                                                                      | Weather widget location map thumbnail (saved HUD coordinates; `<img>` request only — not a manifest host permission)             |
+| `api.coingecko.com` / `coin-images.coingecko.com`                                            | Crypto prices widget (public market data + logos; `assets.coingecko.com` logos load as `<img>` only, no host permission)         |
+| `peapix.com` / `img.peapix.com`                                                              | Optional Bing spotlight background imagery                                                                                       |
+| `duckduckgo.com`                                                                             | Live search suggestions when Search widget is enabled and DuckDuckGo is selected                                                 |
+| `suggestqueries.google.com`                                                                  | Live search suggestions when Search widget is enabled and Google is selected                                                     |
+| `api.bing.com`                                                                               | Live search suggestions when Search widget is enabled and Bing is selected                                                       |
+| `green2.kingcounty.gov`                                                                      | Optional Pacific Northwest lake buoy weather data                                                                                |
+| `speed.cloudflare.com`                                                                       | Optional network speed test widget                                                                                               |
+| `api.wikimedia.org`                                                                          | Weather Forecast “on this day” trivia                                                                                            |
+| `freequicknews.com`                                                                          | Optional Balanced news headlines                                                                                                 |
+| `www.unsuck-it.com`                                                                          | Optional humor pack line refresh                                                                                                 |
+| `steamcharts.com`                                                                            | Optional Steam® leaderboard (open concurrent-player chart)                                                                       |
+| `api.steampowered.com`                                                                       | Optional Steam Web API (owned games by last played / hours) when the user supplies a Steam Web API key and Steam ID              |
+| `cdn.cloudflare.steamstatic.com`, `shared.akamai.steamstatic.com`, `steamcdn-a.akamaihd.net` | Optional Steam store capsule artwork for games on the leaderboard                                                                |
+| `api.openai.com`, `generativelanguage.googleapis.com` (optional)                             | BYO AI presets (OpenAI, Gemini) — requested only when the user saves that base URL; user-supplied API key only                   |
+| `https://*/*`, `http://localhost/*`, `http://127.0.0.1/*` (optional)                         | Any other OpenAI-compatible endpoint the user configures for BYO AI, including a local model server                              |
 
 **Remote code:** Tabocalypse does not execute remote code. Declarative plugins are JSON interpreted by the app; no user-supplied JavaScript.
 
 ## Screenshots
 
-Capture at least:
+Generate them from the release build instead of capturing by hand:
 
-- Default new tab (widgets visible)
-- **Settings** open — widget toggles (per monitor), **Chaos** personality, and import section
-- Import flow or BYO AI disclaimer if shown in your build
+```bash
+pnpm build:chrome
+pnpm screenshots:docs    # → doc/assets/screenshots/
+```
 
-Typical store sizes: **1280×800** and/or **440×280** — confirm each portal’s current spec before upload.
+The script produces the default HUD (Balanced), Focus and Light variants, the first-run welcome, each panel, and **Settings › Widgets / Appearance / Chaos / Panel layout / Import declarative plugin / Data / Optional permissions**. Pick at least:
+
+- `hud-default.jpg` — default new tab (widgets visible)
+- `settings-widgets.png` and `settings-chaos.png` — per-monitor widget toggles and personality
+- `settings-import-plugin.png` or `settings-optional-permissions.png` — import flow / permission prompts
+
+Typical store sizes: **1280×800** and/or **440×280** — resize or crop the 1600×1000 captures and confirm each portal’s current spec before upload.
+
+| Default HUD                                        | Settings › Widgets                                           |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| ![Default HUD](assets/screenshots/hud-default.jpg) | ![Settings widgets](assets/screenshots/settings-widgets.png) |
 
 ## Policy alignment
 

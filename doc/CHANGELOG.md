@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation** — architecture decision records under `doc/ADR/` (nineteen records covering the local-first, declarative-plugin, BYO-AI, sync, licensing, and monetization decisions), a marketing plan (`doc/PLAN/MARKETING.md`), and real screenshots of the HUD and Settings under `doc/assets/screenshots/` captured by `pnpm screenshots:docs` (Playwright against the built extension). Guides were reconciled with the code: pnpm 11, the pre-commit patch bump, the full host-permission list, `https`-only plugin links and validator limits, Gemini in the privacy policy, and "planned" wording for license verification.
+
 ### Changed
 
 - **Licensing** — the extension is now released under **AGPL-3.0** and `@tabocalypse/plugin-sdk` under **MIT** (`LICENSE` files added; `license` fields set). Monetization direction (one-off purchases such as a lifetime Pro unlock, signed packs, theme suites, and brand kits, plus donations of any kind; no ads, no scheduled obligations, no in-extension checkout) is documented in `doc/PLAN/MONETIZATION.md` and `doc/PLAN/THEME-SUITES.md`; the support page, store listing, and privacy copy describe tips with no perks and no monthly pack drop.

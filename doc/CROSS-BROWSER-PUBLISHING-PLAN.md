@@ -26,7 +26,7 @@ Do this once before opening any developer dashboard.
 
 ### 0.1 Version and quality gate
 
-1. Set the release version in [`apps/extension/package.json`](../apps/extension/package.json) (WXT reads this for `manifest.version`).
+1. Confirm the release version in [`apps/extension/package.json`](../apps/extension/package.json) (WXT reads this for `manifest.version`). The pre-commit hook bumps the patch number on every commit; edit it by hand only for a minor/major line and roll [CHANGELOG.md](CHANGELOG.md) at the same time.
 2. From repo root:
 
    ```bash
@@ -44,7 +44,7 @@ From repo root:
 pnpm package:stores
 ```
 
-This runs `pnpm build`, creates WXT zips for Chromium and Firefox (+ Firefox sources), and writes a deliverables manifest under `apps/extension/output/store-deliverables/`. See [Deliverables matrix](#deliverables-matrix).
+This runs `pnpm build`, creates zips for Chromium (duplicated as `-chrome` and `-edge`), Firefox (+ Firefox sources), and a Safari MV3 archive, verifies each zip (manifest at the root, version match, Chrome and Edge byte-identical), and writes a deliverables manifest under `apps/extension/output/store-deliverables/`. See [Deliverables matrix](#deliverables-matrix).
 
 ### 0.3 Firefox add-on ID (blocker for AMO)
 
@@ -58,14 +58,14 @@ Rebuild after changing it. AMO requires a **unique** reverse-domain ID tied to y
 
 ### 0.4 Legal and marketing assets (blockers for all stores)
 
-| Item                          | Status in repo                                       | Action before submit                                                                                                                                                                               |
-| ----------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Privacy policy URL**        | [`PRIVACY.md`](../PRIVACY.md) in repo                | Host at a **public HTTPS URL** (GitHub default branch link, GitHub Pages, or your site). Stores reject “file in zip only”.                                                                         |
-| **Support URL**               | Optional env links                                   | Add a support/contact URL (GitHub Issues is fine).                                                                                                                                                 |
-| **Icons**                     | `public/icon/*.png`, WXT auto-icons                  | Confirm **128×128** (and store-required sizes) look correct in built output.                                                                                                                       |
-| **Screenshots**               | Not in repo                                          | Capture per [STORE-LISTING.md](STORE-LISTING.md): default new tab, Settings (widgets), import/BYO AI disclaimer. Typical sizes: **1280×800** and/or **440×280** (check each store’s current spec). |
-| **Short + long description**  | Partial in manifest                                  | Expand for each dashboard; emphasize **new tab replacement**, **no publisher backend**, **local/BYO data**.                                                                                        |
-| **Permission justifications** | See [wxt.config.ts](../apps/extension/wxt.config.ts) | Pre-write reviewer notes for optional `bookmarks`, `topSites`, `tabs`, and OpenAI-compatible host.                                                                                                 |
+| Item                          | Status in repo                                        | Action before submit                                                                                                                                                                  |
+| ----------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Privacy policy URL**        | [`PRIVACY.md`](../PRIVACY.md) in repo                 | Host at a **public HTTPS URL** (GitHub default branch link, GitHub Pages, or your site). Stores reject “file in zip only”.                                                            |
+| **Support URL**               | Optional env links                                    | Add a support/contact URL (GitHub Issues is fine).                                                                                                                                    |
+| **Icons**                     | `public/icon/*.png`, WXT auto-icons                   | Confirm **128×128** (and store-required sizes) look correct in built output.                                                                                                          |
+| **Screenshots**               | `doc/assets/screenshots/` via `pnpm screenshots:docs` | Recapture from the release build, then resize per portal. Typical sizes: **1280×800** and/or **440×280** (check each store’s current spec). See [STORE-LISTING.md](STORE-LISTING.md). |
+| **Short + long description**  | Partial in manifest                                   | Expand for each dashboard; emphasize **new tab replacement**, **no publisher backend**, **local/BYO data**.                                                                           |
+| **Permission justifications** | See [wxt.config.ts](../apps/extension/wxt.config.ts)  | Pre-write reviewer notes for optional `bookmarks`, `topSites`, `tabs`, and OpenAI-compatible host.                                                                                    |
 
 ### 0.5 Permission summary (for store forms)
 
@@ -73,8 +73,8 @@ Copy from [`wxt.config.ts`](../apps/extension/wxt.config.ts) and [PRIVACY.md](..
 
 - **Required:** `storage`, `alarms`, `notifications`
 - **Optional (user enables widgets):** `bookmarks`, `topSites`, `tabs`
-- **Host permissions:** Open-Meteo, CoinGecko, Cloudflare speed test, Peapix/Bing imagery, King County lake buoys
-- **Optional host:** user-configured OpenAI-compatible API (BYO key test only)
+- **Host permissions:** Open-Meteo (forecast + geocoding), FreeQuickNews, CoinGecko, Cloudflare speed test, Peapix/Bing imagery, King County lake buoys, Unsuck-it humor refresh, DuckDuckGo / Google / Bing search suggestions, Wikimedia "on this day", Steam Charts, Steam Web API and Steam CDNs — full table in [STORE-LISTING.md](STORE-LISTING.md)
+- **Optional hosts:** OpenAI, Gemini, any HTTPS host, and localhost — requested only when the user saves a BYO AI base URL (Settings test and the optional AI chat widget)
 - **No** remote code execution; declarative plugins are **JSON only**
 
 ---
@@ -236,7 +236,7 @@ Expand and localize per store in [STORE-LISTING.md](STORE-LISTING.md).
 
 ## After launch
 
-- Bump version in `apps/extension/package.json` for each release; run `pnpm package:stores` again.
+- For each release, check the auto-bumped version in `apps/extension/package.json` (edit only for minor/major), tag `v{version}`, and let the release workflow run `pnpm package:stores` ([GITHUB-ACTIONS.md](GITHUB-ACTIONS.md)).
 - Update [CHANGELOG.md](CHANGELOG.md) and store “What’s new” text.
 - Keep [PRIVACY.md](../PRIVACY.md) and store disclosures in sync when permissions or network behavior changes.
 - Monitor reviews and crash reports per store dashboard.

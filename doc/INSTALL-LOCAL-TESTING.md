@@ -11,6 +11,12 @@ This page is for **testers** and **early users** who want to run the extension o
 
 Tabocalypse **does not** install like a normal desktop app from an `.exe` or `.dmg`. You load it through the browser’s **developer / temporary add-on** flow.
 
+Once loaded, a new tab looks like this (Balanced personality; **Focus** hides the status line and jokes, **Chaotic** turns them up):
+
+| Balanced                                            | Focus                                          |
+| --------------------------------------------------- | ---------------------------------------------- |
+| ![Balanced HUD](assets/screenshots/hud-default.jpg) | ![Focus HUD](assets/screenshots/hud-focus.jpg) |
+
 ## Chrome or Microsoft Edge (Chromium)
 
 1. Unzip the archive if you received a **zip** (you should see a `manifest.json` at the top level of the folder you load).
