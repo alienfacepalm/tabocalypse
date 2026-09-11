@@ -4,11 +4,11 @@ This guide is for **maintainers** shipping Tabocalypse to **Chrome Web Store**, 
 
 ## Before you publish (all stores)
 
-1. **Version** — Bump `version` in [`apps/extension/package.json`](../apps/extension/package.json). WXT uses this when generating the MV3 manifest.
-2. **Privacy** — Store forms will ask what data you collect. Use [`PRIVACY.md`](../PRIVACY.md) as the source of truth; keep store text aligned with actual behavior (local storage, optional network to Open-Meteo, user-supplied AI base URL, link-out donate URLs).
-3. **Permissions** — Match [`apps/extension/wxt.config.ts`](../apps/extension/wxt.config.ts): `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; `host_permissions` for Open-Meteo; optional OpenAI-compatible host for BYO testing only.
+1. **Version** — The pre-commit hook bumps the **patch** version on every commit. For a store release that is a new **minor/major** line, edit `version` in [`apps/extension/package.json`](../apps/extension/package.json) by hand and roll `doc/CHANGELOG.md` in the same commit. WXT copies the version into every manifest.
+2. **Privacy** — Store forms will ask what data you collect. Use [`PRIVACY.md`](../PRIVACY.md) as the source of truth; keep store text aligned with actual behavior (local storage; user-directed network calls to the public endpoints listed there; user-supplied AI base URL and keys; link-out support and purchase URLs; no in-extension checkout).
+3. **Permissions** — Match [`apps/extension/wxt.config.ts`](../apps/extension/wxt.config.ts): `storage`, `alarms`, `notifications`; optional `bookmarks`, `topSites`, `tabs`; nineteen `host_permissions` (Open-Meteo and its geocoder, FreeQuickNews, CoinGecko, Cloudflare speed test, Peapix, King County buoys, Unsuck-it, DuckDuckGo / Google / Bing suggestions, Wikimedia, Steam Charts and Steam CDNs); `optional_host_permissions` for OpenAI, Gemini, any HTTPS host, and localhost so BYO AI can target a user-chosen endpoint. The per-host justifications are in [STORE-LISTING.md](STORE-LISTING.md).
 4. **Single purpose** — The extension replaces the **new tab page** with widgets and optional humor/plugins; say that clearly in the listing (see checklist).
-5. **Screenshots** — Capture the new tab: default view; **Settings** open (widgets + any “chaos” / import sections); import / BYO AI disclaimer if shown. Follow each store’s resolution and count limits.
+5. **Screenshots** — Run `pnpm build:chrome` then `pnpm screenshots:docs` to produce fresh captures under `doc/assets/screenshots/` (default HUD, Focus and Light modes, Settings › Widgets / Appearance / Chaos / Optional permissions, individual panels). Crop or resize to each store's resolution and count limits.
 6. **Fundraising** — Donate / feature links open **third-party sites** only; Tabocalypse does not process payments. Say so if the store asks about monetization.
 
 ## Build artifacts

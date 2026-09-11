@@ -4,13 +4,14 @@ Tabocalypse uses GitHub Actions for **CI** (quality gate on pull requests) and *
 
 ## Workflows
 
-| Workflow                     | File                                                                | When it runs                                                                                               |
-| ---------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **CI**                       | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)           | Push and pull requests to `main` / `master`                                                                |
-| **Release packages**         | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | When a GitHub Release is **published**, or manually via **Actions → Release packages → Run workflow**      |
-| **Deploy homepage to Pages** | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)     | Push to `master` touching `site/**`, or manually via **Actions → Deploy homepage to Pages → Run workflow** |
+| Workflow                     | File                                                                                  | When it runs                                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **CI**                       | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)                             | Push to `main` / `master`, and every pull request                                                                                                                              |
+| **Release packages**         | [`.github/workflows/release.yml`](../.github/workflows/release.yml)                   | When a GitHub Release is **published**, or manually via **Actions → Release packages → Run workflow**                                                                          |
+| **Deploy homepage to Pages** | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)                       | Push to `master` touching `site/**` (or the workflow file itself), or manually via **Actions → Deploy homepage to Pages → Run workflow**                                       |
+| **Owner merge gate**         | [`.github/workflows/owner-merge-gate.yml`](../.github/workflows/owner-merge-gate.yml) | Pull requests targeting `master` (`pull_request_target`) and manual runs; enforces the merge policy in [`.github/owner-merge-policy.json`](../.github/owner-merge-policy.json) |
 
-Both workflows use **Node.js 22**, **pnpm** (from root `package.json` `packageManager`), and `pnpm install --frozen-lockfile`.
+**CI** and **Release packages** use **Node.js 22**, **pnpm** (from root `package.json` `packageManager`), and `pnpm install --frozen-lockfile`. The Pages and merge-gate workflows need no Node toolchain.
 
 ## CI
 
@@ -20,9 +21,9 @@ Runs `pnpm check` (format check, ESLint, tests, SDK + extension TypeScript). Thi
 
 When you **publish** a GitHub Release, the workflow:
 
-1. Verifies the release tag matches [`apps/extension/package.json`](../apps/extension/package.json) `version` (for example tag `v0.1.81` and version `0.1.81`).
+1. Verifies the release tag matches [`apps/extension/package.json`](../apps/extension/package.json) `version` (for example tag `v1.0.7` and version `1.0.7`).
 2. Requires repository secret **`WXT_TABOCALYPSE_FIREFOX_GECKO_ID`** (production Firefox add-on ID — not the placeholder).
-3. Runs `pnpm check`, then `pnpm package:stores --skip-check` (same script as local maintainers).
+3. Runs `pnpm check`, then `pnpm package:stores --skip-check` (same script as local maintainers), which also **verifies every zip** (manifest at the archive root, version matches, Chrome and Edge zips byte-identical).
 4. Uploads artifacts to the release:
 
 | Asset                                       | Purpose                                                                  |
@@ -48,9 +49,9 @@ Set this before the first automated release. Without it, **Release packages** fa
 
 ### Publishing a release
 
-1. Bump `version` in [`apps/extension/package.json`](../apps/extension/package.json).
+1. Decide the version. The pre-commit hook already bumps the **patch** number on every commit; edit `version` in [`apps/extension/package.json`](../apps/extension/package.json) by hand only for a **minor or major** bump, and roll `doc/CHANGELOG.md` **[Unreleased]** into a dated section in the same commit.
 2. Merge to the default branch and run `pnpm check` locally if you changed code.
-3. Create a GitHub Release with tag **`v{version}`** (for example `v0.1.81`) matching the package version.
+3. Create a GitHub Release with tag **`v{version}`** (for example `v1.0.7`) matching the package version on the merged commit.
 4. Publish the release — the workflow attaches the zip assets automatically.
 
 ### Manual test run

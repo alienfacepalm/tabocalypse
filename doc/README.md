@@ -11,8 +11,10 @@ Start here for **development**, **local testing** (including non-developers), an
 | [Future enhancements roadmap](PLAN/ROADMAP.md)                    | Candidate backlog before Projocalypse board sync                        |
 | [Monetization plan](PLAN/MONETIZATION.md)                         | Revenue spectrum, approved package, pricing, signed-JSON entitlements   |
 | [Theme suites and brand kits](PLAN/THEME-SUITES.md)               | Sellable theme suites, company branding, theme pack schema, designer    |
+| [Marketing plan](PLAN/MARKETING.md)                               | Positioning, audiences, channels, launch playbook, asset kit            |
 | [Projocalypse PM board](PLAN/PROJOCALYPSE.md)                     | Submodule setup, `pnpm pm:board`, plan ↔ board sync                     |
-| [Architecture overview](ARCHITECTURE.md)                          | High-level map of packages and extension surfaces                       |
+| [Architecture overview](ARCHITECTURE.md)                          | Map of packages, extension surfaces, and `lib/` subsystems              |
+| [Architecture decision records](ADR/README.md)                    | Why each product and toolchain constraint exists (ADR-0001 … ADR-0019)  |
 | [Contributing](CONTRIBUTING.md)                                   | PR expectations and checks                                              |
 | [GitHub Actions](GITHUB-ACTIONS.md)                               | CI and automated release packages per browser                           |
 | [Troubleshooting](TROUBLESHOOTING.md)                             | Common load / build / pnpm issues                                       |
@@ -27,3 +29,4 @@ Start here for **development**, **local testing** (including non-developers), an
 - [Store listing checklist](STORE-LISTING.md) — short checklist (expanded in publishing guide)
 - [Privacy policy](../PRIVACY.md) — basis for store privacy disclosures
 - [Repository README](../README.md) — quick start and links to agents / Cursor rules
+- [`assets/screenshots/`](assets/screenshots/) — real captures of the HUD and Settings, regenerated with `pnpm screenshots:docs` ([DEVELOPMENT.md › Screenshots](DEVELOPMENT.md#screenshots))

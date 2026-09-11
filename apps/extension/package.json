@@ -9,6 +9,7 @@
     "dev:firefox": "wxt -b firefox",
     "predev": "pnpm generate:settings-changelog",
     "build": "pnpm generate:settings-changelog && wxt build && tsx scripts/rename-chrome-mv3-to-chrome-edge-mv3.ts && wxt build -b safari --mv3 && wxt build -b firefox",
+    "build:chrome": "pnpm generate:settings-changelog && wxt build && tsx scripts/rename-chrome-mv3-to-chrome-edge-mv3.ts",
     "build:firefox": "wxt build -b firefox",
     "build:safari": "wxt build -b safari --mv3",
     "zip": "wxt zip",

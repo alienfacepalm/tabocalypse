@@ -26,3 +26,15 @@ Hooks install when **`pnpm install`** runs inside a **git** clone. If you downlo
 ## Development build looks stale
 
 After `pnpm dev`, WXT rebuilds on save; use the browser’s **reload extension** and refresh the new tab.
+
+## The footer version does not match `apps/extension/package.json`
+
+`apps/extension/output/` is gitignored and only changes when you build. Every commit bumps the patch version, so after a `git pull` the built folder is usually a version behind — run `pnpm build` (or `pnpm build:chrome`) and reload the extension.
+
+## Widgets say “reload the extension” after an update
+
+The background service worker still runs an older host allowlist. Click **Reload** on the extension card (`chrome://extensions`, `edge://extensions`, or `about:debugging`) and open a fresh new tab.
+
+## `pnpm screenshots:docs` fails to launch Chromium
+
+Install the Playwright browser once (`pnpm exec playwright install chromium`) and make sure `apps/extension/output/chrome_edge-mv3/manifest.json` exists (`pnpm build:chrome`). The capture script needs network access to the same public endpoints the widgets use.

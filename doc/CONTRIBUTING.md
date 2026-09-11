@@ -16,11 +16,13 @@ Shipped Tabocalypse—the new tab people use every day—only gets better when s
 
    GitHub Actions **CI** runs the same `pnpm check` on pull requests ([GITHUB-ACTIONS.md](GITHUB-ACTIONS.md)).
 
-5. **Pre-commit** — Staged files run through **lint-staged** (ESLint + Prettier). Fix reported issues or run `pnpm format` and `pnpm lint` locally.
+5. **Pre-commit** — Staged files run through **lint-staged** (ESLint + Prettier). The hook then **bumps the extension patch version** and regenerates the embedded Settings changelog, staging both files automatically — do not undo that bump. Fix reported issues or run `pnpm format` and `pnpm lint` locally.
+
+6. **Licensing** — Contributions to `apps/extension` are accepted under **AGPL-3.0-only** and to `packages/plugin-sdk` under **MIT** ([ADR-0015](ADR/ADR-0015-LICENSING-AGPL-EXTENSION-MIT-SDK.md)).
 
 ## Conventions
 
-Product and toolchain rules live in [`.cursor/rules/project-conventions.mdc`](../.cursor/rules/project-conventions.mdc) (always-on for Cursor) and the summary table in [AGENTS.md](../AGENTS.md). Highlights:
+Product and toolchain rules live in [`.cursor/rules/project-conventions.mdc`](../.cursor/rules/project-conventions.mdc) (always-on for Cursor) and the summary table in [AGENTS.md](../AGENTS.md). The reasoning behind them is recorded in [`doc/ADR/`](ADR/README.md); a change that reverses a decision should come with a new ADR. Highlights:
 
 - **pnpm** only; no `npm` lockfiles.
 - **TypeScript** — no `any`; match existing naming in the folder you touch.
