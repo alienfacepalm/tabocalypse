@@ -126,7 +126,8 @@ export type TWidgetKey =
   | "tabGuilt"
   | "humorBanner"
   | "aiChat"
-  | "balancedNews";
+  | "balancedNews"
+  | "dailyQuiz";
 
 /** Top players (open steamcharts) vs Recently played (Steam Web API). */
 export type TSteamChartsBoardMode = "open" | "recent";
@@ -1243,6 +1244,7 @@ export const DEFAULT_WIDGETS: Record<TWidgetKey, boolean> = {
   tabGuilt: false,
   humorBanner: true,
   balancedNews: false,
+  dailyQuiz: false,
 };
 
 /** Merge stored widget toggles into defaults; ignores unknown keys (e.g. removed widgets). */
@@ -1346,6 +1348,7 @@ export const WIDGET_LABELS: Record<TWidgetKey, string> = {
   tabGuilt: "Tab guilt",
   humorBanner: "Humor banner",
   balancedNews: "Balanced news",
+  dailyQuiz: "Daily quiz",
 };
 
 export function resolveWeatherGeoAdjusted(

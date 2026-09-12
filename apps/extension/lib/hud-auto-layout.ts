@@ -34,6 +34,7 @@ export const HUD_AUTO_LAYOUT_PANEL_PRIORITY: Record<THudPanelId, number> = {
   todo: 2,
   clock: 3,
   tabGuilt: 4,
+  dailyQuiz: 5,
   topSites: 10,
   bookmarksStrip: 11,
   pluginDeck: 12,
@@ -57,6 +58,7 @@ const WIDGET_TO_HUD_PANEL: Partial<Record<TWidgetKey, THudPanelId>> = {
   bookmarksStrip: "bookmarksStrip",
   notes: "notes",
   balancedNews: "balancedNews",
+  dailyQuiz: "dailyQuiz",
 };
 
 /** How much HUD canvas is available — drives stack vs spread, not resize deltas alone. */

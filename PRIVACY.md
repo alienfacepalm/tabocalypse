@@ -7,6 +7,7 @@
 - Preferences, widget toggles, and **notes** (text and which note panels are open) may sync via the browser’s extension storage sync (if you use browser sync), controlled by Mozilla/Google/Microsoft/Apple — not by us.
 - **Per-monitor** widget toggles and note panel **screen positions** stay in **local** extension storage on each device (they are not part of browser sync).
 - API keys (OpenAI-compatible, Gemini, FreeQuickNews, Steam Web API), optional Steam ID, imported packs/plugins, todos, a single saved **HUD location** (latitude/longitude used by Weather, Clock timezone, Balanced News device region, and related panels), and optional background images stay in **local** extension storage on your device. Default **Settings export** omits API keys and Steam ID so shared backup files do not include them.
+- The **Daily quiz** widget keeps today's answers and its XP/streak ledger in **local** extension storage on this device only. They are not synced, not exported, and never sent anywhere; reward widgets you unlock are stored like any other imported plugin.
 
 ## Network requests (only when you use a feature)
 

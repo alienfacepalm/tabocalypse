@@ -72,7 +72,9 @@ import { NotesMasterList } from "../../components/built-in/notes-master-list";
 import { StickyNoteLayer } from "../../components/built-in/sticky-note-layer";
 import { SearchWidget } from "../../components/built-in/search-widget";
 import { SearchEngineSettingPicker } from "../../components/search-engine-setting-picker";
+import { DailyQuizWidget } from "../../components/built-in/daily-quiz-widget";
 import { TodoWidget } from "../../components/built-in/todo-widget";
+import { RewardsSettingsSection } from "../../components/rewards-settings-section";
 import { WeatherWidget } from "../../components/built-in/weather-widget";
 import { BalancedNewsWidget } from "../../components/built-in/balanced-news-widget";
 import { SteamChartsWidget } from "../../components/built-in/steam-charts-widget";
@@ -159,6 +161,8 @@ import {
   mergeImportedPlugin,
   removeImportedPlugin,
 } from "../../lib/plugin-import";
+import { REWARD_CATALOG } from "../../lib/rewards/reward-catalog";
+import { partitionImportedPlugins } from "../../lib/rewards/reward-catalog-logic";
 import { hideBookmarksStripBookmark } from "../../lib/bookmarks-strip-preferences";
 import { BUILTIN_PACKS } from "../../lib/humor/builtin-packs";
 import {
@@ -255,6 +259,7 @@ type TSettingsSectionJump =
   | "steamCharts"
   | "steamChartsSteamId"
   | "widgets"
+  | "rewards"
   | "chaos"
   | "byoAi"
   | "optionalPermissions"
@@ -280,6 +285,7 @@ type TSettingsAccordionSection =
   | "importPack"
   | "importPlugin"
   | "manageImports"
+  | "rewards"
   | "experimental"
   | "changelog"
   | "feedback"
@@ -447,6 +453,7 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const balancedNewsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const steamChartsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const widgetsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
+  const rewardsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const byoAiSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const optionalPermissionsSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
   const bookmarksSettingsSectionRef = useRef<HTMLDetailsElement | null>(null);
@@ -1058,13 +1065,15 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
             ? steamChartsSettingsSectionRef.current
             : pendingSettingsSectionJump === "widgets"
               ? widgetsSettingsSectionRef.current
-              : pendingSettingsSectionJump === "chaos"
-                ? chaosSettingsSectionRef.current
-                : pendingSettingsSectionJump === "byoAi"
-                  ? byoAiSettingsSectionRef.current
-                  : pendingSettingsSectionJump === "bookmarks"
-                    ? bookmarksSettingsSectionRef.current
-                    : optionalPermissionsSettingsSectionRef.current;
+              : pendingSettingsSectionJump === "rewards"
+                ? rewardsSettingsSectionRef.current
+                : pendingSettingsSectionJump === "chaos"
+                  ? chaosSettingsSectionRef.current
+                  : pendingSettingsSectionJump === "byoAi"
+                    ? byoAiSettingsSectionRef.current
+                    : pendingSettingsSectionJump === "bookmarks"
+                      ? bookmarksSettingsSectionRef.current
+                      : optionalPermissionsSettingsSectionRef.current;
     if (!section) {
       return;
     }
@@ -1116,6 +1125,17 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
   const openWidgetsSettingsSection = useCallback(() => {
     openSettingsAccordionSection("widgets");
     setPendingSettingsSectionJump("widgets");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openRewardsSettingsSection = useCallback(() => {
+    openSettingsAccordionSection("rewards");
+    setPendingSettingsSectionJump("rewards");
+    setOpenSettings(true);
+  }, [openSettingsAccordionSection]);
+
+  const openManageImportsSection = useCallback(() => {
+    openSettingsAccordionSection("manageImports");
     setOpenSettings(true);
   }, [openSettingsAccordionSection]);
 
@@ -2261,6 +2281,10 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                               icon: <SteamIconLogo size={16} />,
                               onOpenSettings: openSteamChartsSettingsSection,
                               settingsTip: "Open Settings > Steam® leaderboard",
+                            },
+                            dailyQuiz: {
+                              onOpenSettings: openRewardsSettingsSection,
+                              settingsTip: "Open Settings > Rewards",
                             },
                           }}
                         />
@@ -4409,39 +4433,111 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           </div>
                         ))}
                         <p className="muted sm mb-2 mt-4">Plugins</p>
-                        {s.importedPlugins.map((p) => (
-                          <div key={p.id} className="row manage-row">
-                            <label className="check-row">
-                              <input
-                                type="checkbox"
-                                checked={p.enabled}
-                                onChange={(e) => {
-                                  const v = e.target.checked;
+                        {partitionImportedPlugins(REWARD_CATALOG, s.importedPlugins).user.map(
+                          (p) => (
+                            <div key={p.id} className="row manage-row">
+                              <label className="check-row">
+                                <input
+                                  type="checkbox"
+                                  checked={p.enabled}
+                                  onChange={(e) => {
+                                    const v = e.target.checked;
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      importedPlugins: cur.importedPlugins.map((x) =>
+                                        x.id === p.id ? { ...x, enabled: v } : x,
+                                      ),
+                                    }));
+                                  }}
+                                />
+                                <span>{p.name}</span>
+                              </label>
+                              <button
+                                type="button"
+                                className="btn ghost sm has-icon"
+                                onClick={() =>
                                   void persist((cur) => ({
                                     ...cur,
-                                    importedPlugins: cur.importedPlugins.map((x) =>
-                                      x.id === p.id ? { ...x, enabled: v } : x,
+                                    importedPlugins: removeImportedPlugin(
+                                      cur.importedPlugins,
+                                      p.id,
                                     ),
-                                  }));
-                                }}
-                              />
-                              <span>{p.name}</span>
-                            </label>
-                            <button
-                              type="button"
-                              className="btn ghost sm has-icon"
-                              onClick={() =>
-                                void persist((cur) => ({
-                                  ...cur,
-                                  importedPlugins: removeImportedPlugin(cur.importedPlugins, p.id),
-                                }))
-                              }
-                            >
-                              <Trash2 size={18} strokeWidth={2} aria-hidden />
-                              <span>Remove</span>
-                            </button>
-                          </div>
-                        ))}
+                                  }))
+                                }
+                              >
+                                <Trash2 size={18} strokeWidth={2} aria-hidden />
+                                <span>Remove</span>
+                              </button>
+                            </div>
+                          ),
+                        )}
+                        {partitionImportedPlugins(REWARD_CATALOG, s.importedPlugins).rewards
+                          .length > 0 ? (
+                          <>
+                            <p className="muted sm mb-2 mt-4">Reward widgets</p>
+                            <p className="muted sm mb-2 mt-0">
+                              Unlocked with quiz XP. Removed rewards stay unlocked; reinstall them
+                              free under Settings &gt; Rewards.
+                            </p>
+                            {partitionImportedPlugins(
+                              REWARD_CATALOG,
+                              s.importedPlugins,
+                            ).rewards.map((p) => (
+                              <div key={p.id} className="row manage-row">
+                                <label className="check-row">
+                                  <input
+                                    type="checkbox"
+                                    checked={p.enabled}
+                                    onChange={(e) => {
+                                      const v = e.target.checked;
+                                      void persist((cur) => ({
+                                        ...cur,
+                                        importedPlugins: cur.importedPlugins.map((x) =>
+                                          x.id === p.id ? { ...x, enabled: v } : x,
+                                        ),
+                                      }));
+                                    }}
+                                  />
+                                  <span>{p.name}</span>
+                                </label>
+                                <button
+                                  type="button"
+                                  className="btn ghost sm has-icon"
+                                  onClick={() =>
+                                    void persist((cur) => ({
+                                      ...cur,
+                                      importedPlugins: removeImportedPlugin(
+                                        cur.importedPlugins,
+                                        p.id,
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  <Trash2 size={18} strokeWidth={2} aria-hidden />
+                                  <span>Remove</span>
+                                </button>
+                              </div>
+                            ))}
+                          </>
+                        ) : null}
+                      </div>
+                    </details>
+
+                    <details
+                      ref={rewardsSettingsSectionRef}
+                      className="acc-item"
+                      open={settingsAccordionIsOpen("rewards")}
+                      onToggle={onSettingsAccordionToggle("rewards")}
+                    >
+                      <summary className="acc-summary">
+                        <span className="acc-title">Rewards</span>
+                      </summary>
+                      <div className="acc-body">
+                        <RewardsSettingsSection
+                          quizWidgetOn={effectiveWidgets.dailyQuiz}
+                          onOpenWidgetsSettings={openWidgetsSettingsSection}
+                          onOpenManageImports={openManageImportsSection}
+                        />
                       </div>
                     </details>
 
@@ -5264,6 +5360,18 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       onOpenBookmarksPermissionSettings={openBookmarksPermissionSettingsSection}
                       onOpenBookmarksHiddenSettings={openBookmarksHiddenSettingsSection}
                     />
+                  </DraggableHudPanel>
+                ) : null}
+                {effectiveWidgets.dailyQuiz ? (
+                  <DraggableHudPanel
+                    key="dailyQuiz"
+                    panelId="dailyQuiz"
+                    canvasRef={hudCanvasRef}
+                    position={effectiveHudPanelPositions.dailyQuiz}
+                    locked={s.hudLayoutLocked}
+                    onCommit={(pos) => commitHudPanel("dailyQuiz", pos)}
+                  >
+                    <DailyQuizWidget onOpenRewardsSettings={openRewardsSettingsSection} />
                   </DraggableHudPanel>
                 ) : null}
                 {s.importedPlugins.some((p) => p.enabled) ? (
