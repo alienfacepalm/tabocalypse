@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Daily quiz** widget — three multiple-choice questions a day from a bundled, offline question bank (the same set all day, a new set tomorrow). Correct answers earn local XP; finishing all three keeps a daily streak with a small bonus. Everything stays on this device: no account, no network. Off by default under **Settings > Widgets**.
+- **Settings > Rewards** — spend quiz XP to unlock small bundled reward widgets (focus mantras, a keyboard cheat-sheet, a reference-desk link grid, a fortune deck, unit conversions). Unlocking installs an ordinary declarative plugin, listed under **Manage imports > Reward widgets**; a removed reward reinstalls free.
 - **Documentation** — architecture decision records under `doc/ADR/` (nineteen records covering the local-first, declarative-plugin, BYO-AI, sync, licensing, and monetization decisions), a marketing plan (`doc/PLAN/MARKETING.md`), and real screenshots of the HUD and Settings under `doc/assets/screenshots/` captured by `pnpm screenshots:docs` (Playwright against the built extension). Guides were reconciled with the code: pnpm 11, the pre-commit patch bump, the full host-permission list, `https`-only plugin links and validator limits, Gemini in the privacy policy, and "planned" wording for license verification.
 
 ### Changed

@@ -26,6 +26,7 @@ function sampleWidgets(
     humorBanner: true,
     aiChat: false,
     balancedNews: false,
+    dailyQuiz: false,
     ...over,
   };
 }
