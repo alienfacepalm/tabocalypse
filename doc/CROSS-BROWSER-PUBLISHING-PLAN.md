@@ -71,7 +71,7 @@ Rebuild after changing it. AMO requires a **unique** reverse-domain ID tied to y
 
 Copy from [`wxt.config.ts`](../apps/extension/wxt.config.ts) and [PRIVACY.md](../PRIVACY.md):
 
-- **Required:** `storage`, `alarms`, `notifications`
+- **Required:** `storage`, `alarms`, `notifications`, `geolocation`
 - **Optional (user enables widgets):** `bookmarks`, `topSites`, `tabs`
 - **Host permissions:** Open-Meteo (forecast + geocoding), FreeQuickNews, CoinGecko, Cloudflare speed test, Peapix/Bing imagery, King County lake buoys, Unsuck-it humor refresh, DuckDuckGo / Google / Bing search suggestions, Wikimedia "on this day", Steam Charts, Steam Web API and Steam CDNs — full table in [STORE-LISTING.md](STORE-LISTING.md)
 - **Optional hosts:** OpenAI, Gemini, any HTTPS host, and localhost — requested only when the user saves a BYO AI base URL (Settings test and the optional AI chat widget)
