@@ -45,6 +45,12 @@ import {
   DEFAULT_CRYPTO_WATCHLIST,
   type ICryptoWatchlistEntry,
 } from "./crypto/crypto-watchlist";
+import { coerceMarketsPanelView, type TMarketsPanelView } from "./stocks/markets-panel-view";
+import {
+  coerceStockWatchlist,
+  DEFAULT_STOCK_WATCHLIST,
+  type IStockWatchlistEntry,
+} from "./stocks/stock-watchlist";
 import {
   coerceBookmarksStripHidden,
   coerceBookmarksStripIdList,
@@ -686,6 +692,10 @@ export interface ISettings {
   cryptoChartDays: TCryptoChartDays;
   /** Coins shown in the Crypto panel (CoinGecko ids + display symbols). */
   cryptoWatchlist: ICryptoWatchlistEntry[];
+  /** Crypto panel title toggle: which market list is showing. */
+  marketsPanelView: TMarketsPanelView;
+  /** Tickers shown on the Stocks side of the Crypto panel (Yahoo Finance symbols). */
+  stockWatchlist: IStockWatchlistEntry[];
   /** Preferred rows to keep loaded (3–200); tall panels may load more to fill height. */
   steamChartsRowCount: number;
   /** Last selected board chip: open top players vs recently played. */
@@ -1044,6 +1054,8 @@ export interface ISyncSlice {
   weatherTenDayLayout: TWeatherTenDayLayout;
   cryptoChartDays: TCryptoChartDays;
   cryptoWatchlist: ICryptoWatchlistEntry[];
+  marketsPanelView: TMarketsPanelView;
+  stockWatchlist: IStockWatchlistEntry[];
   steamChartsRowCount: number;
   steamChartsBoardMode: TSteamChartsBoardMode;
   balancedNewsCountryAuto: boolean;
@@ -1421,6 +1433,8 @@ export function defaultSettings(): ISettings {
     weatherTenDayLayout: "stack",
     cryptoChartDays: 1,
     cryptoWatchlist: [...DEFAULT_CRYPTO_WATCHLIST],
+    marketsPanelView: "crypto",
+    stockWatchlist: [...DEFAULT_STOCK_WATCHLIST],
     steamChartsRowCount: DEFAULT_STEAM_CHARTS_ROW_COUNT,
     steamChartsBoardMode: "open",
     steamChartsSteamId: "",
@@ -1518,6 +1532,8 @@ function toSync(s: ISettings, prefsSavedAt = Date.now()): ISyncSlice {
     weatherTenDayLayout: s.weatherTenDayLayout,
     cryptoChartDays: s.cryptoChartDays,
     cryptoWatchlist: s.cryptoWatchlist,
+    marketsPanelView: s.marketsPanelView,
+    stockWatchlist: s.stockWatchlist,
     steamChartsRowCount: s.steamChartsRowCount,
     steamChartsBoardMode: s.steamChartsBoardMode,
     balancedNewsCountryAuto: s.balancedNewsCountryAuto,
@@ -1801,6 +1817,8 @@ function mergeSettings(
     ),
     cryptoChartDays: coerceCryptoChartDays(sync?.cryptoChartDays, d.cryptoChartDays),
     cryptoWatchlist: coerceCryptoWatchlist(sync?.cryptoWatchlist, d.cryptoWatchlist),
+    marketsPanelView: coerceMarketsPanelView(sync?.marketsPanelView, d.marketsPanelView),
+    stockWatchlist: coerceStockWatchlist(sync?.stockWatchlist, d.stockWatchlist),
     steamChartsRowCount: coerceSteamChartsRowCount(
       sync?.steamChartsRowCount,
       d.steamChartsRowCount,
