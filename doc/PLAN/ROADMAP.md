@@ -37,16 +37,17 @@ _(Removed from the active roadmap — store prerequisites are tracked outside th
 
 ## P2 · Widgets & HUD
 
-| ID    | Candidate                                                  | Notes                                     |
-| ----- | ---------------------------------------------------------- | ----------------------------------------- |
-| T-020 | **Graduate Speed test** from default-off to on-by-default  | After more soak time                      |
-| T-021 | **Graduate Balanced news** default-on for new installs     | Optional API key path documented          |
-| T-022 | **AI chat widget** polish + safer defaults                 | Still BYO key; off by default until ready |
-| T-023 | **Calendar / agenda widget** (local-only events)           | No backend; `alarms` + storage            |
-| T-024 | **RSS / feed reader widget** (user URLs)                   | Privileged fetch allowlist per host       |
-| T-025 | **Pinned quick links** grid (user-curated)                 | Distinct from Top sites / bookmarks strip |
-| T-026 | **Multi-monitor HUD presets** export/import                | JSON file alongside settings export       |
-| T-027 | **Weather HUD streak & points** graduate from Experimental | When scoring feels stable                 |
+| ID    | Candidate                                                  | Notes                                          |
+| ----- | ---------------------------------------------------------- | ---------------------------------------------- |
+| T-020 | **Graduate Speed test** from default-off to on-by-default  | After more soak time                           |
+| T-021 | **Graduate Balanced news** default-on for new installs     | Optional API key path documented               |
+| T-022 | **AI chat widget** polish + safer defaults                 | Still BYO key; off by default until ready      |
+| T-023 | **Calendar / agenda widget** (local-only events)           | No backend; `alarms` + storage                 |
+| T-024 | **RSS / feed reader widget** (user URLs)                   | Privileged fetch allowlist per host            |
+| T-025 | **Pinned quick links** grid (user-curated)                 | Distinct from Top sites / bookmarks strip      |
+| T-026 | **Multi-monitor HUD presets** export/import                | JSON file alongside settings export            |
+| T-027 | **Weather HUD streak & points** graduate from Experimental | When scoring feels stable                      |
+| T-088 | **Daily quiz** widget + local XP rewards (shipped)         | Bundled bank; XP is a game gate, not a license |
 
 ---
 

@@ -34,6 +34,7 @@ const TEST_WIDGETS: Record<TWidgetKey, boolean> = {
   tabGuilt: false,
   humorBanner: true,
   balancedNews: false,
+  dailyQuiz: false,
 };
 
 describe("resolveHudPanelResponsiveRect", () => {

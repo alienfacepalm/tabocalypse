@@ -14,6 +14,7 @@ export type THudPanelId =
   | "bookmarksStrip"
   | "notes"
   | "balancedNews"
+  | "dailyQuiz"
   | "pluginDeck";
 
 export interface IHudPanelPosition {
@@ -43,6 +44,7 @@ export const HUD_PANEL_IDS: THudPanelId[] = [
   "bookmarksStrip",
   "notes",
   "balancedNews",
+  "dailyQuiz",
   "pluginDeck",
 ];
 
@@ -61,6 +63,7 @@ export const DEFAULT_HUD_PANEL_POSITIONS: Record<THudPanelId, IHudPanelPosition>
   pluginDeck: { xPct: 34, yPct: 58 },
   notes: { xPct: 70, yPct: 2 },
   balancedNews: { xPct: 34, yPct: 72 },
+  dailyQuiz: { xPct: 2, yPct: 52 },
 };
 
 /** Default outer size (px) aligned with {@link HUD_PANEL_WIDTH_CLASSES} (16px rem base). */
@@ -79,6 +82,7 @@ export const HUD_PANEL_DEFAULT_SIZE_PX: Record<THudPanelId, { widthPx: number; h
     pluginDeck: { widthPx: 896, heightPx: 320 },
     notes: { widthPx: 352, heightPx: 280 },
     balancedNews: { widthPx: 576, heightPx: 320 },
+    dailyQuiz: { widthPx: 352, heightPx: 320 },
   };
 
 /** Baseline canvas used to classify compact vs comfortable auto-layout. */
@@ -135,6 +139,7 @@ export const HUD_PANEL_WIDTH_CLASSES: Record<THudPanelId, string> = {
   pluginDeck: "w-[min(56rem,calc(100vw-2rem))]",
   notes: "w-[min(22rem,calc(100vw-2rem))]",
   balancedNews: "w-[min(36rem,calc(100vw-2rem))]",
+  dailyQuiz: "w-[min(22rem,calc(100vw-2rem))]",
 };
 
 /** Min/max outer dimensions (px) when the user resizes a HUD panel. */
@@ -155,6 +160,7 @@ export const HUD_PANEL_SIZE_LIMITS: Record<
   pluginDeck: { minW: 320, maxW: 1600, minH: 160, maxH: 2000 },
   notes: { minW: 260, maxW: 1200, minH: 160, maxH: 1600 },
   balancedNews: { minW: 300, maxW: 1200, minH: 200, maxH: 1600 },
+  dailyQuiz: { minW: 260, maxW: 1200, minH: 280, maxH: 1600 },
 };
 
 export function clampHudPanelSize(

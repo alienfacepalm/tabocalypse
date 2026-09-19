@@ -2,7 +2,7 @@
   "version": 1,
   "packageName": "tabocalypse-roadmap",
   "hostProjectId": null,
-  "generatedAt": "2026-09-11T23:07:32.379Z",
+  "generatedAt": "2026-09-12T03:53:49.813Z",
   "seedPolicy": "merge-new-only",
   "sections": [
     "Backlog",
@@ -166,12 +166,20 @@
       "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:46"
     },
     {
+      "planItemId": "PM-T088",
+      "title": "Daily quiz widget: bundled question bank, local XP ledger + streak, reward plugin unlocks",
+      "completed": true,
+      "sectionName": "Done",
+      "priority": "medium",
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:47"
+    },
+    {
       "planItemId": "PM-T040",
       "title": "Full settings backup/restore (encrypted optional)",
       "completed": false,
       "sectionName": "W7 · Settings & data trust",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:50"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:51"
     },
     {
       "planItemId": "PM-T042",
@@ -179,7 +187,7 @@
       "completed": false,
       "sectionName": "W7 · Settings & data trust",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:51"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:52"
     },
     {
       "planItemId": "PM-T043",
@@ -187,7 +195,7 @@
       "completed": false,
       "sectionName": "W7 · Settings & data trust",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:52"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:53"
     },
     {
       "planItemId": "PM-T034",
@@ -195,7 +203,7 @@
       "completed": false,
       "sectionName": "W7 · Settings & data trust",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:53"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:54"
     },
     {
       "planItemId": "PM-T074",
@@ -203,7 +211,7 @@
       "completed": false,
       "sectionName": "W7 · Settings & data trust",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:54"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:55"
     },
     {
       "planItemId": "PM-T030",
@@ -211,7 +219,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:58"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:59"
     },
     {
       "planItemId": "PM-T031",
@@ -219,7 +227,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:59"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:60"
     },
     {
       "planItemId": "PM-T032",
@@ -227,7 +235,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:60"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:61"
     },
     {
       "planItemId": "PM-T075",
@@ -235,7 +243,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:61"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:62"
     },
     {
       "planItemId": "PM-T076",
@@ -243,7 +251,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:62"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:63"
     },
     {
       "planItemId": "PM-T077",
@@ -251,7 +259,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:63"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:64"
     },
     {
       "planItemId": "PM-T080",
@@ -259,7 +267,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:64"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:65"
     },
     {
       "planItemId": "PM-T081",
@@ -267,7 +275,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:65"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:66"
     },
     {
       "planItemId": "PM-T082",
@@ -275,7 +283,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:66"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:67"
     },
     {
       "planItemId": "PM-T083",
@@ -283,7 +291,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:67"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:68"
     },
     {
       "planItemId": "PM-T087",
@@ -291,7 +299,7 @@
       "completed": false,
       "sectionName": "W8 · Plugins & packs",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:68"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:69"
     },
     {
       "planItemId": "PM-T050",
@@ -299,7 +307,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:72"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:73"
     },
     {
       "planItemId": "PM-T051",
@@ -307,7 +315,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:73"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:74"
     },
     {
       "planItemId": "PM-T052",
@@ -315,7 +323,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:74"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:75"
     },
     {
       "planItemId": "PM-T055",
@@ -323,7 +331,7 @@
       "completed": false,
       "sectionName": "W9 · Accessibility & performance",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:75"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:76"
     },
     {
       "planItemId": "PM-T033",
@@ -331,7 +339,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:79"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:80"
     },
     {
       "planItemId": "PM-T053",
@@ -339,7 +347,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:80"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:81"
     },
     {
       "planItemId": "PM-T060",
@@ -347,7 +355,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:81"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:82"
     },
     {
       "planItemId": "PM-T061",
@@ -355,7 +363,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:82"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:83"
     },
     {
       "planItemId": "PM-T062",
@@ -363,7 +371,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:83"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:84"
     },
     {
       "planItemId": "PM-T063",
@@ -371,7 +379,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:84"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:85"
     },
     {
       "planItemId": "PM-T064",
@@ -379,7 +387,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:85"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:86"
     },
     {
       "planItemId": "PM-T065",
@@ -387,7 +395,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:86"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:87"
     },
     {
       "planItemId": "PM-T084",
@@ -395,7 +403,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:87"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:88"
     },
     {
       "planItemId": "PM-T085",
@@ -403,7 +411,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:88"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:89"
     },
     {
       "planItemId": "PM-T086",
@@ -411,7 +419,7 @@
       "completed": false,
       "sectionName": "W10 · Stretch & backlog",
       "priority": "low",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:89"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:90"
     },
     {
       "planItemId": "PM-T070",
@@ -419,7 +427,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:93"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:94"
     },
     {
       "planItemId": "PM-T071",
@@ -427,7 +435,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "high",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:94"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:95"
     },
     {
       "planItemId": "PM-T072",
@@ -435,7 +443,7 @@
       "completed": true,
       "sectionName": "Done",
       "priority": "medium",
-      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:95"
+      "description": "Synced from doc/PLAN/ROADMAP-PM-BOARD.md:96"
     }
   ]
 }

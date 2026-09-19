@@ -82,6 +82,10 @@ The validator (`packages/plugin-sdk/src/validate.ts`) trims and caps every field
 
 The extension re-runs validation when it loads stored plugins and drops widgets that no longer validate instead of crashing.
 
+## Reward widgets
+
+The **Daily quiz** widget earns device-local XP, and **Settings › Rewards** spends it on a small bundled catalog of reward widgets (`apps/extension/lib/rewards/reward-catalog.ts`). Each reward is an ordinary v1 manifest as described above, bundled inside the extension with an id that starts with `reward-`, and installing one goes through the same validator and `importedPlugins` storage as a file import. Rewards appear under **Manage imports › Reward widgets**, can be disabled or removed like any plugin, and reinstall free once unlocked. The XP gate is a local game mechanic, not a license or DRM: the catalog is open source and the ledger never leaves the device. When the signed-pack envelope below ships, reward manifests become its `payload` without changing the unlock flow.
+
 ## Planned: theme packs and signed envelopes
 
 `kind: "theme"` packs, the signed-pack envelope (`tabocalypse-signed-pack/1`), and premium declarative widget types (`DataCard`, `Countdown`, `RssList`, `StatChart`) are **planned, not shipped**. Their design lives in [`PLAN/THEME-SUITES.md`](PLAN/THEME-SUITES.md) and [`PLAN/MONETIZATION.md`](PLAN/MONETIZATION.md) ([ADR-0017](ADR/ADR-0017-THEME-SUITES-AND-BRAND-KITS-AS-SIGNED-JSON.md)). Until they land, the v1 schema above is the only thing the importer accepts.

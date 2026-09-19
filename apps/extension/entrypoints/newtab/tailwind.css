@@ -1035,6 +1035,75 @@
     @apply block font-mono text-[11px] normal-case tracking-normal text-text;
   }
 
+  /* Daily quiz: XP chip mirrors the Weather HUD streak chip. */
+  .hud-xp-chip {
+    @apply m-0 shrink-0 border border-accent2 bg-surface px-2 py-1 text-right font-display text-[10px] uppercase tracking-wide text-accent2 shadow-[2px_2px_0px_0px_var(--color-accent2)];
+  }
+
+  .hud-xp-chip-streak {
+    @apply block leading-tight;
+  }
+
+  .hud-xp-chip-points {
+    @apply block font-mono text-[11px] normal-case tracking-normal text-text;
+  }
+
+  .quiz-meta {
+    @apply mb-1 mt-0;
+  }
+
+  .quiz-prompt {
+    @apply mb-2 mt-0 text-[0.92rem] leading-snug;
+  }
+
+  .quiz-choices {
+    @apply m-0 grid list-none grid-cols-2 gap-1.5 p-0;
+  }
+
+  .quiz-choices li {
+    @apply min-w-0;
+  }
+
+  .btn.quiz-choice {
+    @apply h-auto min-h-[2rem] w-full whitespace-normal px-2 py-1 text-left font-sans text-[0.78rem] font-medium normal-case leading-snug tracking-normal shadow-[2px_2px_0px_0px_var(--color-accent)];
+  }
+
+  .btn.quiz-choice.correct,
+  .btn.quiz-choice.correct:disabled,
+  .btn.quiz-choice.correct:disabled:hover,
+  .btn.quiz-choice.correct:disabled:active {
+    @apply border-accent bg-accent text-on-accent opacity-100;
+  }
+
+  .btn.quiz-choice.wrong,
+  .btn.quiz-choice.wrong:disabled {
+    @apply line-through opacity-60;
+  }
+
+  .quiz-feedback {
+    @apply mt-3 text-[0.85rem];
+  }
+
+  .quiz-summary {
+    @apply flex flex-col gap-1;
+  }
+
+  .quiz-summary-score {
+    @apply m-0 font-display text-lg uppercase tracking-wide text-accent;
+  }
+
+  .reward-list {
+    @apply m-0 flex list-none flex-col gap-2 p-0;
+  }
+
+  .reward-row {
+    @apply flex flex-wrap items-center justify-between gap-2 border border-border px-3 py-2;
+  }
+
+  .reward-cost {
+    @apply font-mono text-xs text-accent2;
+  }
+
   .weather-on-this-day {
     @apply border border-border bg-surface-weak px-3 py-3 shadow-[3px_3px_0px_0px_var(--color-border)];
   }

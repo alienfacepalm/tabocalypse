@@ -6,19 +6,19 @@ import "@/styles/globals.css";
 
 applyDocumentTheme(loadAppearance());
 
-type StaleCheck = {
+interface IStaleCheck {
   stale: boolean;
   reasons: string[];
   fix?: string;
-};
+}
 
 function PmStaleBanner() {
-  const [stale, setStale] = useState<StaleCheck | null>(null);
+  const [stale, setStale] = useState<IStaleCheck | null>(null);
 
   useEffect(() => {
     fetch("/.projocalypse/stale-check.json", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data: StaleCheck) => {
+      .then((data: IStaleCheck) => {
         if (data.stale) setStale(data);
       })
       .catch(() => {

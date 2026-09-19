@@ -11,6 +11,8 @@ export interface ICryptoMarketRow {
   /** Window change: first → last sample in the raw series, as a percent. */
   changePct: number;
   lastPriceUsd: number;
+  /** ISO 4217 quote currency when not USD (stock listings on non-US exchanges). */
+  currency?: string;
 }
 
 const MAX_SPARK_POINTS = 72;
@@ -51,14 +53,23 @@ export function coinMarketChartUrl(coinId: TCryptoCoinId, days: TCryptoChartDays
   return `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
 }
 
-/** Builds a widget row from CoinGecko `market_chart` JSON. */
-export function marketRowFromChartPayload(raw: unknown, ticker: TCryptoTicker): ICryptoMarketRow {
-  const closes = parsePriceSeries(raw);
-  if (closes.length < 2) {
-    throw new Error("Unexpected crypto chart payload");
-  }
+/** Builds a widget row from a raw close series (shared by crypto and stock sources). */
+export function marketRowFromCloses(
+  closes: readonly number[],
+  ticker: TCryptoTicker,
+): ICryptoMarketRow | null {
+  if (closes.length < 2) return null;
   const changePct = percentChangeFirstLast(closes);
   const lastPriceUsd = closes[closes.length - 1]!;
   const prices = downsampleClose(closes, MAX_SPARK_POINTS);
   return { ticker, prices, changePct, lastPriceUsd };
+}
+
+/** Builds a widget row from CoinGecko `market_chart` JSON. */
+export function marketRowFromChartPayload(raw: unknown, ticker: TCryptoTicker): ICryptoMarketRow {
+  const row = marketRowFromCloses(parsePriceSeries(raw), ticker);
+  if (!row) {
+    throw new Error("Unexpected crypto chart payload");
+  }
+  return row;
 }

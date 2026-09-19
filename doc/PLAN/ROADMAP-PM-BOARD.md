@@ -44,6 +44,7 @@ _(Removed — pre-store checklist items are no longer tracked on the board.)_
 - [ ] pm:PM-T022 AI chat widget polish + safer defaults <!-- pm:section=W6 · AI & HUD layout pm:priority=medium -->
 - [ ] pm:PM-T027 Weather HUD streak & points graduate from Experimental <!-- pm:section=W6 · AI & HUD layout pm:priority=medium -->
 - [ ] pm:PM-T026 Multi-monitor HUD presets export/import <!-- pm:section=W6 · AI & HUD layout pm:priority=medium -->
+- [x] pm:PM-T088 Daily quiz widget: bundled question bank, local XP ledger + streak, reward plugin unlocks <!-- pm:section=Done pm:priority=medium -->
 
 ## W7 · Settings & data trust
 
