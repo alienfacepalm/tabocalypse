@@ -3165,8 +3165,8 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           Drag the map to pan and use the +/− buttons on the map to zoom. Pan and
                           zoom are saved per monitor on this computer. Use the lock control on the
                           map (bottom right) to freeze pan, zoom, and one-shot location until you
-                          unlock. Optional scroll-wheel and double-click zoom below (off by
-                          default).
+                          unlock. Mouse-wheel zoom is on by default; double-click zoom is off by
+                          default.
                         </p>
                         <div
                           className="row wrap gap-2"
@@ -3174,35 +3174,36 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                           aria-label="Weather map options"
                         >
                           <HudTip tip="Zoom the map with your mouse wheel">
-                            <button
-                              type="button"
-                              className={s.weatherMapScrollZoomEnabled ? "btn primary" : "btn"}
-                              onClick={() =>
-                                void persist((cur) => ({
-                                  ...cur,
-                                  weatherMapScrollZoomEnabled: !cur.weatherMapScrollZoomEnabled,
-                                }))
-                              }
-                            >
-                              {s.weatherMapScrollZoomEnabled ? "Scroll zoom on" : "Scroll zoom off"}
-                            </button>
+                            <label className="check-row">
+                              <input
+                                type="checkbox"
+                                checked={s.weatherMapScrollZoomEnabled}
+                                onChange={(e) => {
+                                  const v = e.target.checked;
+                                  void persist((cur) => ({
+                                    ...cur,
+                                    weatherMapScrollZoomEnabled: v,
+                                  }));
+                                }}
+                              />
+                              <span>Zoom with mouse wheel</span>
+                            </label>
                           </HudTip>
                           <HudTip tip="Double-click the map to zoom in">
-                            <button
-                              type="button"
-                              className={s.weatherMapDoubleClickZoomEnabled ? "btn primary" : "btn"}
-                              onClick={() =>
-                                void persist((cur) => ({
-                                  ...cur,
-                                  weatherMapDoubleClickZoomEnabled:
-                                    !cur.weatherMapDoubleClickZoomEnabled,
-                                }))
-                              }
-                            >
-                              {s.weatherMapDoubleClickZoomEnabled
-                                ? "Double-click zoom on"
-                                : "Double-click zoom off"}
-                            </button>
+                            <label className="check-row">
+                              <input
+                                type="checkbox"
+                                checked={s.weatherMapDoubleClickZoomEnabled}
+                                onChange={(e) => {
+                                  const v = e.target.checked;
+                                  void persist((cur) => ({
+                                    ...cur,
+                                    weatherMapDoubleClickZoomEnabled: v,
+                                  }));
+                                }}
+                              />
+                              <span>Zoom with double-click</span>
+                            </label>
                           </HudTip>
                         </div>
                         <p className="muted sm mb-2 mt-4">2 Lakes</p>
