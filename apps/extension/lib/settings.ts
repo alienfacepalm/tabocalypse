@@ -1413,7 +1413,7 @@ export function defaultSettings(): ISettings {
     weatherAutoGeo: false,
     weatherLakesEmbedEnabled: false,
     weatherMapZoomButtonsEnabled: false,
-    weatherMapScrollZoomEnabled: false,
+    weatherMapScrollZoomEnabled: true,
     weatherMapDoubleClickZoomEnabled: false,
     weatherMapDragEnabled: true,
     weatherMapLocked: false,

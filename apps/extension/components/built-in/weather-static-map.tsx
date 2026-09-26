@@ -281,6 +281,25 @@ export function WeatherStaticMap({
   const canPan = mapInteractive && dragEnabled;
   const canZoom =
     mapInteractive && typeof onZoomIn === "function" && typeof onZoomOut === "function";
+  const wheelZoomActive = scrollZoomEnabled && canZoom;
+  const onZoomInRef = useRef(onZoomIn);
+  const onZoomOutRef = useRef(onZoomOut);
+  onZoomInRef.current = onZoomIn;
+  onZoomOutRef.current = onZoomOut;
+
+  // Native non-passive listener: React's onWheel is passive, so preventDefault would not stop page scroll.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !wheelZoomActive) return;
+    const handleWheel = (e: WheelEvent): void => {
+      e.preventDefault();
+      if (e.deltaY < 0) onZoomInRef.current?.();
+      else if (e.deltaY > 0) onZoomOutRef.current?.();
+    };
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [wheelZoomActive]);
+
   // Always render the one-shot location button when a handler exists; lock or auto-geo only disable it
   // (matching the zoom buttons) so the control never silently vanishes.
   const showUseMyLocation = typeof onUseMyLocationOnce === "function";
@@ -317,15 +336,6 @@ export function WeatherStaticMap({
       ]
         .filter(Boolean)
         .join(" ")}
-      onWheel={
-        scrollZoomEnabled && canZoom
-          ? (e) => {
-              e.preventDefault();
-              if (e.deltaY < 0) onZoomIn();
-              else if (e.deltaY > 0) onZoomOut();
-            }
-          : undefined
-      }
       onDoubleClick={
         doubleClickZoomEnabled && canZoom
           ? (e) => {
