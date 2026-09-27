@@ -63,12 +63,19 @@ import {
   type TWeatherTemperatureUnit,
 } from "../../lib/weather/weather-units";
 import {
+  WEATHER_STATIC_MAP_MAX_ZOOM,
+  WEATHER_STATIC_MAP_MIN_ZOOM,
+} from "../../lib/weather/weather-static-map-url";
+import {
   useTabocalypsePersist as usePanelPersist,
   useTabocalypseSettings as usePanelSettings,
 } from "../tabocalypse-settings-context";
 
 function clampWeatherMapZoom(zoom: number): number {
-  return Math.min(17, Math.max(1, Math.round(zoom)));
+  return Math.min(
+    WEATHER_STATIC_MAP_MAX_ZOOM,
+    Math.max(WEATHER_STATIC_MAP_MIN_ZOOM, Math.round(zoom)),
+  );
 }
 
 type TWeatherTenDayDetailRow = {

@@ -39,7 +39,7 @@ describe("buildWeatherStaticMapUrl", () => {
 
   it("clamps zoom to a sane range", () => {
     expect(buildWeatherStaticMapUrl(0, 0, 0)).toContain("z=1");
-    expect(buildWeatherStaticMapUrl(0, 0, 99)).toContain("z=17");
+    expect(buildWeatherStaticMapUrl(0, 0, 99)).toContain("z=19");
   });
 
   it("derives visible map height from the branding crop ratio", () => {

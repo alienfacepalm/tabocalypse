@@ -145,7 +145,7 @@ describe("weather map view by display", () => {
         anchorLat: 1,
         anchorLon: 2,
       })?.zoom,
-    ).toBe(17);
+    ).toBe(19);
     expect(
       coerceWeatherMapView({
         centerLat: 1,

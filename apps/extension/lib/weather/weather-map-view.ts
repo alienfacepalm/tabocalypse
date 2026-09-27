@@ -1,4 +1,8 @@
-import { WEATHER_STATIC_MAP_DEFAULT_ZOOM } from "./weather-static-map-url";
+import {
+  WEATHER_STATIC_MAP_DEFAULT_ZOOM,
+  WEATHER_STATIC_MAP_MAX_ZOOM,
+  WEATHER_STATIC_MAP_MIN_ZOOM,
+} from "./weather-static-map-url";
 
 /** Pan/zoom camera for the Weather location map on one monitor. */
 export interface IWeatherMapView {
@@ -13,8 +17,6 @@ export interface IWeatherMapView {
 /** Per-monitor map cameras; keyed by {@link getHudDisplayLayoutKey}. Local-only. */
 export type TWeatherMapViewByDisplay = Record<string, IWeatherMapView>;
 
-const WEATHER_MAP_ZOOM_MIN = 1;
-const WEATHER_MAP_ZOOM_MAX = 17;
 /** Shared pin must match within this epsilon for a saved camera to apply. */
 const WEATHER_MAP_ANCHOR_EPSILON = 1e-5;
 
@@ -29,7 +31,10 @@ export function defaultWeatherMapView(anchorLat: number, anchorLon: number): IWe
 }
 
 function clampWeatherMapZoom(zoom: number): number {
-  return Math.min(WEATHER_MAP_ZOOM_MAX, Math.max(WEATHER_MAP_ZOOM_MIN, Math.round(zoom)));
+  return Math.min(
+    WEATHER_STATIC_MAP_MAX_ZOOM,
+    Math.max(WEATHER_STATIC_MAP_MIN_ZOOM, Math.round(zoom)),
+  );
 }
 
 function weatherMapAnchorsMatch(
