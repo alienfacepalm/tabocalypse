@@ -18,6 +18,9 @@ export const WEATHER_STATIC_MAP_VISIBLE_HEIGHT_RATIO =
   WEATHER_STATIC_MAP_VISIBLE_HEIGHT / WEATHER_STATIC_MAP_WIDTH;
 /** Default zoom — tight neighborhood view around the saved pin. */
 export const WEATHER_STATIC_MAP_DEFAULT_ZOOM = 14;
+/** Zoom range the map camera and static-map requests are clamped to. */
+export const WEATHER_STATIC_MAP_MIN_ZOOM = 1;
+export const WEATHER_STATIC_MAP_MAX_ZOOM = 19;
 
 export type TWeatherStaticMapDimensions = {
   fetchWidth: number;
@@ -48,7 +51,10 @@ export function buildWeatherStaticMapUrl(
   zoom: number,
   dimensions?: Pick<TWeatherStaticMapDimensions, "fetchWidth" | "fetchHeight">,
 ): string {
-  const z = Math.min(17, Math.max(1, Math.round(zoom)));
+  const z = Math.min(
+    WEATHER_STATIC_MAP_MAX_ZOOM,
+    Math.max(WEATHER_STATIC_MAP_MIN_ZOOM, Math.round(zoom)),
+  );
   const width = dimensions?.fetchWidth ?? WEATHER_STATIC_MAP_WIDTH;
   const height = dimensions?.fetchHeight ?? WEATHER_STATIC_MAP_HEIGHT;
   // Map center (`ll`) marks the saved coordinates; the UI draws its own centered pin overlay.
@@ -98,7 +104,10 @@ export function offsetWeatherStaticMapCenter(
   pixelDx: number,
   pixelDy: number,
 ): { lat: number; lon: number } {
-  const z = Math.min(17, Math.max(1, Math.round(zoom)));
+  const z = Math.min(
+    WEATHER_STATIC_MAP_MAX_ZOOM,
+    Math.max(WEATHER_STATIC_MAP_MIN_ZOOM, Math.round(zoom)),
+  );
   const centerPx = weatherStaticMapLatLonToWorldPixels(centerLat, centerLon, z);
   const next = weatherStaticMapWorldPixelsToLatLon(centerPx.x - pixelDx, centerPx.y - pixelDy, z);
   return {

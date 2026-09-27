@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Weather** widget location map — you can now zoom in two more levels (max zoom 17 → 19).
 - **Licensing** — the extension is now released under **AGPL-3.0** and `@tabocalypse/plugin-sdk` under **MIT** (`LICENSE` files added; `license` fields set). Monetization direction (one-off purchases such as a lifetime Pro unlock, signed packs, theme suites, and brand kits, plus donations of any kind; no ads, no scheduled obligations, no in-extension checkout) is documented in `doc/PLAN/MONETIZATION.md` and `doc/PLAN/THEME-SUITES.md`; the support page, store listing, and privacy copy describe tips with no perks and no monthly pack drop.
 - **Notes** sync each note as its own browser-sync item, so the ~8 KB sync limit now applies per note instead of to all notes combined. A note that is still too large stays on this device and the HUD names it; the rest keep syncing.
 - **Settings** writes are coalesced and only the parts that changed are written. Typing in a note, dragging a slider, or moving a panel no longer rewrites every stored setting (including wallpapers) on each change, which also stops the "changing too fast for browser sync" warnings. Pending changes are written when the tab is hidden or closed.
@@ -25,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Settings > Appearance** — **Soft corners** and **Pill buttons** now round the HUD widget panels as well as the buttons and controls (panels stayed square before).
 - **Weather** widget location map — mouse-wheel zoom is now on by default (toggle in Settings) and no longer scrolls the page while zooming the map.
 - **Weather** widget location map — the "use my location once" button no longer disappears when the map is locked or automatic HUD location is on. It now stays visible and disabled with a tooltip explaining why, matching the zoom buttons. The automatic-location tooltip under **Settings > Optional permissions** no longer points at a button that was hidden while it was on.
 - **Settings > Feedback** — the default mailto recipient was missing its domain suffix (`jagon@alienfacepalm` → `jagon@alienfacepalm.com`), so builds without `WXT_TABOCALYPSE_FEEDBACK_TO` opened an undeliverable address.

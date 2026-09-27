@@ -527,6 +527,7 @@
     display: grid;
     grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     @apply relative min-h-0 flex-1 overflow-hidden;
+    border-radius: var(--ui-radius-panel);
   }
 
   .hud-panel-card-frame > .card,
@@ -765,6 +766,7 @@
 
   .hud-panel-card-frame > .plugin-deck-host {
     @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+    border-radius: var(--ui-radius-panel);
   }
 
   .hud-panel-card-frame .plugin-deck-scroll {
@@ -773,6 +775,7 @@
 
   .card {
     @apply relative border px-4 py-4;
+    border-radius: var(--ui-radius-panel);
     border-color: rgb(148 163 184 / 0.22);
     background:
       linear-gradient(
@@ -796,6 +799,7 @@
   .card::before {
     content: "";
     @apply absolute left-0 top-0 h-1 w-full bg-accent;
+    border-radius: var(--ui-radius-panel) var(--ui-radius-panel) 0 0;
   }
 
   .hud-glass-popover {
