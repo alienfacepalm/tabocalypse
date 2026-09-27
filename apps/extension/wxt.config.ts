@@ -14,7 +14,9 @@ export default defineConfig({
     name: "Tabocalypse",
     description:
       "New tab by AlienFacepalm — utility widgets, humor packs, optional user imports. No publisher backend.",
-    permissions: ["storage", "alarms", "notifications"],
+    // `geolocation` backs the user-initiated "Use my location" lookup; Chromium logs an
+    // extension error when an extension page calls it without declaring the permission.
+    permissions: ["storage", "alarms", "notifications", "geolocation"],
     optional_permissions: ["bookmarks", "topSites", "tabs"],
     host_permissions: [
       "https://api.open-meteo.com/*",
@@ -22,6 +24,7 @@ export default defineConfig({
       "https://freequicknews.com/*",
       "https://api.coingecko.com/*",
       "https://coin-images.coingecko.com/*",
+      "https://query1.finance.yahoo.com/*",
       "https://speed.cloudflare.com/*",
       "https://peapix.com/*",
       "https://img.peapix.com/*",

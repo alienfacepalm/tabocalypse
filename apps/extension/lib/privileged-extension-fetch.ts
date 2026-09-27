@@ -176,6 +176,7 @@ export const PRIVILEGED_EXTENSION_FETCH_ALLOWED_HOSTS = [
   "geocoding-api.open-meteo.com",
   "freequicknews.com",
   "api.coingecko.com",
+  "query1.finance.yahoo.com",
   "green2.kingcounty.gov",
   "www.unsuck-it.com",
   "duckduckgo.com",

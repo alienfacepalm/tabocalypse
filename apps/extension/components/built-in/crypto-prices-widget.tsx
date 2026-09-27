@@ -1,7 +1,8 @@
 /**
- * Built-in crypto spot + sparkline panel (CoinGecko; no API key).
+ * Built-in markets panel: Stocks (Yahoo Finance) or Crypto (CoinGecko) spot + sparkline rows.
+ * The title toggle picks one list at a time; neither source needs an API key.
  */
-import { X } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { PanelBody, PanelTip, PanelTitleInline } from "../panel-sdk";
 import {
@@ -21,9 +22,23 @@ import {
   type ICryptoMarketRow,
 } from "../../lib/crypto/fetch-crypto-market";
 import { fetchCryptoWatchlistIconUrls } from "../../lib/crypto/fetch-crypto-watchlist-icons";
+import { orderListByIds } from "../../lib/move-list-item";
 import type { THumorIntensity } from "../../lib/settings";
+import { fetchStockMarketRow } from "../../lib/stocks/fetch-stock-market";
+import {
+  MARKETS_PANEL_VIEWS,
+  marketsPanelViewLabel,
+  type TMarketsPanelView,
+} from "../../lib/stocks/markets-panel-view";
+import {
+  canRemoveStockWatchlistEntry,
+  normalizeStockWatchlistEntry,
+  type IStockWatchlistEntry,
+} from "../../lib/stocks/stock-watchlist";
 import { CryptoCoinIcon } from "./crypto-coin-icon";
 import { CryptoWatchlistAddField } from "./crypto-watchlist-add-field";
+import { StockWatchlistAddField } from "./stock-watchlist-add-field";
+import { useRowDragReorder, type IRowDragReorderGripProps } from "./use-row-drag-reorder";
 
 type TCryptoRowState =
   | { status: "loading" }
@@ -65,10 +80,14 @@ function Sparkline({ values, toneClass }: { values: readonly number[]; toneClass
   );
 }
 
-function formatUsd(locale: string, n: number): string {
+function formatPrice(locale: string, n: number, currency = "USD"): string {
+  // Yahoo sub-unit codes (e.g. `GBp` pence) are not ISO 4217; show them as a plain suffix.
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(n)} ${currency}`;
+  }
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency,
     maximumFractionDigits: n >= 1000 ? 0 : 2,
     minimumFractionDigits: n >= 1000 ? 0 : 2,
   }).format(n);
@@ -86,24 +105,58 @@ function rowTone(changePct: number): { pct: string; spark: string } {
 }
 
 function AssetRow({
-  entry,
+  id,
+  gripProps,
+  dragging,
+  symbol,
+  name,
+  icon,
   state,
   locale,
   canRemove,
   onRemove,
 }: {
-  entry: ICryptoWatchlistEntry;
+  id: string;
+  /** Present when the list has more than one row to reorder. */
+  gripProps?: IRowDragReorderGripProps;
+  dragging: boolean;
+  symbol: string;
+  /** Full instrument name, surfaced as a tooltip on the ticker. */
+  name?: string;
+  icon?: React.ReactNode;
   state: TCryptoRowState;
   locale: string;
   canRemove: boolean;
   onRemove: () => void;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3 first:mt-0 first:border-t-0 first:pt-0">
+    <div
+      data-reorder-row-id={id}
+      className={`mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3 first:mt-0 first:border-t-0 first:pt-0 ${
+        dragging ? "opacity-60" : ""
+      }`}
+    >
+      {gripProps ? (
+        <PanelTip tip={`Drag to reorder ${symbol} (or focus and press ↑ / ↓)`}>
+          <button
+            type="button"
+            className={`-mr-1 shrink-0 touch-none border-0 bg-transparent p-0 text-muted hover:text-text ${
+              dragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
+            aria-label={`Reorder ${symbol}`}
+            {...gripProps}
+          >
+            <GripVertical size={14} strokeWidth={2} aria-hidden />
+          </button>
+        </PanelTip>
+      ) : null}
       <div className="flex w-[4.5rem] shrink-0 items-center gap-1.5">
-        <CryptoCoinIcon entry={entry} size="sm" />
-        <span className="font-display text-xs font-bold uppercase tracking-wider text-text">
-          {entry.symbol}
+        {icon}
+        <span
+          className="truncate font-display text-xs font-bold uppercase tracking-wider text-text"
+          title={name}
+        >
+          {symbol}
         </span>
       </div>
       <div className="min-w-0 flex-1">
@@ -116,7 +169,7 @@ function AssetRow({
         {state.status === "ok" ? (
           <>
             <p className="truncate font-mono text-sm leading-none">
-              {formatUsd(locale, state.row.lastPriceUsd)}
+              {formatPrice(locale, state.row.lastPriceUsd, state.row.currency)}
             </p>
             <p className={`mt-0.5 font-mono text-xs ${rowTone(state.row.changePct).pct}`}>
               {formatPct(locale, state.row.changePct)}
@@ -130,11 +183,11 @@ function AssetRow({
         <span className="h-9 w-20 shrink-0" aria-hidden />
       )}
       {canRemove ? (
-        <PanelTip tip={`Remove ${entry.symbol} from your watchlist`}>
+        <PanelTip tip={`Remove ${symbol} from your watchlist`}>
           <button
             type="button"
             className="btn ghost icon-only shrink-0"
-            aria-label={`Remove ${entry.symbol}`}
+            aria-label={`Remove ${symbol}`}
             onClick={onRemove}
           >
             <X size={14} strokeWidth={2} aria-hidden />
@@ -147,35 +200,88 @@ function AssetRow({
   );
 }
 
+interface IMarketListItem {
+  /** Row-state key: CoinGecko coin id or Yahoo symbol. */
+  id: string;
+  symbol: string;
+  name?: string;
+  cryptoEntry?: ICryptoWatchlistEntry;
+}
+
+function MarketsViewToggle({
+  view,
+  onSelectView,
+}: {
+  view: TMarketsPanelView;
+  onSelectView: (next: TMarketsPanelView) => void;
+}) {
+  return (
+    <span className="inline-flex items-baseline gap-2" role="group" aria-label="Market">
+      {MARKETS_PANEL_VIEWS.map((v, index) => (
+        <React.Fragment key={v}>
+          {index > 0 ? (
+            <span className="text-muted" aria-hidden>
+              /
+            </span>
+          ) : null}
+          <button
+            type="button"
+            aria-pressed={view === v}
+            className={`cursor-pointer border-0 bg-transparent p-0 [font:inherit] [letter-spacing:inherit] [text-transform:inherit] ${
+              view === v ? "text-inherit" : "text-muted hover:text-text"
+            }`}
+            onClick={() => {
+              if (view !== v) onSelectView(v);
+            }}
+          >
+            {marketsPanelViewLabel(v)}
+          </button>
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
 export function CryptoPricesWidget({
+  view,
   watchlist,
+  stockWatchlist,
   chartDays,
   humorEnabled,
   humorIntensity,
   displayLocale,
+  onSelectView,
   onSelectChartDays,
   onWatchlistChange,
+  onStockWatchlistChange,
 }: {
+  view: TMarketsPanelView;
   watchlist: ICryptoWatchlistEntry[];
+  stockWatchlist: IStockWatchlistEntry[];
   chartDays: TCryptoChartDays;
   humorEnabled: boolean;
   humorIntensity: THumorIntensity;
   displayLocale: string;
+  onSelectView: (next: TMarketsPanelView) => void;
   onSelectChartDays: (next: TCryptoChartDays) => void;
   onWatchlistChange: (next: ICryptoWatchlistEntry[]) => void;
+  onStockWatchlistChange: (next: IStockWatchlistEntry[]) => void;
 }) {
   const [rowStates, setRowStates] = useState<Record<string, TCryptoRowState>>({});
   const onWatchlistChangeRef = useRef(onWatchlistChange);
   onWatchlistChangeRef.current = onWatchlistChange;
+  const isStocks = view === "stocks";
 
   const missingIconCoinIdsKey = useMemo(
     () =>
-      watchlist
-        .filter((entry) => !entry.iconUrl)
-        .map((entry) => entry.coinId)
-        .sort()
-        .join(","),
-    [watchlist],
+      isStocks
+        ? ""
+        : watchlist
+            .filter((entry) => !entry.iconUrl)
+            .map((entry) => entry.coinId)
+            .sort()
+            .join(","),
+    [isStocks, watchlist],
   );
 
   useEffect(() => {
@@ -206,21 +312,54 @@ export function CryptoPricesWidget({
     };
   }, [missingIconCoinIdsKey, watchlist]);
 
+  const items = useMemo<IMarketListItem[]>(
+    () =>
+      isStocks
+        ? stockWatchlist.map((entry) => ({
+            id: entry.symbol,
+            symbol: entry.symbol,
+            name: entry.name,
+          }))
+        : watchlist.map((entry) => ({
+            id: entry.coinId,
+            symbol: entry.symbol,
+            cryptoEntry: entry,
+          })),
+    [isStocks, stockWatchlist, watchlist],
+  );
+
+  // Keyed on the set of rows, not their order, so reordering never refetches or flashes "Loading…".
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const fetchKey = useMemo(
+    () =>
+      `${view}|${items
+        .map((item) => `${item.id}:${item.symbol}`)
+        .sort()
+        .join(",")}`,
+    [view, items],
+  );
+
   useEffect(() => {
     let cancelled = false;
+    const rows = itemsRef.current;
+    const stocksView = fetchKey.startsWith("stocks|");
     const nextStates: Record<string, TCryptoRowState> = {};
-    for (const entry of watchlist) {
-      nextStates[entry.coinId] = { status: "loading" };
+    for (const item of rows) {
+      nextStates[item.id] = { status: "loading" };
     }
     setRowStates(nextStates);
 
-    for (const entry of watchlist) {
-      void fetchCoinGeckoMarketRow(entry.coinId, entry.symbol, chartDays)
+    for (const item of rows) {
+      const request = stocksView
+        ? fetchStockMarketRow(item.symbol, chartDays)
+        : fetchCoinGeckoMarketRow(item.id, item.symbol, chartDays);
+      void request
         .then((result) => {
           if (cancelled) return;
           setRowStates((prev) => ({
             ...prev,
-            [entry.coinId]: { status: "ok", row: result.row, stale: result.stale },
+            [item.id]: { status: "ok", row: result.row, stale: result.stale },
           }));
         })
         .catch((error: unknown) => {
@@ -228,7 +367,7 @@ export function CryptoPricesWidget({
           const message = error instanceof Error ? error.message : "Could not load prices";
           setRowStates((prev) => ({
             ...prev,
-            [entry.coinId]: { status: "err", message },
+            [item.id]: { status: "err", message },
           }));
         });
     }
@@ -236,35 +375,36 @@ export function CryptoPricesWidget({
     return () => {
       cancelled = true;
     };
-  }, [watchlist, chartDays]);
+  }, [fetchKey, chartDays]);
 
   const loadedRows = useMemo(
     () =>
-      watchlist
-        .map((entry) => {
-          const state = rowStates[entry.coinId];
+      items
+        .map((item) => {
+          const state = rowStates[item.id];
           return state?.status === "ok" ? state.row : null;
         })
         .filter((row): row is ICryptoMarketRow => row !== null),
-    [rowStates, watchlist],
+    [rowStates, items],
   );
 
   const anyStale = useMemo(
     () =>
-      watchlist.some((entry) => {
-        const state = rowStates[entry.coinId];
+      items.some((item) => {
+        const state = rowStates[item.id];
         return state?.status === "ok" && state.stale;
       }),
-    [rowStates, watchlist],
+    [rowStates, items],
   );
 
-  const allSettled = watchlist.every((entry) => {
-    const state = rowStates[entry.coinId];
+  const allSettled = items.every((item) => {
+    const state = rowStates[item.id];
     return state && state.status !== "loading";
   });
 
   const snark = useMemo(() => {
-    if (loadedRows.length < 2) return null;
+    // Snark lines are written about coins; the Stocks list stays deadpan.
+    if (isStocks || loadedRows.length < 2) return null;
     return pickCryptoSnark({
       humorEnabled,
       humorIntensity,
@@ -273,9 +413,11 @@ export function CryptoPricesWidget({
       secondaryChangePct: loadedRows[1]!.changePct,
       locale: displayLocale,
     });
-  }, [loadedRows, humorEnabled, humorIntensity, chartDays, displayLocale]);
+  }, [isStocks, loadedRows, humorEnabled, humorIntensity, chartDays, displayLocale]);
 
-  const removable = canRemoveCryptoWatchlistEntry(watchlist);
+  const removable = isStocks
+    ? canRemoveStockWatchlistEntry(stockWatchlist)
+    : canRemoveCryptoWatchlistEntry(watchlist);
 
   const addEntry = (entry: ICryptoWatchlistEntry) => {
     const normalized = normalizeCryptoWatchlistEntry(entry);
@@ -284,16 +426,43 @@ export function CryptoPricesWidget({
     onWatchlistChange([...watchlist, normalized]);
   };
 
-  const removeEntry = (coinId: string) => {
+  const addStockEntry = (entry: IStockWatchlistEntry) => {
+    const normalized = normalizeStockWatchlistEntry(entry);
+    if (!normalized) return;
+    if (stockWatchlist.some((w) => w.symbol === normalized.symbol)) return;
+    onStockWatchlistChange([...stockWatchlist, normalized]);
+  };
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const { orderedIds, draggingId, gripProps } = useRowDragReorder({
+    ids: itemIds,
+    listRef,
+    onCommit: (nextIds) => {
+      if (isStocks)
+        onStockWatchlistChange(orderListByIds(stockWatchlist, nextIds, (e) => e.symbol));
+      else onWatchlistChange(orderListByIds(watchlist, nextIds, (e) => e.coinId));
+    },
+  });
+  const orderedItems = useMemo(
+    () => orderListByIds(items, orderedIds, (item) => item.id),
+    [items, orderedIds],
+  );
+  const reorderable = items.length > 1;
+
+  const removeItem = (id: string) => {
     if (!removable) return;
-    onWatchlistChange(watchlist.filter((e) => e.coinId !== coinId));
+    if (isStocks) onStockWatchlistChange(stockWatchlist.filter((e) => e.symbol !== id));
+    else onWatchlistChange(watchlist.filter((e) => e.coinId !== id));
   };
 
   return (
     <section className="card flex flex-col gap-4">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <PanelTitleInline>Crypto</PanelTitleInline>
+          <PanelTitleInline>
+            <MarketsViewToggle view={view} onSelectView={onSelectView} />
+          </PanelTitleInline>
           <div className="row wrap gap-1" role="group" aria-label="Chart range">
             {CRYPTO_CHART_DAY_OPTIONS.map((d) => (
               <PanelTip key={d} tip={cryptoChartRangeTip(d)}>
@@ -312,28 +481,40 @@ export function CryptoPricesWidget({
       <PanelBody>
         {anyStale ? (
           <p className="muted text-xs leading-tight" role="status">
-            Cached prices — live CoinGecko data is temporarily unavailable.
+            Cached prices — live {isStocks ? "Yahoo Finance" : "CoinGecko"} data is temporarily
+            unavailable.
           </p>
         ) : null}
-        {watchlist.map((entry) => (
-          <AssetRow
-            key={entry.coinId}
-            entry={entry}
-            state={rowStates[entry.coinId] ?? { status: "loading" }}
-            locale={displayLocale}
-            canRemove={removable}
-            onRemove={() => removeEntry(entry.coinId)}
-          />
-        ))}
-        {!allSettled && watchlist.length > 0 ? (
+        <div ref={listRef}>
+          {orderedItems.map((item) => (
+            <AssetRow
+              key={item.id}
+              id={item.id}
+              gripProps={reorderable ? gripProps(item.id) : undefined}
+              dragging={draggingId === item.id}
+              symbol={item.symbol}
+              name={item.name}
+              icon={item.cryptoEntry ? <CryptoCoinIcon entry={item.cryptoEntry} size="sm" /> : null}
+              state={rowStates[item.id] ?? { status: "loading" }}
+              locale={displayLocale}
+              canRemove={removable}
+              onRemove={() => removeItem(item.id)}
+            />
+          ))}
+        </div>
+        {!allSettled && items.length > 0 ? (
           <p className="muted sr-only" role="status">
-            Loading crypto prices
+            Loading {isStocks ? "stock" : "crypto"} prices
           </p>
         ) : null}
         {snark ? (
           <p className="muted mt-3 border-t border-border pt-2 text-xs leading-snug">{snark}</p>
         ) : null}
-        <CryptoWatchlistAddField watchlist={watchlist} onAdd={addEntry} />
+        {isStocks ? (
+          <StockWatchlistAddField key="stocks" watchlist={stockWatchlist} onAdd={addStockEntry} />
+        ) : (
+          <CryptoWatchlistAddField key="crypto" watchlist={watchlist} onAdd={addEntry} />
+        )}
       </PanelBody>
     </section>
   );

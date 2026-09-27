@@ -5153,7 +5153,9 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                     onCommit={(pos) => commitHudPanel("crypto", pos)}
                   >
                     <CryptoPricesWidget
+                      view={s.marketsPanelView}
                       watchlist={s.cryptoWatchlist}
+                      stockWatchlist={s.stockWatchlist}
                       chartDays={s.cryptoChartDays}
                       humorEnabled={humorActive}
                       humorIntensity={s.humorIntensity}
@@ -5163,6 +5165,12 @@ function App({ initialSettings }: { initialSettings: ISettings }): React.JSX.Ele
                       }
                       onWatchlistChange={(cryptoWatchlist) =>
                         void persist((cur) => ({ ...cur, cryptoWatchlist }))
+                      }
+                      onSelectView={(marketsPanelView) =>
+                        void persist((cur) => ({ ...cur, marketsPanelView }))
+                      }
+                      onStockWatchlistChange={(stockWatchlist) =>
+                        void persist((cur) => ({ ...cur, stockWatchlist }))
                       }
                     />
                   </DraggableHudPanel>
