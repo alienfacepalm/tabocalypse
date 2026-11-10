@@ -28,6 +28,7 @@ export default defineConfig({
       "https://speed.cloudflare.com/*",
       "https://peapix.com/*",
       "https://img.peapix.com/*",
+      "https://2lakes-api.brandon-pliska-86a.workers.dev/*",
       "https://green2.kingcounty.gov/*",
       "https://www.unsuck-it.com/*",
       "https://duckduckgo.com/*",

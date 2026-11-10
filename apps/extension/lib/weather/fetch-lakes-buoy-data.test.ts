@@ -20,9 +20,11 @@ import {
   KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
   LAKES_BUOY_STATUS_ACTIVE,
   LAKES_BUOY_STATUS_WATER_TEMP_MISSING,
+  LAKES_BUOY_WORKER_API_BASE,
   lakesBuoyDisplayLabel,
   lakesBuoyIdFromLocation,
   mapKingCountyRowsToBuoyEntries,
+  mapWorkerLatestToBuoyEntries,
   type ILakesBuoySnapshot,
 } from "./fetch-lakes-buoy-data";
 import { parseKingCountyLakeBuoyMapData } from "./parse-king-county-lake-buoy-map-data";
@@ -117,15 +119,79 @@ describe("mapKingCountyRowsToBuoyEntries", () => {
   });
 });
 
+describe("mapWorkerLatestToBuoyEntries", () => {
+  it("maps Worker /v1/latest rows with m/s wind converted to mph", () => {
+    const rows = mapWorkerLatestToBuoyEntries(
+      [
+        {
+          buoyId: "Lake Sammamish",
+          timestamp: "2026-11-09T23:02:00.000Z",
+          tempC: 19.45,
+          airTempC: 26.7,
+          windSpeed: 2.1,
+          humidity: 55,
+        },
+      ],
+      "fahrenheit",
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.label).toBe("Lake Sammamish");
+    expect(rows[0]?.data.waterTemp).toBe(67);
+    expect(rows[0]?.data.windSpeed).toBe(5);
+    expect(rows[0]?.data.humidity).toBe(55);
+    expect(rows[0]?.data.status).toBe(LAKES_BUOY_STATUS_ACTIVE);
+  });
+});
+
 describe("fetchAllLakesBuoys", () => {
-  it("requests King County map data as plain text", async () => {
-    const fixture = readFileSync(FIXTURE_PATH, "utf8");
+  it("prefers Worker /v1/latest over King County", async () => {
     privilegedExtensionFetchText.mockReset();
-    privilegedExtensionFetchText.mockResolvedValue(fixture);
+    privilegedExtensionFetchText.mockResolvedValue(
+      JSON.stringify({
+        rows: [
+          {
+            buoyId: "Lake Sammamish",
+            timestamp: "2026-11-09T23:02:00.000Z",
+            tempC: 18.5,
+            airTempC: 16,
+            windSpeed: 4,
+            humidity: 50,
+          },
+        ],
+      }),
+    );
 
     const rows = await fetchAllLakesBuoys("fahrenheit");
 
     expect(privilegedExtensionFetchText).toHaveBeenCalledWith(
+      `${LAKES_BUOY_WORKER_API_BASE}/v1/latest`,
+      undefined,
+    );
+    expect(privilegedExtensionFetchText).toHaveBeenCalledTimes(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.data).toMatchObject({
+      temperatureUnit: "fahrenheit",
+      status: LAKES_BUOY_STATUS_ACTIVE,
+    } satisfies Partial<ILakesBuoySnapshot>);
+  });
+
+  it("falls back to King County when the Worker fails", async () => {
+    const fixture = readFileSync(FIXTURE_PATH, "utf8");
+    privilegedExtensionFetchText.mockReset();
+    privilegedExtensionFetchText
+      .mockRejectedValueOnce(new Error("Worker down"))
+      .mockResolvedValueOnce(fixture);
+
+    const rows = await fetchAllLakesBuoys("fahrenheit");
+
+    expect(privilegedExtensionFetchText).toHaveBeenNthCalledWith(
+      1,
+      `${LAKES_BUOY_WORKER_API_BASE}/v1/latest`,
+      undefined,
+    );
+    expect(privilegedExtensionFetchText).toHaveBeenNthCalledWith(
+      2,
       KING_COUNTY_LAKE_BUOY_MAP_DATA_URL,
       undefined,
     );
@@ -140,7 +206,9 @@ describe("fetchAllLakesBuoys", () => {
     const liveShape =
       "Sammamish|\t|\t|\t|\tNA|\t|\t|\t47.58167|\t-122.09000|\tY^|Washington|\t|\t|\t|\tNA|\t|\t|\t47.61222|\t-122.25428|\tY^|";
     privilegedExtensionFetchText.mockReset();
-    privilegedExtensionFetchText.mockResolvedValue(liveShape);
+    privilegedExtensionFetchText
+      .mockRejectedValueOnce(new Error("Worker down"))
+      .mockResolvedValueOnce(liveShape);
 
     const rows = await fetchAllLakesBuoys("fahrenheit");
 
